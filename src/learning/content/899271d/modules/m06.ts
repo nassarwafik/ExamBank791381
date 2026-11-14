@@ -4760,26 +4760,26 @@ const m06: ContentModule = {
   },
   {
    "id": "899271d-m06-l07",
-   "title": "أسئلة تتبّع وكتابة",
+   "title": "أسئلة وتمارين",
    "order": 7,
    "pages": [
     {
      "id": "899271d-m06-l07-p01",
-     "title": "أسئلة تتبّع (1): سؤال 5 من الكتاب",
+     "title": "أسئلة تتبّع محلولة",
      "order": 1,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
-      "pdfPageStart": 284,
-      "pdfPageEnd": 285,
-      "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 284–285"
+      "pdfPageStart": 243,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
      },
      "keywords": [
       "تتبّع",
+      "أسئلة محلولة",
       "What1",
       "What2",
-      "What3",
-      "بحث في شجرة"
+      "مستوى خلية",
+      "راصّة"
      ],
      "blocks": [
       {
@@ -4787,44 +4787,39 @@ const m06: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "تتبّع كل عملية "
+         "text": "خمسة أسئلة تتبّع "
+        },
+        {
+         "text": "محلولة",
+         "style": "strong"
+        },
+        {
+         "text": "، مرتّبة من الأسهل إلى الأصعب. تتبّع كل عملية بنفسك أولًا "
         },
         {
          "text": "بدون",
          "style": "strong"
         },
         {
-         "text": " الاستعانة بالحاسوب. أجب أولًا، ثم افتح التتبّع لتتأكّد."
+         "text": " الحاسوب، ثم اقرأ الحل وافتح التتبّع لتتأكّد. أربعة منها من تمارين الكتاب."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m06-l07-p01-b02",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 5 من الكتاب",
-       "prompt": "معطاة العمليات التالية والشجرة الثنائية \u2066bt\u2069.",
-       "steps": [
-        {
-         "text": "تتبّع تنفيذ العملية \u2066What1\u2069 بالنسبة للابن الأيمن للشجرة الثنائية \u2066bt\u2069 و \u2066Val = 1\u2069، وحدّد مهمّة العملية ودرجة نجاعتها."
-        },
-        {
-         "text": "تتبّع تنفيذ العملية \u2066What2\u2069 بالنسبة للشجرة الثنائية \u2066bt\u2069، وحدّد مهمّة العملية ودرجة نجاعتها. لا حاجة لتتبّع استدعاءات العملية \u2066What1\u2069."
-        },
-        {
-         "text": "تتبّع تنفيذ العملية \u2066What3\u2069 بالنسبة للشجرة الثنائية \u2066bt\u2069، وحدّد مهمّة العملية ودرجة تعقيدها. لا حاجة لتتبّع استدعاءات العملية \u2066What2\u2069."
-        }
-       ],
-       "origin": "book"
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066LeftMost\u2069",
+       "origin": "teacher-enrichment"
       },
       {
        "id": "m06-l07-p01-b03",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}\n\npublic static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}\n\npublic static void What3(BinNode<int> bt)\n{\n    if (bt != null)\n    {\n       if(bt.GetLeft() != null &&\n         bt.GetValue() == bt.GetLeft().GetValue())\n         What2(bt.GetLeft());\n       if(bt.GetRight() != null &&\n          bt.GetValue() == bt.GetRight().GetValue())\n          What2(bt.GetRight());\n        What3(bt.GetLeft());\n        What3(bt.GetRight());\n    }\n}",
-       "origin": "book"
+       "code": "public static int LeftMost(BinNode<int> bt)\n{\n    while (bt.HasLeft())\n        bt = bt.GetLeft();\n    return bt.GetValue();\n}",
+       "origin": "teacher-enrichment"
       },
       {
        "id": "m06-l07-p01-b04",
@@ -4832,6 +4827,158 @@ const m06: ContentModule = {
        "interactionType": "ds-figure",
        "version": 1,
        "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           8,
+           [
+            3,
+            [
+             6,
+             null,
+             1
+            ],
+            7
+           ],
+           [
+            9,
+            4,
+            null
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b05",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ماذا تعيد "
+        },
+        {
+         "text": "LeftMost(bt)",
+         "dir": "ltr"
+        },
+        {
+         "text": " للشجرة التي في الرسم؟ وهل الخلية التي تُعاد قيمتها ورقة دائمًا؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b06",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في البداية \u2066bt\u2069 يشير إلى الجذر 8. للجذر ابن أيسر، فينتقل \u2066bt\u2069 إلى الخلية 3."
+        },
+        {
+         "text": "للخلية 3 ابن أيسر، فينتقل \u2066bt\u2069 إلى الخلية 6."
+        },
+        {
+         "text": "الخلية 6 ليس لها ابن أيسر: تتوقّف الحلقة وتُعاد القيمة 6."
+        },
+        {
+         "text": "الخلية 6 ليست ورقة، فلها ابن أيمن (1). العملية تعيد قيمة آخر خلية في المسار الذي ينزل إلى اليسار فقط، وهذه الخلية ليست ورقة دائمًا."
+        },
+        {
+         "text": "النتيجة: تعيد العملية \u20666\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b07",
+       "type": "text",
+       "spans": [
+        {
+         "text": "لاحظ أنّ "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " داخل العملية نسخة من المؤشّر: تحريكه إلى اليسار لا يغيّر الشجرة نفسها."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b08",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int LeftMost(BinNode<int> bt)\n{\n    while (bt.HasLeft())\n        bt = bt.GetLeft();\n    return bt.GetValue();\n}",
+        "given": "الشجرة `bt` التي في الرسم (جذرها 8)، والاستدعاء `LeftMost(bt)`.",
+        "out": "6\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `LeftMost` مع `bt` = الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LeftMost","vars":[["bt",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"bin","v":"1","l":null,"r":null},{"id":2,"k":"bin","v":"6","l":null,"r":1},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":2,"r":3},{"id":5,"k":"bin","v":"4","l":null,"r":null},{"id":6,"k":"bin","v":"9","l":5,"r":null},{"id":7,"k":"bin","v":"8","l":4,"r":6}]},
+{"l":3,"n":"الشرط `bt.HasLeft()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LeftMost","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt.HasLeft()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LeftMost","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt.HasLeft()` خطأ: نخرج من الحلقة.","o":0},
+{"l":5,"n":"العملية `LeftMost` تُعيد `6`.","o":0},
+{"l":0,"n":"نطبع: `6`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (8 خطوة)؛ ناتج البرنامج: 6."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b09",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066What1\u2069: سؤال 5 من الكتاب، العملية الأولى",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b10",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b11",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069 (لهذا السؤال وللسؤال التالي)",
        "capabilities": {
         "fullscreen": true
        },
@@ -4879,7 +5026,42 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b05",
+       "id": "m06-l07-p01-b12",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال",
+         "style": "strong"
+        },
+        {
+         "text": " (سؤال 5 من الكتاب، ص 284–285): تتبّع تنفيذ العملية "
+        },
+        {
+         "text": "What1",
+         "dir": "ltr"
+        },
+        {
+         "text": " بالنسبة للابن الأيمن للشجرة الثنائية "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " و "
+        },
+        {
+         "text": "Val = 1",
+         "dir": "ltr"
+        },
+        {
+         "text": "، وحدّد مهمّة العملية ودرجة نجاعتها."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b13",
        "type": "callout",
        "kind": "clarification",
        "title": "في الكتاب",
@@ -4940,70 +5122,45 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b06",
-       "type": "heading",
-       "level": 3,
-       "text": "القسم 1 — العملية \u2066What1\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p01-b07",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ماذا تعيد \u2066What1(bt.GetRight(), 1)\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "true",
-        "feedback": {
-         "explanation": "الابن الأيمن للجذر هو الخلية 3، وابنها الأيمن 5، وابنه الأيمن 1. العملية تنزل في هذا المسار حتى تجد القيمة 1 فتعيد \u2066true\u2069."
+       "id": "m06-l07-p01-b14",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الابن الأيمن للجذر هو الخلية 3. قيمتها لا تساوي 1، فنبحث في شجرتها الفرعية اليسرى: هي فارغة، فيُعاد \u2066false\u2069."
+        },
+        {
+         "text": "العملية \u2066||\u2069 تكمل إلى الطرف الثاني: الشجرة الفرعية اليمنى، وجذرها الخلية 5. قيمتها لا تساوي 1 ويسارها فارغ، فننتقل إلى ابنها الأيمن."
+        },
+        {
+         "text": "الخلية 1 قيمتها تساوي \u2066Val\u2069: يُعاد \u2066true\u2069، وتعود هذه القيمة إلى كل الاستدعاءات التي تنتظر."
+        },
+        {
+         "text": "المهمّة: العملية تعيد \u2066true\u2069 إذا كانت القيمة \u2066Val\u2069 موجودة في إحدى خلايا الشجرة، وإلا تعيد \u2066false\u2069."
+        },
+        {
+         "text": "النجاعة: في أسوأ الحالات تُزار كل خلية مرة واحدة، فالنجاعة خطية: \u2066O(n)\u2069."
+        },
+        {
+         "text": "النتيجة: تعيد العملية \u2066true\u2069."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b08",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما مهمّة العملية \u2066What1\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تعيد \u2066true\u2069 إذا كانت قيمة الجذر تساوي \u2066Val\u2069 فقط"
-         },
-         {
-          "id": "o2",
-          "text": "تعيد \u2066true\u2069 إذا كانت القيمة \u2066Val\u2069 موجودة في إحدى خلايا الشجرة",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "تعدّ الخلايا التي قيمتها \u2066Val\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "تعيد \u2066true\u2069 إذا كانت \u2066Val\u2069 موجودة في ورقة فقط"
-         }
-        ],
-        "feedback": {
-         "explanation": "العملية تفحص الخلية الحالية، وإذا لم تجد القيمة تبحث في الشجرة الفرعية اليسرى ثم في اليمنى. في أسوأ الحالات تزور كل خلية مرة واحدة، فنجاعتها خطية: \u2066O(n)\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p01-b09",
+       "id": "m06-l07-p01-b15",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066What1\u2069 على الابن الأيمن للجذر",
+       "title": "تتبّع الحل",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}\n\npublic static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}\n\npublic static void What3(BinNode<int> bt)\n{\n    if (bt != null)\n    {\n       if(bt.GetLeft() != null &&\n         bt.GetValue() == bt.GetLeft().GetValue())\n         What2(bt.GetLeft());\n       if(bt.GetRight() != null &&\n          bt.GetValue() == bt.GetRight().GetValue())\n          What2(bt.GetRight());\n        What3(bt.GetLeft());\n        What3(bt.GetRight());\n    }\n}",
+        "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}",
         "given": "الشجرة `bt` التي في الرسم، والاستدعاء `What1(bt.GetRight(), 1)`.",
         "out": "True\n",
         "steps": [
@@ -5034,113 +5191,111 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b10",
+       "id": "m06-l07-p01-b16",
        "type": "heading",
        "level": 3,
-       "text": "القسم 2 — العملية \u2066What2\u2069",
+       "text": "سؤال 3 · متوسط — \u2066What2\u2069: سؤال 5 من الكتاب، العملية الثانية",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b11",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ننفّذ \u2066What2(bt)\u2069 على الشجرة الأصلية. ما قيمة الجذر بعد انتهاء العملية؟",
-        "answer": "7",
-        "feedback": {
-         "explanation": "\u2066Temp\u2069 يبدأ من 3. القيم 3 و4 و5 و6 موجودة كلها في الشجرة، فيزيد \u2066Temp\u2069 في كل مرة. القيمة 7 غير موجودة، فتتوقّف الحلقة ويصير الجذر 7."
-        }
-       },
+       "id": "m06-l07-p01-b17",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b12",
+       "id": "m06-l07-p01-b18",
        "type": "text",
        "spans": [
         {
-         "text": "مهمّة "
+         "text": "السؤال",
+         "style": "strong"
+        },
+        {
+         "text": " (سؤال 5 من الكتاب، ص 284–285): تتبّع تنفيذ العملية "
         },
         {
          "text": "What2",
          "dir": "ltr"
         },
         {
-         "text": ": تغيّر قيمة الجذر إلى أول عدد أكبر من قيمته "
+         "text": " بالنسبة للشجرة الثنائية "
         },
         {
-         "text": "غير موجود",
-         "style": "strong"
-        },
-        {
-         "text": " في الشجرة. الحلقة تدور على الأكثر "
-        },
-        {
-         "text": "n + 1",
+         "text": "bt",
          "dir": "ltr"
         },
         {
-         "text": " مرات، وفي كل دورة تُستدعى "
+         "text": " التي في رسم السؤال السابق، وحدّد مهمّة العملية ودرجة نجاعتها. لا حاجة لتتبّع استدعاءات العملية "
         },
         {
          "text": "What1",
          "dir": "ltr"
         },
         {
-         "text": " التي نجاعتها "
-        },
-        {
-         "text": "O(n)",
-         "dir": "ltr"
-        },
-        {
-         "text": ". لذلك نجاعة "
-        },
-        {
-         "text": "What2",
-         "dir": "ltr"
-        },
-        {
-         "text": " هي "
-        },
-        {
-         "text": "O(n²)",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
+         "text": " (هي العملية من السؤال السابق)."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b13",
+       "id": "m06-l07-p01-b19",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "المتغيّر \u2066Temp\u2069 يبدأ من قيمة الجذر: 3."
+        },
+        {
+         "text": "الاستدعاء \u2066What1(bt, 3)\u2069 يعيد \u2066true\u2069 (القيمة في الجذر نفسه)، فيزيد \u2066Temp\u2069 ويصير 4. القيم 4 و5 و6 موجودة أيضًا في الشجرة، فيزيد \u2066Temp\u2069 في كل دورة حتى يصير 7."
+        },
+        {
+         "text": "الاستدعاء \u2066What1(bt, 7)\u2069 يعيد \u2066false\u2069: تتوقّف الحلقة، والعملية \u2066SetValue\u2069 تجعل قيمة الجذر 7."
+        },
+        {
+         "text": "المهمّة: العملية تغيّر قيمة الجذر إلى أول عدد أكبر من قيمته غير موجود في الشجرة."
+        },
+        {
+         "text": "النجاعة: الحلقة تدور على الأكثر \u2066n + 1\u2069 مرات، وفي كل دورة تُستدعى \u2066What1\u2069 التي نجاعتها \u2066O(n)\u2069. لذلك نجاعة \u2066What2\u2069 هي \u2066O(n²)\u2069."
+        },
+        {
+         "text": "النتيجة: قيمة الجذر تصير \u20667\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b20",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066What2\u2069 على الشجرة \u2066bt\u2069",
+       "title": "تتبّع الحل",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}\n\npublic static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}\n\npublic static void What3(BinNode<int> bt)\n{\n    if (bt != null)\n    {\n       if(bt.GetLeft() != null &&\n         bt.GetValue() == bt.GetLeft().GetValue())\n         What2(bt.GetLeft());\n       if(bt.GetRight() != null &&\n          bt.GetValue() == bt.GetRight().GetValue())\n          What2(bt.GetRight());\n        What3(bt.GetLeft());\n        What3(bt.GetRight());\n    }\n}",
-        "given": "الشجرة `bt` التي في الرسم، والاستدعاء `What2(bt)`. استدعاءات `What1` تُنفّذ بدون تتبّع، كما يطلب السؤال.",
+        "code": "public static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}",
+        "given": "الشجرة `bt` التي في رسم السؤال السابق، والاستدعاء `What2(bt)`. استدعاءات `What1` تُنفّذ بدون تتبّع، كما يطلب السؤال.",
         "out": "7\n",
         "steps": [
-{"l":8,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}]]}],"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":1},{"id":3,"k":"bin","v":"6","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"bin","v":"5","l":2,"r":5},{"id":7,"k":"bin","v":"1","l":null,"r":null},{"id":8,"k":"bin","v":"5","l":null,"r":7},{"id":9,"k":"bin","v":"3","l":null,"r":8},{"id":10,"k":"bin","v":"3","l":6,"r":9}]},
-{"l":10,"n":"`Temp = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"3"}]]}]},
-{"l":11,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":12,"n":"`Temp` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"4"}]]}]},
-{"l":11,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":12,"n":"`Temp` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"5"}]]}]},
-{"l":11,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":12,"n":"`Temp` تزيد بواحد وتصبح `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"6"}]]}]},
-{"l":11,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":12,"n":"`Temp` تزيد بواحد وتصبح `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"7"}]]}]},
-{"l":11,"n":"الشرط `What1(bt, Temp)` خطأ: نخرج من الحلقة.","o":0},
-{"l":13,"n":"قيمة الخلية `bt` تتغيّر من `3` إلى `7`.","o":0,"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":1},{"id":3,"k":"bin","v":"6","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"bin","v":"5","l":2,"r":5},{"id":7,"k":"bin","v":"1","l":null,"r":null},{"id":8,"k":"bin","v":"5","l":null,"r":7},{"id":9,"k":"bin","v":"3","l":null,"r":8},{"id":10,"k":"bin","v":"7","l":6,"r":9}]},
-{"l":14,"n":"تنتهي العملية `What2` ونعود إلى من استدعاها.","o":0},
+{"l":1,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}]]}],"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":1},{"id":3,"k":"bin","v":"6","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"bin","v":"5","l":2,"r":5},{"id":7,"k":"bin","v":"1","l":null,"r":null},{"id":8,"k":"bin","v":"5","l":null,"r":7},{"id":9,"k":"bin","v":"3","l":null,"r":8},{"id":10,"k":"bin","v":"3","l":6,"r":9}]},
+{"l":3,"n":"`Temp = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`Temp` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`Temp` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`Temp` تزيد بواحد وتصبح `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"6"}]]}]},
+{"l":4,"n":"الشرط `What1(bt, Temp)` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`Temp` تزيد بواحد وتصبح `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":10}],["Temp",{"t":"v","s":"7"}]]}]},
+{"l":4,"n":"الشرط `What1(bt, Temp)` خطأ: نخرج من الحلقة.","o":0},
+{"l":6,"n":"قيمة الخلية `bt` تتغيّر من `3` إلى `7`.","o":0,"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":1},{"id":3,"k":"bin","v":"6","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"bin","v":"5","l":2,"r":5},{"id":7,"k":"bin","v":"1","l":null,"r":null},{"id":8,"k":"bin","v":"5","l":null,"r":7},{"id":9,"k":"bin","v":"3","l":null,"r":8},{"id":10,"k":"bin","v":"7","l":6,"r":9}]},
+{"l":7,"n":"تنتهي العملية `What2` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"نطبع: `7`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]}]}
 ]
        },
@@ -5150,19 +5305,1233 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b14",
+       "id": "m06-l07-p01-b21",
        "type": "heading",
        "level": 3,
-       "text": "القسم 3 — العملية \u2066What3\u2069",
+       "text": "سؤال 4 · متوسط — في أي مستوى؟ سؤال 24 من الكتاب",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b15",
+       "id": "m06-l07-p01-b22",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int What1(BinNode<int> bt, int V)\n{\n    return What2(bt, V, 1) - 1;\n}\n\npublic static int What2(BinNode<int> bt, int V, int X)\n{\n    if (bt == null)\n        return 0;\n    if (bt.GetValue() == V)\n        return X;\n    int Y = What2(bt.GetLeft(), V, X + 1);\n    if (Y != 0)\n        return Y;\n    Y = What2(bt.GetRight(), V, X + 1);\n    return Y;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b23",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            1,
+            0,
+            null
+           ],
+           [
+            5,
+            4,
+            [
+             8,
+             7,
+             null
+            ]
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b24",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال",
+         "style": "strong"
+        },
+        {
+         "text": " (سؤال 24 من الكتاب، ص 303): معطاة العمليتان أعلاه والشجرة "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": "، وقيمها لا تتكرّر. تتبّع الاستدعاء "
+        },
+        {
+         "text": "What1(bt, 8)",
+         "dir": "ltr"
+        },
+        {
+         "text": " وحدّد ماذا يُعاد. ما هي مهمّة العملية "
+        },
+        {
+         "text": "What1",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b25",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "العملية \u2066What1\u2069 تستدعي \u2066What2(bt, 8, 1)\u2069. المتغيّر \u2066X\u2069 يعدّ الخلايا في المسار من الجذر إلى الخلية الحالية."
+        },
+        {
+         "text": "الجذر 3 لا يساوي 8. نبحث أولًا في الشجرة الفرعية اليسرى (الخليتان 1 و0)، ومع كل نزول يزيد \u2066X\u2069 بواحد. القيمة غير موجودة هناك، فيعود العدد 0."
+        },
+        {
+         "text": "لأنّ \u2066Y\u2069 يساوي 0 نبحث في الشجرة الفرعية اليمنى: الخلية 5 مع \u2066X = 2\u2069، ثم ابنها الأيسر 4 (يعود 0)، ثم ابنها الأيمن 8 مع \u2066X = 3\u2069."
+        },
+        {
+         "text": "الخلية 8 قيمتها تساوي \u2066V\u2069: يُعاد \u2066X\u2069، أي 3، إلى كل الاستدعاءات التي تنتظر. ثم \u2066What1\u2069 تطرح 1."
+        },
+        {
+         "text": "المهمّة: العملية \u2066What1\u2069 تعيد رقم المستوى الذي فيه الخلية التي قيمتها \u2066V\u2069 (الجذر في المستوى 0). إذا لم توجد القيمة تعيد \u2066What2\u2069 العدد 0، فتعيد \u2066What1\u2069 القيمة \u2066-1\u2069."
+        },
+        {
+         "text": "النتيجة: تعيد العملية \u20662\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b26",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int What1(BinNode<int> bt, int V)\n{\n    return What2(bt, V, 1) - 1;\n}\n\npublic static int What2(BinNode<int> bt, int V, int X)\n{\n    if (bt == null)\n        return 0;\n    if (bt.GetValue() == V)\n        return X;\n    int Y = What2(bt.GetLeft(), V, X + 1);\n    if (Y != 0)\n        return Y;\n    Y = What2(bt.GetRight(), V, X + 1);\n    return Y;\n}",
+        "given": "الشجرة `bt` التي في الرسم، والاستدعاء `What1(bt, 8)`.",
+        "out": "2\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `What1` مع `bt` = الخلية التي قيمتها `3`، `V = 8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]}],"h":[{"id":1,"k":"bin","v":"0","l":null,"r":null},{"id":2,"k":"bin","v":"1","l":1,"r":null},{"id":3,"k":"bin","v":"4","l":null,"r":null},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"8","l":4,"r":null},{"id":6,"k":"bin","v":"5","l":3,"r":5},{"id":7,"k":"bin","v":"3","l":2,"r":6}]},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `3`، `V = 8`، `X = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `1`، `V = 8`، `X = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `0`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":15,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":16,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":15,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":16,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `5`، `V = 8`، `X = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `4`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":15,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":16,"n":"العملية `What2` تُعيد `0`.","o":0},
+{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]}]},
+{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `8`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":5}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `bt.GetValue() == V` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":11,"n":"العملية `What2` تُعيد `3`.","o":0},
+{"l":15,"n":"`Y = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"3"}]]}]},
+{"l":16,"n":"العملية `What2` تُعيد `3`.","o":0},
+{"l":15,"n":"`Y = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"3"}]]}]},
+{"l":16,"n":"العملية `What2` تُعيد `3`.","o":0},
+{"l":3,"n":"العملية `What1` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]}]},
+{"l":0,"n":"نطبع: `2`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (57 خطوة)؛ ناتج البرنامج: 2."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b27",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — شجرة وراصّة: سؤال 7 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b28",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int What1(BinNode<int> t, Stack<int> st)\n{\n    if (t == null || (t.GetLeft() == null && t.GetRight() == null))\n        return 0;\n    if (t.GetLeft() != null && t.GetRight() != null)\n        return What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    else\n    {\n        st.Push(t.GetValue());\n        return 1 + What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    }\n}\nstatic void Main(string[] args)\n{\n    Stack<int> s = new Stack<int>();\n    Console.WriteLine(What1(bt, s));\n    Console.WriteLine(s);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b29",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           86,
+           [
+            82,
+            null,
+            [
+             76,
+             78,
+             null
+            ]
+           ],
+           [
+            70,
+            66,
+            null
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b30",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال",
+         "style": "strong"
+        },
+        {
+         "text": " (سؤال 7 من الكتاب، ص 287): تتبّع تنفيذ العملية "
+        },
+        {
+         "text": "What1(bt,s)",
+         "dir": "ltr"
+        },
+        {
+         "text": " بالنسبة للشجرة الثنائية "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " التي في الرسم والراصّة الفارغة "
+        },
+        {
+         "text": "s",
+         "dir": "ltr"
+        },
+        {
+         "text": " بشكل مفصّل، واصفًا حالة الراصّة والقيم المُرجعة. ثم سجّل ادّعاءَي الدخول والخروج للعملية "
+        },
+        {
+         "text": "What1",
+         "dir": "ltr"
+        },
+        {
+         "text": ". في "
+        },
+        {
+         "text": "Main",
+         "dir": "ltr"
+        },
+        {
+         "text": " الشجرة "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " معطاة: هي التي في الرسم."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b31",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الجذر 86 له ابنان: لا يُدفع شيء إلى الراصّة، ويُعاد مجموع ما تعيده الشجرتان الفرعيتان."
+        },
+        {
+         "text": "الخلية 82 لها ابن واحد فقط (أيمن): تُدفع القيمة 82 إلى الراصّة، وتعيد الخلية 1 زائد ما تعيده الخلية 76."
+        },
+        {
+         "text": "الخلية 76 لها ابن واحد فقط (أيسر): تُدفع 76، وتعيد 1، لأنّ ابنها 78 ورقة والورقة تعيد 0. إذن الخلية 82 تعيد 2."
+        },
+        {
+         "text": "الخلية 70 لها ابن واحد فقط: تُدفع 70، وتعيد 1، لأنّ ابنها 66 ورقة."
+        },
+        {
+         "text": "المجموع عند الجذر \u20662 + 1 = 3\u2069. آخر ما دُفع (70) هو رأس الراصّة، فتُطبع الراصّة \u2066[70,76,82]\u2069."
+        },
+        {
+         "text": "ادّعاء الدخول: تتلقّى العملية جذر شجرة ثنائية \u2066t\u2069 وراصّة \u2066st\u2069. ادّعاء الخروج: تعيد عدد الخلايا التي لها ابن واحد بالضبط، وتُدخل قيم هذه الخلايا إلى الراصّة."
+        },
+        {
+         "text": "النتيجة: يُطبع \u20663\u2069 ثم \u2066[70,76,82]\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p01-b32",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
+       "description": "راقب الراصّة: أي خلايا تُدفع قيمها؟",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int What1(BinNode<int> t, Stack<int> st)\n{\n    if (t == null || (t.GetLeft() == null && t.GetRight() == null))\n        return 0;\n    if (t.GetLeft() != null && t.GetRight() != null)\n        return What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    else\n    {\n        st.Push(t.GetValue());\n        return 1 + What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    }\n}",
+        "given": "الشجرة `bt` التي في الرسم والراصّة الفارغة `s`، ثم أوامر `Main`.",
+        "out": "3\n[70,76,82]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `86`، `st` = الراصّة `[]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":[]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `82`، `st` = الراصّة `[]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"ندخل `82` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":["82"]}]},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = `null`، `st` = الراصّة `[82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"null"}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `76`، `st` = الراصّة `[82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"ندخل `76` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":["76","82"]}]},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `78`، `st` = الراصّة `[76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":1}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = `null`، `st` = الراصّة `[76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"null"}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
+{"l":10,"n":"العملية `What1` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]}]},
+{"l":10,"n":"العملية `What1` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]}]},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `70`، `st` = الراصّة `[76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"ندخل `70` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":["70","76","82"]}]},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `66`، `st` = الراصّة `[70,76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":4}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `What1` مع `t` = `null`، `st` = الراصّة `[70,76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"null"}],["st",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
+{"l":10,"n":"العملية `What1` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]}]},
+{"l":6,"n":"العملية `What1` تُعيد `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]}]},
+{"l":0,"n":"نطبع: `3`. نطبع: `[70,76,82]`. انتهى التنفيذ.","o":13,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (35 خطوة)؛ ناتج البرنامج: 3 ↵ [70,76,82]."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m06-l07-p02",
+     "title": "وظيفة: أسئلة تتبّع",
+     "order": 2,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 243,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+     },
+     "keywords": [
+      "وظيفة",
+      "تتبّع",
+      "مجموع مستوى",
+      "What3",
+      "تمشيط براصّة"
+     ],
+     "blocks": [
+      {
+       "id": "m06-l07-p02-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة تتبّع للحل في البيت، من الأسهل إلى الأصعب. أجب أولًا، ثم اضغط «الحل»: تفتح نافذة فيها الشرح وتتبّع البرنامج خطوة بخطوة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Mystery\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Mystery(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    if (bt.GetValue() % 2 == 0)\n        return 1 + Mystery(bt.GetLeft()) + Mystery(bt.GetRight());\n    return Mystery(bt.GetLeft()) + Mystery(bt.GetRight());\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b04",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           4,
+           [
+            7,
+            2,
+            null
+           ],
+           [
+            6,
+            null,
+            9
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b05",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Mystery(bt)\u2069 للشجرة التي في الرسم؟",
+        "answer": "3",
+        "feedback": {
+         "explanation": "العملية تضيف 1 لكل خلية قيمتها زوجية: 4 و2 و6. الخليتان 7 و9 فرديتان فلا تُعدّان."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066Mystery\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الشجرة الفارغة تعيد 0."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "خلية قيمتها زوجية ("
+          },
+          {
+           "text": "bt.GetValue() % 2 == 0",
+           "dir": "ltr"
+          },
+          {
+           "text": ") تعيد 1 زائد ما يعيده ابناها. خلية قيمتها فردية تعيد ما يعيده ابناها فقط."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الجذر 4 زوجي. في شجرته اليسرى: 7 فردية و2 زوجية. في شجرته اليمنى: 6 زوجية و9 فردية."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الخلايا الزوجية ثلاث: 4 و2 و6."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "تعيد العملية "
+        },
+        {
+         "text": "3",
+         "dir": "ltr"
+        },
+        {
+         "text": ": هي تعدّ الخلايا التي قيمتها زوجية."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static int Mystery(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    if (bt.GetValue() % 2 == 0)\n        return 1 + Mystery(bt.GetLeft()) + Mystery(bt.GetRight());\n    return Mystery(bt.GetLeft()) + Mystery(bt.GetRight());\n}",
+         "given": "الشجرة `bt` التي في الرسم (جذرها 4)، والاستدعاء `Mystery(bt)`.",
+         "out": "3\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"7","l":1,"r":null},{"id":3,"k":"bin","v":"9","l":null,"r":null},{"id":4,"k":"bin","v":"6","l":null,"r":3},{"id":5,"k":"bin","v":"4","l":2,"r":4}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetValue() % 2 == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":1}]]},{"name":"Mystery","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mystery` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mystery` تُعيد `0`.","o":0},
+{"l":6,"n":"العملية `Mystery` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Mystery","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mystery` تُعيد `0`.","o":0},
+{"l":7,"n":"العملية `Mystery` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mystery","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mystery` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetValue() % 2 == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Mystery","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mystery` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mystery` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mystery` تُعيد `0`.","o":0},
+{"l":7,"n":"العملية `Mystery` تُعيد `0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"العملية `Mystery` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":6,"n":"العملية `Mystery` تُعيد `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mystery","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":0,"n":"نطبع: `3`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: الشجرة الفارغة تعيد 0. خلية قيمتها زوجية (bt.GetValue() % 2 == 0) تعيد 1 زائد ما يعيده ابناها. خلية قيمتها فردية تعيد ما يعيده ابناها فقط. الجذر 4 زوجي. في شجرته اليسرى: 7 فردية و2 زوجية. في شجرته اليمنى: 6 زوجية و9 فردية. الخلايا الزوجية ثلاث: 4 و2 و6."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b07",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066Change\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b08",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Change(BinNode<int> bt)\n{\n    if (bt == null)\n        return;\n    if (bt.HasLeft() && bt.HasRight())\n        bt.SetValue(bt.GetLeft().GetValue() + bt.GetRight().GetValue());\n    Change(bt.GetLeft());\n    Change(bt.GetRight());\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b09",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           1,
+           [
+            2,
+            4,
+            5
+           ],
+           [
+            3,
+            null,
+            6
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b10",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "ننفّذ \u2066What3(bt)\u2069 على الشجرة الأصلية. أي خلايا تتغيّر قيمتها؟",
+        "prompt": "ما قيمة الجذر بعد انتهاء الاستدعاء \u2066Change(bt)\u2069 للشجرة التي في الرسم؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "1"
+         },
+         {
+          "id": "o2",
+          "text": "5",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "12"
+         },
+         {
+          "id": "o4",
+          "text": "9"
+         }
+        ],
+        "feedback": {
+         "explanation": "الجذر له ابنان، فتتغيّر قيمته قبل الاستدعاءين التراجعيين: \u20662 + 3 = 5\u2069. الخلية 2 تتغيّر بعد ذلك إلى 9، لكنّ الجذر لا يُحسب مرة ثانية."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b11",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066Change\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "العملية تمشيط بَدْئي: تعالج الخلية الحالية أولًا، ثم تنزل إلى ابنيها."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الجذر 1 له ابنان قيمتاهما "
+          },
+          {
+           "text": "الآن",
+           "style": "strong"
+          },
+          {
+           "text": " 2 و3، فتصير قيمته "
+          },
+          {
+           "text": "2 + 3 = 5",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "ثم الخلية 2: لها ابنان 4 و5، فتصير "
+          },
+          {
+           "text": "4 + 5 = 9",
+           "dir": "ltr"
+          },
+          {
+           "text": ". الورقتان لا تتغيّران."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الخلية 3 لها ابن واحد فقط، فالشرط "
+          },
+          {
+           "text": "bt.HasLeft() && bt.HasRight()",
+           "dir": "ltr"
+          },
+          {
+           "text": " خطأ ولا تتغيّر."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "لو كان التغيير "
+          },
+          {
+           "text": "بعد",
+           "style": "strong"
+          },
+          {
+           "text": " الاستدعاءين (تمشيط نهائي) لصار الجذر "
+          },
+          {
+           "text": "9 + 3 = 12",
+           "dir": "ltr"
+          },
+          {
+           "text": ". ترتيب الأوامر يغيّر النتيجة."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "الجذر يصير "
+        },
+        {
+         "text": "5",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والخلية 2 تصير "
+        },
+        {
+         "text": "9",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والخلية 3 لا تتغيّر."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Change(BinNode<int> bt)\n{\n    if (bt == null)\n        return;\n    if (bt.HasLeft() && bt.HasRight())\n        bt.SetValue(bt.GetLeft().GetValue() + bt.GetRight().GetValue());\n    Change(bt.GetLeft());\n    Change(bt.GetRight());\n}",
+         "given": "الشجرة `bt` التي في الرسم (جذرها 1)، والاستدعاء `Change(bt)`.",
+         "out": "5\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"5","l":null,"r":null},{"id":3,"k":"bin","v":"2","l":1,"r":2},{"id":4,"k":"bin","v":"6","l":null,"r":null},{"id":5,"k":"bin","v":"3","l":null,"r":4},{"id":6,"k":"bin","v":"1","l":3,"r":5}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.HasLeft() && bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"قيمة الخلية `bt` تتغيّر من `1` إلى `5`.","o":0,"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"5","l":null,"r":null},{"id":3,"k":"bin","v":"2","l":1,"r":2},{"id":4,"k":"bin","v":"6","l":null,"r":null},{"id":5,"k":"bin","v":"3","l":null,"r":4},{"id":6,"k":"bin","v":"5","l":3,"r":5}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.HasLeft() && bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"قيمة الخلية `bt` تتغيّر من `2` إلى `9`.","o":0,"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"5","l":null,"r":null},{"id":3,"k":"bin","v":"9","l":1,"r":2},{"id":4,"k":"bin","v":"6","l":null,"r":null},{"id":5,"k":"bin","v":"3","l":null,"r":4},{"id":6,"k":"bin","v":"5","l":3,"r":5}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.HasLeft() && bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":1}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":7,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":1}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":8,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":9,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":7,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.HasLeft() && bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":7,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":8,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":9,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":8,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":7,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.HasLeft() && bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":7,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.HasLeft() && bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":7,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":1,"n":"تبدأ العملية `Change` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Change","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `Change`.","o":0},
+{"l":8,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":9,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":8,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":9,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":8,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"Change","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":9,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":0,"n":"نطبع: `5`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: العملية تمشيط بَدْئي: تعالج الخلية الحالية أولًا، ثم تنزل إلى ابنيها. الجذر 1 له ابنان قيمتاهما الآن 2 و3، فتصير قيمته 2 + 3 = 5. ثم الخلية 2: لها ابنان 4 و5، فتصير 4 + 5 = 9. الورقتان لا تتغيّران. الخلية 3 لها ابن واحد فقط، فالشرط bt.HasLeft() && bt.HasRight() خطأ ولا تتغيّر. لو كان التغيير بعد الاستدعاءين (تمشيط نهائي) لصار الجذر 9 + 3 = 12. ترتيب الأوامر يغيّر النتيجة."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b12",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066SumLevel\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b13",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int SumLevel(BinNode<int> bt, int k)\n{\n    if (bt == null)\n        return 0;\n    if (k == 0)\n        return bt.GetValue();\n    return SumLevel(bt.GetLeft(), k - 1) + SumLevel(bt.GetRight(), k - 1);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b14",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           5,
+           [
+            3,
+            1,
+            4
+           ],
+           [
+            7,
+            null,
+            9
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b15",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066SumLevel(bt, 2)\u2069 للشجرة التي في الرسم؟",
+        "answer": "14",
+        "feedback": {
+         "explanation": "مع كل نزول ينقص \u2066k\u2069 بواحد، فيصير 0 عند خلايا المستوى 2: الخلايا 1 و4 و9. مجموعها 14."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b16",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066SumLevel\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "عند الجذر "
+          },
+          {
+           "text": "k = 2",
+           "dir": "ltr"
+          },
+          {
+           "text": ". العملية لا تأخذ قيمة الجذر، بل تنزل إلى ابنيه مع "
+          },
+          {
+           "text": "k - 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "عند الخليتين 3 و7 (المستوى 1) يكون "
+          },
+          {
+           "text": "k = 1",
+           "dir": "ltr"
+          },
+          {
+           "text": ": ننزل مرة أخرى مع "
+          },
+          {
+           "text": "k = 0",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "عند "
+          },
+          {
+           "text": "k = 0",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُعاد قيمة الخلية نفسها: 1 و4 من جهة الخلية 3، و9 من جهة الخلية 7. الابن الأيسر غير الموجود للخلية 7 يعيد 0."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "المجموع "
+          },
+          {
+           "text": "1 + 4 + 0 + 9 = 14",
+           "dir": "ltr"
+          },
+          {
+           "text": ". العملية تعيد مجموع قيم الخلايا التي في المستوى "
+          },
+          {
+           "text": "k",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "تعيد العملية "
+        },
+        {
+         "text": "14",
+         "dir": "ltr"
+        },
+        {
+         "text": ": مجموع قيم خلايا المستوى 2."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static int SumLevel(BinNode<int> bt, int k)\n{\n    if (bt == null)\n        return 0;\n    if (k == 0)\n        return bt.GetValue();\n    return SumLevel(bt.GetLeft(), k - 1) + SumLevel(bt.GetRight(), k - 1);\n}",
+         "given": "الشجرة `bt` التي في الرسم (جذرها 5)، والاستدعاء `SumLevel(bt, 2)`.",
+         "out": "14\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = الخلية التي قيمتها `5`، `k = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]}],"h":[{"id":1,"k":"bin","v":"1","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"9","l":null,"r":null},{"id":5,"k":"bin","v":"7","l":null,"r":4},{"id":6,"k":"bin","v":"5","l":3,"r":5}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `k == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = الخلية التي قيمتها `3`، `k = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `k == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = الخلية التي قيمتها `1`، `k = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"1"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":1}],["k",{"t":"v","s":"0"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `k == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `SumLevel` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = الخلية التي قيمتها `4`، `k = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"1"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":2}],["k",{"t":"v","s":"0"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `k == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `SumLevel` تُعيد `4`.","o":0},
+{"l":7,"n":"العملية `SumLevel` تُعيد `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"1"}]]}]},
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = الخلية التي قيمتها `7`، `k = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":5}],["k",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `k == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = `null`، `k = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":5}],["k",{"t":"v","s":"1"}]]},{"name":"SumLevel","vars":[["bt",{"t":"null"}],["k",{"t":"v","s":"0"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `SumLevel` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `SumLevel` مع `bt` = الخلية التي قيمتها `9`، `k = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":5}],["k",{"t":"v","s":"1"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":4}],["k",{"t":"v","s":"0"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `k == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `SumLevel` تُعيد `9`.","o":0},
+{"l":7,"n":"العملية `SumLevel` تُعيد `9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":5}],["k",{"t":"v","s":"1"}]]}]},
+{"l":7,"n":"العملية `SumLevel` تُعيد `14`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"SumLevel","vars":[["bt",{"t":"ref","id":6}],["k",{"t":"v","s":"2"}]]}]},
+{"l":0,"n":"نطبع: `14`. انتهى التنفيذ.","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: عند الجذر k = 2. العملية لا تأخذ قيمة الجذر، بل تنزل إلى ابنيه مع k - 1. عند الخليتين 3 و7 (المستوى 1) يكون k = 1: ننزل مرة أخرى مع k = 0. عند k = 0 تُعاد قيمة الخلية نفسها: 1 و4 من جهة الخلية 3، و9 من جهة الخلية 7. الابن الأيسر غير الموجود للخلية 7 يعيد 0. المجموع 1 + 4 + 0 + 9 = 14. العملية تعيد مجموع قيم الخلايا التي في المستوى k."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b17",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — \u2066What3\u2069: سؤال 5 من الكتاب، العملية الثالثة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b18",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}\n\npublic static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}\n\npublic static void What3(BinNode<int> bt)\n{\n    if (bt != null)\n    {\n       if(bt.GetLeft() != null &&\n         bt.GetValue() == bt.GetLeft().GetValue())\n         What2(bt.GetLeft());\n       if(bt.GetRight() != null &&\n          bt.GetValue() == bt.GetRight().GetValue())\n          What2(bt.GetRight());\n        What3(bt.GetLeft());\n        What3(bt.GetRight());\n    }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b19",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            5,
+            [
+             3,
+             null,
+             4
+            ],
+            [
+             5,
+             6,
+             3
+            ]
+           ],
+           [
+            3,
+            null,
+            [
+             5,
+             null,
+             1
+            ]
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b20",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال",
+         "style": "strong"
+        },
+        {
+         "text": " (سؤال 5 من الكتاب، ص 284–285): تتبّع تنفيذ العملية "
+        },
+        {
+         "text": "What3",
+         "dir": "ltr"
+        },
+        {
+         "text": " بالنسبة للشجرة الثنائية "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " التي في الرسم، وحدّد مهمّة العملية ودرجة تعقيدها. لا حاجة لتتبّع استدعاءات العملية "
+        },
+        {
+         "text": "What2",
+         "dir": "ltr"
+        },
+        {
+         "text": ". العمليتان "
+        },
+        {
+         "text": "What1",
+         "dir": "ltr"
+        },
+        {
+         "text": " و "
+        },
+        {
+         "text": "What2",
+         "dir": "ltr"
+        },
+        {
+         "text": " محلولتان في الصفحة السابقة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b21",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "أي خلايا تتغيّر قيمتها بعد الاستدعاء \u2066What3(bt)\u2069؟",
         "options": [
          {
           "id": "o1",
@@ -5183,73 +6552,144 @@ const m06: ContentModule = {
          }
         ],
         "feedback": {
-         "explanation": "العملية تفحص كل أب مع ابنيه. الجذر 3 يساوي ابنه الأيمن 3، فتُستدعى \u2066What2\u2069 على هذا الابن: القيمة 4 غير موجودة في شجرته الفرعية فيصير 4. والخلية 5 (الابن الأيسر للجذر) تساوي ابنها الأيمن 5، وفي شجرة هذا الابن القيمتان 5 و6 موجودتان، فيصير 7."
+         "explanation": "العملية تفحص كل أب مع ابنيه. الجذر 3 يساوي ابنه الأيمن 3، والخلية 5 (الابن الأيسر للجذر) تساوي ابنها الأيمن 5. على كل واحد من هذين الابنين تُستدعى \u2066What2\u2069."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p01-b16",
-       "type": "text",
-       "spans": [
+       "id": "m06-l07-p02-b22",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066What3\u2069",
+       "steps": [
         {
-         "text": "مهمّة "
+         "id": "s1",
+         "text": [
+          {
+           "text": "عند كل خلية تقارن العملية قيمتها بقيمة ابنها الأيسر ثم بقيمة ابنها الأيمن. الابن الذي يساوي أباه تُستدعى عليه "
+          },
+          {
+           "text": "What2",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
         },
         {
-         "text": "What3",
-         "dir": "ltr"
+         "id": "s2",
+         "text": [
+          {
+           "text": "الجذر 3: ابنه الأيسر 5 مختلف، وابنه الأيمن 3 "
+          },
+          {
+           "text": "يساويه",
+           "style": "strong"
+          },
+          {
+           "text": ". "
+          },
+          {
+           "text": "What2",
+           "dir": "ltr"
+          },
+          {
+           "text": " على هذا الابن: القيمة 3 موجودة في شجرته الفرعية (فيها 3 و5 و1) والقيمة 4 غير موجودة، فيصير 4."
+          }
+         ]
         },
         {
-         "text": ": تمرّ على كل الشجرة، وكل ابن قيمته "
+         "id": "s3",
+         "text": [
+          {
+           "text": "الخلية 5 (الابن الأيسر للجذر): ابنها الأيمن 5 "
+          },
+          {
+           "text": "يساويها",
+           "style": "strong"
+          },
+          {
+           "text": ". في شجرة هذا الابن القيم 5 و6 و3: القيمتان 5 و6 موجودتان و7 غير موجودة، فيصير 7."
+          }
+         ]
         },
         {
-         "text": "تساوي",
-         "style": "strong"
+         "id": "s4",
+         "text": [
+          {
+           "text": "في باقي الخلايا لا يوجد ابن يساوي أباه، فلا يتغيّر شيء."
+          }
+         ]
         },
         {
-         "text": " قيمة أبيه تغيّر قيمته بمساعدة "
+         "id": "s5",
+         "text": [
+          {
+           "text": "المهمّة: العملية تمرّ على كل الشجرة وتغيّر قيمة كل ابن يساوي أباه. في النهاية لا يبقى ابن قيمته تساوي قيمة أبيه."
+          }
+         ]
         },
         {
-         "text": "What2",
-         "dir": "ltr"
-        },
-        {
-         "text": ". في النهاية لا يبقى ابن يساوي أباه. العملية تزور كل خلية مرة واحدة، وقد تستدعي عندها "
-        },
-        {
-         "text": "What2",
-         "dir": "ltr"
-        },
-        {
-         "text": "، فدرجة تعقيدها لا تزيد على "
-        },
-        {
-         "text": "O(n³)",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
+         "id": "s6",
+         "text": [
+          {
+           "text": "درجة التعقيد: العملية تزور كل خلية مرة واحدة، وقد تستدعي عندها "
+          },
+          {
+           "text": "What2",
+           "dir": "ltr"
+          },
+          {
+           "text": " التي نجاعتها "
+          },
+          {
+           "text": "O(n²)",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فدرجة تعقيدها لا تزيد على "
+          },
+          {
+           "text": "O(n³)",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
         }
        ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p01-b17",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066What3\u2069 على الشجرة \u2066bt\u2069",
-       "description": "راقب الشجرة: متى تتغيّر قيمة خلية؟",
+       "result": [
+        {
+         "text": "الابن الأيمن للجذر يصير "
+        },
+        {
+         "text": "4",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والخلية 5 التي ابناها 6 و3 تصير "
+        },
+        {
+         "text": "7",
+         "dir": "ltr"
+        },
+        {
+         "text": ". باقي الخلايا لا تتغيّر."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}\n\npublic static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}\n\npublic static void What3(BinNode<int> bt)\n{\n    if (bt != null)\n    {\n       if(bt.GetLeft() != null &&\n         bt.GetValue() == bt.GetLeft().GetValue())\n         What2(bt.GetLeft());\n       if(bt.GetRight() != null &&\n          bt.GetValue() == bt.GetRight().GetValue())\n          What2(bt.GetRight());\n        What3(bt.GetLeft());\n        What3(bt.GetRight());\n    }\n}",
-        "given": "الشجرة `bt` التي في الرسم، والاستدعاء `What3(bt)`. استدعاءات `What2` تُنفّذ بدون تتبّع، كما يطلب السؤال.",
-        "out": "",
-        "steps": [
+        "trace": {
+         "code": "public static bool What1(BinNode<int> bt, int Val)\n{\n    if (bt == null) return false;\n    if (bt.GetValue() == Val) return true;\n    return What1(bt.GetLeft(), Val) || What1(bt.GetRight(), Val);\n}\n\npublic static void What2(BinNode<int> bt)\n{\n    int Temp = bt.GetValue();\n    while (What1(bt, Temp))\n        Temp++;\n    bt.SetValue(Temp);\n}\n\npublic static void What3(BinNode<int> bt)\n{\n    if (bt != null)\n    {\n       if(bt.GetLeft() != null &&\n         bt.GetValue() == bt.GetLeft().GetValue())\n         What2(bt.GetLeft());\n       if(bt.GetRight() != null &&\n          bt.GetValue() == bt.GetRight().GetValue())\n          What2(bt.GetRight());\n        What3(bt.GetLeft());\n        What3(bt.GetRight());\n    }\n}",
+         "given": "الشجرة `bt` التي في الرسم، والاستدعاء `What3(bt)`. استدعاءات `What2` تُنفّذ بدون تتبّع، كما يطلب السؤال.",
+         "out": "",
+         "steps": [
 {"l":16,"n":"تبدأ العملية `What3` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]},{"name":"What3","vars":[["bt",{"t":"ref","id":10}]]}],"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":1},{"id":3,"k":"bin","v":"6","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"bin","v":"5","l":2,"r":5},{"id":7,"k":"bin","v":"1","l":null,"r":null},{"id":8,"k":"bin","v":"5","l":null,"r":7},{"id":9,"k":"bin","v":"3","l":null,"r":8},{"id":10,"k":"bin","v":"3","l":6,"r":9}]},
 {"l":18,"n":"الشرط `bt != null` صحيح: ننفّذ ما بعد `if`.","o":0},
 {"l":20,"n":"الشرط `bt.GetLeft() != null && bt.GetValue() == bt.GetLeft().GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
@@ -5357,57 +6797,30 @@ const m06: ContentModule = {
 {"l":29,"n":"تنتهي العملية `What3` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"انتهى التنفيذ.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":10}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (106 خطوة)."
+        "text": "حل السؤال: عند كل خلية تقارن العملية قيمتها بقيمة ابنها الأيسر ثم بقيمة ابنها الأيمن. الابن الذي يساوي أباه تُستدعى عليه What2. الجذر 3: ابنه الأيسر 5 مختلف، وابنه الأيمن 3 يساويه. What2 على هذا الابن: القيمة 3 موجودة في شجرته الفرعية (فيها 3 و5 و1) والقيمة 4 غير موجودة، فيصير 4. الخلية 5 (الابن الأيسر للجذر): ابنها الأيمن 5 يساويها. في شجرة هذا الابن القيم 5 و6 و3: القيمتان 5 و6 موجودتان و7 غير موجودة، فيصير 7. في باقي الخلايا لا يوجد ابن يساوي أباه، فلا يتغيّر شيء. المهمّة: العملية تمرّ على كل الشجرة وتغيّر قيمة كل ابن يساوي أباه. في النهاية لا يبقى ابن قيمته تساوي قيمة أبيه. درجة التعقيد: العملية تزور كل خلية مرة واحدة، وقد تستدعي عندها What2 التي نجاعتها O(n²)، فدرجة تعقيدها لا تزيد على O(n³)."
        },
        "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m06-l07-p02",
-     "title": "أسئلة تتبّع (2): سؤالا 7 و24 من الكتاب",
-     "order": 2,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 287,
-      "pdfPageEnd": 303,
-      "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 287–303"
-     },
-     "keywords": [
-      "تتبّع",
-      "راصّة",
-      "مستوى خلية"
-     ],
-     "blocks": [
-      {
-       "id": "m06-l07-p02-b01",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 7 من الكتاب",
-       "prompt": "معطاة العمليات التالية والشجرة الثنائية \u2066bt\u2069.",
-       "steps": [
-        {
-         "text": "تتبّع تنفيذ العملية \u2066What1(bt,s)\u2069 بالنسبة للشجرة الثنائية \u2066bt\u2069 التالية والراصّة الفارغة \u2066s\u2069 بشكل مفصّل، واصفًا حالة الراصّة والقيم المُرجعة."
-        },
-        {
-         "text": "سجّل ادّعاءَي الدخول والخروج للعملية \u2066What1\u2069."
-        }
-       ],
-       "origin": "book"
       },
       {
-       "id": "m06-l07-p02-b02",
+       "id": "m06-l07-p02-b23",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066Walk\u2069: تمشيط براصّة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p02-b24",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static int What1(BinNode<int> t, Stack<int> st)\n{\n    if (t == null || (t.GetLeft() == null && t.GetRight() == null))\n        return 0;\n    if (t.GetLeft() != null && t.GetRight() != null)\n        return What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    else\n    {\n        st.Push(t.GetValue());\n        return 1 + What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    }\n}\nstatic void Main(string[] args)\n{\n    Stack<int> s = new Stack<int>();\n    Console.WriteLine(What1(bt, s));\n    Console.WriteLine(s);\n}",
-       "origin": "book"
+       "code": "public static void Walk(BinNode<int> bt)\n{\n    Stack<BinNode<int>> st = new Stack<BinNode<int>>();\n    st.Push(bt);\n    while (!st.IsEmpty())\n    {\n        BinNode<int> t = st.Pop();\n        Console.Write(t.GetValue() + \" \");\n        if (t.HasRight())\n            st.Push(t.GetRight());\n        if (t.HasLeft())\n            st.Push(t.GetLeft());\n    }\n}",
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p02-b03",
+       "id": "m06-l07-p02-b25",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -5420,21 +6833,13 @@ const m06: ContentModule = {
          {
           "kind": "tree",
           "tree": [
-           86,
+           5,
            [
-            82,
-            null,
-            [
-             76,
-             78,
-             null
-            ]
+            3,
+            2,
+            4
            ],
-           [
-            70,
-            66,
-            null
-           ]
+           7
           ],
           "pointers": [
            [
@@ -5451,379 +6856,174 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p02-b04",
-       "type": "text",
-       "spans": [
-        {
-         "text": "في "
-        },
-        {
-         "text": "Main",
-         "dir": "ltr"
-        },
-        {
-         "text": " الشجرة "
-        },
-        {
-         "text": "bt",
-         "dir": "ltr"
-        },
-        {
-         "text": " معطاة: هي الشجرة التي في الرسم."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b05",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما العدد الذي يطبعه الأمر \u2066Console.WriteLine(What1(bt, s));\u2069؟",
-        "answer": "3",
-        "feedback": {
-         "explanation": "الخلايا التي لها ابن واحد فقط هي 82 و76 و70، وكل واحدة منها تضيف 1. الجذر 86 له ابنان فلا يُعدّ، والورقتان 78 و66 تعيدان 0."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b06",
+       "id": "m06-l07-p02-b26",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "ماذا يطبع الأمر \u2066Console.WriteLine(s);\u2069 بعد ذلك؟",
+        "prompt": "ماذا تطبع \u2066Walk(bt)\u2069 للشجرة التي في الرسم؟ القيم مكتوبة بالترتيب من اليسار.",
         "options": [
          {
           "id": "o1",
-          "text": "\u2066[82,76,70]\u2069"
+          "text": "\u2066[5,3,7,2,4]\u2069"
          },
          {
           "id": "o2",
-          "text": "\u2066[70,76,82]\u2069",
+          "text": "\u2066[5,3,2,4,7]\u2069",
           "correct": true
          },
          {
           "id": "o3",
-          "text": "\u2066[86,82,70]\u2069"
+          "text": "\u2066[2,3,4,5,7]\u2069"
          },
          {
           "id": "o4",
-          "text": "\u2066[66,78]\u2069"
+          "text": "\u2066[5,7,3,4,2]\u2069"
          }
         ],
         "feedback": {
-         "explanation": "القيم تُدفع بترتيب الزيارة: 82 ثم 76 (في الشجرة اليسرى) ثم 70. آخر ما دُفع هو رأس الراصّة، فتُطبع \u2066[70,76,82]\u2069."
+         "explanation": "الراصّة تُخرج آخر ما دخل. الابن الأيمن يُدفع أولًا ثم الأيسر، فيخرج الأيسر أولًا وتُطبع شجرته الفرعية كلها قبل أن يخرج الأيمن."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p02-b07",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m06-l07-p02-b27",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع سؤال 7",
-       "description": "راقب الراصّة: أي خلايا تُدفع قيمها؟",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
-        "interactive": true
-       },
-       "config": {
-        "code": "public static int What1(BinNode<int> t, Stack<int> st)\n{\n    if (t == null || (t.GetLeft() == null && t.GetRight() == null))\n        return 0;\n    if (t.GetLeft() != null && t.GetRight() != null)\n        return What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    else\n    {\n        st.Push(t.GetValue());\n        return 1 + What1(t.GetLeft(), st) + What1(t.GetRight(), st);\n    }\n}",
-        "given": "الشجرة `bt` التي في الرسم والراصّة الفارغة `s`، ثم أوامر `Main`.",
-        "out": "3\n[70,76,82]\n",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `86`، `st` = الراصّة `[]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":[]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `82`، `st` = الراصّة `[]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":9,"n":"ندخل `82` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":["82"]}]},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = `null`، `st` = الراصّة `[82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"null"}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `76`، `st` = الراصّة `[82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":9,"n":"ندخل `76` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":["76","82"]}]},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `78`، `st` = الراصّة `[76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":1}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = `null`، `st` = الراصّة `[76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"null"}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
-{"l":10,"n":"العملية `What1` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":2}],["st",{"t":"ref","id":7}]]}]},
-{"l":10,"n":"العملية `What1` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":3}],["st",{"t":"ref","id":7}]]}]},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `70`، `st` = الراصّة `[76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":5,"n":"الشرط `t.GetLeft() != null && t.GetRight() != null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":9,"n":"ندخل `70` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"78","l":null,"r":null},{"id":2,"k":"bin","v":"76","l":1,"r":null},{"id":3,"k":"bin","v":"82","l":null,"r":2},{"id":4,"k":"bin","v":"66","l":null,"r":null},{"id":5,"k":"bin","v":"70","l":4,"r":null},{"id":6,"k":"bin","v":"86","l":3,"r":5},{"id":7,"k":"stack","items":["70","76","82"]}]},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = الخلية التي قيمتها `66`، `st` = الراصّة `[70,76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":4}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `t` = `null`، `st` = الراصّة `[70,76,82]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"null"}],["st",{"t":"ref","id":7}]]}]},
-{"l":3,"n":"الشرط `t == null || (t.GetLeft() == null && t.GetRight() == null)` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `What1` تُعيد `0`.","o":0},
-{"l":10,"n":"العملية `What1` تُعيد `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":5}],["st",{"t":"ref","id":7}]]}]},
-{"l":6,"n":"العملية `What1` تُعيد `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]},{"name":"What1","vars":[["t",{"t":"ref","id":6}],["st",{"t":"ref","id":7}]]}]},
-{"l":0,"n":"نطبع: `3`. نطبع: `[70,76,82]`. انتهى التنفيذ.","o":13,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}],["s",{"t":"ref","id":7}]]}]}
-]
-       },
-       "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (35 خطوة)؛ ناتج البرنامج: 3 ↵ [70,76,82]."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b08",
-       "type": "text",
-       "spans": [
-        {
-         "text": "ادّعاء الدخول:",
-         "style": "strong"
-        },
-        {
-         "text": " تتلقّى العملية جذر شجرة ثنائية "
-        },
-        {
-         "text": "t",
-         "dir": "ltr"
-        },
-        {
-         "text": " وراصّة "
-        },
-        {
-         "text": "st",
-         "dir": "ltr"
-        },
-        {
-         "text": ". "
-        },
-        {
-         "text": "ادّعاء الخروج:",
-         "style": "strong"
-        },
-        {
-         "text": " تعيد عدد الخلايا التي لها "
-        },
-        {
-         "text": "ابن واحد بالضبط",
-         "style": "strong"
-        },
-        {
-         "text": "، وتُدخل قيم هذه الخلايا إلى الراصّة."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b09",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 24 من الكتاب",
-       "prompt": "معطاة العمليتان التاليتان والشجرة التالية \u2066bt\u2069 – قيمها لا تتكرّر.",
+       "title": "حل سؤال 5 — \u2066Walk\u2069",
        "steps": [
         {
-         "text": "تتبّع الاستدعاء \u2066What1(bt, 8)\u2069 وحدّد ماذا يُعاد."
+         "id": "s1",
+         "text": [
+          {
+           "text": "ندفع الجذر. في كل دورة نُخرج خلية من رأس الراصّة ونطبع قيمتها، ثم ندفع ابنها الأيمن ثم ابنها الأيسر."
+          }
+         ]
         },
         {
-         "text": "ما هي مهمّة العملية \u2066What1\u2069؟"
+         "id": "s2",
+         "text": [
+          {
+           "text": "تخرج 5 وتُطبع، وتُدفع 7 ثم 3: الخلية 3 في الرأس."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "تخرج 3 وتُطبع، وتُدفع 4 ثم 2. تخرج 2 ثم 4 (ورقتان)."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الخلية 7 بقيت في قاع الراصّة كل هذا الوقت، وتخرج في النهاية."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "قارن بالعملية "
+          },
+          {
+           "text": "LevelsOrder",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الكود نفسه تقريبًا، لكن مع "
+          },
+          {
+           "text": "دور",
+           "style": "strong"
+          },
+          {
+           "text": " نحصل على تمشيط بحسب المستوى، ومع "
+          },
+          {
+           "text": "راصّة",
+           "style": "strong"
+          },
+          {
+           "text": " نحصل على تمشيط بحسب العمق."
+          }
+         ]
         }
        ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p02-b10",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int What1(BinNode<int> bt, int V)\n{\n    return What2(bt, V, 1) - 1;\n}\n\npublic static int What2(BinNode<int> bt, int V, int X)\n{\n    if (bt == null)\n        return 0;\n    if (bt.GetValue() == V)\n        return X;\n    int Y = What2(bt.GetLeft(), V, X + 1);\n    if (Y != 0)\n        return Y;\n    Y = What2(bt.GetRight(), V, X + 1);\n    return Y;\n}",
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p02-b11",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "الشجرة \u2066bt\u2069",
+       "result": [
+        {
+         "text": "تُطبع القيم "
+        },
+        {
+         "text": "5 3 2 4 7",
+         "dir": "ltr"
+        },
+        {
+         "text": ": هذا تمشيط بَدْئي ("
+        },
+        {
+         "text": "Preorder",
+         "dir": "ltr"
+        },
+        {
+         "text": ") بدون تراجعية."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           3,
-           [
-            1,
-            0,
-            null
-           ],
-           [
-            5,
-            4,
-            [
-             8,
-             7,
-             null
-            ]
-           ]
-          ],
-          "pointers": [
-           [
-            "bt",
-            ""
-           ]
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b12",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي يعيدها \u2066What1(bt, 8)\u2069؟",
-        "answer": "2",
-        "feedback": {
-         "explanation": "\u2066What2\u2069 تبدأ بالقيمة \u2066X = 1\u2069 عند الجذر، وتزيد \u2066X\u2069 بواحد مع كل نزول. القيمة 8 في المستوى 2، فهناك \u2066X = 3\u2069، وتُعاد 3. ثم \u2066What1\u2069 تطرح 1: النتيجة 2."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b13",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "وما القيمة التي يعيدها \u2066What1(bt, 6)\u2069؟ (القيمة 6 غير موجودة في الشجرة)",
-        "answer": "-1",
-        "feedback": {
-         "explanation": "حين لا توجد القيمة تعيد \u2066What2\u2069 العدد 0 من كل الاستدعاءات، فتعيد \u2066What1\u2069 القيمة \u20660 - 1\u2069، أي \u2066-1\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b14",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما مهمّة العملية \u2066What1\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تعيد عدد الخلايا التي قيمتها أصغر من \u2066V\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "تعيد ارتفاع الشجرة"
-         },
-         {
-          "id": "o3",
-          "text": "تعيد رقم المستوى الذي فيه الخلية التي قيمتها \u2066V\u2069، وتعيد \u2066-1\u2069 إذا لم توجد",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "تعيد عدد أبناء الخلية التي قيمتها \u2066V\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "\u2066X\u2069 يعدّ الخلايا في المسار من الجذر إلى الخلية الحالية. عند إيجاد القيمة يُعاد \u2066X\u2069، وبعد طرح 1 نحصل على رقم المستوى: الجذر في المستوى 0."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p02-b15",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066What1(bt, 8)\u2069",
-       "description": "البحث يبدأ في الشجرة الفرعية اليسرى. متى ينتقل إلى اليمنى؟",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static int What1(BinNode<int> bt, int V)\n{\n    return What2(bt, V, 1) - 1;\n}\n\npublic static int What2(BinNode<int> bt, int V, int X)\n{\n    if (bt == null)\n        return 0;\n    if (bt.GetValue() == V)\n        return X;\n    int Y = What2(bt.GetLeft(), V, X + 1);\n    if (Y != 0)\n        return Y;\n    Y = What2(bt.GetRight(), V, X + 1);\n    return Y;\n}",
-        "given": "الشجرة `bt` التي في الرسم، والاستدعاء `What1(bt, 8)`.",
-        "out": "2\n",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `What1` مع `bt` = الخلية التي قيمتها `3`، `V = 8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]}],"h":[{"id":1,"k":"bin","v":"0","l":null,"r":null},{"id":2,"k":"bin","v":"1","l":1,"r":null},{"id":3,"k":"bin","v":"4","l":null,"r":null},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"8","l":4,"r":null},{"id":6,"k":"bin","v":"5","l":3,"r":5},{"id":7,"k":"bin","v":"3","l":2,"r":6}]},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `3`، `V = 8`، `X = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]}]},
-{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `1`، `V = 8`، `X = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]}]},
-{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `0`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
-{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
-{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
-{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":15,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":1}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":16,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
-{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":15,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":2}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":16,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `5`، `V = 8`، `X = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]}]},
-{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `4`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
-{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":10,"n":"الشرط `bt.GetValue() == V` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
-{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = `null`، `V = 8`، `X = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"null"}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"4"}]]}]},
-{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":15,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":3}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":16,"n":"العملية `What2` تُعيد `0`.","o":0},
-{"l":12,"n":"`Y = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]}]},
-{"l":13,"n":"الشرط `Y != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":6,"n":"تبدأ العملية `What2` مع `bt` = الخلية التي قيمتها `8`، `V = 8`، `X = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":5}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"3"}]]}]},
-{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":10,"n":"الشرط `bt.GetValue() == V` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":11,"n":"العملية `What2` تُعيد `3`.","o":0},
-{"l":15,"n":"`Y = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"0"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":6}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"2"}],["Y",{"t":"v","s":"3"}]]}]},
-{"l":16,"n":"العملية `What2` تُعيد `3`.","o":0},
-{"l":15,"n":"`Y = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]},{"name":"What2","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}],["X",{"t":"v","s":"1"}],["Y",{"t":"v","s":"3"}]]}]},
-{"l":16,"n":"العملية `What2` تُعيد `3`.","o":0},
-{"l":3,"n":"العملية `What1` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"What1","vars":[["bt",{"t":"ref","id":7}],["V",{"t":"v","s":"8"}]]}]},
-{"l":0,"n":"نطبع: `2`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+        "trace": {
+         "code": "public static void Walk(BinNode<int> bt)\n{\n    Stack<BinNode<int>> st = new Stack<BinNode<int>>();\n    st.Push(bt);\n    while (!st.IsEmpty())\n    {\n        BinNode<int> t = st.Pop();\n        Console.Write(t.GetValue() + \" \");\n        if (t.HasRight())\n            st.Push(t.GetRight());\n        if (t.HasLeft())\n            st.Push(t.GetLeft());\n    }\n}",
+         "given": "الشجرة `bt` التي في الرسم (جذرها 5)، والاستدعاء `Walk(bt)`.",
+         "out": "5 3 2 4 7 ",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Walk` مع `bt` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4}]},
+{"l":3,"n":"ننشئ راصّة فارغة باسم `st`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":[]}]},
+{"l":4,"n":"ندخل `5` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["5"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"نخرج `5` من رأس الراصّة `st`. `t` يشير الآن إلى الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}],["t",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":[]}]},
+{"l":8,"n":"نطبع: `5 ` (بلا سطر جديد).","o":2},
+{"l":9,"n":"الشرط `t.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":2},
+{"l":10,"n":"ندخل `7` إلى رأس الراصّة `st`.","o":2,"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["7"]}]},
+{"l":11,"n":"الشرط `t.HasLeft()` صحيح: ننفّذ ما بعد `if`.","o":2},
+{"l":12,"n":"ندخل `3` إلى رأس الراصّة `st`.","o":2,"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["3","7"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}]]}]},
+{"l":7,"n":"نخرج `3` من رأس الراصّة `st`. `t` يشير الآن إلى الخلية التي قيمتها `3`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}],["t",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["7"]}]},
+{"l":8,"n":"نطبع: `3 ` (بلا سطر جديد).","o":4},
+{"l":9,"n":"الشرط `t.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":4},
+{"l":10,"n":"ندخل `4` إلى رأس الراصّة `st`.","o":4,"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["4","7"]}]},
+{"l":11,"n":"الشرط `t.HasLeft()` صحيح: ننفّذ ما بعد `if`.","o":4},
+{"l":12,"n":"ندخل `2` إلى رأس الراصّة `st`.","o":4,"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["2","4","7"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":4,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}]]}]},
+{"l":7,"n":"نخرج `2` من رأس الراصّة `st`. `t` يشير الآن إلى الخلية التي قيمتها `2`.","o":4,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}],["t",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["4","7"]}]},
+{"l":8,"n":"نطبع: `2 ` (بلا سطر جديد).","o":6},
+{"l":9,"n":"الشرط `t.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":6},
+{"l":11,"n":"الشرط `t.HasLeft()` خطأ: نتخطّى ما بعد `if`.","o":6},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}]]}]},
+{"l":7,"n":"نخرج `4` من رأس الراصّة `st`. `t` يشير الآن إلى الخلية التي قيمتها `4`.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}],["t",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":["7"]}]},
+{"l":8,"n":"نطبع: `4 ` (بلا سطر جديد).","o":8},
+{"l":9,"n":"الشرط `t.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":8},
+{"l":11,"n":"الشرط `t.HasLeft()` خطأ: نتخطّى ما بعد `if`.","o":8},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":8,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}]]}]},
+{"l":7,"n":"نخرج `7` من رأس الراصّة `st`. `t` يشير الآن إلى الخلية التي قيمتها `7`.","o":8,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}],["t",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4},{"id":6,"k":"stack","items":[]}]},
+{"l":8,"n":"نطبع: `7 ` (بلا سطر جديد).","o":10},
+{"l":9,"n":"الشرط `t.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":10},
+{"l":11,"n":"الشرط `t.HasLeft()` خطأ: نتخطّى ما بعد `if`.","o":10},
+{"l":5,"n":"الشرط `!st.IsEmpty()` خطأ: نخرج من الحلقة.","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Walk","vars":[["bt",{"t":"ref","id":5}],["st",{"t":"ref","id":6}]]}]},
+{"l":14,"n":"تنتهي العملية `Walk` ونعود إلى من استدعاها.","o":10},
+{"l":0,"n":"انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":3,"r":4}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (57 خطوة)؛ ناتج البرنامج: 2."
+        "text": "حل السؤال: ندفع الجذر. في كل دورة نُخرج خلية من رأس الراصّة ونطبع قيمتها، ثم ندفع ابنها الأيمن ثم ابنها الأيسر. تخرج 5 وتُطبع، وتُدفع 7 ثم 3: الخلية 3 في الرأس. تخرج 3 وتُطبع، وتُدفع 4 ثم 2. تخرج 2 ثم 4 (ورقتان). الخلية 7 بقيت في قاع الراصّة كل هذا الوقت، وتخرج في النهاية. قارن بالعملية LevelsOrder: الكود نفسه تقريبًا، لكن مع دور نحصل على تمشيط بحسب المستوى، ومع راصّة نحصل على تمشيط بحسب العمق."
        },
        "origin": "teacher-enrichment"
       }
@@ -5831,21 +7031,21 @@ const m06: ContentModule = {
     },
     {
      "id": "899271d-m06-l07-p03",
-     "title": "أسئلة كتابة: اكتب العملية",
+     "title": "أسئلة كتابة محلولة",
      "order": 3,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
-      "pdfPageStart": 282,
-      "pdfPageEnd": 302,
-      "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 282–302"
+      "pdfPageStart": 243,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
      },
      "keywords": [
       "كتابة عملية",
+      "أسئلة محلولة",
       "أوراق",
+      "Mirror",
       "HasPathSum",
-      "CountIsJud",
-      "مرآة"
+      "CountIsJud"
      ],
      "blocks": [
       {
@@ -5853,29 +7053,241 @@ const m06: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "اكتب كل عملية في دفترك أو في محرّر الكود "
+         "text": "خمسة أسئلة كتابة "
         },
         {
-         "text": "قبل",
+         "text": "محلولة",
          "style": "strong"
         },
         {
-         "text": " أن تنتقل إلى الصفحة التالية، ففيها الحلول مع تتبّعها. الأسئلة الأربعة من تمارين الكتاب."
+         "text": "، مرتّبة من الأسهل إلى الأصعب. اكتب حلّك في الدفتر أولًا، ثم قارنه بالحل وبقائمة «ما يُفحص في الحل». أربعة منها من تمارين الكتاب."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m06-l07-p03-b02",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 2 من الكتاب",
-       "prompt": "اكتب عملية تتلقّى كبارامترات شجرة ثنائية من نوع \u2066int\u2069 أي \u2066BinNode<int>\u2069 وعددًا صحيحًا \u2066Sum\u2069. العملية تعيد \u2066true\u2069 إذا كان حاصل جمع قيم جميع الأوراق مساويًا لـ \u2066Sum\u2069. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: بالنسبة للشجرة التالية و \u2066Sum = 9\u2069 تعيد العملية \u2066true\u2069 لأنّ \u2066-6 + 8 + 7 = 9\u2069.",
-       "steps": [],
-       "origin": "book"
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066CountGreater\u2069",
+       "origin": "teacher-enrichment"
       },
       {
        "id": "m06-l07-p03-b03",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066CountGreater\u2069 التي تتلقّى جذر شجرة ثنائية \u2066bt\u2069 من نوع \u2066BinNode<int>\u2069 وعددًا صحيحًا \u2066x\u2069، وتعيد عدد الخلايا التي قيمتها أكبر من \u2066x\u2069. مثال: للشجرة التي في الرسم و \u2066x = 6\u2069 تعيد العملية 2.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b04",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة المثال",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           5,
+           [
+            8,
+            2,
+            null
+           ],
+           9
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
+          "hi": [
+           "L",
+           "R"
+          ],
+          "label": "الخليتان المظلّلتان أكبر من 6"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (الخليتان المظلّلتان أكبر من 6)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b05",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int CountGreater(BinNode<int> bt, int x)\n{\n    if (bt == null)\n        return 0;\n    int count = CountGreater(bt.GetLeft(), x) + CountGreater(bt.GetRight(), x);\n    if (bt.GetValue() > x)\n        count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b06",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "شرط التوقّف: الشجرة الفارغة تعيد 0."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "استدعاء العملية للشجرة الفرعية اليسرى "
+          },
+          {
+           "text": "و",
+           "style": "strong"
+          },
+          {
+           "text": "لليمنى، وجمع النتيجتين."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "إضافة 1 فقط إذا كانت قيمة الخلية الحالية أكبر من "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "إعادة العدّاد في نهاية العملية."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b07",
+       "type": "text",
+       "spans": [
+        {
+         "text": "هذا هو القالب نفسه للعملية "
+        },
+        {
+         "text": "NumOfTreeNodes",
+         "dir": "ltr"
+        },
+        {
+         "text": "، مع شرط: الخلية لا تعدّ نفسها إلا إذا كانت قيمتها أكبر من "
+        },
+        {
+         "text": "x",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b08",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int CountGreater(BinNode<int> bt, int x)\n{\n    if (bt == null)\n        return 0;\n    int count = CountGreater(bt.GetLeft(), x) + CountGreater(bt.GetRight(), x);\n    if (bt.GetValue() > x)\n        count++;\n    return count;\n}",
+        "given": "شجرة المثال (جذرها 5)، والاستدعاء `CountGreater(bt, 6)`.",
+        "out": "2\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = الخلية التي قيمتها `5`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"8","l":1,"r":null},{"id":3,"k":"bin","v":"9","l":null,"r":null},{"id":4,"k":"bin","v":"5","l":2,"r":3}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = الخلية التي قيمتها `8`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = الخلية التي قيمتها `2`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":1}],["x",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = `null`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":1}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"null"}],["x",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountGreater` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = `null`، `x = 6`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountGreater` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":1}],["x",{"t":"v","s":"6"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":6,"n":"الشرط `bt.GetValue() > x` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `CountGreater` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = `null`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"null"}],["x",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountGreater` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":6,"n":"الشرط `bt.GetValue() > x` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":2}],["x",{"t":"v","s":"6"}],["count",{"t":"v","s":"1"}]]}]},
+{"l":8,"n":"العملية `CountGreater` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = الخلية التي قيمتها `9`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":3}],["x",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = `null`، `x = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":3}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"null"}],["x",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountGreater` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountGreater` مع `bt` = `null`، `x = 6`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountGreater` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":3}],["x",{"t":"v","s":"6"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":6,"n":"الشرط `bt.GetValue() > x` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":3}],["x",{"t":"v","s":"6"}],["count",{"t":"v","s":"1"}]]}]},
+{"l":8,"n":"العملية `CountGreater` تُعيد `1`.","o":0},
+{"l":5,"n":"`count = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountGreater","vars":[["bt",{"t":"ref","id":4}],["x",{"t":"v","s":"6"}],["count",{"t":"v","s":"2"}]]}]},
+{"l":6,"n":"الشرط `bt.GetValue() > x` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `CountGreater` تُعيد `2`.","o":0},
+{"l":0,"n":"نطبع: `2`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (38 خطوة)؛ ناتج البرنامج: 2."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b09",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — مجموع الأوراق: سؤال 2 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b10",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 2 من الكتاب (ص 282)",
+       "prompt": "اكتب عملية تتلقّى كبارامترات شجرة ثنائية من نوع \u2066int\u2069 أي \u2066BinNode<int>\u2069 وعددًا صحيحًا \u2066Sum\u2069. العملية تعيد \u2066true\u2069 إذا كان حاصل جمع قيم جميع الأوراق مساويًا لـ \u2066Sum\u2069. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: بالنسبة للشجرة التالية و \u2066Sum = 9\u2069 تعيد العملية \u2066true\u2069 لأنّ \u2066-6 + 8 + 7 = 9\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b11",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -5904,6 +7316,12 @@ const m06: ContentModule = {
             ]
            ]
           ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
           "hi": [
            "LL",
            "RL",
@@ -5919,509 +7337,7 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p03-b04",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsLeavesSum(BinNode<int> bt, int Sum)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b05",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 10 من الكتاب",
-       "steps": [
-        {
-         "text": "اكتب عملية باسم \u2066IsJud\u2069 تتلقّى شجرة ثنائية من الأعداد الصحيحة وترجع \u2066true\u2069 إن كان «جدًّا» (أي له ابن ولابنه ابن) و \u2066false\u2069 خلاف ذلك."
-        },
-        {
-         "text": "اكتب عملية \u2066CountIsJud\u2069 تتلقّى شجرة ثنائية من الأعداد الصحيحة وترجع عدد الأجداد في الشجرة."
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b06",
-       "type": "text",
-       "spans": [
-        {
-         "text": "مثلًا في الشجرة التالية هنالك 4 أجداد:",
-         "style": "strong"
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b07",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "شجرة سؤال 10",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           1,
-           [
-            2,
-            [
-             3,
-             null,
-             [
-              4,
-              null,
-              5
-             ]
-            ],
-            null
-           ],
-           [
-            6,
-            [
-             7,
-             null,
-             8
-            ],
-            9
-           ]
-          ],
-          "hi": [
-           "",
-           "L",
-           "LL",
-           "R"
-          ],
-          "label": "الأجداد الأربعة مظلّلون"
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية (الأجداد الأربعة مظلّلون)."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b08",
-       "type": "callout",
-       "kind": "clarification",
-       "title": "سؤال 10",
-       "spans": [
-        {
-         "text": "المقصود في البند الأول: "
-        },
-        {
-         "text": "جذر",
-         "style": "strong"
-        },
-        {
-         "text": " الشجرة التي تتلقّاها العملية هو «جدّ» إذا كان له ابن، ولهذا الابن ابن. في رسم الكتاب الخلايا بلا قيم؛ الأرقام هنا للتمييز بين الخلايا فقط."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b09",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsJud(BinNode<int> bt)\n{\n    // اكتب هنا\n}\n\npublic static int CountIsJud(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b10",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 11 من الكتاب",
-       "prompt": "اكتب عملية باسم \u2066HasPathSum\u2069 تتلقّى كبارامتر جذر شجرة ثنائية \u2066bt\u2069 من نوع \u2066BinNode<int>\u2069 وعددًا صحيحًا \u2066Sum\u2069. العملية تعيد \u2066true\u2069 إذا وجدت مسارًا واحدًا على الأقل حاصل جمع قيم خلاياه يساوي العدد \u2066Sum\u2069. خلاف ذلك تعيد العملية \u2066false\u2069.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b11",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "شجرة سؤال 11",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           10,
-           [
-            8,
-            3,
-            5
-           ],
-           [
-            2,
-            2,
-            null
-           ]
-          ],
-          "pointers": [
-           [
-            "bt",
-            ""
-           ]
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
        "id": "m06-l07-p03-b12",
-       "type": "list",
-       "variant": "plain",
-       "title": "مثال: بالنسبة للشجرة أعلاه تعيد الاستدعاءات التالية \u2066true\u2069",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "HasPathSum(bt, 21)",
-           "dir": "ltr"
-          },
-          {
-           "text": " لأنّ "
-          },
-          {
-           "text": "3 + 8 + 10 = 21",
-           "dir": "ltr"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "HasPathSum(bt, 23)",
-           "dir": "ltr"
-          },
-          {
-           "text": " لأنّ "
-          },
-          {
-           "text": "5 + 8 + 10 = 23",
-           "dir": "ltr"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "HasPathSum(bt, 14)",
-           "dir": "ltr"
-          },
-          {
-           "text": " لأنّ "
-          },
-          {
-           "text": "2 + 2 + 10 = 14",
-           "dir": "ltr"
-          }
-         ]
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b13",
-       "type": "callout",
-       "kind": "clarification",
-       "title": "سؤال 11",
-       "spans": [
-        {
-         "text": "السؤال لا يقول أين يبدأ المسار وأين ينتهي. في الأمثلة الثلاثة يبدأ المسار من "
-        },
-        {
-         "text": "الجذر",
-         "style": "strong"
-        },
-        {
-         "text": " وينتهي عند "
-        },
-        {
-         "text": "ورقة",
-         "style": "strong"
-        },
-        {
-         "text": "، وهذا هو المعنى الذي نعتمده في الحل."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b14",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool HasPathSum(BinNode<int> bt, int Sum)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b15",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 23 من الكتاب",
-       "steps": [
-        {
-         "text": "اكتب عملية خارجية تتلقّى شجرتين ثنائيتين \u2066bt1\u2069 و \u2066bt2\u2069 تحويان أعدادًا صحيحة. العملية تُعيد \u2066true\u2069 إذا كانت \u2066bt2\u2069 مرآة لـ \u2066bt1\u2069. خلاف ذلك تُعيد العملية \u2066false\u2069."
-        },
-        {
-         "text": "ما هي درجة نجاعة زمن تشغيل العملية من القسم أ؟ اشرح."
-        },
-        {
-         "text": "اكتب عملية خارجية تتلقّى شجرة ثنائية \u2066bt\u2069 تحوي أعدادًا صحيحة. العملية تُنشئ وتُعيد شجرة ثنائية جديدة هي مرآة لـ \u2066bt\u2069."
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b16",
-       "type": "callout",
-       "kind": "warning",
-       "title": "لاحظ",
-       "spans": [
-        {
-         "text": "الجذر يبقى في شجرة المرآة كما هو، وكل ابن أيسر يُصبح ابنًا أيمن، والعكس أيضًا: كل ابن أيمن يُصبح ابنًا أيسر، وهكذا بالنسبة لكل الشجرة."
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b17",
-       "type": "text",
-       "spans": [
-        {
-         "text": "أمامك أمثلة لأزواج من الأشجار الثنائية حيث كل واحدة مرآة للأخرى:"
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m06-l07-p03-b18",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "سؤال 23: الزوج الأول",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           1,
-           [
-            2,
-            4,
-            5
-           ],
-           [
-            3,
-            6,
-            7
-           ]
-          ]
-         },
-         {
-          "kind": "tree",
-          "tree": [
-           1,
-           [
-            3,
-            7,
-            6
-           ],
-           [
-            2,
-            5,
-            4
-           ]
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية؛ شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b19",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "سؤال 23: الزوج الثاني",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           1,
-           2,
-           [
-            3,
-            6,
-            7
-           ]
-          ]
-         },
-         {
-          "kind": "tree",
-          "tree": [
-           1,
-           [
-            3,
-            7,
-            6
-           ],
-           2
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية؛ شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b20",
-       "type": "callout",
-       "kind": "clarification",
-       "title": "سؤال 23",
-       "spans": [
-        {
-         "text": "البنود في الكتاب مرقّمة بالأرقام، لكنّ البند الثاني يقول «القسم أ». المقصود: العملية التي كتبتها في البند الأول."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b21",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool AreMirror(BinNode<int> bt1, BinNode<int> bt2)\n{\n    // اكتب هنا\n}\n\npublic static BinNode<int> Mirror(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p03-b22",
-       "type": "list",
-       "variant": "checklist",
-       "title": "افحص حلّك قبل أن ترى الحل",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "هل للعملية شرط توقّف يعالج الشجرة الفارغة ("
-          },
-          {
-           "text": "null",
-           "dir": "ltr"
-          },
-          {
-           "text": ")؟"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "هل تفحص وجود الابن قبل أن تستدعي عليه "
-          },
-          {
-           "text": "GetValue()",
-           "dir": "ltr"
-          },
-          {
-           "text": "؟"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "هل تستدعي العملية نفسها للشجرة الفرعية اليسرى "
-          },
-          {
-           "text": "وأيضًا",
-           "style": "strong"
-          },
-          {
-           "text": " لليمنى؟"
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "هل تعيد العملية قيمة في "
-          },
-          {
-           "text": "كل",
-           "style": "strong"
-          },
-          {
-           "text": " مسار ممكن في الكود؟"
-          }
-         ]
-        }
-       ],
-       "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m06-l07-p04",
-     "title": "حلول أسئلة الكتابة",
-     "order": 4,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 243,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
-     },
-     "keywords": [
-      "حلول",
-      "SumOfLeaves",
-      "CountIsJud",
-      "HasPathSum",
-      "Mirror"
-     ],
-     "blocks": [
-      {
-       "id": "m06-l07-p04-b01",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 2 — مجموع الأوراق",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b02",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6429,7 +7345,7 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b03",
+       "id": "m06-l07-p03-b13",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -6484,60 +7400,56 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b04",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "شجرة سؤال 2",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           3,
-           [
-            -1,
-            -6,
-            null
-           ],
-           [
-            5,
-            8,
-            [
-             -1,
-             7,
-             null
-            ]
-           ]
-          ],
-          "pointers": [
-           [
-            "bt",
-            ""
-           ]
-          ],
-          "hi": [
-           "LL",
-           "RL",
-           "RRL"
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
+       "id": "m06-l07-p03-b14",
+       "type": "text",
+       "spans": [
+        {
+         "text": "نقسم العمل: "
+        },
+        {
+         "text": "SumOfLeaves",
+         "dir": "ltr"
+        },
+        {
+         "text": " تحسب المجموع، و "
+        },
+        {
+         "text": "IsLeavesSum",
+         "dir": "ltr"
+        },
+        {
+         "text": " تقارنه بالعدد "
+        },
+        {
+         "text": "Sum",
+         "dir": "ltr"
+        },
+        {
+         "text": ". انتبه لشرط الورقة: العملية "
+        },
+        {
+         "text": "&&",
+         "dir": "ltr"
+        },
+        {
+         "text": " وليس "
+        },
+        {
+         "text": "||",
+         "dir": "ltr"
+        },
+        {
+         "text": "، وإلا تُحسب خلية ينقصها ابن واحد كأنها ورقة."
+        }
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b05",
+       "id": "m06-l07-p03-b15",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066IsLeavesSum\u2069 على شجرة السؤال",
+       "title": "تتبّع الحل",
        "description": "أي خلايا تعيد قيمتها، وأيها تعيد مجموع ما يعيده ابناها فقط؟",
        "capabilities": {
         "fullscreen": true,
@@ -6594,191 +7506,301 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b06",
-       "type": "text",
-       "spans": [
-        {
-         "text": "طالب كتب شرط الورقة بالعملية "
-        },
-        {
-         "text": "||",
-         "dir": "ltr"
-        },
-        {
-         "text": " بدل "
-        },
-        {
-         "text": "&&",
-         "dir": "ltr"
-        },
-        {
-         "text": ":"
-        }
-       ],
+       "id": "m06-l07-p03-b16",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066Mirror\u2069: سؤال 23 من الكتاب، البند الثالث",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b07",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int SumOfLeaves(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    if (!bt.HasLeft() || !bt.HasRight())\n        return bt.GetValue();\n    return SumOfLeaves(bt.GetLeft()) + SumOfLeaves(bt.GetRight());\n}",
+       "id": "m06-l07-p03-b17",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 23 من الكتاب (ص 302)، البند الثالث",
+       "prompt": "اكتب عملية خارجية تتلقّى شجرة ثنائية \u2066bt\u2069 تحوي أعدادًا صحيحة. العملية تُنشئ وتُعيد شجرة ثنائية جديدة هي مرآة لـ \u2066bt\u2069. في شجرة المرآة يبقى الجذر كما هو، وكل ابن أيسر يُصبح ابنًا أيمن، وكل ابن أيمن يُصبح ابنًا أيسر، وهكذا بالنسبة لكل الشجرة.",
+       "steps": [],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b08",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تعيد عملية الطالب لشجرة السؤال؟ (الصحيح 9)",
-        "options": [
+       "id": "m06-l07-p03-b18",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "مثال من الكتاب: كل شجرة مرآة للأخرى",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
          {
-          "id": "o1",
-          "text": "9"
+          "kind": "tree",
+          "tree": [
+           1,
+           2,
+           [
+            3,
+            6,
+            7
+           ]
+          ]
          },
          {
-          "id": "o2",
-          "text": "6",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "0"
-         },
-         {
-          "id": "o4",
-          "text": "خطأ في التشغيل"
+          "kind": "tree",
+          "tree": [
+           1,
+           [
+            3,
+            7,
+            6
+           ],
+           2
+          ]
          }
-        ],
-        "feedback": {
-         "explanation": "بالشرط \u2066||\u2069 تُعتبر كل خلية ينقصها ابن واحد ورقة. الخلية \u2066-1\u2069 اليسرى ينقصها ابن أيمن، فتُعاد قيمتها ولا نصل إلى الورقة \u2066-6\u2069. وكذلك الخلية \u2066-1\u2069 اليمنى تُعاد بدل الورقة 7. المجموع: \u2066-1 + 8 + -1 = 6\u2069."
-        }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية؛ شجرة ثنائية."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b09",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 10 — الأجداد",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b10",
+       "id": "m06-l07-p03-b19",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static bool HasChild(BinNode<int> bt)\n{\n    return bt != null && (bt.HasLeft() || bt.HasRight());\n}\n\npublic static bool IsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return false;\n    return HasChild(bt.GetLeft()) || HasChild(bt.GetRight());\n}\n\npublic static int CountIsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int Count = CountIsJud(bt.GetLeft()) + CountIsJud(bt.GetRight());\n    if (IsJud(bt))\n        Count++;\n    return Count;\n}",
+       "code": "public static BinNode<int> Mirror(BinNode<int> bt)\n{\n    if (bt == null)\n        return null;\n    return new BinNode<int>(Mirror(bt.GetRight()),\n                            bt.GetValue(),\n                            Mirror(bt.GetLeft()));\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b11",
-       "type": "text",
-       "spans": [
+       "id": "m06-l07-p03-b20",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
         {
-         "text": "العملية المساعدة "
+         "id": "i1",
+         "text": [
+          {
+           "text": "شجرة فارغة: مرآتها شجرة فارغة، فنعيد "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
         },
         {
-         "text": "HasChild",
-         "dir": "ltr"
+         "id": "i2",
+         "text": [
+          {
+           "text": "خلية "
+          },
+          {
+           "text": "جديدة",
+           "style": "strong"
+          },
+          {
+           "text": " لكل خلية، بالعملية البنائية التي تتلقّى ابنين: الشجرة الأصلية لا تتغيّر."
+          }
+         ]
         },
         {
-         "text": " تجيب عن سؤال واحد: هل الخلية موجودة ولها ابن واحد على الأقل؟ الجذر «جدّ» إذا كان أحد ابنيه كذلك. و "
-        },
-        {
-         "text": "CountIsJud",
-         "dir": "ltr"
-        },
-        {
-         "text": " تعدّ الأجداد في الشجرتين الفرعيتين، ثم تضيف 1 إذا كان الجذر نفسه جدًّا."
+         "id": "i3",
+         "text": [
+          {
+           "text": "في مكان الابن الأيسر نضع مرآة الشجرة الفرعية "
+          },
+          {
+           "text": "اليمنى",
+           "style": "strong"
+          },
+          {
+           "text": "، وفي مكان الابن الأيمن مرآة "
+          },
+          {
+           "text": "اليسرى",
+           "style": "strong"
+          },
+          {
+           "text": "."
+          }
+         ]
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b12",
+       "id": "m06-l07-p03-b21",
+       "type": "text",
+       "spans": [
+        {
+         "text": "لا يكفي أن نبدّل ابنَي الجذر: التبديل يجب أن يحدث في "
+        },
+        {
+         "text": "كل",
+         "style": "strong"
+        },
+        {
+         "text": " خلية. التراجعية تفعل ذلك وحدها، لأنّ كل شجرة فرعية تُبنى مرآتها بالطريقة نفسها."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b22",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066CountIsJud\u2069 على شجرة صغيرة",
-       "description": "الجذر وحده جدّ: ابنه 2 له ابن.",
+       "title": "تتبّع الحل",
+       "description": "الشجرة الأصلية لا تتغيّر، والشجرة الجديدة تُبنى من الأوراق صعودًا.",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static bool HasChild(BinNode<int> bt)\n{\n    return bt != null && (bt.HasLeft() || bt.HasRight());\n}\n\npublic static bool IsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return false;\n    return HasChild(bt.GetLeft()) || HasChild(bt.GetRight());\n}\n\npublic static int CountIsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int Count = CountIsJud(bt.GetLeft()) + CountIsJud(bt.GetRight());\n    if (IsJud(bt))\n        Count++;\n    return Count;\n}",
-        "given": "الشجرة `bt`: الجذر 1، ابنه الأيسر 2 (وله ابن أيسر 3)، وابنه الأيمن 4. الاستدعاء `CountIsJud(bt)`.",
-        "out": "1\n",
+        "code": "public static BinNode<int> Mirror(BinNode<int> bt)\n{\n    if (bt == null)\n        return null;\n    return new BinNode<int>(Mirror(bt.GetRight()),\n                            bt.GetValue(),\n                            Mirror(bt.GetLeft()));\n}",
+        "given": "الشجرة اليسرى في الرسم (جذرها 1). الأمر `BinNode<int> m = Mirror(bt);` ثم طباعة `m` بتمشيط بَدْئي.",
+        "out": "1 3 7 6 2 ",
         "steps": [
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"bin","v":"3","l":null,"r":null},{"id":2,"k":"bin","v":"2","l":1,"r":null},{"id":3,"k":"bin","v":"4","l":null,"r":null},{"id":4,"k":"bin","v":"1","l":2,"r":3}]},
-{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]}]},
-{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":1}]]}]},
-{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":1}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
-{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0},
-{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":1}],["Count",{"t":"v","s":"0"}]]}]},
-{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
-{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}],["Count",{"t":"v","s":"0"}]]}]},
-{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]}]},
-{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
-{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0},
-{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}],["Count",{"t":"v","s":"0"}]]}]},
-{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
-{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}],["Count",{"t":"v","s":"0"}]]}]},
-{"l":18,"n":"الشرط `IsJud(bt)` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":19,"n":"`Count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}],["Count",{"t":"v","s":"1"}]]}]},
-{"l":20,"n":"العملية `CountIsJud` تُعيد `1`.","o":0},
-{"l":0,"n":"نطبع: `1`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]}]}
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"6","l":null,"r":null},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":2,"r":3},{"id":5,"k":"bin","v":"1","l":1,"r":4}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Mirror","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
+{"l":5,"n":"ننشئ خلية شجرة قيمتها `7` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Mirror","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
+{"l":5,"n":"ننشئ خلية شجرة قيمتها `6` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"ننشئ خلية شجرة قيمتها `3` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":1}]]},{"name":"Mirror","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
+{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
+{"l":5,"n":"ننشئ خلية شجرة قيمتها `2` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"ننشئ خلية شجرة قيمتها `1` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":0,"n":"نطبع: `1 ` (بلا سطر جديد). نطبع: `3 ` (بلا سطر جديد). نطبع: `7 ` (بلا سطر جديد). نطبع: `6 ` (بلا سطر جديد). نطبع: `2 ` (بلا سطر جديد). انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}],["m",{"t":"ref","id":10}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"6","l":null,"r":null},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":2,"r":3},{"id":5,"k":"bin","v":"1","l":1,"r":4},{"id":6,"k":"bin","v":"7","l":null,"r":null},{"id":7,"k":"bin","v":"6","l":null,"r":null},{"id":8,"k":"bin","v":"3","l":6,"r":7},{"id":9,"k":"bin","v":"2","l":null,"r":null},{"id":10,"k":"bin","v":"1","l":8,"r":9}]}
 ]
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (37 خطوة)؛ ناتج البرنامج: 1."
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (34 خطوة)؛ ناتج البرنامج: 1 3 7 6 2."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b13",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تعيدها \u2066CountIsJud(bt)\u2069 لشجرة سؤال 10 (9 خلايا)؟",
-        "answer": "4",
-        "feedback": {
-         "explanation": "الأجداد: الجذر 1 (ابنه 2 له ابن)، والخلية 2 (ابنها 3 له ابن)، والخلية 3 (ابنها 4 له ابن)، والخلية 6 (ابنها 7 له ابن). الخلية 4 ابنها ورقة، فليست جدًّا."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b14",
+       "id": "m06-l07-p03-b23",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 11 — \u2066HasPathSum\u2069",
+       "text": "سؤال 4 · متوسط — \u2066HasPathSum\u2069: سؤال 11 من الكتاب",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b15",
+       "id": "m06-l07-p03-b24",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 11 من الكتاب (ص 290)",
+       "prompt": "اكتب عملية باسم \u2066HasPathSum\u2069 تتلقّى كبارامتر جذر شجرة ثنائية \u2066bt\u2069 من نوع \u2066BinNode<int>\u2069 وعددًا صحيحًا \u2066Sum\u2069. العملية تعيد \u2066true\u2069 إذا وجدت مسارًا واحدًا على الأقل حاصل جمع قيم خلاياه يساوي العدد \u2066Sum\u2069. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: بالنسبة للشجرة التالية تعيد الاستدعاءات التالية \u2066true\u2069:",
+       "steps": [
+        {
+         "text": "\u2066HasPathSum(bt, 21)\u2069 لأنّ \u20663 + 8 + 10 = 21\u2069"
+        },
+        {
+         "text": "\u2066HasPathSum(bt, 23)\u2069 لأنّ \u20665 + 8 + 10 = 23\u2069"
+        },
+        {
+         "text": "\u2066HasPathSum(bt, 14)\u2069 لأنّ \u20662 + 2 + 10 = 14\u2069"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b25",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة سؤال 11",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           10,
+           [
+            8,
+            3,
+            5
+           ],
+           [
+            2,
+            2,
+            null
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b26",
+       "type": "callout",
+       "kind": "clarification",
+       "title": "سؤال 11",
+       "spans": [
+        {
+         "text": "السؤال لا يقول أين يبدأ المسار وأين ينتهي. في الأمثلة الثلاثة يبدأ المسار من "
+        },
+        {
+         "text": "الجذر",
+         "style": "strong"
+        },
+        {
+         "text": " وينتهي عند "
+        },
+        {
+         "text": "ورقة",
+         "style": "strong"
+        },
+        {
+         "text": "، وهذا هو المعنى الذي نعتمده في الحل."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b27",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6786,7 +7808,7 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b16",
+       "id": "m06-l07-p03-b28",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -6862,7 +7884,24 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b17",
+       "id": "m06-l07-p03-b29",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الفكرة: بدل أن نجمع القيم في الطريق إلى الأسفل، "
+        },
+        {
+         "text": "نطرح",
+         "style": "strong"
+        },
+        {
+         "text": " قيمة كل خلية من المجموع المطلوب. عند الورقة يكفي أن نقارن قيمتها بما بقي."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b30",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -6914,160 +7953,1490 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b18",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ماذا تعيد \u2066HasPathSum(bt, 18)\u2069 لشجرة سؤال 11؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "false",
-        "feedback": {
-         "explanation": "\u206610 + 8 = 18\u2069، لكنّ الخلية 8 ليست ورقة، فهذا ليس مسارًا كاملًا. المسارات من الجذر إلى الأوراق مجاميعها 21 و23 و14 فقط."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b19",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 23 — المرآة",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b20",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool AreMirror(BinNode<int> bt1, BinNode<int> bt2)\n{\n    if (bt1 == null && bt2 == null)\n        return true;\n    if (bt1 == null || bt2 == null)\n        return false;\n    return bt1.GetValue() == bt2.GetValue()\n        && AreMirror(bt1.GetLeft(), bt2.GetRight())\n        && AreMirror(bt1.GetRight(), bt2.GetLeft());\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b21",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static BinNode<int> Mirror(BinNode<int> bt)\n{\n    if (bt == null)\n        return null;\n    return new BinNode<int>(Mirror(bt.GetRight()),\n                            bt.GetValue(),\n                            Mirror(bt.GetLeft()));\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m06-l07-p04-b22",
+       "id": "m06-l07-p03-b31",
        "type": "text",
        "spans": [
         {
-         "text": "في "
+         "text": "وماذا عن "
         },
         {
-         "text": "AreMirror",
+         "text": "HasPathSum(bt, 18)",
          "dir": "ltr"
         },
         {
-         "text": " نقارن "
+         "text": "؟ صحيح أنّ "
         },
         {
-         "text": "يسار",
-         "style": "strong"
-        },
-        {
-         "text": " الأولى مع "
-        },
-        {
-         "text": "يمين",
-         "style": "strong"
-        },
-        {
-         "text": " الثانية، ويمين الأولى مع يسار الثانية. كل خلية تُزار مرة واحدة على الأكثر، فالنجاعة خطية: "
-        },
-        {
-         "text": "O(n)",
+         "text": "10 + 8 = 18",
          "dir": "ltr"
         },
         {
-         "text": "، حيث "
+         "text": "، لكنّ الخلية 8 ليست ورقة، فهذا ليس مسارًا كاملًا. العملية تعيد "
         },
         {
-         "text": "n",
+         "text": "false",
          "dir": "ltr"
         },
         {
-         "text": " عدد خلايا الشجرة الأصغر. و "
-        },
-        {
-         "text": "Mirror",
-         "dir": "ltr"
-        },
-        {
-         "text": " تبني لكل خلية خلية جديدة، وتضع مرآة الشجرة اليمنى في اليسار ومرآة اليسرى في اليمين."
+         "text": ":"
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b23",
+       "id": "m06-l07-p03-b32",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Mirror\u2069: شجرة جديدة تُبنى",
-       "description": "الشجرة الأصلية لا تتغيّر، والشجرة الجديدة تُبنى من الأوراق صعودًا.",
+       "title": "تتبّع \u2066HasPathSum(bt, 18)\u2069",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static BinNode<int> Mirror(BinNode<int> bt)\n{\n    if (bt == null)\n        return null;\n    return new BinNode<int>(Mirror(bt.GetRight()),\n                            bt.GetValue(),\n                            Mirror(bt.GetLeft()));\n}",
-        "given": "الشجرة `bt` من الزوج الثاني في السؤال: الجذر 1، ابنه الأيسر 2، وابنه الأيمن 3 (وابناه 6 و7). الأمر `BinNode<int> m = Mirror(bt);` ثم طباعة `m` بتمشيط بَدْئي.",
-        "out": "1 3 7 6 2 ",
+        "code": "public static bool HasPathSum(BinNode<int> bt, int Sum)\n{\n    if (bt == null)\n        return false;\n    if (!bt.HasLeft() && !bt.HasRight())\n        return bt.GetValue() == Sum;\n    int Rest = Sum - bt.GetValue();\n    return HasPathSum(bt.GetLeft(), Rest) || HasPathSum(bt.GetRight(), Rest);\n}",
+        "given": "شجرة سؤال 11، والاستدعاء `HasPathSum(bt, 18)`.",
+        "out": "False\n",
         "steps": [
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"6","l":null,"r":null},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":2,"r":3},{"id":5,"k":"bin","v":"1","l":1,"r":4}]},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = الخلية التي قيمتها `10`، `Sum = 18`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}]]}],"h":[{"id":1,"k":"bin","v":"3","l":null,"r":null},{"id":2,"k":"bin","v":"5","l":null,"r":null},{"id":3,"k":"bin","v":"8","l":1,"r":2},{"id":4,"k":"bin","v":"2","l":null,"r":null},{"id":5,"k":"bin","v":"2","l":4,"r":null},{"id":6,"k":"bin","v":"10","l":3,"r":5}]},
 {"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`Rest = 8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]}]},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = الخلية التي قيمتها `8`، `Sum = 8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":3}],["Sum",{"t":"v","s":"8"}]]}]},
 {"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`Rest = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":3}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"0"}]]}]},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = الخلية التي قيمتها `3`، `Sum = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":3}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"0"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":1}],["Sum",{"t":"v","s":"0"}]]}]},
 {"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":3}]]},{"name":"Mirror","vars":[["bt",{"t":"null"}]]}]},
-{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0},
-{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
-{"l":5,"n":"ننشئ خلية شجرة قيمتها `7` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":3}]]}]},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `HasPathSum` تُعيد `false`.","o":0},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = الخلية التي قيمتها `5`، `Sum = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":3}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"0"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":2}],["Sum",{"t":"v","s":"0"}]]}]},
 {"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":2}]]},{"name":"Mirror","vars":[["bt",{"t":"null"}]]}]},
-{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0},
-{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
-{"l":5,"n":"ننشئ خلية شجرة قيمتها `6` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":2}]]}]},
-{"l":5,"n":"ننشئ خلية شجرة قيمتها `3` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":4}]]}]},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `HasPathSum` تُعيد `false`.","o":0},
+{"l":8,"n":"العملية `HasPathSum` تُعيد `false`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":3}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"0"}]]}]},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = الخلية التي قيمتها `2`، `Sum = 8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":5}],["Sum",{"t":"v","s":"8"}]]}]},
 {"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":1}]]},{"name":"Mirror","vars":[["bt",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`Rest = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":5}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"6"}]]}]},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = الخلية التي قيمتها `2`، `Sum = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":5}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"6"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":4}],["Sum",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `HasPathSum` تُعيد `false`.","o":0},
+{"l":1,"n":"تبدأ العملية `HasPathSum` مع `bt` = `null`، `Sum = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":5}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"6"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"null"}],["Sum",{"t":"v","s":"6"}]]}]},
 {"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
-{"l":1,"n":"تبدأ العملية `Mirror` مع `bt` = `null`.","o":0},
-{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"العملية `Mirror` تُعيد `null`.","o":0},
-{"l":5,"n":"ننشئ خلية شجرة قيمتها `2` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":1}]]}]},
-{"l":5,"n":"ننشئ خلية شجرة قيمتها `1` مع ابنيها. العملية `Mirror` تُعيد الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"Mirror","vars":[["bt",{"t":"ref","id":5}]]}]},
-{"l":0,"n":"نطبع: `1 ` (بلا سطر جديد). نطبع: `3 ` (بلا سطر جديد). نطبع: `7 ` (بلا سطر جديد). نطبع: `6 ` (بلا سطر جديد). نطبع: `2 ` (بلا سطر جديد). انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}],["m",{"t":"ref","id":10}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"6","l":null,"r":null},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":2,"r":3},{"id":5,"k":"bin","v":"1","l":1,"r":4},{"id":6,"k":"bin","v":"7","l":null,"r":null},{"id":7,"k":"bin","v":"6","l":null,"r":null},{"id":8,"k":"bin","v":"3","l":6,"r":7},{"id":9,"k":"bin","v":"2","l":null,"r":null},{"id":10,"k":"bin","v":"1","l":8,"r":9}]}
+{"l":4,"n":"العملية `HasPathSum` تُعيد `false`.","o":0},
+{"l":8,"n":"العملية `HasPathSum` تُعيد `false`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":5}],["Sum",{"t":"v","s":"8"}],["Rest",{"t":"v","s":"6"}]]}]},
+{"l":8,"n":"العملية `HasPathSum` تُعيد `false`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasPathSum","vars":[["bt",{"t":"ref","id":6}],["Sum",{"t":"v","s":"18"}],["Rest",{"t":"v","s":"8"}]]}]},
+{"l":0,"n":"نطبع: `False`. انتهى التنفيذ.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]}]}
 ]
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (34 خطوة)؛ ناتج البرنامج: 1 3 7 6 2."
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (31 خطوة)؛ ناتج البرنامج: False."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p04-b24",
+       "id": "m06-l07-p03-b33",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — الأجداد: سؤال 10 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b34",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 10 من الكتاب (ص 290)",
+       "prompt": "مثلًا في الشجرة التالية هنالك 4 أجداد.",
+       "steps": [
+        {
+         "text": "اكتب عملية باسم \u2066IsJud\u2069 تتلقّى شجرة ثنائية من الأعداد الصحيحة وترجع \u2066true\u2069 إن كان «جدًّا» (أي له ابن ولابنه ابن) و \u2066false\u2069 خلاف ذلك."
+        },
+        {
+         "text": "اكتب عملية \u2066CountIsJud\u2069 تتلقّى شجرة ثنائية من الأعداد الصحيحة وترجع عدد الأجداد في الشجرة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b35",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة سؤال 10",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           1,
+           [
+            2,
+            [
+             3,
+             null,
+             [
+              4,
+              null,
+              5
+             ]
+            ],
+            null
+           ],
+           [
+            6,
+            [
+             7,
+             null,
+             8
+            ],
+            9
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
+          "hi": [
+           "",
+           "L",
+           "LL",
+           "R"
+          ],
+          "label": "الأجداد الأربعة مظلّلون"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (الأجداد الأربعة مظلّلون)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b36",
+       "type": "callout",
+       "kind": "clarification",
+       "title": "سؤال 10",
+       "spans": [
+        {
+         "text": "المقصود في البند الأول: "
+        },
+        {
+         "text": "جذر",
+         "style": "strong"
+        },
+        {
+         "text": " الشجرة التي تتلقّاها العملية هو «جدّ» إذا كان له ابن، ولهذا الابن ابن. في رسم الكتاب الخلايا بلا قيم؛ الأرقام هنا للتمييز بين الخلايا فقط."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b37",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool HasChild(BinNode<int> bt)\n{\n    return bt != null && (bt.HasLeft() || bt.HasRight());\n}\n\npublic static bool IsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return false;\n    return HasChild(bt.GetLeft()) || HasChild(bt.GetRight());\n}\n\npublic static int CountIsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int Count = CountIsJud(bt.GetLeft()) + CountIsJud(bt.GetRight());\n    if (IsJud(bt))\n        Count++;\n    return Count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b38",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "عملية مساعدة "
+          },
+          {
+           "text": "HasChild",
+           "dir": "ltr"
+          },
+          {
+           "text": ": هل الخلية موجودة ولها ابن واحد على الأقل؟ الفحص "
+          },
+          {
+           "text": "bt != null",
+           "dir": "ltr"
+          },
+          {
+           "text": " يأتي أولًا."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "IsJud",
+           "dir": "ltr"
+          },
+          {
+           "text": " تفحص الابن الأيسر "
+          },
+          {
+           "text": "أو",
+           "style": "strong"
+          },
+          {
+           "text": " الابن الأيمن بمساعدة "
+          },
+          {
+           "text": "HasChild",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "CountIsJud",
+           "dir": "ltr"
+          },
+          {
+           "text": " تجمع عدد الأجداد في الشجرتين الفرعيتين، وتضيف 1 إذا كان الجذر نفسه جدًّا."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "كل عملية مساعدة مكتوبة بالكامل، كما يطلب الكتاب."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b39",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الجذر «جدّ» إذا كان أحد ابنيه أبًا. لذلك نسأل عن كل ابن: هل هو موجود وله ابن؟ ثم نعدّ الأجداد بالقالب المعروف: ما في اليسار، زائد ما في اليمين، زائد الخلية نفسها إذا تحقّق الشرط."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p03-b40",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل على شجرة السؤال",
+       "description": "راقب \u2066Count\u2069 عند كل خلية: متى يزيد بواحد؟",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool HasChild(BinNode<int> bt)\n{\n    return bt != null && (bt.HasLeft() || bt.HasRight());\n}\n\npublic static bool IsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return false;\n    return HasChild(bt.GetLeft()) || HasChild(bt.GetRight());\n}\n\npublic static int CountIsJud(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int Count = CountIsJud(bt.GetLeft()) + CountIsJud(bt.GetRight());\n    if (IsJud(bt))\n        Count++;\n    return Count;\n}",
+        "given": "شجرة سؤال 10 (9 خلايا)، والاستدعاء `CountIsJud(bt)`. العمليتان `IsJud` و `HasChild` تُنفّذان بدون تتبّع.",
+        "out": "4\n",
+        "steps": [
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]}],"h":[{"id":1,"k":"bin","v":"5","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":1},{"id":3,"k":"bin","v":"3","l":null,"r":2},{"id":4,"k":"bin","v":"2","l":3,"r":null},{"id":5,"k":"bin","v":"8","l":null,"r":null},{"id":6,"k":"bin","v":"7","l":null,"r":5},{"id":7,"k":"bin","v":"9","l":null,"r":null},{"id":8,"k":"bin","v":"6","l":6,"r":7},{"id":9,"k":"bin","v":"1","l":4,"r":8}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":1}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":1}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":2}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":19,"n":"`Count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":3}],["Count",{"t":"v","s":"1"}]]}]},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `1`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}],["Count",{"t":"v","s":"1"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":19,"n":"`Count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":4}],["Count",{"t":"v","s":"2"}]]}]},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `2`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":5}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":5}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":6}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":7}]]}]},
+{"l":15,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":7}]]},{"name":"CountIsJud","vars":[["bt",{"t":"null"}]]}]},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":13,"n":"تبدأ العملية `CountIsJud` مع `bt` = `null`.","o":0},
+{"l":15,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":16,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":7}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `0`.","o":0},
+{"l":17,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":19,"n":"`Count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":8}],["Count",{"t":"v","s":"1"}]]}]},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `1`.","o":0},
+{"l":17,"n":"`Count = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}],["Count",{"t":"v","s":"3"}]]}]},
+{"l":18,"n":"الشرط `IsJud(bt)` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":19,"n":"`Count` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]},{"name":"CountIsJud","vars":[["bt",{"t":"ref","id":9}],["Count",{"t":"v","s":"4"}]]}]},
+{"l":20,"n":"العملية `CountIsJud` تُعيد `4`.","o":0},
+{"l":0,"n":"نطبع: `4`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":9}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (80 خطوة)؛ ناتج البرنامج: 4."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m06-l07-p04",
+     "title": "وظيفة: أسئلة كتابة",
+     "order": 4,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 243,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+     },
+     "keywords": [
+      "وظيفة",
+      "كتابة عملية",
+      "CountOneChild",
+      "MaxValue",
+      "AreMirror",
+      "أوراق"
+     ],
+     "blocks": [
+      {
+       "id": "m06-l07-p04-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة كتابة للحل في البيت، من الأسهل إلى الأصعب. اكتب كل عملية في دفترك أو في محرّر الكود، ثم اضغط «الحل» وقارن: في النافذة كود الحل وما يُفحص فيه وتتبّعه."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066CountOneChild\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b03",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066CountOneChild\u2069 التي تتلقّى جذر شجرة ثنائية \u2066bt\u2069 من نوع \u2066BinNode<int>\u2069، وتعيد عدد الخلايا التي لها ابن واحد بالضبط. مثال: للشجرة التي في الرسم تعيد العملية 3.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b04",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة المثال",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           86,
+           [
+            82,
+            null,
+            [
+             76,
+             78,
+             null
+            ]
+           ],
+           [
+            70,
+            66,
+            null
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
+          "hi": [
+           "L",
+           "LR",
+           "R"
+          ],
+          "label": "الخلايا المظلّلة لها ابن واحد بالضبط"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (الخلايا المظلّلة لها ابن واحد بالضبط)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b05",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int CountOneChild(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066CountOneChild\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "القالب هو قالب العدّ: ما في الشجرة اليسرى، زائد ما في اليمنى، زائد الخلية نفسها إذا تحقّق الشرط."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الشرط «ابن واحد بالضبط»: للخلية ابن أيسر وليس لها ابن أيمن، "
+          },
+          {
+           "text": "أو",
+           "style": "strong"
+          },
+          {
+           "text": " ليس لها ابن أيسر ولها ابن أيمن."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الورقة لا تُعدّ (لا أبناء لها)، والخلية التي لها ابنان لا تُعدّ أيضًا."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int CountOneChild(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int count = CountOneChild(bt.GetLeft()) + CountOneChild(bt.GetRight());\n    if ((bt.HasLeft() && !bt.HasRight()) || (!bt.HasLeft() && bt.HasRight()))\n        count++;\n    return count;\n}",
+        "checklist": [
+         "شرط التوقّف: `bt == null` يعيد 0.",
+         "الاستدعاء التراجعي للشجرتين الفرعيتين **كلتيهما**.",
+         "شرط «ابن واحد بالضبط» يستعمل `HasLeft()` و `HasRight()` معًا."
+        ],
+        "trace": {
+         "code": "public static int CountOneChild(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int count = CountOneChild(bt.GetLeft()) + CountOneChild(bt.GetRight());\n    if ((bt.HasLeft() && !bt.HasRight()) || (!bt.HasLeft() && bt.HasRight()))\n        count++;\n    return count;\n}",
+         "given": "الشجرة `bt`: الجذر 5، ابنه الأيسر 3 (وله ابن أيمن 4)، وابنه الأيمن 7. الاستدعاء `CountOneChild(bt)`.",
+         "out": "1\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"bin","v":"4","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":1},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"5","l":2,"r":3}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountOneChild","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":1}]]},{"name":"CountOneChild","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":1}],["count",{"t":"v","s":"0"}]]}]},
+{"l":6,"n":"الشرط `(bt.HasLeft() && !bt.HasRight()) || (!bt.HasLeft() && bt.HasRight())` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}],["count",{"t":"v","s":"0"}]]}]},
+{"l":6,"n":"الشرط `(bt.HasLeft() && !bt.HasRight()) || (!bt.HasLeft() && bt.HasRight())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":2}],["count",{"t":"v","s":"1"}]]}]},
+{"l":8,"n":"العملية `CountOneChild` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountOneChild","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":1,"n":"تبدأ العملية `CountOneChild` مع `bt` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":3}],["count",{"t":"v","s":"0"}]]}]},
+{"l":6,"n":"الشرط `(bt.HasLeft() && !bt.HasRight()) || (!bt.HasLeft() && bt.HasRight())` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `CountOneChild` تُعيد `0`.","o":0},
+{"l":5,"n":"`count = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountOneChild","vars":[["bt",{"t":"ref","id":4}],["count",{"t":"v","s":"1"}]]}]},
+{"l":6,"n":"الشرط `(bt.HasLeft() && !bt.HasRight()) || (!bt.HasLeft() && bt.HasRight())` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `CountOneChild` تُعيد `1`.","o":0},
+{"l":0,"n":"نطبع: `1`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: القالب هو قالب العدّ: ما في الشجرة اليسرى، زائد ما في اليمنى، زائد الخلية نفسها إذا تحقّق الشرط. الشرط «ابن واحد بالضبط»: للخلية ابن أيسر وليس لها ابن أيمن، أو ليس لها ابن أيسر ولها ابن أيمن. الورقة لا تُعدّ (لا أبناء لها)، والخلية التي لها ابنان لا تُعدّ أيضًا."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b07",
        "type": "practice",
        "question": {
         "kind": "shortInput",
-        "prompt": "معطاة الشجرتان \u2066bt1\u2069 و \u2066bt2\u2069 من الزوج الأول في السؤال. ماذا تعيد \u2066AreMirror(bt1, bt2)\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "true",
+        "prompt": "ماذا تعيد \u2066CountOneChild\u2069 لشجرة فيها 7 خلايا: جذر له ابنان، ولكل واحد منهما ابنان؟",
+        "answer": "0",
         "feedback": {
-         "explanation": "الجذران متساويان، ويسار الأولى (2 وابناه 4 و5) مرآة ليمين الثانية (2 وابناه 5 و4)، وكذلك يمين الأولى مع يسار الثانية."
+         "explanation": "الجذر وابناه لهم ابنان، والخلايا الأربع الباقية أوراق. لا توجد خلية لها ابن واحد بالضبط."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066MaxValue\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066MaxValue\u2069 التي تتلقّى جذر شجرة ثنائية \u2066bt\u2069 من نوع \u2066BinNode<int>\u2069 ليست فارغة، وتعيد أكبر قيمة مخزّنة في خلايا الشجرة. مثال: للشجرة التي في الرسم تعيد العملية 9.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b10",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة المثال",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           4,
+           [
+            9,
+            1,
+            [
+             6,
+             3,
+             null
+            ]
+           ],
+           [
+            2,
+            null,
+            7
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
+          "hi": [
+           "L"
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int MaxValue(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b12",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066MaxValue\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "أكبر قيمة في الشجرة هي الأكبر من بين ثلاث: قيمة الجذر، وأكبر قيمة في الشجرة اليسرى، وأكبر قيمة في الشجرة اليمنى."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "نبدأ بقيمة الجذر، ونقارنها بنتيجة كل شجرة فرعية "
+          },
+          {
+           "text": "موجودة",
+           "style": "strong"
+          },
+          {
+           "text": " بالعملية "
+          },
+          {
+           "text": "Math.Max",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "لشجرة فارغة لا توجد «أكبر قيمة»، لذلك لا نستدعي العملية على "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": ": نفحص "
+          },
+          {
+           "text": "HasLeft()",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "HasRight()",
+           "dir": "ltr"
+          },
+          {
+           "text": " قبل الاستدعاء."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int MaxValue(BinNode<int> bt)\n{\n    int max = bt.GetValue();\n    if (bt.HasLeft())\n        max = Math.Max(max, MaxValue(bt.GetLeft()));\n    if (bt.HasRight())\n        max = Math.Max(max, MaxValue(bt.GetRight()));\n    return max;\n}",
+        "checklist": [
+         "لا يوجد استدعاء على شجرة فارغة: الفحص `HasLeft()` / `HasRight()` قبل كل استدعاء تراجعي.",
+         "القيمة الابتدائية هي قيمة الجذر، وليست 0 (قد تكون كل القيم سالبة).",
+         "الشجرتان الفرعيتان **كلتاهما** تُفحصان."
+        ],
+        "trace": {
+         "code": "public static int MaxValue(BinNode<int> bt)\n{\n    int max = bt.GetValue();\n    if (bt.HasLeft())\n        max = Math.Max(max, MaxValue(bt.GetLeft()));\n    if (bt.HasRight())\n        max = Math.Max(max, MaxValue(bt.GetRight()));\n    return max;\n}",
+         "given": "الشجرة `bt`: الجذر 4، ابنه الأيسر 9 (وله ابن أيسر 1)، وابنه الأيمن 6. الاستدعاء `MaxValue(bt)`.",
+         "out": "9\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `MaxValue` مع `bt` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"bin","v":"1","l":null,"r":null},{"id":2,"k":"bin","v":"9","l":1,"r":null},{"id":3,"k":"bin","v":"6","l":null,"r":null},{"id":4,"k":"bin","v":"4","l":2,"r":3}]},
+{"l":3,"n":"`max = 4`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `bt.HasLeft()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `MaxValue` مع `bt` = الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"4"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"`max = 9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"4"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":2}],["max",{"t":"v","s":"9"}]]}]},
+{"l":4,"n":"الشرط `bt.HasLeft()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `MaxValue` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"4"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":2}],["max",{"t":"v","s":"9"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"`max = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"4"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":2}],["max",{"t":"v","s":"9"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":1}],["max",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `bt.HasLeft()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"الشرط `bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `MaxValue` تُعيد `1`.","o":0},
+{"l":5,"n":"`max = 9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"4"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":2}],["max",{"t":"v","s":"9"}]]}]},
+{"l":6,"n":"الشرط `bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `MaxValue` تُعيد `9`.","o":0},
+{"l":5,"n":"`max = 9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"9"}]]}]},
+{"l":6,"n":"الشرط `bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `MaxValue` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"9"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"`max = 6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"9"}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":3}],["max",{"t":"v","s":"6"}]]}]},
+{"l":4,"n":"الشرط `bt.HasLeft()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"الشرط `bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `MaxValue` تُعيد `6`.","o":0},
+{"l":7,"n":"`max = 9`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]},{"name":"MaxValue","vars":[["bt",{"t":"ref","id":4}],["max",{"t":"v","s":"9"}]]}]},
+{"l":8,"n":"العملية `MaxValue` تُعيد `9`.","o":0},
+{"l":0,"n":"نطبع: `9`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":4}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: أكبر قيمة في الشجرة هي الأكبر من بين ثلاث: قيمة الجذر، وأكبر قيمة في الشجرة اليسرى، وأكبر قيمة في الشجرة اليمنى. نبدأ بقيمة الجذر، ونقارنها بنتيجة كل شجرة فرعية موجودة بالعملية Math.Max. لشجرة فارغة لا توجد «أكبر قيمة»، لذلك لا نستدعي العملية على null: نفحص HasLeft() و HasRight() قبل الاستدعاء."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b13",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد \u2066MaxValue\u2069 لشجرة جذرها \u2066-5\u2069، ابنه الأيسر \u2066-2\u2069 وابنه الأيمن \u2066-9\u2069؟",
+        "answer": "-2",
+        "feedback": {
+         "explanation": "كل القيم سالبة، وأكبرها \u2066-2\u2069. لو بدأنا من 0 بدل قيمة الجذر لحصلنا على 0، وهي قيمة غير موجودة في الشجرة."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b14",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — أوراق من 0 و1: سؤال 4 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b15",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 4 من الكتاب (ص 283)",
+       "prompt": "بالنسبة للشجرة التالية تعيد العملية \u2066true\u2069.",
+       "steps": [
+        {
+         "text": "اكتب عملية تراجعية تتلقّى شجرة ثنائية \u2066BinNode<int>\u2069. العملية تعيد \u2066true\u2069 إذا تحقّق الشرط التالي: قيمة كل ورقة إمّا 0 وإمّا 1. خلاف ذلك تعيد العملية \u2066false\u2069."
+        },
+        {
+         "text": "ما هي درجة نجاعة العملية من البند الأول؟ اشرح."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b16",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة سؤال 4",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            -1,
+            1,
+            1
+           ],
+           [
+            5,
+            0,
+            null
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
+          "hi": [
+           "LL",
+           "LR",
+           "RL"
+          ],
+          "label": "الأوراق مظلّلة"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (الأوراق مظلّلة)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b17",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool LeavesZeroOne(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b18",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066LeavesZeroOne\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "شجرة فارغة ليس فيها ورقة تخالف الشرط، فنعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "عند ورقة نفحص قيمتها: 0 أو 1."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "عند خلية داخلية قيمتها لا تهمّنا: الشرط يجب أن يتحقّق في الشجرة اليسرى "
+          },
+          {
+           "text": "و",
+           "style": "strong"
+          },
+          {
+           "text": "في اليمنى، لذلك نستعمل "
+          },
+          {
+           "text": "&&",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "النجاعة: في أسوأ الحالات تُزار كل خلية مرة واحدة، فالنجاعة خطية "
+          },
+          {
+           "text": "O(n)",
+           "dir": "ltr"
+          },
+          {
+           "text": "، حيث "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " عدد خلايا الشجرة."
+          }
+         ]
+        }
+       ],
+       "explanation": "في الكتاب كُتب «العملية من القسم أ» مع أنّ البنود مرقّمة بالأرقام؛ المقصود العملية من البند الأول. والكتاب لا يعطي العملية اسمًا؛ الاسم \u2066LeavesZeroOne\u2069 من عندنا.",
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool LeavesZeroOne(BinNode<int> bt)\n{\n    if (bt == null)\n        return true;\n    if (!bt.HasLeft() && !bt.HasRight())\n        return bt.GetValue() == 0 || bt.GetValue() == 1;\n    return LeavesZeroOne(bt.GetLeft()) && LeavesZeroOne(bt.GetRight());\n}",
+        "checklist": [
+         "شرط توقّف للشجرة الفارغة يعيد `true` وليس `false`.",
+         "فحص الورقة بالشرط `!bt.HasLeft() && !bt.HasRight()`.",
+         "العملية `&&` بين نتيجتَي الشجرتين الفرعيتين.",
+         "جواب عن النجاعة مع تعليل: كل خلية تُزار مرة واحدة."
+        ],
+        "trace": {
+         "code": "public static bool LeavesZeroOne(BinNode<int> bt)\n{\n    if (bt == null)\n        return true;\n    if (!bt.HasLeft() && !bt.HasRight())\n        return bt.GetValue() == 0 || bt.GetValue() == 1;\n    return LeavesZeroOne(bt.GetLeft()) && LeavesZeroOne(bt.GetRight());\n}",
+         "given": "شجرة سؤال 4 (أوراقها `1` و `1` و `0`)، والاستدعاء `LeavesZeroOne(bt)`.",
+         "out": "True\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"bin","v":"1","l":null,"r":null},{"id":2,"k":"bin","v":"1","l":null,"r":null},{"id":3,"k":"bin","v":"-1","l":1,"r":2},{"id":4,"k":"bin","v":"0","l":null,"r":null},{"id":5,"k":"bin","v":"5","l":4,"r":null},{"id":6,"k":"bin","v":"3","l":3,"r":5}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = الخلية التي قيمتها `-1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":3}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0},
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":3}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0},
+{"l":7,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = الخلية التي قيمتها `0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":5}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!bt.HasLeft() && !bt.HasRight()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0},
+{"l":1,"n":"تبدأ العملية `LeavesZeroOne` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":5}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0},
+{"l":7,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":7,"n":"العملية `LeavesZeroOne` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"LeavesZeroOne","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: شجرة فارغة ليس فيها ورقة تخالف الشرط، فنعيد true. عند ورقة نفحص قيمتها: 0 أو 1. عند خلية داخلية قيمتها لا تهمّنا: الشرط يجب أن يتحقّق في الشجرة اليسرى وفي اليمنى، لذلك نستعمل &&. النجاعة: في أسوأ الحالات تُزار كل خلية مرة واحدة، فالنجاعة خطية O(n)، حيث n عدد خلايا الشجرة."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b19",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد \u2066LeavesZeroOne\u2069 لشجرة جذرها 1، ابنه الأيسر الورقة 0 وابنه الأيمن الورقة 2؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "false",
+        "feedback": {
+         "explanation": "الورقة 2 تخالف الشرط. الشجرة اليسرى تعيد \u2066true\u2069 واليمنى \u2066false\u2069، والعملية \u2066&&\u2069 تعيد \u2066false\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b20",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — \u2066AreMirror\u2069: سؤال 23 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b21",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 23 من الكتاب (ص 302)، البندان الأول والثاني",
+       "prompt": "في الرسم زوج من الأشجار الثنائية حيث كل واحدة مرآة للأخرى.",
+       "steps": [
+        {
+         "text": "اكتب عملية خارجية تتلقّى شجرتين ثنائيتين \u2066bt1\u2069 و \u2066bt2\u2069 تحويان أعدادًا صحيحة. العملية تُعيد \u2066true\u2069 إذا كانت \u2066bt2\u2069 مرآة لـ \u2066bt1\u2069. خلاف ذلك تُعيد العملية \u2066false\u2069."
+        },
+        {
+         "text": "ما هي درجة نجاعة زمن تشغيل العملية من البند الأول؟ اشرح."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b22",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "مثال من الكتاب: كل شجرة مرآة للأخرى",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           1,
+           [
+            2,
+            4,
+            5
+           ],
+           [
+            3,
+            6,
+            7
+           ]
+          ],
+          "pointers": [
+           [
+            "bt1",
+            ""
+           ]
+          ]
+         },
+         {
+          "kind": "tree",
+          "tree": [
+           1,
+           [
+            3,
+            7,
+            6
+           ],
+           [
+            2,
+            5,
+            4
+           ]
+          ],
+          "pointers": [
+           [
+            "bt2",
+            ""
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية؛ شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b23",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool AreMirror(BinNode<int> bt1, BinNode<int> bt2)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b24",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066AreMirror\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "شجرتان فارغتان: كل واحدة مرآة للأخرى، نعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": ". واحدة فارغة والأخرى لا: نعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الشجرتان غير فارغتين: الجذران يجب أن يتساويا."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "ثم نقارن "
+          },
+          {
+           "text": "يسار",
+           "style": "strong"
+          },
+          {
+           "text": " الأولى مع "
+          },
+          {
+           "text": "يمين",
+           "style": "strong"
+          },
+          {
+           "text": " الثانية، ويمين الأولى مع يسار الثانية، بالعملية نفسها."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "النجاعة: في كل استدعاء ننزل خطوة في الشجرتين معًا، وكل خلية تُزار مرة واحدة على الأكثر. النجاعة خطية "
+          },
+          {
+           "text": "O(n)",
+           "dir": "ltr"
+          },
+          {
+           "text": "، حيث "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " عدد خلايا الشجرة الأصغر."
+          }
+         ]
+        }
+       ],
+       "explanation": "في الكتاب كُتب «العملية من القسم أ» مع أنّ البنود مرقّمة بالأرقام؛ المقصود العملية من البند الأول. بناء شجرة المرآة (البند الثالث) محلول في صفحة «أسئلة كتابة محلولة».",
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool AreMirror(BinNode<int> bt1, BinNode<int> bt2)\n{\n    if (bt1 == null && bt2 == null)\n        return true;\n    if (bt1 == null || bt2 == null)\n        return false;\n    return bt1.GetValue() == bt2.GetValue()\n        && AreMirror(bt1.GetLeft(), bt2.GetRight())\n        && AreMirror(bt1.GetRight(), bt2.GetLeft());\n}",
+        "checklist": [
+         "حالتا التوقّف بالترتيب: الشجرتان فارغتان، ثم واحدة فقط فارغة.",
+         "مقارنة قيمتَي الجذرين.",
+         "استدعاءان **متقاطعان**: `GetLeft()` من الأولى مع `GetRight()` من الثانية، والعكس.",
+         "العملية `&&` بين الشروط الثلاثة."
+        ],
+        "trace": {
+         "code": "public static bool AreMirror(BinNode<int> bt1, BinNode<int> bt2)\n{\n    if (bt1 == null && bt2 == null)\n        return true;\n    if (bt1 == null || bt2 == null)\n        return false;\n    return bt1.GetValue() == bt2.GetValue()\n        && AreMirror(bt1.GetLeft(), bt2.GetRight())\n        && AreMirror(bt1.GetRight(), bt2.GetLeft());\n}",
+         "given": "الشجرة `bt1`: الجذر 1، ابنه الأيسر 2، وابنه الأيمن 3 (وابناه 6 و7). الشجرة `bt2` مرآتها. الاستدعاء `AreMirror(bt1, bt2)`.",
+         "out": "True\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = الخلية التي قيمتها `1`، `bt2` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]}],"h":[{"id":1,"k":"bin","v":"2","l":null,"r":null},{"id":2,"k":"bin","v":"6","l":null,"r":null},{"id":3,"k":"bin","v":"7","l":null,"r":null},{"id":4,"k":"bin","v":"3","l":2,"r":3},{"id":5,"k":"bin","v":"1","l":1,"r":4},{"id":6,"k":"bin","v":"7","l":null,"r":null},{"id":7,"k":"bin","v":"6","l":null,"r":null},{"id":8,"k":"bin","v":"3","l":6,"r":7},{"id":9,"k":"bin","v":"2","l":null,"r":null},{"id":10,"k":"bin","v":"1","l":8,"r":9}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt1 == null || bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = الخلية التي قيمتها `2`، `bt2` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":1}],["bt2",{"t":"ref","id":9}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt1 == null || bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = `null`، `bt2` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":1}],["bt2",{"t":"ref","id":9}]]},{"name":"AreMirror","vars":[["bt1",{"t":"null"}],["bt2",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `AreMirror` تُعيد `true`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = `null`، `bt2` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `AreMirror` تُعيد `true`.","o":0},
+{"l":7,"n":"العملية `AreMirror` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":1}],["bt2",{"t":"ref","id":9}]]}]},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = الخلية التي قيمتها `3`، `bt2` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt1 == null || bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = الخلية التي قيمتها `6`، `bt2` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":2}],["bt2",{"t":"ref","id":7}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt1 == null || bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = `null`، `bt2` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":2}],["bt2",{"t":"ref","id":7}]]},{"name":"AreMirror","vars":[["bt1",{"t":"null"}],["bt2",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `AreMirror` تُعيد `true`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = `null`، `bt2` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `AreMirror` تُعيد `true`.","o":0},
+{"l":7,"n":"العملية `AreMirror` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":2}],["bt2",{"t":"ref","id":7}]]}]},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = الخلية التي قيمتها `7`، `bt2` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":3}],["bt2",{"t":"ref","id":6}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt1 == null || bt2 == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = `null`، `bt2` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":3}],["bt2",{"t":"ref","id":6}]]},{"name":"AreMirror","vars":[["bt1",{"t":"null"}],["bt2",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `AreMirror` تُعيد `true`.","o":0},
+{"l":1,"n":"تبدأ العملية `AreMirror` مع `bt1` = `null`، `bt2` = `null`.","o":0},
+{"l":3,"n":"الشرط `bt1 == null && bt2 == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `AreMirror` تُعيد `true`.","o":0},
+{"l":7,"n":"العملية `AreMirror` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":3}],["bt2",{"t":"ref","id":6}]]}]},
+{"l":7,"n":"العملية `AreMirror` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":4}],["bt2",{"t":"ref","id":8}]]}]},
+{"l":7,"n":"العملية `AreMirror` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]},{"name":"AreMirror","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]}]},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["bt1",{"t":"ref","id":5}],["bt2",{"t":"ref","id":10}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: شجرتان فارغتان: كل واحدة مرآة للأخرى، نعيد true. واحدة فارغة والأخرى لا: نعيد false. الشجرتان غير فارغتين: الجذران يجب أن يتساويا. ثم نقارن يسار الأولى مع يمين الثانية، ويمين الأولى مع يسار الثانية، بالعملية نفسها. النجاعة: في كل استدعاء ننزل خطوة في الشجرتين معًا، وكل خلية تُزار مرة واحدة على الأكثر. النجاعة خطية O(n)، حيث n عدد خلايا الشجرة الأصغر."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b25",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "شجرة \u2066bt\u2069 جذرها 1، ابنه الأيسر 2 وابنه الأيمن 3. ماذا تعيد \u2066AreMirror(bt, bt)\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "false",
+        "feedback": {
+         "explanation": "نقارن يسار الأولى (2) مع يمين الثانية (3): القيمتان مختلفتان. الشجرة مرآة لنفسها فقط إذا كانت متناظرة."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b26",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — ورقة يمنى تساوي أباها: سؤال 14 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b27",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 14 من الكتاب (ص 292)",
+       "prompt": "اكتب عملية تتلقّى كبارامتر شجرة ثنائية \u2066bt\u2069 من نوع \u2066BinNode<int>\u2069. العملية تعيد عدد الأوراق التي تحقّق الشرط التالي: الورقة هي الابن الأيمن ومساوية لقيمة أبيها. أمثلة: بالنسبة للشجرة الأولى في الرسم يُعاد 2، وبالنسبة للشجرة الثانية يُعاد 0.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b28",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرتا سؤال 14",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            3,
+            5,
+            3
+           ],
+           [
+            6,
+            null,
+            6
+           ]
+          ],
+          "hi": [
+           "LR",
+           "RR"
+          ],
+          "label": "يُعاد 2: الورقتان المظلّلتان"
+         },
+         {
+          "kind": "tree",
+          "tree": [
+           6,
+           [
+            2,
+            7,
+            8
+           ],
+           [
+            6,
+            null,
+            9
+           ]
+          ],
+          "label": "يُعاد 0"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (يُعاد 2: الورقتان المظلّلتان)؛ شجرة ثنائية (يُعاد 0)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b29",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int CountEqualRightLeaves(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b30",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 5 — \u2066CountEqualRightLeaves\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الورقة لا تعرف أباها: في الخلية لا يوجد مؤشّر إلى الأب. لذلك نفحص الشرط "
+          },
+          {
+           "text": "من جهة الأب",
+           "style": "strong"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "عند كل خلية نسأل: هل لها ابن أيمن؟ وهل هذا الابن ورقة؟ وهل قيمته تساوي قيمتها؟ إذا تحقّقت الشروط الثلاثة نضيف 1."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "ثم القالب المعروف: ما في الشجرة اليسرى، زائد ما في اليمنى، زائد الخلية نفسها إذا تحقّق الشرط."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "في الشجرة الثانية: الجذر 6 يساوي ابنه الأيمن 6، لكنّ هذا الابن ليس ورقة، فلا يُعدّ."
+          }
+         ]
+        }
+       ],
+       "explanation": "الكتاب لا يعطي العملية اسمًا؛ الاسم \u2066CountEqualRightLeaves\u2069 من عندنا.",
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool IsLeaf(BinNode<int> bt)\n{\n    return !bt.HasLeft() && !bt.HasRight();\n}\n\npublic static int CountEqualRightLeaves(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int count = CountEqualRightLeaves(bt.GetLeft()) + CountEqualRightLeaves(bt.GetRight());\n    if (bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue())\n        count++;\n    return count;\n}",
+        "checklist": [
+         "شرط التوقّف: `bt == null` يعيد 0.",
+         "الفحص `bt.HasRight()` يأتي **قبل** `bt.GetRight().GetValue()`.",
+         "فحص أنّ الابن الأيمن **ورقة**، بعملية مساعدة مكتوبة بالكامل.",
+         "الاستدعاء التراجعي للشجرتين الفرعيتين كلتيهما."
+        ],
+        "trace": {
+         "code": "public static bool IsLeaf(BinNode<int> bt)\n{\n    return !bt.HasLeft() && !bt.HasRight();\n}\n\npublic static int CountEqualRightLeaves(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    int count = CountEqualRightLeaves(bt.GetLeft()) + CountEqualRightLeaves(bt.GetRight());\n    if (bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue())\n        count++;\n    return count;\n}",
+         "given": "الشجرة الأولى في الرسم (جذرها 3)، والاستدعاء `CountEqualRightLeaves(bt)`. العملية `IsLeaf` تُنفّذ بدون تتبّع.",
+         "out": "2\n",
+         "steps": [
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"bin","v":"5","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":null},{"id":3,"k":"bin","v":"3","l":1,"r":2},{"id":4,"k":"bin","v":"6","l":null,"r":null},{"id":5,"k":"bin","v":"6","l":null,"r":4},{"id":6,"k":"bin","v":"3","l":3,"r":5}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":1}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"null"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":10,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":1}],["count",{"t":"v","s":"0"}]]}]},
+{"l":11,"n":"الشرط `bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":2}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"null"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":10,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":2}],["count",{"t":"v","s":"0"}]]}]},
+{"l":11,"n":"الشرط `bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":10,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}],["count",{"t":"v","s":"0"}]]}]},
+{"l":11,"n":"الشرط `bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":12,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":3}],["count",{"t":"v","s":"1"}]]}]},
+{"l":13,"n":"العملية `CountEqualRightLeaves` تُعيد `1`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"null"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":8,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":4}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"null"}]]}]},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":6,"n":"تبدأ العملية `CountEqualRightLeaves` مع `bt` = `null`.","o":0},
+{"l":8,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":10,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":4}],["count",{"t":"v","s":"0"}]]}]},
+{"l":11,"n":"الشرط `bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"العملية `CountEqualRightLeaves` تُعيد `0`.","o":0},
+{"l":10,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}],["count",{"t":"v","s":"0"}]]}]},
+{"l":11,"n":"الشرط `bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":12,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":5}],["count",{"t":"v","s":"1"}]]}]},
+{"l":13,"n":"العملية `CountEqualRightLeaves` تُعيد `1`.","o":0},
+{"l":10,"n":"`count = 2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"CountEqualRightLeaves","vars":[["bt",{"t":"ref","id":6}],["count",{"t":"v","s":"2"}]]}]},
+{"l":11,"n":"الشرط `bt.HasRight() && IsLeaf(bt.GetRight()) && bt.GetRight().GetValue() == bt.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"العملية `CountEqualRightLeaves` تُعيد `2`.","o":0},
+{"l":0,"n":"نطبع: `2`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: الورقة لا تعرف أباها: في الخلية لا يوجد مؤشّر إلى الأب. لذلك نفحص الشرط من جهة الأب. عند كل خلية نسأل: هل لها ابن أيمن؟ وهل هذا الابن ورقة؟ وهل قيمته تساوي قيمتها؟ إذا تحقّقت الشروط الثلاثة نضيف 1. ثم القالب المعروف: ما في الشجرة اليسرى، زائد ما في اليمنى، زائد الخلية نفسها إذا تحقّق الشرط. في الشجرة الثانية: الجذر 6 يساوي ابنه الأيمن 6، لكنّ هذا الابن ليس ورقة، فلا يُعدّ."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p04-b31",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد عمليتك للشجرة الثانية في الرسم (جذرها 6)؟",
+        "answer": "0",
+        "feedback": {
+         "explanation": "الورقتان اليمنيان 8 و9 لا تساويان أبويهما (2 و6). والابن الأيمن للجذر يساوي الجذر لكنّه ليس ورقة."
         }
        },
        "origin": "teacher-enrichment"
@@ -7380,6 +9749,120 @@ const m06: ContentModule = {
       },
       {
        "id": "m06-l07-p05-b11",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة للسؤال التالي",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            -1,
+            -6,
+            null
+           ],
+           [
+            5,
+            8,
+            [
+             -1,
+             7,
+             null
+            ]
+           ]
+          ],
+          "pointers": [
+           [
+            "bt",
+            ""
+           ]
+          ],
+          "hi": [
+           "LL",
+           "RL",
+           "RRL"
+          ],
+          "label": "الأوراق مظلّلة ومجموعها 9"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (الأوراق مظلّلة ومجموعها 9)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p05-b12",
+       "type": "text",
+       "spans": [
+        {
+         "text": "طالب كتب عملية تحسب مجموع قيم الأوراق، لكنّه كتب شرط الورقة بالعملية "
+        },
+        {
+         "text": "||",
+         "dir": "ltr"
+        },
+        {
+         "text": " بدل "
+        },
+        {
+         "text": "&&",
+         "dir": "ltr"
+        },
+        {
+         "text": ":"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p05-b13",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int SumOfLeaves(BinNode<int> bt)\n{\n    if (bt == null)\n        return 0;\n    if (!bt.HasLeft() || !bt.HasRight())\n        return bt.GetValue();\n    return SumOfLeaves(bt.GetLeft()) + SumOfLeaves(bt.GetRight());\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p05-b14",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا تعيد عملية الطالب للشجرة التي في الرسم الأخير؟ (المجموع الصحيح 9)",
+        "options": [
+         {
+          "id": "o1",
+          "text": "9"
+         },
+         {
+          "id": "o2",
+          "text": "6",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "0"
+         },
+         {
+          "id": "o4",
+          "text": "خطأ في التشغيل"
+         }
+        ],
+        "feedback": {
+         "explanation": "بالشرط \u2066||\u2069 تُعتبر كل خلية ينقصها ابن واحد ورقة. الخلية \u2066-1\u2069 اليسرى ينقصها ابن أيمن، فتُعاد قيمتها ولا نصل إلى الورقة \u2066-6\u2069. وكذلك الخلية \u2066-1\u2069 اليمنى تُعاد بدل الورقة 7. المجموع: \u2066-1 + 8 + -1 = 6\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m06-l07-p05-b15",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7393,7 +9876,7 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p05-b12",
+       "id": "m06-l07-p05-b16",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7425,7 +9908,7 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p05-b13",
+       "id": "m06-l07-p05-b17",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7457,7 +9940,7 @@ const m06: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m06-l07-p05-b14",
+       "id": "m06-l07-p05-b18",
        "type": "practice",
        "reveal": true,
        "question": {

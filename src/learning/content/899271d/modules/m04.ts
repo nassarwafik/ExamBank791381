@@ -11,7 +11,7 @@ const m04: ContentModule = {
  "id": "899271d-m04",
  "title": "الراصّة (Stack)",
  "shortTitle": "الراصّة",
- "description": "مبدأ «آخر من يدخل أول من يخرج»، واجهة الفئة Stack، تمشيط الراصّة مع الحفاظ عليها، بناء الفئة بسلسلة خلايا، فحص اتزان الأقواس وحساب تعبير حسابي، الراصّة والتراجعية، وأسئلة تتبّع وكتابة.",
+ "description": "مبدأ «آخر من يدخل أول من يخرج»، واجهة الفئة Stack، تمشيط الراصّة مع الحفاظ عليها، بناء الفئة بسلسلة خلايا، فحص اتزان الأقواس وحساب تعبير حسابي، الراصّة والتراجعية، وأسئلة تتبّع وكتابة مرتّبة بحسب الصعوبة: خمسة محلولة من كل نوع، ووظيفة مع نافذة حل لكل سؤال.",
  "order": 5,
  "lessons": [
   {
@@ -2706,12 +2706,12 @@ const m04: ContentModule = {
   },
   {
    "id": "899271d-m04-l05",
-   "title": "أسئلة تتبّع وكتابة",
+   "title": "أسئلة وتمارين",
    "order": 5,
    "pages": [
     {
      "id": "899271d-m04-l05-p01",
-     "title": "أسئلة تتبّع (1)",
+     "title": "أسئلة تتبّع محلولة",
      "order": 1,
      "source": {
       "kind": "book",
@@ -2721,7 +2721,9 @@ const m04: ContentModule = {
      },
      "keywords": [
       "تتبّع",
-      "راصّة"
+      "أسئلة محلولة",
+      "راصّة",
+      "راصّة مساعدة"
      ],
      "blocks": [
       {
@@ -2729,14 +2731,14 @@ const m04: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "تمعّن في مقطع البرنامج، وتتبّعه "
+         "text": "خمسة أسئلة تتبّع محلولة، مرتّبة من الأسهل إلى الأصعب. في كل سؤال: اقرأ الكود وحاول أن تجيب "
         },
         {
          "text": "بدون",
          "style": "strong"
         },
         {
-         "text": " الاستعانة بالحاسوب. أجب أولًا، ثم افتح التتبّع لتتأكد. في كل الإجابات: القيمة الأولى من اليسار هي رأس الراصّة."
+         "text": " الاستعانة بالحاسوب، ثم اقرأ الحل، ثم شغّل التتبّع وراقب الراصّة خطوة بخطوة. في كل الإجابات: القيمة الأولى من اليسار هي رأس الراصّة."
         }
        ],
        "origin": "teacher-enrichment"
@@ -2745,7 +2747,7 @@ const m04: ContentModule = {
        "id": "m04-l05-p01-b02",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 1",
+       "text": "سؤال 1 · سهل — إدخال حروف وإخراجها",
        "origin": "teacher-enrichment"
       },
       {
@@ -2758,38 +2760,48 @@ const m04: ContentModule = {
       },
       {
        "id": "m04-l05-p01-b04",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف ستبدو الراصّة \u2066st\u2069 في نهاية مقطع البرنامج؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[a,b,c,d,e]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[e,d,c,b,a]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[e,c,b,a]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[e]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "دُفعت الحروف a ثم b ثم c ثم d. عملية الإخراج حذفت الرأس d، ثم دُفع e فأصبح هو الرأس فوق c."
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كيف ستبدو الراصّة "
+        },
+        {
+         "text": "st",
+         "dir": "ltr"
+        },
+        {
+         "text": " في نهاية مقطع البرنامج؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m04-l05-p01-b05",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "دُفعت الحروف \u2066a\u2069 ثم \u2066b\u2069 ثم \u2066c\u2069 ثم \u2066d\u2069: الراصّة \u2066[d,c,b,a]\u2069 والرأس \u2066d\u2069."
+        },
+        {
+         "text": "الأمر \u2066st.Pop();\u2069 يحذف الرأس \u2066d\u2069: الراصّة \u2066[c,b,a]\u2069."
+        },
+        {
+         "text": "الأمر \u2066st.Push('e');\u2069 يدفع \u2066e\u2069 فيصير هو الرأس فوق \u2066c\u2069."
+        },
+        {
+         "text": "النتيجة: في النهاية \u2066st = [e,c,b,a]\u2069، وهذا ما يطبعه الأمر الأخير."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b06",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -2821,14 +2833,14 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b06",
+       "id": "m04-l05-p01-b07",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 2",
+       "text": "سؤال 2 · سهل — حلقة \u2066for\u2069 تملأ راصّة",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b07",
+       "id": "m04-l05-p01-b08",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -2836,39 +2848,55 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b08",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف ستبدو الراصّة \u2066st\u2069 في نهاية مقطع البرنامج؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[1,20,9,40,25,60,49,80,81,100]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[100,81,80,49,60,25,40,9,20,1]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[100,90,64,70,36,50,16,30,4,10]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[10,4,30,16,50,36,70,64,90,100]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "القيم الفردية تُدفع مربّعاتها والقيم الزوجية تُدفع مضروبة في 10، فترتيب الدفع: 1، 20، 9، 40، 25، 60، 49، 80، 81، 100. في الراصّة آخر ما دُفع يكون الرأس، لذلك نقرأ الترتيب معكوسًا."
+       "id": "m04-l05-p01-b09",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كيف ستبدو الراصّة "
+        },
+        {
+         "text": "st",
+         "dir": "ltr"
+        },
+        {
+         "text": " في نهاية مقطع البرنامج؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b09",
+       "id": "m04-l05-p01-b10",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة تمرّ على \u2066k\u2069 من 1 إلى 10، وفي كل دورة تدفع قيمة واحدة إلى الراصّة."
+        },
+        {
+         "text": "حين يكون \u2066k\u2069 زوجيًا تُدفع القيمة \u2066k * 10\u2069: تُدفع 20 و40 و60 و80 و100."
+        },
+        {
+         "text": "حين يكون \u2066k\u2069 فرديًا يُدفع مربّعه \u2066Math.Pow(k, 2)\u2069: تُدفع 1 و9 و25 و49 و81."
+        },
+        {
+         "text": "ترتيب الدفع إذن: 1، 20، 9، 40، 25، 60، 49، 80، 81، 100."
+        },
+        {
+         "text": "في الراصّة آخر ما دُفع يكون الرأس، لذلك نقرأ الترتيب معكوسًا."
+        },
+        {
+         "text": "النتيجة: في النهاية \u2066st = [100,81,80,49,60,25,40,9,20,1]\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b11",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -2936,14 +2964,14 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b10",
+       "id": "m04-l05-p01-b12",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 3 — العملية \u2066Pineapple\u2069",
+       "text": "سؤال 3 · متوسط — العملية \u2066Pineapple\u2069",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b11",
+       "id": "m04-l05-p01-b13",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -2951,11 +2979,11 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b12",
+       "id": "m04-l05-p01-b14",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
-       "title": "الراصّة المعطاة st",
+       "title": "الراصّة المعطاة \u2066st\u2069",
        "capabilities": {
         "fullscreen": true
        },
@@ -2979,52 +3007,56 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p01-b13",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تُعاد بعد استدعاء العملية \u2066Pineapple\u2069 مع الراصّة \u2066st\u2069؟",
-        "answer": "28",
-        "feedback": {
-         "explanation": "\u206611 + 3 + 5 + 7 + 2 = 28\u2069. كل حدّ أُخرج من \u2066st\u2069 أُضيف إلى \u2066sod\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p01-b14",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تنفّذ العملية \u2066Pineapple\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تعكس ترتيب حدود الراصّة"
-         },
-         {
-          "id": "o2",
-          "text": "تعيد عدد حدود الراصّة"
-         },
-         {
-          "id": "o3",
-          "text": "تعيد مجموع حدود الراصّة",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "تعيد عدد الحدود المساوية للحدّ الذي في رأس الراصّة"
-         }
-        ],
-        "feedback": {
-         "explanation": "الحلقة الأولى تجمع الحدود وتنقلها إلى \u2066temp\u2069، والحلقة الثانية تعيدها إلى \u2066st\u2069 بترتيبها الأصلي. إذن العملية تعيد مجموع الحدود ولا تغيّر الراصّة."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
        "id": "m04-l05-p01-b15",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما القيمة التي تُعاد بعد استدعاء العملية "
+        },
+        {
+         "text": "Pineapple",
+         "dir": "ltr"
+        },
+        {
+         "text": " مع الراصّة "
+        },
+        {
+         "text": "st",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وماذا تنفّذ هذه العملية؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b16",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة الأولى تُخرج الحدود واحدًا واحدًا: كل حدّ يُدفع إلى \u2066temp\u2069 ويُضاف إلى \u2066sod\u2069."
+        },
+        {
+         "text": "بعد الحلقة الأولى: \u2066sod = 11 + 3 + 5 + 7 + 2 = 28\u2069، والراصّة \u2066st\u2069 فارغة، و \u2066temp = [2,7,5,3,11]\u2069 (الترتيب مقلوب)."
+        },
+        {
+         "text": "الحلقة الثانية تعيد الحدود من \u2066temp\u2069 إلى \u2066st\u2069: النقل مرّتين يعيد الترتيب الأصلي \u2066[11,3,5,7,2]\u2069."
+        },
+        {
+         "text": "النتيجة: تُعاد القيمة \u206628\u2069. العملية تعيد مجموع حدود الراصّة ولا تغيّر الراصّة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b17",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -3082,44 +3114,236 @@ const m04: ContentModule = {
         "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (37 خطوة)؛ ناتج البرنامج: 28 ↵ [11,3,5,7,2]."
        },
        "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m04-l05-p02",
-     "title": "أسئلة تتبّع (2)",
-     "order": 2,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 179,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الرابع «الراصّة»"
-     },
-     "keywords": [
-      "تتبّع",
-      "راصّة مساعدة",
-      "ترتيب"
-     ],
-     "blocks": [
+      },
       {
-       "id": "m04-l05-p02-b01",
+       "id": "m04-l05-p01-b18",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — العملية \u2066Grapes\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b19",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Grapes(Stack<string> st)\n{\n    int x;\n    Stack<string> a = new Stack<string>();\n    Stack<string> b = new Stack<string>();\n    while (!st.IsEmpty())\n    {\n        x = st.Top().Length;\n        if (x > 5)\n            a.Push(st.Pop());\n        else\n            b.Push(st.Pop());\n    }\n    Console.WriteLine(b);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b20",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الراصّة المعطاة \u2066st\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "stack",
+          "items": [
+           "sing",
+           "important",
+           "to",
+           "love",
+           "encyclopedia",
+           "I"
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: راصّة من الرأس إلى القاع: sing، important، to، love، encyclopedia، I."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b21",
        "type": "text",
        "spans": [
         {
-         "text": "أسئلة أصعب قليلًا: في كل سؤال عملية وراصّة معطاة. القيمة الأولى من اليسار هي رأس الراصّة."
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " (أ) ماذا تطبع "
+        },
+        {
+         "text": "Grapes(st)",
+         "dir": "ltr"
+        },
+        {
+         "text": " للراصّة المعطاة؟ (ب) بعد استدعاء العملية "
+        },
+        {
+         "text": "Grapes",
+         "dir": "ltr"
+        },
+        {
+         "text": " مع راصّة ما، أيّ الراصّات التالية يمكن أن تكون الراصّة "
+        },
+        {
+         "text": "b",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b02",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 4 — العملية \u2066Peach\u2069",
+       "id": "m04-l05-p01-b22",
+       "type": "list",
+       "variant": "plain",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "أ: "
+          },
+          {
+           "text": "[important,read,an,encyclopedia]",
+           "dir": "ltr"
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "ب: "
+          },
+          {
+           "text": "[I,love,to,sing]",
+           "dir": "ltr"
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "ج: "
+          },
+          {
+           "text": "[play,the,accordion]",
+           "dir": "ltr"
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "د: "
+          },
+          {
+           "text": "[Those,who,study,hard,excel]",
+           "dir": "ltr"
+          }
+         ]
+        }
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b03",
+       "id": "m04-l05-p01-b23",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في كل دورة يُحفظ في \u2066x\u2069 طول الكلمة التي في الرأس. إذا كان الطول أكبر من 5 تنتقل الكلمة إلى \u2066a\u2069، وإلا تنتقل إلى \u2066b\u2069."
+        },
+        {
+         "text": "\u2066sing\u2069 طولها 4: إلى \u2066b\u2069. \u2066important\u2069 طولها 9: إلى \u2066a\u2069. \u2066to\u2069 طولها 2: إلى \u2066b\u2069. \u2066love\u2069 طولها 4: إلى \u2066b\u2069. \u2066encyclopedia\u2069 طولها 12: إلى \u2066a\u2069. \u2066I\u2069 طولها 1: إلى \u2066b\u2069."
+        },
+        {
+         "text": "دخلت إلى \u2066b\u2069 الكلمات \u2066sing\u2069 ثم \u2066to\u2069 ثم \u2066love\u2069 ثم \u2066I\u2069، فآخرها \u2066I\u2069 في الرأس."
+        },
+        {
+         "text": "للقسم (ب): الراصّة \u2066b\u2069 تستقبل فقط الكلمات التي طولها 5 أو أقل، لأن الشرط \u2066x > 5\u2069 يرسل الطول 5 نفسه إلى \u2066b\u2069."
+        },
+        {
+         "text": "الراصّة أ فيها \u2066important\u2069 و \u2066encyclopedia\u2069، والراصّة ج فيها \u2066accordion\u2069: كلمات أطول من 5، فلا يمكن أن تكون أيٌّ منهما \u2066b\u2069."
+        },
+        {
+         "text": "الراصّة ب كل كلماتها قصيرة. والراصّة د كلماتها \u2066Those\u2069 و \u2066study\u2069 و \u2066excel\u2069 طولها 5 بالضبط، فهي مقبولة أيضًا."
+        },
+        {
+         "text": "النتيجة: (أ) يُطبع \u2066[I,love,to,sing]\u2069. (ب) الراصّتان ب و د."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b24",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع \u2066Grapes\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void Grapes(Stack<string> st)\n{\n    int x;\n    Stack<string> a = new Stack<string>();\n    Stack<string> b = new Stack<string>();\n    while (!st.IsEmpty())\n    {\n        x = st.Top().Length;\n        if (x > 5)\n            a.Push(st.Pop());\n        else\n            b.Push(st.Pop());\n    }\n    Console.WriteLine(b);\n}",
+        "given": "الراصّة `st = [sing,important,to,love,encyclopedia,I]`، والاستدعاء `Grapes(st)`.",
+        "out": "[I,love,to,sing]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Grapes` مع `st` = الراصّة `[sing,important,to,love,encyclopedia,I]`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["sing","important","to","love","encyclopedia","I"]}]},
+{"l":3,"n":"نعرّف المتغيّر `x`.","o":0},
+{"l":4,"n":"ننشئ راصّة فارغة باسم `a`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["a",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["sing","important","to","love","encyclopedia","I"]},{"id":2,"k":"stack","items":[]}]},
+{"l":5,"n":"ننشئ راصّة فارغة باسم `b`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"stack","items":["sing","important","to","love","encyclopedia","I"]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":[]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"رأس الراصّة `st` هو `sing` (لا يخرج). `x = 4`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["x",{"t":"v","s":"4"}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"الشرط `x > 5` خطأ: ننتقل إلى `else`.","o":0},
+{"l":12,"n":"نخرج `sing` من رأس الراصّة `st`. ندخل `sing` إلى رأس الراصّة `b`.","o":0,"h":[{"id":1,"k":"stack","items":["important","to","love","encyclopedia","I"]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["sing"]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"رأس الراصّة `st` هو `important` (لا يخرج). `x = 9`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["x",{"t":"v","s":"9"}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"الشرط `x > 5` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":10,"n":"نخرج `important` من رأس الراصّة `st`. ندخل `important` إلى رأس الراصّة `a`.","o":0,"h":[{"id":1,"k":"stack","items":["to","love","encyclopedia","I"]},{"id":2,"k":"stack","items":["important"]},{"id":3,"k":"stack","items":["sing"]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"رأس الراصّة `st` هو `to` (لا يخرج). `x = 2`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["x",{"t":"v","s":"2"}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"الشرط `x > 5` خطأ: ننتقل إلى `else`.","o":0},
+{"l":12,"n":"نخرج `to` من رأس الراصّة `st`. ندخل `to` إلى رأس الراصّة `b`.","o":0,"h":[{"id":1,"k":"stack","items":["love","encyclopedia","I"]},{"id":2,"k":"stack","items":["important"]},{"id":3,"k":"stack","items":["to","sing"]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"رأس الراصّة `st` هو `love` (لا يخرج). `x = 4`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["x",{"t":"v","s":"4"}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"الشرط `x > 5` خطأ: ننتقل إلى `else`.","o":0},
+{"l":12,"n":"نخرج `love` من رأس الراصّة `st`. ندخل `love` إلى رأس الراصّة `b`.","o":0,"h":[{"id":1,"k":"stack","items":["encyclopedia","I"]},{"id":2,"k":"stack","items":["important"]},{"id":3,"k":"stack","items":["love","to","sing"]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"رأس الراصّة `st` هو `encyclopedia` (لا يخرج). `x = 12`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["x",{"t":"v","s":"12"}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"الشرط `x > 5` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":10,"n":"نخرج `encyclopedia` من رأس الراصّة `st`. ندخل `encyclopedia` إلى رأس الراصّة `a`.","o":0,"h":[{"id":1,"k":"stack","items":["I"]},{"id":2,"k":"stack","items":["encyclopedia","important"]},{"id":3,"k":"stack","items":["love","to","sing"]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"رأس الراصّة `st` هو `I` (لا يخرج). `x = 1`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["st",{"t":"ref","id":1}],["x",{"t":"v","s":"1"}],["a",{"t":"ref","id":2}],["b",{"t":"ref","id":3}]]}]},
+{"l":9,"n":"الشرط `x > 5` خطأ: ننتقل إلى `else`.","o":0},
+{"l":12,"n":"نخرج `I` من رأس الراصّة `st`. ندخل `I` إلى رأس الراصّة `b`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":["encyclopedia","important"]},{"id":3,"k":"stack","items":["I","love","to","sing"]}]},
+{"l":6,"n":"الشرط `!st.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"نطبع: `[I,love,to,sing]`.","o":17},
+{"l":15,"n":"تنتهي العملية `Grapes` ونعود إلى من استدعاها.","o":17},
+{"l":0,"n":"انتهى التنفيذ.","o":17,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":[]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (32 خطوة)؛ ناتج البرنامج: [I,love,to,sing]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b25",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متوسط — العملية \u2066Peach\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b26",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3127,39 +3351,91 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b04",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "معطاة الراصّة \u2066st1 = [8,2,1,7,3,5]\u2069. كيف ستبدو الراصّة \u2066st2\u2069 في نهاية استدعاء \u2066Peach(st1)\u2069؟",
-        "options": [
+       "id": "m04-l05-p01-b27",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الراصّة المعطاة \u2066st1\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
          {
-          "id": "o1",
-          "text": "\u2066[3,5,1,7,8,2]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[2,8,7,1,5,3]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[1,2,3,5,7,8]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[5,3,7,1,2,8]\u2069"
+          "kind": "stack",
+          "items": [
+           8,
+           2,
+           1,
+           7,
+           3,
+           5
+          ]
          }
-        ],
-        "feedback": {
-         "explanation": "في كل دورة يُخرج حدّان: الأول x والثاني y، فيُدفع y ثم x. الأزواج (8، 2) ثم (1، 7) ثم (3، 5) تُدفع بالترتيب: 2، 8، 7، 1، 5، 3، فيكون الرأس 3."
-        }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: راصّة من الرأس إلى القاع: 8، 2، 1، 7، 3، 5."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b05",
+       "id": "m04-l05-p01-b28",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كيف ستبدو الراصّة "
+        },
+        {
+         "text": "st2",
+         "dir": "ltr"
+        },
+        {
+         "text": " في نهاية استدعاء "
+        },
+        {
+         "text": "Peach(st1)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b29",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في كل دورة يُخرج حدّان: الأول \u2066x\u2069 والثاني \u2066y\u2069، فيُدفع \u2066y\u2069 ثم \u2066x\u2069."
+        },
+        {
+         "text": "الدورة الأولى: \u2066x = 8\u2069 و \u2066y = 2\u2069. يُدفع 2 ثم 8: \u2066st2 = [8,2]\u2069."
+        },
+        {
+         "text": "الدورة الثانية: \u2066x = 1\u2069 و \u2066y = 7\u2069. يُدفع 7 ثم 1: \u2066st2 = [1,7,8,2]\u2069."
+        },
+        {
+         "text": "الدورة الثالثة: \u2066x = 3\u2069 و \u2066y = 5\u2069. يُدفع 5 ثم 3: \u2066st2 = [3,5,1,7,8,2]\u2069."
+        },
+        {
+         "text": "الفرع \u2066else\u2069 يعمل فقط حين يبقى حدّ أخير بلا شريك (عدد الحدود فردي): عندها يُدفع هذا الحدّ مرّتين."
+        },
+        {
+         "text": "النتيجة: يُطبع \u2066st2=[3,5,1,7,8,2]\u2069: ترتيب الأزواج انقلب، وكل زوج بقي بترتيبه."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p01-b30",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -3205,16 +3481,53 @@ const m04: ContentModule = {
         "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (25 خطوة)؛ ناتج البرنامج: st2=[3,5,1,7,8,2]."
        },
        "origin": "teacher-enrichment"
-      },
+      }
+     ]
+    },
+    {
+     "id": "899271d-m04-l05-p02",
+     "title": "وظيفة: أسئلة تتبّع",
+     "order": 2,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 179,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الرابع «الراصّة»"
+     },
+     "keywords": [
+      "وظيفة",
+      "تتبّع",
+      "راصّة مساعدة",
+      "أقواس",
+      "ترتيب"
+     ],
+     "blocks": [
       {
-       "id": "m04-l05-p02-b06",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 5 — العملية \u2066Cherry\u2069",
+       "id": "m04-l05-p02-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "أربعة أسئلة تتبّع للوظيفة، من الأسهل إلى الأصعب. تتبّع كل عملية في دفترك "
+        },
+        {
+         "text": "بدون",
+         "style": "strong"
+        },
+        {
+         "text": " الاستعانة بالحاسوب وأجب، ثم اضغط «الحل»: تفتح نافذة فيها الشرح وتتبّع البرنامج خطوة بخطوة. القيمة الأولى من اليسار هي رأس الراصّة."
+        }
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b07",
+       "id": "m04-l05-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · متوسط — العملية \u2066Cherry\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b03",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3222,7 +3535,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b08",
+       "id": "m04-l05-p02-b04",
        "type": "text",
        "spans": [
         {
@@ -3246,7 +3559,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b09",
+       "id": "m04-l05-p02-b05",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -3259,7 +3572,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b10",
+       "id": "m04-l05-p02-b06",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -3291,21 +3604,140 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b11",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m04-l05-p02-b07",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Cherry\u2069",
+       "title": "حل سؤال 1 — \u2066Cherry\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الحلقة الأولى تُخرج الحدود واحدًا واحدًا. الحدّ الذي لا يساوي "
+          },
+          {
+           "text": "num",
+           "dir": "ltr"
+          },
+          {
+           "text": " يُدفع إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، والحدّ الذي يساويه لا يُدفع إلى أي مكان ويزيد "
+          },
+          {
+           "text": "count",
+           "dir": "ltr"
+          },
+          {
+           "text": " بواحد."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "العدد 4 يظهر ثلاث مرات، فيصير "
+          },
+          {
+           "text": "count = 3",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وتبقى في "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " الحدود الأخرى بترتيب مقلوب: "
+          },
+          {
+           "text": "temp = [9,2,7]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الحلقة الثانية تعيد الحدود من "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": ": النقل مرّتين يعيد ترتيبها الأصلي، فتصير "
+          },
+          {
+           "text": "st = [7,2,9]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "إذن العملية تحذف من الراصّة كل ظهور للعدد "
+          },
+          {
+           "text": "num",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتعيد عدد مرات ظهوره."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "r = 3",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والراصّة تصير "
+        },
+        {
+         "text": "[7,2,9]",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static int Cherry(Stack<int> st, int num)\n{\n    int count = 0;\n    Stack<int> temp = new Stack<int>();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x != num)\n            temp.Push(x);\n        else\n            count++;\n    }\n    while (!temp.IsEmpty())\n        st.Push(temp.Pop());\n    return count;\n}",
-        "given": "الراصّة `st = [4,7,4,2,4,9]`، والاستدعاء `Cherry(st, 4)`.",
-        "out": "3\n",
-        "steps": [
+        "trace": {
+         "code": "public static int Cherry(Stack<int> st, int num)\n{\n    int count = 0;\n    Stack<int> temp = new Stack<int>();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x != num)\n            temp.Push(x);\n        else\n            count++;\n    }\n    while (!temp.IsEmpty())\n        st.Push(temp.Pop());\n    return count;\n}",
+         "given": "الراصّة `st = [4,7,4,2,4,9]`، والاستدعاء `int r = Cherry(st, 4);`.",
+         "out": "3\n[7,2,9]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Cherry` مع `st` = الراصّة `[4,7,4,2,4,9]`، `num = 4`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["st",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"stack","items":["4","7","4","2","4","9"]}]},
 {"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["st",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}]]}]},
 {"l":4,"n":"ننشئ راصّة فارغة باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["st",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["4","7","4","2","4","9"]},{"id":2,"k":"stack","items":[]}]},
@@ -3342,23 +3774,349 @@ const m04: ContentModule = {
 {"l":14,"n":"نخرج `7` من رأس الراصّة `temp`. ندخل `7` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["7","2","9"]},{"id":2,"k":"stack","items":[]}]},
 {"l":13,"n":"الشرط `!temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
 {"l":15,"n":"العملية `Cherry` تُعيد `3`.","o":0},
-{"l":0,"n":"نطبع: `3`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}],["r",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["7","2","9"]}]}
+{"l":0,"n":"نطبع: `3`. نطبع: `[7,2,9]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}],["r",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["7","2","9"]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (37 خطوة)؛ ناتج البرنامج: 3."
+        "text": "حل السؤال: الحلقة الأولى تُخرج الحدود واحدًا واحدًا. الحدّ الذي لا يساوي num يُدفع إلى temp، والحدّ الذي يساويه لا يُدفع إلى أي مكان ويزيد count بواحد. العدد 4 يظهر ثلاث مرات، فيصير count = 3، وتبقى في temp الحدود الأخرى بترتيب مقلوب: temp = [9,2,7]. الحلقة الثانية تعيد الحدود من temp إلى st: النقل مرّتين يعيد ترتيبها الأصلي، فتصير st = [7,2,9]. إذن العملية تحذف من الراصّة كل ظهور للعدد num وتعيد عدد مرات ظهوره."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — العملية \u2066Strawberry\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b09",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Strawberry(string s)\n{\n    Stack<char> st = new Stack<char>();\n    for (int i = 0; i < s.Length; i++)\n    {\n        char c = s[i];\n        if (c == '(' || c == '[')\n            st.Push(c);\n        else\n        {\n            if (st.IsEmpty())\n                return false;\n            char t = st.Pop();\n            if ((c == ')' && t != '(') || (c == ']' && t != '['))\n                return false;\n        }\n    }\n    return st.IsEmpty();\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b10",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "لأيّ من النصوص التالية تعيد العملية \u2066Strawberry\u2069 القيمة \u2066true\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066\"([)]\"\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066\"(()[\"\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "\u2066\"([]())\"\u2069",
+          "correct": true
+         },
+         {
+          "id": "o4",
+          "text": "\u2066\"())(\"\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "في \u2066\"([)]\"\u2069 القوس \u2066)\u2069 يصل بينما الرأس \u2066[\u2069. في \u2066\"(()[\"\u2069 تبقى أقواس مفتوحة في النهاية. في \u2066\"())(\"\u2069 يصل \u2066)\u2069 والراصّة فارغة. فقط \u2066\"([]())\"\u2069 يُفرغ الراصّة تمامًا بدون أي تعارض."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b11",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا تنفّذ العملية \u2066Strawberry\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "تفحص إذا كان عدد الأقواس المفتوحة يساوي عدد الأقواس المغلقة"
+         },
+         {
+          "id": "o2",
+          "text": "تفحص إذا كانت الأقواس في النص متّزنة ومتداخلة بشكل صحيح",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "تعيد \u2066true\u2069 إذا بدأ النص بقوس مفتوح"
+         },
+         {
+          "id": "o4",
+          "text": "تعكس ترتيب الأقواس في النص"
+         }
+        ],
+        "feedback": {
+         "explanation": "تساوي العدد لا يكفي: النص \u2066\"([)]\"\u2069 فيه عددان متساويان ومع ذلك تعيد العملية \u2066false\u2069. الراصّة تحفظ آخر قوس مفتوح، فكل قوس مغلق يجب أن يطابق الأقرب إليه."
+        }
        },
        "origin": "teacher-enrichment"
       },
       {
        "id": "m04-l05-p02-b12",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 6 — العملية \u2066Banana\u2069",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066Strawberry\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "القوس المفتوح يُدفع إلى الراصّة. القوس المغلق يُخرج الرأس ويقارنه به: "
+          },
+          {
+           "text": ")",
+           "dir": "ltr"
+          },
+          {
+           "text": " يجب أن يقابل "
+          },
+          {
+           "text": "(",
+           "dir": "ltr"
+          },
+          {
+           "text": "، و "
+          },
+          {
+           "text": "]",
+           "dir": "ltr"
+          },
+          {
+           "text": " يجب أن يقابل "
+          },
+          {
+           "text": "[",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "في "
+          },
+          {
+           "text": "\"([)]\"",
+           "dir": "ltr"
+          },
+          {
+           "text": ": يُدفع "
+          },
+          {
+           "text": "(",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "[",
+           "dir": "ltr"
+          },
+          {
+           "text": ". عند "
+          },
+          {
+           "text": ")",
+           "dir": "ltr"
+          },
+          {
+           "text": " يكون الرأس "
+          },
+          {
+           "text": "[",
+           "dir": "ltr"
+          },
+          {
+           "text": ": لا يتطابقان، فتُعاد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "في "
+          },
+          {
+           "text": "\"(()[\"",
+           "dir": "ltr"
+          },
+          {
+           "text": ": ينتهي النص وفي الراصّة قوسان مفتوحان، فتُعاد قيمة "
+          },
+          {
+           "text": "st.IsEmpty()",
+           "dir": "ltr"
+          },
+          {
+           "text": " وهي "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "في "
+          },
+          {
+           "text": "\"())(\"",
+           "dir": "ltr"
+          },
+          {
+           "text": ": القوس "
+          },
+          {
+           "text": ")",
+           "dir": "ltr"
+          },
+          {
+           "text": " الثاني يصل والراصّة فارغة، فتُعاد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "في "
+          },
+          {
+           "text": "\"([]())\"",
+           "dir": "ltr"
+          },
+          {
+           "text": ": كل قوس مغلق يجد شريكه في الرأس، وتنتهي الراصّة فارغة: "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s6",
+         "text": [
+          {
+           "text": "هذه هي فكرة العملية "
+          },
+          {
+           "text": "IsBracketBalanced",
+           "dir": "ltr"
+          },
+          {
+           "text": " التي تعلّمتها في صفحة «فحص اتّزان الأقواس»، لنوعين من الأقواس."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "تعيد "
+        },
+        {
+         "text": "true",
+         "dir": "ltr"
+        },
+        {
+         "text": " للنص "
+        },
+        {
+         "text": "\"([]())\"",
+         "dir": "ltr"
+        },
+        {
+         "text": " فقط. العملية تفحص إن كانت الأقواس متّزنة ومتداخلة بشكل صحيح."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static bool Strawberry(string s)\n{\n    Stack<char> st = new Stack<char>();\n    for (int i = 0; i < s.Length; i++)\n    {\n        char c = s[i];\n        if (c == '(' || c == '[')\n            st.Push(c);\n        else\n        {\n            if (st.IsEmpty())\n                return false;\n            char t = st.Pop();\n            if ((c == ')' && t != '(') || (c == ']' && t != '['))\n                return false;\n        }\n    }\n    return st.IsEmpty();\n}",
+         "given": "الاستدعاء `Strawberry(\"([)]\")`.",
+         "out": "False\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Strawberry` مع `s = \"([)]\"`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}]]}],"h":[]},
+{"l":3,"n":"ننشئ راصّة فارغة باسم `st`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":[]}]},
+{"l":4,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `i < s.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`c = '('`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"0"}],["c",{"t":"v","s":"'('"}]]}]},
+{"l":7,"n":"الشرط `c == '(' || c == '['` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"ندخل `(` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["("]}]},
+{"l":4,"n":"`i` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `i < s.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`c = '['`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"1"}],["c",{"t":"v","s":"'['"}]]}]},
+{"l":7,"n":"الشرط `c == '(' || c == '['` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"ندخل `[` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["[","("]}]},
+{"l":4,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `i < s.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`c = ')'`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"2"}],["c",{"t":"v","s":"')'"}]]}]},
+{"l":7,"n":"الشرط `c == '(' || c == '['` خطأ: ننتقل إلى `else`.","o":0},
+{"l":11,"n":"الشرط `st.IsEmpty()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"نخرج `[` من رأس الراصّة `st`. `t = '['`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Strawberry","vars":[["s",{"t":"v","s":"\"([)]\""}],["st",{"t":"ref","id":1}],["i",{"t":"v","s":"2"}],["c",{"t":"v","s":"')'"}],["t",{"t":"v","s":"'['"}]]}],"h":[{"id":1,"k":"stack","items":["("]}]},
+{"l":14,"n":"الشرط `(c == ')' && t != '(') || (c == ']' && t != '[')` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":15,"n":"العملية `Strawberry` تُعيد `false`.","o":0},
+{"l":0,"n":"نطبع: `False`. انتهى التنفيذ.","o":6,"f":[{"name":"Main","vars":[]}],"h":[]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: القوس المفتوح يُدفع إلى الراصّة. القوس المغلق يُخرج الرأس ويقارنه به: ) يجب أن يقابل (، و ] يجب أن يقابل [. في \"([)]\": يُدفع ( ثم [. عند ) يكون الرأس [: لا يتطابقان، فتُعاد false. في \"(()[\": ينتهي النص وفي الراصّة قوسان مفتوحان، فتُعاد قيمة st.IsEmpty() وهي false. في \"())(\": القوس ) الثاني يصل والراصّة فارغة، فتُعاد false. في \"([]())\": كل قوس مغلق يجد شريكه في الرأس، وتنتهي الراصّة فارغة: true. هذه هي فكرة العملية IsBracketBalanced التي تعلّمتها في صفحة «فحص اتّزان الأقواس»، لنوعين من الأقواس."
+       },
        "origin": "teacher-enrichment"
       },
       {
        "id": "m04-l05-p02-b13",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متقدّم — العملية \u2066Banana\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b14",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3366,12 +4124,36 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b14",
+       "id": "m04-l05-p02-b15",
+       "type": "text",
+       "spans": [
+        {
+         "text": "معطاة الراصّة "
+        },
+        {
+         "text": "st = [6,9,3,9,1]",
+         "dir": "ltr"
+        },
+        {
+         "text": "، ونُفّذ الاستدعاء "
+        },
+        {
+         "text": "Banana(st);",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b16",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "معطاة الراصّة \u2066st = [6,9,3,9,1]\u2069. كيف ستبدو بعد انتهاء استدعاء \u2066Banana(st)\u2069؟",
+        "prompt": "كيف ستبدو الراصّة \u2066st\u2069 بعد انتهاء استدعاء \u2066Banana(st)\u2069؟",
         "options": [
          {
           "id": "o1",
@@ -3398,7 +4180,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b15",
+       "id": "m04-l05-p02-b17",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -3430,21 +4212,145 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b16",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m04-l05-p02-b18",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Banana\u2069",
+       "title": "حل سؤال 3 — \u2066Banana\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ بقيمة الرأس 6. الحلقة الأولى تنقل كل الحدود إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وتحدّث "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " كلما وجدت حدًّا أكبر: في النهاية "
+          },
+          {
+           "text": "max = 9",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "بعد الحلقة الأولى: "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": " فارغة و "
+          },
+          {
+           "text": "temp = [1,9,3,9,6]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الحلقة الثانية تعيد الحدود إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "، لكنّ كل حدّ يساوي "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا يعود. يعود 1 ثم 3 ثم 6: "
+          },
+          {
+           "text": "st = [6,3,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الأمر الأخير "
+          },
+          {
+           "text": "st.Push(max);",
+           "dir": "ltr"
+          },
+          {
+           "text": " يدفع 9 مرة واحدة: "
+          },
+          {
+           "text": "st = [9,6,3,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "ترتيب باقي الحدود لم يتغيّر لأنها نُقلت مرّتين. إن ظهرت أكبر قيمة أكثر من مرة يقلّ عدد الحدود."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "st = [9,6,3,1]",
+         "dir": "ltr"
+        },
+        {
+         "text": ": أكبر قيمة انتقلت إلى الرأس وحُذفت تكراراتها الأخرى."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static void Banana(Stack<int> st)\n{\n    Stack<int> temp = new Stack<int>();\n    int max = st.Top();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x > max)\n            max = x;\n        temp.Push(x);\n    }\n    while (!temp.IsEmpty())\n    {\n        int x = temp.Pop();\n        if (x != max)\n            st.Push(x);\n    }\n    st.Push(max);\n}",
-        "given": "الراصّة `st = [6,9,3,9,1]`، والاستدعاء `Banana(st)`.",
-        "out": "[9,6,3,1]\n",
-        "steps": [
+        "trace": {
+         "code": "public static void Banana(Stack<int> st)\n{\n    Stack<int> temp = new Stack<int>();\n    int max = st.Top();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x > max)\n            max = x;\n        temp.Push(x);\n    }\n    while (!temp.IsEmpty())\n    {\n        int x = temp.Pop();\n        if (x != max)\n            st.Push(x);\n    }\n    st.Push(max);\n}",
+         "given": "الراصّة `st = [6,9,3,9,1]`، والاستدعاء `Banana(st)`.",
+         "out": "[9,6,3,1]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Banana` مع `st` = الراصّة `[6,9,3,9,1]`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Banana","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["6","9","3","9","1"]}]},
 {"l":3,"n":"ننشئ راصّة فارغة باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Banana","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["6","9","3","9","1"]},{"id":2,"k":"stack","items":[]}]},
 {"l":4,"n":"رأس الراصّة `st` هو `6` (لا يخرج). `max = 6`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Banana","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["max",{"t":"v","s":"6"}]]}]},
@@ -3493,21 +4399,22 @@ const m04: ContentModule = {
 {"l":19,"n":"تنتهي العملية `Banana` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"نطبع: `[9,6,3,1]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["9","6","3","1"]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (47 خطوة)؛ ناتج البرنامج: [9,6,3,1]."
+        "text": "حل السؤال: max يبدأ بقيمة الرأس 6. الحلقة الأولى تنقل كل الحدود إلى temp، وتحدّث max كلما وجدت حدًّا أكبر: في النهاية max = 9. بعد الحلقة الأولى: st فارغة و temp = [1,9,3,9,6]. الحلقة الثانية تعيد الحدود إلى st، لكنّ كل حدّ يساوي max لا يعود. يعود 1 ثم 3 ثم 6: st = [6,3,1]. الأمر الأخير st.Push(max); يدفع 9 مرة واحدة: st = [9,6,3,1]. ترتيب باقي الحدود لم يتغيّر لأنها نُقلت مرّتين. إن ظهرت أكبر قيمة أكثر من مرة يقلّ عدد الحدود."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b17",
+       "id": "m04-l05-p02-b19",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 7 — العملية \u2066Watermelon\u2069",
+       "text": "سؤال 4 · متقدّم — العملية \u2066Watermelon\u2069",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b18",
+       "id": "m04-l05-p02-b20",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3515,12 +4422,36 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b19",
+       "id": "m04-l05-p02-b21",
+       "type": "text",
+       "spans": [
+        {
+         "text": "معطاة الراصّة "
+        },
+        {
+         "text": "st = [3,1,4,2]",
+         "dir": "ltr"
+        },
+        {
+         "text": "، ونُفّذ الاستدعاء "
+        },
+        {
+         "text": "Stack<int> res = Watermelon(st);",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p02-b22",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "معطاة الراصّة \u2066st = [3,1,4,2]\u2069. كيف ستبدو الراصّة التي تعيدها \u2066Watermelon(st)\u2069؟",
+        "prompt": "كيف ستبدو الراصّة التي تعيدها \u2066Watermelon(st)\u2069؟",
         "options": [
          {
           "id": "o1",
@@ -3547,7 +4478,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b20",
+       "id": "m04-l05-p02-b23",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -3560,22 +4491,229 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p02-b21",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m04-l05-p02-b24",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Watermelon\u2069",
-       "description": "ترتيب راصّة براصّة مساعدة واحدة.",
+       "title": "حل سؤال 4 — \u2066Watermelon\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "قبل دفع أي حدّ "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": "، الحلقة الداخلية تعيد إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": " كل حدود "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": " الأكبر من "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": ". هكذا تبقى "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرتّبة دائمًا: الأكبر في الرأس."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "يُخرج 3: "
+          },
+          {
+           "text": "res = [3]",
+           "dir": "ltr"
+          },
+          {
+           "text": ". يُخرج 1: الحدّ 3 أكبر منه فيعود إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم يُدفع 1: "
+          },
+          {
+           "text": "res = [1]",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "st = [3,4,2]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "يُخرج 3: "
+          },
+          {
+           "text": "res = [3,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": ". يُخرج 4: "
+          },
+          {
+           "text": "res = [4,3,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "st = [2]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "يُخرج 2: الحدّان 4 و3 أكبر منه فيعودان إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم يُدفع 2: "
+          },
+          {
+           "text": "res = [2,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "st = [3,4]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "يُخرج 3 ثم 4: "
+          },
+          {
+           "text": "res = [4,3,2,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": " فارغة، فتنتهي الحلقة."
+          }
+         ]
+        },
+        {
+         "id": "s6",
+         "text": [
+          {
+           "text": "الإخراجات من "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": " هي: 3، 1، 3، 4، 2، 3، 4، أي 7 مرات، وبعد كل إخراج يُنفَّذ "
+          },
+          {
+           "text": "res.Push(x);",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة واحدة. هذه طريقة لترتيب راصّة براصّة مساعدة واحدة."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "تُعاد الراصّة "
+        },
+        {
+         "text": "[4,3,2,1]",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والأمر "
+        },
+        {
+         "text": "res.Push(x);",
+         "dir": "ltr"
+        },
+        {
+         "text": " يُنفَّذ 7 مرات."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static Stack<int> Watermelon(Stack<int> st)\n{\n    Stack<int> res = new Stack<int>();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        while (!res.IsEmpty() && res.Top() > x)\n            st.Push(res.Pop());\n        res.Push(x);\n    }\n    return res;\n}",
-        "given": "الراصّة `st = [3,1,4,2]`، والاستدعاء `Watermelon(st)`.",
-        "out": "[4,3,2,1]\n",
-        "steps": [
+        "trace": {
+         "code": "public static Stack<int> Watermelon(Stack<int> st)\n{\n    Stack<int> res = new Stack<int>();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        while (!res.IsEmpty() && res.Top() > x)\n            st.Push(res.Pop());\n        res.Push(x);\n    }\n    return res;\n}",
+         "given": "الراصّة `st = [3,1,4,2]`، والاستدعاء `Watermelon(st)`.",
+         "out": "[4,3,2,1]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Watermelon` مع `st` = الراصّة `[3,1,4,2]`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Watermelon","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["3","1","4","2"]}]},
 {"l":3,"n":"ننشئ راصّة فارغة باسم `res`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"Watermelon","vars":[["st",{"t":"ref","id":1}],["res",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["3","1","4","2"]},{"id":2,"k":"stack","items":[]}]},
 {"l":4,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
@@ -3616,9 +4754,10 @@ const m04: ContentModule = {
 {"l":11,"n":"العملية `Watermelon` تُعيد الراصّة `[4,3,2,1]`.","o":0},
 {"l":0,"n":"نطبع: `[4,3,2,1]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":[]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (39 خطوة)؛ ناتج البرنامج: [4,3,2,1]."
+        "text": "حل السؤال: قبل دفع أي حدّ x إلى res، الحلقة الداخلية تعيد إلى st كل حدود res الأكبر من x. هكذا تبقى res مرتّبة دائمًا: الأكبر في الرأس. يُخرج 3: res = [3]. يُخرج 1: الحدّ 3 أكبر منه فيعود إلى st، ثم يُدفع 1: res = [1] و st = [3,4,2]. يُخرج 3: res = [3,1]. يُخرج 4: res = [4,3,1] و st = [2]. يُخرج 2: الحدّان 4 و3 أكبر منه فيعودان إلى st، ثم يُدفع 2: res = [2,1] و st = [3,4]. يُخرج 3 ثم 4: res = [4,3,2,1] و st فارغة، فتنتهي الحلقة. الإخراجات من st هي: 3، 1، 3، 4، 2، 3، 4، أي 7 مرات، وبعد كل إخراج يُنفَّذ res.Push(x); مرة واحدة. هذه طريقة لترتيب راصّة براصّة مساعدة واحدة."
        },
        "origin": "teacher-enrichment"
       }
@@ -3626,7 +4765,7 @@ const m04: ContentModule = {
     },
     {
      "id": "899271d-m04-l05-p03",
-     "title": "أسئلة كتابة: اكتب العملية",
+     "title": "أسئلة كتابة محلولة",
      "order": 3,
      "source": {
       "kind": "book",
@@ -3636,7 +4775,10 @@ const m04: ContentModule = {
      },
      "keywords": [
       "كتابة عملية",
+      "أسئلة محلولة",
       "SumOdd",
+      "ToNumber",
+      "CountEven",
       "IsSorted",
       "Passed"
      ],
@@ -3646,188 +4788,36 @@ const m04: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "اكتب كل عملية في دفترك أو في محرّر الكود "
+         "text": "خمسة أسئلة كتابة محلولة، من الأسهل إلى الأصعب. حاول أن تكتب كل عملية في دفترك أو في محرّر الكود "
         },
         {
          "text": "قبل",
          "style": "strong"
         },
         {
-         "text": " أن تنتقل إلى الصفحة التالية، ففيها الحلول مع تتبّعها. في الأمثلة: القيمة الأولى من اليسار هي رأس الراصّة."
+         "text": " أن تقرأ الحل. بعد كل حل تجد ما يُفحص فيه، وفكرته، وتتبّعه. في الأمثلة: القيمة الأولى من اليسار هي رأس الراصّة."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m04-l05-p03-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066SumOdd\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b03",
        "type": "example",
        "mode": "practice",
-       "title": "سؤال 1 — \u2066SumOdd\u2069 (بدون الحفاظ على الراصّة)",
+       "title": "المطلوب (بدون الحفاظ على الراصّة)",
        "prompt": "اكتب العملية \u2066SumOdd\u2069 التي تستقبل راصّة أعداد صحيحة \u2066st\u2069، وتُرجع مجموع الأعداد الفردية الموجودة فيها. لا حاجة للحفاظ على الراصّة: مسموح أن تبقى فارغة بعد الاستدعاء. مثال: للراصّة \u2066[7,4,9,2,5,8]\u2069 تُرجع العملية 21، لأن \u20667 + 9 + 5 = 21\u2069.",
        "steps": [],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p03-b03",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int SumOdd(Stack<int> st)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
        "id": "m04-l05-p03-b04",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 2 — \u2066IsSorted\u2069 (يجب الحفاظ على الراصّة)",
-       "prompt": "اكتب العملية \u2066IsSorted\u2069 التي تستقبل راصّة أعداد صحيحة \u2066st\u2069، وتُرجع \u2066true\u2069 إذا كانت حدودها مرتّبة تصاعديًا من الرأس إلى القاع (كل حدّ أصغر من الحدّ الذي تحته أو يساويه)، وإلا تُرجع \u2066false\u2069. يجب الحفاظ على الراصّة: في نهاية العملية تعود \u2066st\u2069 كما كانت تمامًا. أمثلة: للراصّة \u2066[2,5,5,8,11]\u2069 تُرجع \u2066true\u2069، وللراصّة \u2066[2,5,3,8]\u2069 تُرجع \u2066false\u2069.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p03-b05",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsSorted(Stack<int> st)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p03-b06",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 3 — \u2066Passed\u2069 (راصّة كائنات)",
-       "prompt": "معطاة الفئة \u2066Student\u2069. اكتب العملية \u2066Passed\u2069 التي تستقبل راصّة طلاب \u2066st\u2069 من نوع \u2066Stack<Student>\u2069، وتُرجع راصّة جديدة فيها الطلاب الذين علامتهم 55 أو أكثر، بنفس ترتيبهم في الراصّة الأصلية. يجب الحفاظ على الراصّة الأصلية \u2066st\u2069 بدون تغيير.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p03-b07",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public class Student\n{\n    private string name;\n    private int grade;\n    public Student(string name, int grade)\n    {\n        this.name = name;\n        this.grade = grade;\n    }\n    public string GetName() { return name; }\n    public int GetGrade() { return grade; }\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p03-b08",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Stack<Student> Passed(Stack<Student> st)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p03-b09",
-       "type": "list",
-       "variant": "checklist",
-       "title": "افحص حلّك قبل أن ترى الحل",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "هل توقيع العملية صحيح (ما تستقبله وما تعيده)؟"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "هل تفحص "
-          },
-          {
-           "text": "IsEmpty",
-           "dir": "ltr"
-          },
-          {
-           "text": " قبل كل "
-          },
-          {
-           "text": "Pop",
-           "dir": "ltr"
-          },
-          {
-           "text": " أو "
-          },
-          {
-           "text": "Top",
-           "dir": "ltr"
-          },
-          {
-           "text": "؟"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "إذا طُلب الحفاظ على الراصّة: هل تعيد "
-          },
-          {
-           "text": "كل",
-           "style": "strong"
-          },
-          {
-           "text": " القيم قبل أي "
-          },
-          {
-           "text": "return",
-           "dir": "ltr"
-          },
-          {
-           "text": "؟"
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "هل تصل إلى صفات الكائن بعمليات "
-          },
-          {
-           "text": "Get",
-           "dir": "ltr"
-          },
-          {
-           "text": " لا مباشرة؟"
-          }
-         ]
-        }
-       ],
-       "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m04-l05-p04",
-     "title": "حلول أسئلة الكتابة",
-     "order": 4,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 179,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الرابع «الراصّة»"
-     },
-     "keywords": [
-      "حلول",
-      "SumOdd",
-      "IsSorted",
-      "Passed"
-     ],
-     "blocks": [
-      {
-       "id": "m04-l05-p04-b01",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 1 — \u2066SumOdd\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m04-l05-p04-b02",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3835,7 +4825,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b03",
+       "id": "m04-l05-p03-b05",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -3844,12 +4834,34 @@ const m04: ContentModule = {
          "id": "i1",
          "text": [
           {
-           "text": "متغيّر المجموع يبدأ من صفر قبل الحلقة."
+           "text": "توقيع العملية صحيح: تستقبل "
+          },
+          {
+           "text": "Stack<int>",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتُرجع "
+          },
+          {
+           "text": "int",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
           }
          ]
         },
         {
          "id": "i2",
+         "text": [
+          {
+           "text": "متغيّر المجموع يبدأ من صفر قبل الحلقة."
+          }
+         ]
+        },
+        {
+         "id": "i3",
          "text": [
           {
            "text": "الحلقة "
@@ -3871,7 +4883,7 @@ const m04: ContentModule = {
          ]
         },
         {
-         "id": "i3",
+         "id": "i4",
          "text": [
           {
            "text": "فحص العدد الفردي بالشرط "
@@ -3893,7 +4905,7 @@ const m04: ContentModule = {
          ]
         },
         {
-         "id": "i4",
+         "id": "i5",
          "text": [
           {
            "text": "إرجاع المجموع بعد انتهاء الحلقة وليس داخلها."
@@ -3904,7 +4916,31 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b04",
+       "id": "m04-l05-p03-b06",
+       "type": "text",
+       "spans": [
+        {
+         "text": "بما أن الحفاظ على الراصّة غير مطلوب، يكفي أن نُخرج الحدود واحدًا تلو الآخر ونجمع الفردية منها، بدون راصّة مساعدة. انتبه: بعد الاستدعاء تصير الراصّة "
+        },
+        {
+         "text": "فارغة",
+         "style": "strong"
+        },
+        {
+         "text": "، لأن كل حدّ أُخرج بواسطة "
+        },
+        {
+         "text": "Pop()",
+         "dir": "ltr"
+        },
+        {
+         "text": " ولم يُدفع إلى أي مكان. لو طُلب الحفاظ على الراصّة لاحتجنا إلى راصّة مساعدة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b07",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -3953,46 +4989,411 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b05",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف ستبدو الراصّة \u2066st = [7,4,9,2,5,8]\u2069 بعد انتهاء استدعاء \u2066SumOdd(st)\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[7,4,9,2,5,8]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[4,2,8]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[8,5,2,9,4,7]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "الراصّة فارغة: \u2066[]\u2069",
-          "correct": true
-         }
-        ],
-        "feedback": {
-         "explanation": "كل حدّ أُخرج بواسطة \u2066Pop()\u2069 ولم يُدفع إلى أي مكان، فتصبح الراصّة فارغة، سواء كان الحدّ فرديًا أم زوجيًا. لو طُلب الحفاظ على الراصّة لاحتجنا إلى راصّة مساعدة."
+       "id": "m04-l05-p03-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066ToNumber\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 20 من الكتاب (ص 226)، القسم الأول",
+       "prompt": "اكتب عملية تتلقّى راصّة من نوع \u2066Stack<int>\u2069 تحوي فقط أرقامًا (أي أعدادًا مكوّنة من منزلة واحدة فقط). العملية تعيد العدد الذي منازله هي الأرقام الموجودة في الراصّة. الرقم الموجود في رأس الراصّة يمثّل المنزلة صاحبة أكبر قيمة في العدد (أي المنزلة التي تظهر إلى أقصى يسار العدد). مثال: العدد المخزَّن في الراصّة \u2066[5,2,0,4,3]\u2069 هو 52043.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b10",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الكتاب لا يحدّد اسمًا للعملية، فنسمّيها هنا "
+        },
+        {
+         "text": "ToNumber",
+         "dir": "ltr"
+        },
+        {
+         "text": ". ولا يطلب الحفاظ على الراصّة، فنكتب الحل الأبسط."
         }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int ToNumber(Stack<int> s)\n{\n    int num = 0;\n    while (!s.IsEmpty())\n        num = num * 10 + s.Pop();\n    return num;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b12",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "متغيّر العدد يبدأ من صفر قبل الحلقة."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "في كل دورة: نضرب العدد في 10 ثم نضيف إليه الرقم الذي أُخرج من الرأس."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "الحلقة "
+          },
+          {
+           "text": "while (!s.IsEmpty())",
+           "dir": "ltr"
+          },
+          {
+           "text": " تتوقّف حين تفرغ الراصّة."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "إرجاع العدد بعد انتهاء الحلقة."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b13",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الضرب في 10 يزيح كل المنازل منزلة واحدة إلى اليسار، فيدخل الرقم الجديد في منزلة الآحاد. الرقم الذي في الرأس يخرج أولًا، فيُزاح أكثر من غيره ويصير المنزلة الكبرى. قيمة "
+        },
+        {
+         "text": "num",
+         "dir": "ltr"
+        },
+        {
+         "text": " بعد كل دورة: "
+        },
+        {
+         "text": "5",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "52",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "520",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "5204",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "52043",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b14",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع \u2066ToNumber\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int ToNumber(Stack<int> s)\n{\n    int num = 0;\n    while (!s.IsEmpty())\n        num = num * 10 + s.Pop();\n    return num;\n}",
+        "given": "الراصّة `s = [5,2,0,4,3]`، والاستدعاء `ToNumber(s)`.",
+        "out": "52043\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `ToNumber` مع `s` = الراصّة `[5,2,0,4,3]`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["5","2","0","4","3"]}]},
+{"l":3,"n":"`num = 0`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}],["num",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `!s.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `5` من رأس الراصّة `s`. `num = 5`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}],["num",{"t":"v","s":"5"}]]}],"h":[{"id":1,"k":"stack","items":["2","0","4","3"]}]},
+{"l":4,"n":"الشرط `!s.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `2` من رأس الراصّة `s`. `num = 52`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}],["num",{"t":"v","s":"52"}]]}],"h":[{"id":1,"k":"stack","items":["0","4","3"]}]},
+{"l":4,"n":"الشرط `!s.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `0` من رأس الراصّة `s`. `num = 520`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}],["num",{"t":"v","s":"520"}]]}],"h":[{"id":1,"k":"stack","items":["4","3"]}]},
+{"l":4,"n":"الشرط `!s.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `4` من رأس الراصّة `s`. `num = 5204`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}],["num",{"t":"v","s":"5204"}]]}],"h":[{"id":1,"k":"stack","items":["3"]}]},
+{"l":4,"n":"الشرط `!s.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `3` من رأس الراصّة `s`. `num = 52043`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"ToNumber","vars":[["s",{"t":"ref","id":1}],["num",{"t":"v","s":"52043"}]]}],"h":[{"id":1,"k":"stack","items":[]}]},
+{"l":4,"n":"الشرط `!s.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":6,"n":"العملية `ToNumber` تُعيد `52043`.","o":0},
+{"l":0,"n":"نطبع: `52043`. انتهى التنفيذ.","o":6,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (15 خطوة)؛ ناتج البرنامج: 52043."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b06",
+       "id": "m04-l05-p03-b15",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 2 — \u2066IsSorted\u2069",
+       "text": "سؤال 3 · متوسط — \u2066CountEven\u2069",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b07",
+       "id": "m04-l05-p03-b16",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب (يجب الحفاظ على الراصّة)",
+       "prompt": "اكتب العملية \u2066CountEven\u2069 التي تستقبل راصّة أعداد صحيحة \u2066st\u2069، وتعيد عدد القيم الزوجية فيها. يجب الحفاظ على الراصّة: في نهاية العملية تعود \u2066st\u2069 كما كانت تمامًا. مثال: للراصّة \u2066[4,7,10,3,6]\u2069 تعيد العملية 3.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b17",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int CountEven(Stack<int> st)\n{\n    Stack<int> temp = new Stack<int>();\n    int count = 0;\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x % 2 == 0)\n            count++;\n        temp.Push(x);\n    }\n    while (!temp.IsEmpty())\n        st.Push(temp.Pop());\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b18",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "راصّة مساعدة "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُنشأ داخل العملية."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "كل قيمة تُخرج من "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُدخل إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، سواء كانت زوجية أم فردية."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "فحص القيمة الزوجية بالشرط "
+          },
+          {
+           "text": "x % 2 == 0",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "حلقة ثانية تعيد القيم من "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i5",
+         "text": [
+          {
+           "text": "الأمر "
+          },
+          {
+           "text": "return count;",
+           "dir": "ltr"
+          },
+          {
+           "text": " يأتي بعد إعادة كل القيم."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b19",
+       "type": "text",
+       "spans": [
+        {
+         "text": "هذا قالب التمشيط مع الحفاظ على الراصّة: النقل الأول يقلب الترتيب في "
+        },
+        {
+         "text": "temp",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والنقل الثاني يعيده كما كان. طريقة أخرى صحيحة: أن ننسخ الراصّة بالعملية "
+        },
+        {
+         "text": "CopyStack",
+         "dir": "ltr"
+        },
+        {
+         "text": " ونعدّ في النسخة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b20",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع \u2066CountEven\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int CountEven(Stack<int> st)\n{\n    Stack<int> temp = new Stack<int>();\n    int count = 0;\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x % 2 == 0)\n            count++;\n        temp.Push(x);\n    }\n    while (!temp.IsEmpty())\n        st.Push(temp.Pop());\n    return count;\n}",
+        "given": "الراصّة `st = [4,7,10,3,6]`، والاستدعاء `CountEven(st)`.",
+        "out": "3\n[4,7,10,3,6]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `CountEven` مع `st` = الراصّة `[4,7,10,3,6]`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["4","7","10","3","6"]}]},
+{"l":3,"n":"ننشئ راصّة فارغة باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["4","7","10","3","6"]},{"id":2,"k":"stack","items":[]}]},
+{"l":4,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"نخرج `4` من رأس الراصّة `st`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"0"}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"stack","items":["7","10","3","6"]},{"id":2,"k":"stack","items":[]}]},
+{"l":8,"n":"الشرط `x % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"1"}],["x",{"t":"v","s":"4"}]]}]},
+{"l":10,"n":"ندخل `4` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["7","10","3","6"]},{"id":2,"k":"stack","items":["4"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"1"}]]}]},
+{"l":7,"n":"نخرج `7` من رأس الراصّة `st`. `x = 7`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"1"}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"stack","items":["10","3","6"]},{"id":2,"k":"stack","items":["4"]}]},
+{"l":8,"n":"الشرط `x % 2 == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"ندخل `7` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["10","3","6"]},{"id":2,"k":"stack","items":["7","4"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"1"}]]}]},
+{"l":7,"n":"نخرج `10` من رأس الراصّة `st`. `x = 10`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"1"}],["x",{"t":"v","s":"10"}]]}],"h":[{"id":1,"k":"stack","items":["3","6"]},{"id":2,"k":"stack","items":["7","4"]}]},
+{"l":8,"n":"الشرط `x % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"2"}],["x",{"t":"v","s":"10"}]]}]},
+{"l":10,"n":"ندخل `10` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["3","6"]},{"id":2,"k":"stack","items":["10","7","4"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"2"}]]}]},
+{"l":7,"n":"نخرج `3` من رأس الراصّة `st`. `x = 3`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"2"}],["x",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["6"]},{"id":2,"k":"stack","items":["10","7","4"]}]},
+{"l":8,"n":"الشرط `x % 2 == 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"ندخل `3` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["6"]},{"id":2,"k":"stack","items":["3","10","7","4"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"2"}]]}]},
+{"l":7,"n":"نخرج `6` من رأس الراصّة `st`. `x = 6`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"2"}],["x",{"t":"v","s":"6"}]]}],"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":["3","10","7","4"]}]},
+{"l":8,"n":"الشرط `x % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"3"}],["x",{"t":"v","s":"6"}]]}]},
+{"l":10,"n":"ندخل `6` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":["6","3","10","7","4"]}]},
+{"l":5,"n":"الشرط `!st.IsEmpty()` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"CountEven","vars":[["st",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["count",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `6` من رأس الراصّة `temp`. ندخل `6` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["6"]},{"id":2,"k":"stack","items":["3","10","7","4"]}]},
+{"l":12,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `3` من رأس الراصّة `temp`. ندخل `3` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["3","6"]},{"id":2,"k":"stack","items":["10","7","4"]}]},
+{"l":12,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `10` من رأس الراصّة `temp`. ندخل `10` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["10","3","6"]},{"id":2,"k":"stack","items":["7","4"]}]},
+{"l":12,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `7` من رأس الراصّة `temp`. ندخل `7` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["7","10","3","6"]},{"id":2,"k":"stack","items":["4"]}]},
+{"l":12,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `4` من رأس الراصّة `temp`. ندخل `4` إلى رأس الراصّة `st`.","o":0,"h":[{"id":1,"k":"stack","items":["4","7","10","3","6"]},{"id":2,"k":"stack","items":[]}]},
+{"l":12,"n":"الشرط `!temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"العملية `CountEven` تُعيد `3`.","o":0},
+{"l":0,"n":"نطبع: `3`. نطبع: `[4,7,10,3,6]`. انتهى التنفيذ.","o":15,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["4","7","10","3","6"]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (40 خطوة)؛ ناتج البرنامج: 3 ↵ [4,7,10,3,6]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b21",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — \u2066IsSorted\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b22",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب (يجب الحفاظ على الراصّة)",
+       "prompt": "اكتب العملية \u2066IsSorted\u2069 التي تستقبل راصّة أعداد صحيحة \u2066st\u2069، وتُرجع \u2066true\u2069 إذا كانت حدودها مرتّبة تصاعديًا من الرأس إلى القاع (كل حدّ أصغر من الحدّ الذي تحته أو يساويه)، وإلا تُرجع \u2066false\u2069. يجب الحفاظ على الراصّة: في نهاية العملية تعود \u2066st\u2069 كما كانت تمامًا. أمثلة: للراصّة \u2066[2,5,5,8,11]\u2069 تُرجع \u2066true\u2069، وللراصّة \u2066[2,5,3,8]\u2069 تُرجع \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b23",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -4000,7 +5401,112 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b08",
+       "id": "m04-l05-p03-b24",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "راصّة مساعدة "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُنشأ داخل العملية."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "كل حدّ يُخرج من "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": " يُدفع إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فلا يضيع أي حدّ."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "المقارنة مع الحدّ التالي تتم بواسطة "
+          },
+          {
+           "text": "Top()",
+           "dir": "ltr"
+          },
+          {
+           "text": "، بعد فحص أن الراصّة ليست فارغة."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "لا يوجد "
+          },
+          {
+           "text": "return",
+           "dir": "ltr"
+          },
+          {
+           "text": " قبل إعادة كل الحدود إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i5",
+         "text": [
+          {
+           "text": "حلقة ثانية تعيد الحدود من "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فيعود الترتيب الأصلي."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b25",
        "type": "text",
        "spans": [
         {
@@ -4031,7 +5537,7 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b09",
+       "id": "m04-l05-p03-b26",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -4086,17 +5592,21 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b10",
+       "id": "m04-l05-p03-b27",
        "type": "text",
        "spans": [
         {
-         "text": "طالب كتب الحلقة الأولى بالشكل التالي، فخرج من العملية فورًا عند اكتشاف أول خلل في الترتيب:"
+         "text": "خطأ شائع:",
+         "style": "strong"
+        },
+        {
+         "text": " طالب كتب الحلقة الأولى بالشكل التالي، فخرج من العملية فورًا عند اكتشاف أول خلل في الترتيب:"
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b11",
+       "id": "m04-l05-p03-b28",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -4104,46 +5614,76 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b12",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما المشكلة في حلّه؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "لا توجد مشكلة، الحل صحيح وأقصر"
-         },
-         {
-          "id": "o2",
-          "text": "عند اكتشاف خلل تنتهي العملية قبل إعادة الحدود من الراصّة المساعدة، فتفقد الراصّة الأصلية جزءًا من حدودها",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "العملية ستُرجع دائمًا القيمة false حتى لو كانت الراصّة مرتّبة"
-         },
-         {
-          "id": "o4",
-          "text": "سيحدث خطأ تشغيل عند الوصول إلى الحدّ الأخير لأن الراصّة فارغة"
-         }
-        ],
-        "feedback": {
-         "explanation": "مثلًا للراصّة \u2066[2,5,3,8]\u2069: يُخرج 2 ويُدفع إلى \u2066temp\u2069، ثم يُخرج 5 وعند المقارنة \u20665 > 3\u2069 تنتهي العملية. الحدّ 2 بقي في \u2066temp\u2069 والحدّ 5 لم يُدفع أصلًا، فتبقى في \u2066st\u2069 الحدود 3 و8 فقط. الإرجاع مسموح فقط بعد إعادة كل الحدود."
+       "id": "m04-l05-p03-b29",
+       "type": "text",
+       "spans": [
+        {
+         "text": "المشكلة: عند اكتشاف خلل تنتهي العملية قبل إعادة الحدود من الراصّة المساعدة، فتفقد الراصّة الأصلية جزءًا من حدودها. مثلًا للراصّة "
+        },
+        {
+         "text": "[2,5,3,8]",
+         "dir": "ltr"
+        },
+        {
+         "text": ": يُخرج 2 ويُدفع إلى "
+        },
+        {
+         "text": "temp",
+         "dir": "ltr"
+        },
+        {
+         "text": "، ثم يُخرج 5 وعند المقارنة "
+        },
+        {
+         "text": "5 > 3",
+         "dir": "ltr"
+        },
+        {
+         "text": " تنتهي العملية. الحدّ 2 بقي في "
+        },
+        {
+         "text": "temp",
+         "dir": "ltr"
+        },
+        {
+         "text": " والحدّ 5 لم يُدفع أصلًا، فتبقى في "
+        },
+        {
+         "text": "st",
+         "dir": "ltr"
+        },
+        {
+         "text": " الحدود 3 و8 فقط. الإرجاع مسموح فقط بعد إعادة كل الحدود."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b13",
+       "id": "m04-l05-p03-b30",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 3 — \u2066Passed\u2069",
+       "text": "سؤال 5 · متقدّم — \u2066Passed\u2069 (راصّة كائنات)",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b14",
+       "id": "m04-l05-p03-b31",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب (يجب الحفاظ على الراصّة)",
+       "prompt": "معطاة الفئة \u2066Student\u2069. اكتب العملية \u2066Passed\u2069 التي تستقبل راصّة طلاب \u2066st\u2069 من نوع \u2066Stack<Student>\u2069، وتُرجع راصّة جديدة فيها الطلاب الذين علامتهم 55 أو أكثر، بنفس ترتيبهم في الراصّة الأصلية. يجب الحفاظ على الراصّة الأصلية \u2066st\u2069 بدون تغيير.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b32",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public class Student\n{\n    private string name;\n    private int grade;\n    public Student(string name, int grade)\n    {\n        this.name = name;\n        this.grade = grade;\n    }\n    public string GetName() { return name; }\n    public int GetGrade() { return grade; }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b33",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -4151,7 +5691,141 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b15",
+       "id": "m04-l05-p03-b34",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "توقيع العملية صحيح: تستقبل "
+          },
+          {
+           "text": "Stack<Student>",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتُرجع "
+          },
+          {
+           "text": "Stack<Student>",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "الوصول إلى العلامة بواسطة "
+          },
+          {
+           "text": "GetGrade()",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وليس مباشرة إلى الصفة الخاصة "
+          },
+          {
+           "text": "grade",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "نقل كل الطلاب إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " أولًا، ثم إعادتهم إلى "
+          },
+          {
+           "text": "st",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "الدفع إلى "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": " يتم أثناء الإعادة من "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فيكون ترتيب "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": " مثل الترتيب الأصلي."
+          }
+         ]
+        },
+        {
+         "id": "i5",
+         "text": [
+          {
+           "text": "الشرط "
+          },
+          {
+           "text": ">= 55",
+           "dir": "ltr"
+          },
+          {
+           "text": " يشمل الطالب الذي علامته 55 بالضبط."
+          }
+         ]
+        },
+        {
+         "id": "i6",
+         "text": [
+          {
+           "text": "إرجاع الراصّة "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": " في نهاية العملية."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p03-b35",
        "type": "text",
        "spans": [
         {
@@ -4183,20 +5857,13 @@ const m04: ContentModule = {
          "dir": "ltr"
         },
         {
-         "text": " معًا. والشرط "
-        },
-        {
-         "text": ">= 55",
-         "dir": "ltr"
-        },
-        {
-         "text": " يشمل الطالب الذي علامته 55 بالضبط."
+         "text": " معًا."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m04-l05-p04-b16",
+       "id": "m04-l05-p03-b36",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -4295,33 +5962,1269 @@ const m04: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
+       "id": "m04-l05-p03-b37",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في هذا المثال تعيد العملية راصّة فيها، من الرأس إلى القاع: "
+        },
+        {
+         "text": "Rami",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "Adam",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "Lina",
+         "dir": "ltr"
+        },
+        {
+         "text": ". الشرط "
+        },
+        {
+         "text": ">=",
+         "dir": "ltr"
+        },
+        {
+         "text": " يشمل "
+        },
+        {
+         "text": "Lina",
+         "dir": "ltr"
+        },
+        {
+         "text": " لأن علامتها 55 بالضبط. الدفع إلى "
+        },
+        {
+         "text": "res",
+         "dir": "ltr"
+        },
+        {
+         "text": " يتم من القاع نحو الرأس، فيصل "
+        },
+        {
+         "text": "Lina",
+         "dir": "ltr"
+        },
+        {
+         "text": " أولًا و "
+        },
+        {
+         "text": "Rami",
+         "dir": "ltr"
+        },
+        {
+         "text": " أخيرًا، فيكون "
+        },
+        {
+         "text": "Rami",
+         "dir": "ltr"
+        },
+        {
+         "text": " في الرأس كما في الراصّة الأصلية."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m04-l05-p04",
+     "title": "وظيفة: أسئلة كتابة",
+     "order": 4,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 179,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الرابع «الراصّة»"
+     },
+     "keywords": [
+      "وظيفة",
+      "كتابة عملية",
+      "MaxValue",
+      "متوالية حسابية",
+      "Merge",
+      "SameKind",
+      "FindRepeated"
+     ],
+     "blocks": [
+      {
+       "id": "m04-l05-p04-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة كتابة للوظيفة، من الأسهل إلى الأصعب. اكتب كل عملية في دفترك أو في محرّر الكود، ثم اضغط «الحل» وقارن: في النافذة كود الحل وما يُفحص فيه وتتبّعه. حيث يُطلب الحفاظ على الراصّة يمكنك أن تستعمل العملية "
+        },
+        {
+         "text": "CopyStack",
+         "dir": "ltr"
+        },
+        {
+         "text": " التي تعلّمتها دون أن تكتبها من جديد. في الأمثلة: القيمة الأولى من اليسار هي رأس الراصّة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b02",
+       "type": "list",
+       "variant": "checklist",
+       "title": "افحص حلّك قبل أن تفتح نافذة الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "هل توقيع العملية صحيح (ما تستقبله وما تعيده)؟"
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "هل تفحص "
+          },
+          {
+           "text": "IsEmpty",
+           "dir": "ltr"
+          },
+          {
+           "text": " قبل كل "
+          },
+          {
+           "text": "Pop",
+           "dir": "ltr"
+          },
+          {
+           "text": " أو "
+          },
+          {
+           "text": "Top",
+           "dir": "ltr"
+          },
+          {
+           "text": "؟"
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "إذا طُلب الحفاظ على الراصّة: هل تعيد "
+          },
+          {
+           "text": "كل",
+           "style": "strong"
+          },
+          {
+           "text": " القيم قبل أي "
+          },
+          {
+           "text": "return",
+           "dir": "ltr"
+          },
+          {
+           "text": "، أو تعمل على نسخة؟"
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "هل جرّبت عمليتك على راصّة فيها قيمة واحدة؟"
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b03",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066MaxValue\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b04",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب (بدون الحفاظ على الراصّة)",
+       "prompt": "اكتب العملية \u2066MaxValue\u2069 التي تستقبل راصّة أعداد صحيحة غير فارغة \u2066st\u2069، وتعيد أكبر قيمة فيها. لا حاجة للحفاظ على الراصّة. مثال: للراصّة \u2066[4,-2,9,7]\u2069 تعيد العملية 9.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b05",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int MaxValue(Stack<int> st)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066MaxValue\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "نُخرج أول قيمة ونحفظها في "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": ": هي أكبر قيمة رأيناها حتى الآن. الراصّة غير فارغة، فهذا الإخراج آمن."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "نُخرج باقي القيم واحدة واحدة، وكل قيمة أكبر من "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " تصير هي "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "حين تفرغ الراصّة يكون في "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " أكبر قيمة."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "لا نبدأ بالأمر "
+          },
+          {
+           "text": "int max = 0;",
+           "dir": "ltr"
+          },
+          {
+           "text": ": لو كانت كل القيم سالبة لأعادت العملية 0، وهو ليس من قيم الراصّة أصلًا."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int MaxValue(Stack<int> st)\n{\n    int max = st.Pop();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x > max)\n            max = x;\n    }\n    return max;\n}",
+        "checklist": [
+         "`max` يبدأ بقيمة من الراصّة نفسها، لا بصفر.",
+         "الحلقة `while (!st.IsEmpty())` تُخرج قيمة واحدة في كل دورة.",
+         "المقارنة `x > max` ثم تحديث `max`.",
+         "`return max;` بعد انتهاء الحلقة وليس داخلها."
+        ],
+        "trace": {
+         "code": "public static int MaxValue(Stack<int> st)\n{\n    int max = st.Pop();\n    while (!st.IsEmpty())\n    {\n        int x = st.Pop();\n        if (x > max)\n            max = x;\n    }\n    return max;\n}",
+         "given": "الراصّة `st = [4,-2,9,7]`، والاستدعاء `MaxValue(st)`.",
+         "out": "9\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `MaxValue` مع `st` = الراصّة `[4,-2,9,7]`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["4","-2","9","7"]}]},
+{"l":3,"n":"نخرج `4` من رأس الراصّة `st`. `max = 4`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"stack","items":["-2","9","7"]}]},
+{"l":4,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"نخرج `-2` من رأس الراصّة `st`. `x = -2`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"4"}],["x",{"t":"v","s":"-2"}]]}],"h":[{"id":1,"k":"stack","items":["9","7"]}]},
+{"l":7,"n":"الشرط `x > max` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"4"}]]}]},
+{"l":6,"n":"نخرج `9` من رأس الراصّة `st`. `x = 9`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"4"}],["x",{"t":"v","s":"9"}]]}],"h":[{"id":1,"k":"stack","items":["7"]}]},
+{"l":7,"n":"الشرط `x > max` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`max = 9`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"9"}],["x",{"t":"v","s":"9"}]]}]},
+{"l":4,"n":"الشرط `!st.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"9"}]]}]},
+{"l":6,"n":"نخرج `7` من رأس الراصّة `st`. `x = 7`.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"9"}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"stack","items":[]}]},
+{"l":7,"n":"الشرط `x > max` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"الشرط `!st.IsEmpty()` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]},{"name":"MaxValue","vars":[["st",{"t":"ref","id":1}],["max",{"t":"v","s":"9"}]]}]},
+{"l":10,"n":"العملية `MaxValue` تُعيد `9`.","o":0},
+{"l":0,"n":"نطبع: `9`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["st",{"t":"ref","id":1}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: نُخرج أول قيمة ونحفظها في max: هي أكبر قيمة رأيناها حتى الآن. الراصّة غير فارغة، فهذا الإخراج آمن. نُخرج باقي القيم واحدة واحدة، وكل قيمة أكبر من max تصير هي max. حين تفرغ الراصّة يكون في max أكبر قيمة. لا نبدأ بالأمر int max = 0;: لو كانت كل القيم سالبة لأعادت العملية 0، وهو ليس من قيم الراصّة أصلًا."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b07",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد \u2066MaxValue\u2069 للراصّة \u2066[-3,-8,-5]\u2069؟",
+        "answer": "-3",
+        "feedback": {
+         "explanation": "كل القيم سالبة، وأكبرها \u2066-3\u2069. عملية تبدأ بالأمر \u2066int max = 0;\u2069 كانت ستعيد 0 هنا، وهذا خطأ."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — متوالية حسابية: \u2066Check\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 12 من الكتاب (ص 219)",
+       "prompt": "اكتب عملية باسم \u2066Check\u2069 تتلقّى كبارامتر راصّة من نمط \u2066int\u2069 وتعيد \u2066true\u2069 إذا كانت الراصّة تحتوي على متوالية حسابية. خلاف ذلك تعيد العملية \u2066false\u2069. الحدّ الأول موجود في رأس الراصّة. أمثلة: الراصّة \u2066[5,7,9,11,13,15,17,19,21]\u2069 تحتوي على متوالية حسابية، فتعيد العملية لها \u2066true\u2069. الراصّة \u2066[3,6,7,9,12,15,21,23,13]\u2069 لا تحتوي على متوالية حسابية، فتعيد العملية لها \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b10",
+       "type": "text",
+       "spans": [
+        {
+         "text": "تذكير: في المتوالية الحسابية الفرق بين كل حدّ والحدّ الذي قبله ثابت. نضيف هنا شرطين لا يذكرهما الكتاب: يجب الحفاظ على الراصّة، والراصّة المعطاة غير فارغة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Check(Stack<int> S)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b12",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066Check\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "ننسخ الراصّة بالعملية "
+          },
+          {
+           "text": "CopyStack",
+           "dir": "ltr"
+          },
+          {
+           "text": " ونعمل على النسخة "
+          },
+          {
+           "text": "Temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فتبقى الراصّة الأصلية كما هي حتى حين نخرج بالأمر "
+          },
+          {
+           "text": "return false;",
+           "dir": "ltr"
+          },
+          {
+           "text": " في وسط الحلقة."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "نُخرج الحدّ الأول ونحفظه في "
+          },
+          {
+           "text": "prev",
+           "dir": "ltr"
+          },
+          {
+           "text": ". إذا لم يبقَ بعده شيء فالراصّة فيها حدّ واحد: نعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الفرق "
+          },
+          {
+           "text": "d",
+           "dir": "ltr"
+          },
+          {
+           "text": " هو الحدّ الثاني ناقص الحدّ الأول. نقرأ الحدّ الثاني بالعملية "
+          },
+          {
+           "text": "Top",
+           "dir": "ltr"
+          },
+          {
+           "text": " دون أن نُخرجه."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "في كل دورة نُخرج حدًّا "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " ونفحص: هل الفرق بينه وبين الحدّ السابق يساوي "
+          },
+          {
+           "text": "d",
+           "dir": "ltr"
+          },
+          {
+           "text": "؟ أول فرق مختلف يعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "إذا انتهت الحلقة دون اختلاف نعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool Check(Stack<int> S)\n{\n    Stack<int> Temp = CopyStack(S);\n    int prev = Temp.Pop();\n    if (Temp.IsEmpty())\n        return true;\n    int d = Temp.Top() - prev;\n    while (!Temp.IsEmpty())\n    {\n        int x = Temp.Pop();\n        if (x - prev != d)\n            return false;\n        prev = x;\n    }\n    return true;\n}",
+        "checklist": [
+         "العمل على نسخة، أو إعادة كل القيم قبل أي `return`.",
+         "معالجة راصّة فيها قيمة واحدة دون `Top` أو `Pop` على راصّة فارغة.",
+         "الفرق يُحسب مرة واحدة من أول حدّين.",
+         "تحديث `prev = x;` في نهاية كل دورة.",
+         "`return true;` بعد الحلقة وليس داخلها."
+        ],
+        "trace": {
+         "code": "public static bool Check(Stack<int> S)\n{\n    Stack<int> Temp = CopyStack(S);\n    int prev = Temp.Pop();\n    if (Temp.IsEmpty())\n        return true;\n    int d = Temp.Top() - prev;\n    while (!Temp.IsEmpty())\n    {\n        int x = Temp.Pop();\n        if (x - prev != d)\n            return false;\n        prev = x;\n    }\n    return true;\n}",
+         "given": "الراصّة `S = [3,6,7,9]`، والاستدعاء `Check(S)`.",
+         "out": "False\n[3,6,7,9]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Check` مع `S` = الراصّة `[3,6,7,9]`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["3","6","7","9"]}]},
+{"l":3,"n":"`Temp` يشير الآن إلى الراصّة `[3,6,7,9]`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"stack","items":["3","6","7","9"]},{"id":3,"k":"stack","items":["3","6","7","9"]}]},
+{"l":4,"n":"نخرج `3` من رأس الراصّة `Temp`. `prev = 3`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["prev",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["3","6","7","9"]},{"id":3,"k":"stack","items":["6","7","9"]}]},
+{"l":5,"n":"الشرط `Temp.IsEmpty()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"رأس الراصّة `Temp` هو `6` (لا يخرج). `d = 3`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["prev",{"t":"v","s":"3"}],["d",{"t":"v","s":"3"}]]}]},
+{"l":8,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نخرج `6` من رأس الراصّة `Temp`. `x = 6`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["prev",{"t":"v","s":"3"}],["d",{"t":"v","s":"3"}],["x",{"t":"v","s":"6"}]]}],"h":[{"id":1,"k":"stack","items":["3","6","7","9"]},{"id":3,"k":"stack","items":["7","9"]}]},
+{"l":11,"n":"الشرط `x - prev != d` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"`prev = 6`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["prev",{"t":"v","s":"6"}],["d",{"t":"v","s":"3"}],["x",{"t":"v","s":"6"}]]}]},
+{"l":8,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["prev",{"t":"v","s":"6"}],["d",{"t":"v","s":"3"}]]}]},
+{"l":10,"n":"نخرج `7` من رأس الراصّة `Temp`. `x = 7`.","o":0,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]},{"name":"Check","vars":[["S",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["prev",{"t":"v","s":"6"}],["d",{"t":"v","s":"3"}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"stack","items":["3","6","7","9"]},{"id":3,"k":"stack","items":["9"]}]},
+{"l":11,"n":"الشرط `x - prev != d` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":12,"n":"العملية `Check` تُعيد `false`.","o":0},
+{"l":0,"n":"نطبع: `False`. نطبع: `[3,6,7,9]`. انتهى التنفيذ.","o":16,"f":[{"name":"Main","vars":[["S",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["3","6","7","9"]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: ننسخ الراصّة بالعملية CopyStack ونعمل على النسخة Temp، فتبقى الراصّة الأصلية كما هي حتى حين نخرج بالأمر return false; في وسط الحلقة. نُخرج الحدّ الأول ونحفظه في prev. إذا لم يبقَ بعده شيء فالراصّة فيها حدّ واحد: نعيد true. الفرق d هو الحدّ الثاني ناقص الحدّ الأول. نقرأ الحدّ الثاني بالعملية Top دون أن نُخرجه. في كل دورة نُخرج حدًّا x ونفحص: هل الفرق بينه وبين الحدّ السابق يساوي d؟ أول فرق مختلف يعيد false. إذا انتهت الحلقة دون اختلاف نعيد true."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b13",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد \u2066Check\u2069 للراصّة \u2066[10,7,4,1]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "true",
+        "feedback": {
+         "explanation": "كل حدّ أصغر من الحدّ الذي قبله بـ 3، فالفرق ثابت: \u2066d = -3\u2069. الفرق السالب مقبول أيضًا."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b14",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متقدّم — دمج راصّتين مرتّبتين: \u2066Merge\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b15",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 14 من الكتاب (ص 221)",
+       "prompt": "معطاة راصّتان من نوع صحيح. الأعداد فيهما مرتّبة ترتيبًا تصاعديًا (أي أنّ أصغر قيمة موجودة في رأس الراصّة). اكتب عملية تأخذ الراصّتين كبارامترات وتعيد راصّة جديدة تحتوي على أعداد الراصّتين مرتّبة ترتيبًا تصاعديًا. افترض أنّه لا توجد أعداد مشتركة بين الراصّتين. ما هي درجة نجاعة العملية؟ مثال: للراصّتين \u2066[-3,-2,1,5,6]\u2069 و \u2066[0,2,3,4]\u2069 تكون الراصّة الجديدة \u2066[-3,-2,0,1,2,3,4,5,6]\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b16",
+       "type": "callout",
+       "kind": "clarification",
+       "title": "في الكتاب",
+       "spans": [
+        {
+         "text": "في رسم المثال في الكتاب طُبعت القيمة التي في قاع الراصّة الثانية 6، مع أنّ الراصّة الناتجة في الرسم فيها 4 وفيها 6 واحدة فقط، والنص يفترض أنه لا توجد أعداد مشتركة. المقصود أنّ الراصّة الثانية هي "
+        },
+        {
+         "text": "[0,2,3,4]",
+         "dir": "ltr"
+        },
+        {
+         "text": " كما كتبنا في المثال."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
        "id": "m04-l05-p04-b17",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الكتاب لا يحدّد اسمًا للعملية، فنسمّيها "
+        },
+        {
+         "text": "Merge",
+         "dir": "ltr"
+        },
+        {
+         "text": ". لا حاجة للحفاظ على الراصّتين."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b18",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static Stack<int> Merge(Stack<int> s1, Stack<int> s2)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b19",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066Merge\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "نقارن رأسَي الراصّتين: الأصغر بينهما هو أصغر قيمة لم تُنقل بعد. نُخرجه وندخله إلى راصّة مساعدة "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "حين تفرغ إحدى الراصّتين ننقل ما بقي في الأخرى إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " كما هو: هو مرتّب أصلًا."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "القيم دخلت "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " من الأصغر إلى الأكبر، فصار "
+          },
+          {
+           "text": "الأكبر",
+           "style": "strong"
+          },
+          {
+           "text": " في رأسها: الترتيب معكوس."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "ننقل "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى الراصّة الجديدة "
+          },
+          {
+           "text": "res",
+           "dir": "ltr"
+          },
+          {
+           "text": ": النقل يقلب الترتيب، فيصير الأصغر في الرأس كما طُلب."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "كل قيمة تُنقل مرّتين فقط، فدرجة النجاعة "
+          },
+          {
+           "text": "O(n + m)",
+           "dir": "ltr"
+          },
+          {
+           "text": " حيث "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "m",
+           "dir": "ltr"
+          },
+          {
+           "text": " طولا الراصّتين."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Stack<int> Merge(Stack<int> s1, Stack<int> s2)\n{\n    Stack<int> temp = new Stack<int>();\n    while (!s1.IsEmpty() && !s2.IsEmpty())\n    {\n        if (s1.Top() < s2.Top())\n            temp.Push(s1.Pop());\n        else\n            temp.Push(s2.Pop());\n    }\n    while (!s1.IsEmpty())\n        temp.Push(s1.Pop());\n    while (!s2.IsEmpty())\n        temp.Push(s2.Pop());\n    Stack<int> res = new Stack<int>();\n    while (!temp.IsEmpty())\n        res.Push(temp.Pop());\n    return res;\n}",
+        "checklist": [
+         "فحص أنّ الراصّتين **كلتيهما** غير فارغتين قبل مقارنة الرأسين بالعملية `Top`.",
+         "حلقتان بعد الحلقة الأولى لنقل ما بقي في كل راصّة.",
+         "نقل أخير من `temp` إلى `res` ليصير الأصغر في الرأس.",
+         "إعادة الراصّة الجديدة `res`."
+        ],
+        "trace": {
+         "code": "public static Stack<int> Merge(Stack<int> s1, Stack<int> s2)\n{\n    Stack<int> temp = new Stack<int>();\n    while (!s1.IsEmpty() && !s2.IsEmpty())\n    {\n        if (s1.Top() < s2.Top())\n            temp.Push(s1.Pop());\n        else\n            temp.Push(s2.Pop());\n    }\n    while (!s1.IsEmpty())\n        temp.Push(s1.Pop());\n    while (!s2.IsEmpty())\n        temp.Push(s2.Pop());\n    Stack<int> res = new Stack<int>();\n    while (!temp.IsEmpty())\n        res.Push(temp.Pop());\n    return res;\n}",
+         "given": "الراصّتان `s1 = [1,5,6]` و `s2 = [0,2]`، والاستدعاء `Merge(s1, s2)`.",
+         "out": "[0,1,2,5,6]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Merge` مع `s1` = الراصّة `[1,5,6]`، `s2` = الراصّة `[0,2]`.","o":0,"f":[{"name":"Main","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}]]},{"name":"Merge","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["1","5","6"]},{"id":2,"k":"stack","items":["0","2"]}]},
+{"l":3,"n":"ننشئ راصّة فارغة باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}]]},{"name":"Merge","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}],["temp",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"stack","items":["1","5","6"]},{"id":2,"k":"stack","items":["0","2"]},{"id":3,"k":"stack","items":[]}]},
+{"l":4,"n":"الشرط `!s1.IsEmpty() && !s2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الراصّة `s1` هو `1` (لا يخرج). رأس الراصّة `s2` هو `0` (لا يخرج). الشرط `s1.Top() < s2.Top()` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"نخرج `0` من رأس الراصّة `s2`. ندخل `0` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["1","5","6"]},{"id":2,"k":"stack","items":["2"]},{"id":3,"k":"stack","items":["0"]}]},
+{"l":4,"n":"الشرط `!s1.IsEmpty() && !s2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الراصّة `s1` هو `1` (لا يخرج). رأس الراصّة `s2` هو `2` (لا يخرج). الشرط `s1.Top() < s2.Top()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"نخرج `1` من رأس الراصّة `s1`. ندخل `1` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["5","6"]},{"id":2,"k":"stack","items":["2"]},{"id":3,"k":"stack","items":["1","0"]}]},
+{"l":4,"n":"الشرط `!s1.IsEmpty() && !s2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الراصّة `s1` هو `5` (لا يخرج). رأس الراصّة `s2` هو `2` (لا يخرج). الشرط `s1.Top() < s2.Top()` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"نخرج `2` من رأس الراصّة `s2`. ندخل `2` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["5","6"]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["2","1","0"]}]},
+{"l":4,"n":"الشرط `!s1.IsEmpty() && !s2.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":11,"n":"الشرط `!s1.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":12,"n":"نخرج `5` من رأس الراصّة `s1`. ندخل `5` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":["6"]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["5","2","1","0"]}]},
+{"l":11,"n":"الشرط `!s1.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":12,"n":"نخرج `6` من رأس الراصّة `s1`. ندخل `6` إلى رأس الراصّة `temp`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["6","5","2","1","0"]}]},
+{"l":11,"n":"الشرط `!s1.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":13,"n":"الشرط `!s2.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":15,"n":"ننشئ راصّة فارغة باسم `res`.","o":0,"f":[{"name":"Main","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}]]},{"name":"Merge","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}],["temp",{"t":"ref","id":3}],["res",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["6","5","2","1","0"]},{"id":4,"k":"stack","items":[]}]},
+{"l":16,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":17,"n":"نخرج `6` من رأس الراصّة `temp`. ندخل `6` إلى رأس الراصّة `res`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["5","2","1","0"]},{"id":4,"k":"stack","items":["6"]}]},
+{"l":16,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":17,"n":"نخرج `5` من رأس الراصّة `temp`. ندخل `5` إلى رأس الراصّة `res`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["2","1","0"]},{"id":4,"k":"stack","items":["5","6"]}]},
+{"l":16,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":17,"n":"نخرج `2` من رأس الراصّة `temp`. ندخل `2` إلى رأس الراصّة `res`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["1","0"]},{"id":4,"k":"stack","items":["2","5","6"]}]},
+{"l":16,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":17,"n":"نخرج `1` من رأس الراصّة `temp`. ندخل `1` إلى رأس الراصّة `res`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":["0"]},{"id":4,"k":"stack","items":["1","2","5","6"]}]},
+{"l":16,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":17,"n":"نخرج `0` من رأس الراصّة `temp`. ندخل `0` إلى رأس الراصّة `res`.","o":0,"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":3,"k":"stack","items":[]},{"id":4,"k":"stack","items":["0","1","2","5","6"]}]},
+{"l":16,"n":"الشرط `!temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":18,"n":"العملية `Merge` تُعيد الراصّة `[0,1,2,5,6]`.","o":0},
+{"l":0,"n":"نطبع: `[0,1,2,5,6]`. انتهى التنفيذ.","o":12,"f":[{"name":"Main","vars":[["s1",{"t":"ref","id":1}],["s2",{"t":"ref","id":2}],["res",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"stack","items":[]},{"id":2,"k":"stack","items":[]},{"id":4,"k":"stack","items":["0","1","2","5","6"]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: نقارن رأسَي الراصّتين: الأصغر بينهما هو أصغر قيمة لم تُنقل بعد. نُخرجه وندخله إلى راصّة مساعدة temp. حين تفرغ إحدى الراصّتين ننقل ما بقي في الأخرى إلى temp كما هو: هو مرتّب أصلًا. القيم دخلت temp من الأصغر إلى الأكبر، فصار الأكبر في رأسها: الترتيب معكوس. ننقل temp إلى الراصّة الجديدة res: النقل يقلب الترتيب، فيصير الأصغر في الرأس كما طُلب. كل قيمة تُنقل مرّتين فقط، فدرجة النجاعة O(n + m) حيث n و m طولا الراصّتين."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b20",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "للراصّة في المثال، أي طلاب في الراصّة التي تعيدها \u2066Passed\u2069، من الرأس إلى القاع؟",
+        "prompt": "ماذا تعيد \u2066Merge\u2069 لراصّتَي مثال الكتاب \u2066[-3,-2,1,5,6]\u2069 و \u2066[0,2,3,4]\u2069؟",
         "options": [
          {
           "id": "o1",
-          "text": "Rami ثم Adam ثم Lina",
-          "correct": true
+          "text": "\u2066[6,5,4,3,2,1,0,-2,-3]\u2069"
          },
          {
           "id": "o2",
-          "text": "Lina ثم Adam ثم Rami"
+          "text": "\u2066[-3,-2,1,5,6,0,2,3,4]\u2069"
          },
          {
           "id": "o3",
-          "text": "Rami ثم Adam فقط"
+          "text": "\u2066[-3,-2,0,1,2,3,4,5,6]\u2069",
+          "correct": true
          },
          {
           "id": "o4",
-          "text": "Adam ثم Rami ثم Lina"
+          "text": "\u2066[0,2,3,4,-3,-2,1,5,6]\u2069"
          }
         ],
         "feedback": {
-         "explanation": "الطلاب الذين علامتهم 55 أو أكثر ثلاثة، والشرط \u2066>=\u2069 يشمل Lina. الدفع إلى \u2066res\u2069 يتم من القاع نحو الرأس، فيصل Lina أولًا و Rami أخيرًا، فيكون Rami في الرأس كما في الراصّة الأصلية."
+         "explanation": "في كل دورة ينتقل الأصغر من الرأسين، فتخرج القيم من الأصغر إلى الأكبر. الخيار الأول هو محتوى \u2066temp\u2069 قبل النقل الأخير: من نسي هذا النقل يعيد الراصّة مقلوبة."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b21",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — مجموعات من النوع نفسه: \u2066SameKind\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b22",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 21 من الكتاب (ص 227)",
+       "prompt": "اكتب عملية تتلقّى كبارامترات راصّة من نوع \u2066Stack<int>\u2069 وعددًا طبيعيًا \u2066N\u2069. العملية تعيد \u2066true\u2069 إذا تحقّق أنّ كلّ \u2066N\u2069 أعداد متجاورة لها نفس الصفة: إمّا أن تكون كلّها زوجية أو كلّها فردية. خلاف ذلك تعيد العملية \u2066false\u2069. لاحظ أنّ طول الراصّة يجب أن يكون من مضاعفات العدد \u2066N\u2069. ما هي درجة نجاعة العملية؟ أمثلة: للراصّة \u2066[1,5,9,2,8,12,4,2,6]\u2069 و \u2066N = 3\u2069 تعيد العملية \u2066true\u2069. للراصّة \u2066[2,4,8,2,9,12,7,2]\u2069 و \u2066N = 4\u2069 تعيد العملية \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b23",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الكتاب لا يحدّد اسمًا للعملية، فنسمّيها "
+        },
+        {
+         "text": "SameKind",
+         "dir": "ltr"
+        },
+        {
+         "text": ". نضيف شرطًا: يجب الحفاظ على الراصّة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b24",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool SameKind(Stack<int> s, int N)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b25",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066SameKind\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "ننسخ الراصّة بالعملية "
+          },
+          {
+           "text": "CopyStack",
+           "dir": "ltr"
+          },
+          {
+           "text": " ونعمل على النسخة، فتبقى الراصّة الأصلية كما هي حتى حين نخرج بالأمر "
+          },
+          {
+           "text": "return false;",
+           "dir": "ltr"
+          },
+          {
+           "text": " في الوسط."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الحلقة الخارجية تعالج مجموعة واحدة في كل دورة: تُخرج أول قيمة في المجموعة وتحفظها في "
+          },
+          {
+           "text": "first",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الحلقة الداخلية تُخرج القيم الباقية في المجموعة، وعددها "
+          },
+          {
+           "text": "N - 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وتقارن كل واحدة بالقيمة "
+          },
+          {
+           "text": "first",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "عددان من النوع نفسه (زوجيان أو فرديان) الفرق بينهما زوجي دائمًا. لذلك الشرط "
+          },
+          {
+           "text": "(x - first) % 2 != 0",
+           "dir": "ltr"
+          },
+          {
+           "text": " يكشف قيمة تخالف نوع مجموعتها، ويعمل مع الأعداد السالبة أيضًا."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "كل قيمة تُخرج مرة واحدة، فدرجة النجاعة "
+          },
+          {
+           "text": "O(n)",
+           "dir": "ltr"
+          },
+          {
+           "text": " حيث "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " طول الراصّة."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool SameKind(Stack<int> s, int N)\n{\n    Stack<int> temp = CopyStack(s);\n    while (!temp.IsEmpty())\n    {\n        int first = temp.Pop();\n        for (int i = 2; i <= N; i++)\n        {\n            int x = temp.Pop();\n            if ((x - first) % 2 != 0)\n                return false;\n        }\n    }\n    return true;\n}",
+        "checklist": [
+         "العمل على نسخة، أو إعادة كل القيم قبل أي `return`.",
+         "حلقة داخلية تُخرج بالضبط `N` قيم لكل مجموعة.",
+         "المقارنة مع أول قيمة في **المجموعة نفسها**، لا مع أول قيمة في الراصّة.",
+         "`return false;` عند أول مخالفة، و `return true;` بعد انتهاء الحلقة الخارجية."
+        ],
+        "trace": {
+         "code": "public static bool SameKind(Stack<int> s, int N)\n{\n    Stack<int> temp = CopyStack(s);\n    while (!temp.IsEmpty())\n    {\n        int first = temp.Pop();\n        for (int i = 2; i <= N; i++)\n        {\n            int x = temp.Pop();\n            if ((x - first) % 2 != 0)\n                return false;\n        }\n    }\n    return true;\n}",
+         "given": "الراصّة `s = [1,5,9,2,8,7]`، والاستدعاء `SameKind(s, 3)`.",
+         "out": "False\n[1,5,9,2,8,7]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `SameKind` مع `s` = الراصّة `[1,5,9,2,8,7]`، `N = 3`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]}]},
+{"l":3,"n":"`temp` يشير الآن إلى الراصّة `[1,5,9,2,8,7]`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":["1","5","9","2","8","7"]}]},
+{"l":4,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"نخرج `1` من رأس الراصّة `temp`. `first = 1`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"1"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":["5","9","2","8","7"]}]},
+{"l":7,"n":"`i = 2`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"1"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":7,"n":"الشرط `i <= N` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `5` من رأس الراصّة `temp`. `x = 5`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"1"}],["i",{"t":"v","s":"2"}],["x",{"t":"v","s":"5"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":["9","2","8","7"]}]},
+{"l":10,"n":"الشرط `(x - first) % 2 != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"1"}],["i",{"t":"v","s":"3"}]]}]},
+{"l":7,"n":"الشرط `i <= N` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `9` من رأس الراصّة `temp`. `x = 9`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"1"}],["i",{"t":"v","s":"3"}],["x",{"t":"v","s":"9"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":["2","8","7"]}]},
+{"l":10,"n":"الشرط `(x - first) % 2 != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`i` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"1"}],["i",{"t":"v","s":"4"}]]}]},
+{"l":7,"n":"الشرط `i <= N` خطأ: نخرج من الحلقة.","o":0},
+{"l":4,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"نخرج `2` من رأس الراصّة `temp`. `first = 2`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"2"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":["8","7"]}]},
+{"l":7,"n":"`i = 2`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"2"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":7,"n":"الشرط `i <= N` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `8` من رأس الراصّة `temp`. `x = 8`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"2"}],["i",{"t":"v","s":"2"}],["x",{"t":"v","s":"8"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":["7"]}]},
+{"l":10,"n":"الشرط `(x - first) % 2 != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"2"}],["i",{"t":"v","s":"3"}]]}]},
+{"l":7,"n":"الشرط `i <= N` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `7` من رأس الراصّة `temp`. `x = 7`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"SameKind","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["temp",{"t":"ref","id":3}],["first",{"t":"v","s":"2"}],["i",{"t":"v","s":"3"}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]},{"id":3,"k":"stack","items":[]}]},
+{"l":10,"n":"الشرط `(x - first) % 2 != 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":11,"n":"العملية `SameKind` تُعيد `false`.","o":0},
+{"l":0,"n":"نطبع: `False`. نطبع: `[1,5,9,2,8,7]`. انتهى التنفيذ.","o":20,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["1","5","9","2","8","7"]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: ننسخ الراصّة بالعملية CopyStack ونعمل على النسخة، فتبقى الراصّة الأصلية كما هي حتى حين نخرج بالأمر return false; في الوسط. الحلقة الخارجية تعالج مجموعة واحدة في كل دورة: تُخرج أول قيمة في المجموعة وتحفظها في first. الحلقة الداخلية تُخرج القيم الباقية في المجموعة، وعددها N - 1، وتقارن كل واحدة بالقيمة first. عددان من النوع نفسه (زوجيان أو فرديان) الفرق بينهما زوجي دائمًا. لذلك الشرط (x - first) % 2 != 0 يكشف قيمة تخالف نوع مجموعتها، ويعمل مع الأعداد السالبة أيضًا. كل قيمة تُخرج مرة واحدة، فدرجة النجاعة O(n) حيث n طول الراصّة."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b26",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد \u2066SameKind\u2069 للراصّة \u2066[2,4,8,2,9,12,7,2]\u2069 و \u2066N = 2\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "false",
+        "feedback": {
+         "explanation": "المجموعات: \u2066[2,4]\u2069 ثم \u2066[8,2]\u2069 ثم \u2066[9,12]\u2069 ثم \u2066[7,2]\u2069. في المجموعة الثالثة 9 فردي و12 زوجي، فتعيد العملية \u2066false\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b27",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — قيمة متكرّرة: \u2066FindRepeated\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b28",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 22 من الكتاب (ص 228)، القسم الأول",
+       "prompt": "اكتب عملية تتلقّى راصّة من نوع \u2066Stack<int>\u2069 وعددًا صحيحًا \u2066N\u2069. جميع القيم التي في الراصّة أكبر أو تساوي 0. العملية تعيد عددًا موجودًا في الراصّة تكرّر \u2066N\u2069 مرّة أو أكثر. إذا لم تجد العملية عددًا كهذا تعيد \u2066-1\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b29",
+       "type": "text",
+       "spans": [
+        {
+         "text": "نضيف شرطًا: يجب الحفاظ على الراصّة. مثال من عندنا: للراصّة "
+        },
+        {
+         "text": "[3,2,5,2,2]",
+         "dir": "ltr"
+        },
+        {
+         "text": " و "
+        },
+        {
+         "text": "N = 3",
+         "dir": "ltr"
+        },
+        {
+         "text": " تعيد العملية 2، وللراصّة نفسها و "
+        },
+        {
+         "text": "N = 4",
+         "dir": "ltr"
+        },
+        {
+         "text": " تعيد "
+        },
+        {
+         "text": "-1",
+         "dir": "ltr"
+        },
+        {
+         "text": ". ما درجة نجاعة عمليتك؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b30",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int FindRepeated(Stack<int> s, int N)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b31",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 5 — \u2066FindRepeated\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الحلقة الخارجية تمرّ على قيم الراصّة واحدة واحدة، في النسخة "
+          },
+          {
+           "text": "outer",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "لكل قيمة "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " ننسخ الراصّة من جديد إلى "
+          },
+          {
+           "text": "inner",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ونعدّ كم مرة تظهر "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " فيها."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إذا وصل العدّاد إلى "
+          },
+          {
+           "text": "N",
+           "dir": "ltr"
+          },
+          {
+           "text": " أو أكثر نعيد "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " فورًا: النسخ هي التي تغيّرت، والراصّة الأصلية سليمة."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "إذا انتهت الحلقة الخارجية ولم نجد قيمة كهذه نعيد "
+          },
+          {
+           "text": "-1",
+           "dir": "ltr"
+          },
+          {
+           "text": ". هذه القيمة لا تلتبس بقيمة من الراصّة، لأن كل قيم الراصّة 0 أو أكثر."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "لكل قيمة من قيم الراصّة نمرّ على الراصّة كلها، فدرجة النجاعة "
+          },
+          {
+           "text": "O(n²)",
+           "dir": "ltr"
+          },
+          {
+           "text": " حيث "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " طول الراصّة."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int FindRepeated(Stack<int> s, int N)\n{\n    Stack<int> outer = CopyStack(s);\n    while (!outer.IsEmpty())\n    {\n        int x = outer.Pop();\n        int count = 0;\n        Stack<int> inner = CopyStack(s);\n        while (!inner.IsEmpty())\n        {\n            if (inner.Pop() == x)\n                count++;\n        }\n        if (count >= N)\n            return x;\n    }\n    return -1;\n}",
+        "checklist": [
+         "حلقتان متداخلتان: الخارجية تختار القيمة والداخلية تعدّ تكرارها.",
+         "العدّاد `count` يبدأ من صفر لكل قيمة جديدة.",
+         "الشرط `count >= N` وليس `count == N`: المطلوب `N` مرّة **أو أكثر**.",
+         "`return -1;` بعد الحلقة الخارجية.",
+         "الراصّة الأصلية لا تتغيّر."
+        ],
+        "trace": {
+         "code": "public static int FindRepeated(Stack<int> s, int N)\n{\n    Stack<int> outer = CopyStack(s);\n    while (!outer.IsEmpty())\n    {\n        int x = outer.Pop();\n        int count = 0;\n        Stack<int> inner = CopyStack(s);\n        while (!inner.IsEmpty())\n        {\n            if (inner.Pop() == x)\n                count++;\n        }\n        if (count >= N)\n            return x;\n    }\n    return -1;\n}",
+         "given": "الراصّة `s = [3,2,5,2,2]`، والاستدعاء `FindRepeated(s, 3)`.",
+         "out": "2\n[3,2,5,2,2]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `FindRepeated` مع `s` = الراصّة `[3,2,5,2,2]`، `N = 3`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]}]},
+{"l":3,"n":"`outer` يشير الآن إلى الراصّة `[3,2,5,2,2]`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["3","2","5","2","2"]}]},
+{"l":4,"n":"الشرط `!outer.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"نخرج `3` من رأس الراصّة `outer`. `x = 3`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]}]},
+{"l":7,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"3"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":8,"n":"`inner` يشير الآن إلى الراصّة `[3,2,5,2,2]`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"3"}],["count",{"t":"v","s":"0"}],["inner",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]},{"id":5,"k":"stack","items":["3","2","5","2","2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `3` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` صحيح: ننفّذ ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]},{"id":5,"k":"stack","items":["2","5","2","2"]}]},
+{"l":12,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"3"}],["count",{"t":"v","s":"1"}],["inner",{"t":"ref","id":5}]]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `2` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]},{"id":5,"k":"stack","items":["5","2","2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `5` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]},{"id":5,"k":"stack","items":["2","2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `2` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]},{"id":5,"k":"stack","items":["2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `2` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]},{"id":5,"k":"stack","items":[]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"الشرط `count >= N` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"الشرط `!outer.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["2","5","2","2"]}]},
+{"l":6,"n":"نخرج `2` من رأس الراصّة `outer`. `x = 2`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"2"}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]}]},
+{"l":7,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"2"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":8,"n":"`inner` يشير الآن إلى الراصّة `[3,2,5,2,2]`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"2"}],["count",{"t":"v","s":"0"}],["inner",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]},{"id":7,"k":"stack","items":["3","2","5","2","2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `3` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]},{"id":7,"k":"stack","items":["2","5","2","2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `2` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` صحيح: ننفّذ ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]},{"id":7,"k":"stack","items":["5","2","2"]}]},
+{"l":12,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"2"}],["count",{"t":"v","s":"1"}],["inner",{"t":"ref","id":7}]]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `5` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]},{"id":7,"k":"stack","items":["2","2"]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `2` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` صحيح: ننفّذ ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]},{"id":7,"k":"stack","items":["2"]}]},
+{"l":12,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"2"}],["count",{"t":"v","s":"2"}],["inner",{"t":"ref","id":7}]]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":11,"n":"نخرج `2` من رأس الراصّة `inner`. الشرط `inner.Pop() == x` صحيح: ننفّذ ما بعد `if`.","o":0,"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]},{"id":3,"k":"stack","items":["5","2","2"]},{"id":7,"k":"stack","items":[]}]},
+{"l":12,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]},{"name":"FindRepeated","vars":[["s",{"t":"ref","id":1}],["N",{"t":"v","s":"3"}],["outer",{"t":"ref","id":3}],["x",{"t":"v","s":"2"}],["count",{"t":"v","s":"3"}],["inner",{"t":"ref","id":7}]]}]},
+{"l":9,"n":"الشرط `!inner.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"الشرط `count >= N` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":15,"n":"العملية `FindRepeated` تُعيد `2`.","o":0},
+{"l":0,"n":"نطبع: `2`. نطبع: `[3,2,5,2,2]`. انتهى التنفيذ.","o":14,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"stack","items":["3","2","5","2","2"]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: الحلقة الخارجية تمرّ على قيم الراصّة واحدة واحدة، في النسخة outer. لكل قيمة x ننسخ الراصّة من جديد إلى inner، ونعدّ كم مرة تظهر x فيها. إذا وصل العدّاد إلى N أو أكثر نعيد x فورًا: النسخ هي التي تغيّرت، والراصّة الأصلية سليمة. إذا انتهت الحلقة الخارجية ولم نجد قيمة كهذه نعيد -1. هذه القيمة لا تلتبس بقيمة من الراصّة، لأن كل قيم الراصّة 0 أو أكثر. لكل قيمة من قيم الراصّة نمرّ على الراصّة كلها، فدرجة النجاعة O(n²) حيث n طول الراصّة."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m04-l05-p04-b32",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تعيد \u2066FindRepeated\u2069 للراصّة \u2066[4,4,5,0,0,2,4,1]\u2069 و \u2066N = 3\u2069؟",
+        "answer": "4",
+        "feedback": {
+         "explanation": "القيمة 4 تظهر ثلاث مرات. القيمة 0 تظهر مرّتين فقط، وكل قيمة أخرى مرة واحدة."
         }
        },
        "origin": "teacher-enrichment"

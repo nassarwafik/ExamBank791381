@@ -125,9 +125,9 @@
 .learning-reader-example{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-success); border-radius:var(--eb-r-lg); }
 .learning-reader-example-kicker{ margin:0; align-self:flex-start; padding:3px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-success-bg); color:var(--eb-success-tx); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
 .learning-reader-example-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-h4); font-weight:var(--eb-fw-bold); line-height:var(--eb-read-lh-heading); }
-.learning-reader-example-prompt, .learning-reader-example-result{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); }
+.learning-reader-example-prompt, .learning-reader-example-result{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); overflow-wrap:anywhere; }
 .learning-reader-example-tag{ padding:2px var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-bold); }
-.learning-reader-example-steps{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); }
+.learning-reader-example-steps{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); overflow-wrap:anywhere; }
 .learning-reader-step-note{ display:block; color:var(--eb-muted); font-size:var(--eb-read-fs-small); }
 .learning-reader-example-explain{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-card); line-height:var(--eb-read-lh); }
 

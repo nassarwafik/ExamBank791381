@@ -3050,7 +3050,7 @@ const m05: ContentModule = {
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static Document RemoveMin(Queue<Document> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Document> QTemp = CopyQueue(Q);\n    // **** Find the first document with minimal number of pages ****\n    Document MinDoc = QTemp.Remove(), Doc;\n    while (!QTemp.IsEmpty())\n    {\n        Doc = QTemp.Remove();\n        if (MinDoc.GetNumPages() > Doc.GetNumPages())\n            MinDoc = Doc;\n    }\n    // **** Remove MinDoc from the queue ****\n    while (!Q.IsEmpty())\n    {\n        Doc = Q.Remove();\n        if (MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****)\n            QTemp.Insert(Doc);\n    }\n    // ****  copy QTemp documents back into the original Q ****\n    while (!QTemp.IsEmpty())\n        Q.Insert(QTemp.Remove());\n    // **** Return the found document with minimal number of pages ****\n    return MinDoc;\n}",
+       "code": "public static Document RemoveMin(Queue<Document> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Document> QTemp = CopyQueue(Q);\n    // **** Find the first document with minimal number of pages ****\n    Document MinDoc = QTemp.Remove(), Doc;\n    while (!QTemp.IsEmpty())\n    {\n        Doc = QTemp.Remove();\n        if (MinDoc.GetNumPages() > Doc.GetNumPages())\n            MinDoc = Doc;\n    }\n    // **** Remove MinDoc from the queue ****\n    while (!Q.IsEmpty())\n    {\n        Doc = Q.Remove();\n        if (MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****\n            QTemp.Insert(Doc);\n    }\n    // ****  copy QTemp documents back into the original Q ****\n    while (!QTemp.IsEmpty())\n        Q.Insert(QTemp.Remove());\n    // **** Return the found document with minimal number of pages ****\n    return MinDoc;\n}",
        "origin": "book"
       },
       {
@@ -3151,7 +3151,7 @@ const m05: ContentModule = {
         "interactive": true
        },
        "config": {
-        "code": "public static Document RemoveMin(Queue<Document> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Document> QTemp = CopyQueue(Q);\n    // **** Find the first document with minimal number of pages ****\n    Document MinDoc = QTemp.Remove(), Doc;\n    while (!QTemp.IsEmpty())\n    {\n        Doc = QTemp.Remove();\n        if (MinDoc.GetNumPages() > Doc.GetNumPages())\n            MinDoc = Doc;\n    }\n    // **** Remove MinDoc from the queue ****\n    while (!Q.IsEmpty())\n    {\n        Doc = Q.Remove();\n        if (MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****)\n            QTemp.Insert(Doc);\n    }\n    // ****  copy QTemp documents back into the original Q ****\n    while (!QTemp.IsEmpty())\n        Q.Insert(QTemp.Remove());\n    // **** Return the found document with minimal number of pages ****\n    return MinDoc;\n}",
+        "code": "public static Document RemoveMin(Queue<Document> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Document> QTemp = CopyQueue(Q);\n    // **** Find the first document with minimal number of pages ****\n    Document MinDoc = QTemp.Remove(), Doc;\n    while (!QTemp.IsEmpty())\n    {\n        Doc = QTemp.Remove();\n        if (MinDoc.GetNumPages() > Doc.GetNumPages())\n            MinDoc = Doc;\n    }\n    // **** Remove MinDoc from the queue ****\n    while (!Q.IsEmpty())\n    {\n        Doc = Q.Remove();\n        if (MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****\n            QTemp.Insert(Doc);\n    }\n    // ****  copy QTemp documents back into the original Q ****\n    while (!QTemp.IsEmpty())\n        Q.Insert(QTemp.Remove());\n    // **** Return the found document with minimal number of pages ****\n    return MinDoc;\n}",
         "given": "دور المستندات `Q` من الرأس: `(A, 7)` ثم `(B, 3)` ثم `(C, 9)` ثم `(D, 3)` (الاسم، عدد الصفحات)، والاستدعاء `RemoveMin(Q)`.",
         "out": "B\n[A,C,D]\n",
         "steps": [
@@ -3304,12 +3304,12 @@ const m05: ContentModule = {
   },
   {
    "id": "899271d-m05-l06",
-   "title": "أسئلة تتبّع وكتابة",
+   "title": "أسئلة وتمارين",
    "order": 6,
    "pages": [
     {
      "id": "899271d-m05-l06-p01",
-     "title": "أسئلة تتبّع (1)",
+     "title": "أسئلة تتبّع محلولة",
      "order": 1,
      "source": {
       "kind": "book",
@@ -3319,7 +3319,9 @@ const m05: ContentModule = {
      },
      "keywords": [
       "تتبّع",
-      "دور"
+      "دور",
+      "أسئلة محلولة",
+      "دمج"
      ],
      "blocks": [
       {
@@ -3327,14 +3329,14 @@ const m05: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "تمعّن في مقطع البرنامج، وتتبّعه "
+         "text": "خمسة أسئلة تتبّع مع حلولها، مرتّبة من الأسهل إلى الأصعب. اقرأ الكود وحاول أن تجيب "
         },
         {
-         "text": "بدون",
+         "text": "قبل",
          "style": "strong"
         },
         {
-         "text": " الاستعانة بالحاسوب. أجب أولًا، ثم افتح التتبّع لتتأكد. في كل الإجابات: القيمة الأولى من اليسار هي رأس الدور. هذه الأسئلة توأم لأسئلة التتبّع في وحدة الراصّة: الكود نفسه تقريبًا، لكن النتيجة تختلف. قارن."
+         "text": " أن تقرأ الحل، ثم افتح التتبّع لترى الدور يتغيّر خطوة بخطوة. في كل الإجابات: القيمة الأولى من اليسار هي رأس الدور. الأسئلة من ورقة المعلّم، وهي توأم لأسئلة التتبّع في وحدة الراصّة: الكود نفسه تقريبًا، لكن النتيجة تختلف. قارن."
         }
        ],
        "origin": "teacher-enrichment"
@@ -3343,7 +3345,7 @@ const m05: ContentModule = {
        "id": "m05-l06-p01-b02",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 1",
+       "text": "سؤال 1 · سهل — إدخال وإخراج",
        "origin": "teacher-enrichment"
       },
       {
@@ -3356,42 +3358,52 @@ const m05: ContentModule = {
       },
       {
        "id": "m05-l06-p01-b04",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف سيبدو الدور \u2066q\u2069 في نهاية مقطع البرنامج؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[a,b,c,d,e]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[e,d,c,b]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[b,c,d,e]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[a,b,c,e]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "أُدخلت الحروف \u2066a\u2069 ثم \u2066b\u2069 ثم \u2066c\u2069 ثم \u2066d\u2069. عملية الإخراج حذفت الرأس \u2066a\u2069 لأنه أول من دخل، ثم أُدخل \u2066e\u2069 إلى نهاية الدور."
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كيف سيبدو الدور "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": " في نهاية مقطع البرنامج؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m05-l06-p01-b05",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "أربعة إدخالات: \u2066a\u2069 ثم \u2066b\u2069 ثم \u2066c\u2069 ثم \u2066d\u2069. الدور \u2066[a,b,c,d]\u2069 ورأسه \u2066a\u2069."
+        },
+        {
+         "text": "الأمر \u2066q.Remove();\u2069 يُخرج الرأس \u2066a\u2069 لأنه أول من دخل. يبقى \u2066[b,c,d]\u2069."
+        },
+        {
+         "text": "الأمر \u2066q.Insert('e');\u2069 يُدخل \u2066e\u2069 إلى نهاية الدور، بعد \u2066d\u2069."
+        },
+        {
+         "text": "النتيجة: يُطبع \u2066[b,c,d,e]\u2069. الكود نفسه مع راصّة أعطى \u2066[e,c,b,a]\u2069: هناك خرج آخر من دخل، وهنا خرج أول من دخل."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b06",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع سؤال 1",
+       "title": "تتبّع حل سؤال 1",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -3419,14 +3431,14 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b06",
+       "id": "m05-l06-p01-b07",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 2",
+       "text": "سؤال 2 · سهل — حلقة تملأ دورًا",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b07",
+       "id": "m05-l06-p01-b08",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3434,43 +3446,56 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b08",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف سيبدو الدور \u2066q\u2069 في نهاية مقطع البرنامج؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[1,20,9,40,25,60,49,80,81,100]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[100,81,80,49,60,25,40,9,20,1]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[100,90,64,70,36,50,16,30,4,10]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[10,4,30,16,50,36,70,64,90,100]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "القيم الفردية تُدخل مربّعاتها والقيم الزوجية تُدخل مضروبة في 10، فترتيب الإدخال: 1، 20، 9، 40، 25، 60، 49، 80، 81، 100. في الدور أول ما أُدخل يكون الرأس، لذلك يبقى الترتيب كما هو بدون عكس."
+       "id": "m05-l06-p01-b09",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كيف سيبدو الدور "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": " في نهاية مقطع البرنامج؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b09",
+       "id": "m05-l06-p01-b10",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة تدور والمتغيّر \u2066k\u2069 يأخذ القيم من 1 إلى 10."
+        },
+        {
+         "text": "إذا كان \u2066k\u2069 زوجيًا تُدخل القيمة \u2066k * 10\u2069، وإذا كان فرديًا يُدخل مربّعه."
+        },
+        {
+         "text": "ترتيب الإدخال: 1، 20، 9، 40، 25، 60، 49، 80، 81، 100."
+        },
+        {
+         "text": "في الدور أول ما أُدخل هو الرأس، فيبقى الترتيب كما هو بدون عكس."
+        },
+        {
+         "text": "النتيجة: يُطبع \u2066[1,20,9,40,25,60,49,80,81,100]\u2069. في الراصّة كان الترتيب معكوسًا."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b11",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع سؤال 2",
+       "title": "تتبّع حل سؤال 2",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -3534,14 +3559,14 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b10",
+       "id": "m05-l06-p01-b12",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 3 — العملية \u2066Pineapple\u2069",
+       "text": "سؤال 3 · متوسط — \u2066Pineapple\u2069: ماذا تعيد وماذا تنفّذ؟",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b11",
+       "id": "m05-l06-p01-b13",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3549,7 +3574,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b12",
+       "id": "m05-l06-p01-b14",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -3577,56 +3602,60 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b13",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تُعاد بعد استدعاء العملية \u2066Pineapple\u2069 مع الدور \u2066q\u2069؟",
-        "answer": "28",
-        "feedback": {
-         "explanation": "\u206611 + 3 + 5 + 7 + 2 = 28\u2069. كل قيمة أُخرجت من \u2066q\u2069 أُضيفت إلى \u2066sod\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p01-b14",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تنفّذ العملية \u2066Pineapple\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تعكس ترتيب قيم الدور"
-         },
-         {
-          "id": "o2",
-          "text": "تعيد عدد قيم الدور"
-         },
-         {
-          "id": "o3",
-          "text": "تعيد مجموع قيم الدور",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "تعيد عدد القيم المساوية للقيمة التي في رأس الدور"
-         }
-        ],
-        "feedback": {
-         "explanation": "الحلقة الأولى تجمع القيم وتنقلها إلى \u2066temp\u2069، والحلقة الثانية تعيدها إلى \u2066q\u2069. الدور يحافظ على ترتيب الإدخال، فيعود \u2066q\u2069 كما كان. إذن العملية تعيد مجموع القيم ولا تغيّر الدور."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
        "id": "m05-l06-p01-b15",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " أ. ما القيمة التي تُعاد بعد استدعاء "
+        },
+        {
+         "text": "Pineapple",
+         "dir": "ltr"
+        },
+        {
+         "text": " مع الدور "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ ب. ماذا تنفّذ العملية، وكيف يبدو الدور بعدها؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b16",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة الأولى تُخرج القيم واحدة واحدة من \u2066q\u2069. كل قيمة تُدخل إلى \u2066temp\u2069 وتُضاف إلى \u2066sod\u2069."
+        },
+        {
+         "text": "حين يفرغ \u2066q\u2069 يكون \u2066sod\u2069 مجموع كل القيم: \u206611 + 3 + 5 + 7 + 2 = 28\u2069."
+        },
+        {
+         "text": "الحلقة الثانية تعيد القيم من \u2066temp\u2069 إلى \u2066q\u2069. الدور يحافظ على ترتيب الإدخال، فيعود \u2066q\u2069 كما كان: \u2066[11,3,5,7,2]\u2069."
+        },
+        {
+         "text": "النتيجة: أ. تُعاد القيمة 28. ب. العملية تعيد مجموع قيم الدور ولا تغيّره. يكفي هنا دور مساعد واحد ونقل مرّتين، لأن الدور لا يقلب الترتيب."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b17",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Pineapple\u2069",
+       "title": "تتبّع حل سؤال 3",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -3682,14 +3711,553 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b16",
+       "id": "m05-l06-p01-b18",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 4 — العملية \u2066Grapes\u2069",
+       "text": "سؤال 4 · متوسط — \u2066Cherry\u2069: عدّ وحذف",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b17",
+       "id": "m05-l06-p01-b19",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Cherry(Queue<int> q, int num)\n{\n    int count = 0;\n    Queue<int> temp = new Queue<int>();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x != num)\n            temp.Insert(x);\n        else\n            count++;\n    }\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b20",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " معطى الدور "
+        },
+        {
+         "text": "q = [4,7,4,2,4,9]",
+         "dir": "ltr"
+        },
+        {
+         "text": "، ونُفّذ الاستدعاء "
+        },
+        {
+         "text": "int r = Cherry(q, 4);",
+         "dir": "ltr"
+        },
+        {
+         "text": ". أ. ما القيمة التي ستُخزَّن في المتغيّر "
+        },
+        {
+         "text": "r",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ ب. كيف سيبدو الدور "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": " بعد انتهاء الاستدعاء؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b21",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "كل قيمة تُخرج من \u2066q\u2069 تُقارَن بالعدد \u2066num\u2069، وهو 4."
+        },
+        {
+         "text": "القيمة التي لا تساوي 4 تُدخل إلى \u2066temp\u2069. القيمة التي تساوي 4 لا تُدخل إلى أي مكان، ويزيد \u2066count\u2069 بواحد."
+        },
+        {
+         "text": "العدد 4 يظهر ثلاث مرات، فيصير \u2066count\u2069 مساويًا 3، ويصير \u2066temp\u2069 مساويًا \u2066[7,2,9]\u2069."
+        },
+        {
+         "text": "الحلقة الثانية تعيد القيم من \u2066temp\u2069 إلى \u2066q\u2069 بالترتيب نفسه."
+        },
+        {
+         "text": "النتيجة: أ. \u2066r = 3\u2069. ب. الدور يصير \u2066[7,2,9]\u2069: حُذف كل ظهور للعدد 4، وترتيب الباقي لم يتغيّر."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b22",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع حل سؤال 4",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int Cherry(Queue<int> q, int num)\n{\n    int count = 0;\n    Queue<int> temp = new Queue<int>();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x != num)\n            temp.Insert(x);\n        else\n            count++;\n    }\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n    return count;\n}",
+        "given": "الدور `q = [4,7,4,2,4,9]`، والاستدعاء `Cherry(q, 4)`.",
+        "out": "3\n[7,2,9]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Cherry` مع `q` = الدور `[4,7,4,2,4,9]`، `num = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["4","7","4","2","4","9"]}]},
+{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"ننشئ دورًا فارغًا باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["4","7","4","2","4","9"]},{"id":2,"k":"queue","items":[]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"نخرج `4` من رأس الدور `q`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["7","4","2","4","9"]},{"id":2,"k":"queue","items":[]}]},
+{"l":8,"n":"الشرط `x != num` خطأ: ننتقل إلى `else`.","o":0},
+{"l":11,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"نخرج `7` من رأس الدور `q`. `x = 7`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"queue","items":["4","2","4","9"]},{"id":2,"k":"queue","items":[]}]},
+{"l":8,"n":"الشرط `x != num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"ندخل `7` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["4","2","4","9"]},{"id":2,"k":"queue","items":["7"]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"نخرج `4` من رأس الدور `q`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["2","4","9"]},{"id":2,"k":"queue","items":["7"]}]},
+{"l":8,"n":"الشرط `x != num` خطأ: ننتقل إلى `else`.","o":0},
+{"l":11,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"نخرج `2` من رأس الدور `q`. `x = 2`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"2"}]]}],"h":[{"id":1,"k":"queue","items":["4","9"]},{"id":2,"k":"queue","items":["7"]}]},
+{"l":8,"n":"الشرط `x != num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"ندخل `2` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["4","9"]},{"id":2,"k":"queue","items":["7","2"]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"نخرج `4` من رأس الدور `q`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["9"]},{"id":2,"k":"queue","items":["7","2"]}]},
+{"l":8,"n":"الشرط `x != num` خطأ: ننتقل إلى `else`.","o":0},
+{"l":11,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"نخرج `9` من رأس الدور `q`. `x = 9`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"9"}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["7","2"]}]},
+{"l":8,"n":"الشرط `x != num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"ندخل `9` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["7","2","9"]}]},
+{"l":5,"n":"الشرط `!q.IsEmpty()` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}]]}]},
+{"l":13,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"نخرج `7` من رأس الدور `temp`. ندخل `7` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["7"]},{"id":2,"k":"queue","items":["2","9"]}]},
+{"l":13,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"نخرج `2` من رأس الدور `temp`. ندخل `2` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["7","2"]},{"id":2,"k":"queue","items":["9"]}]},
+{"l":13,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"نخرج `9` من رأس الدور `temp`. ندخل `9` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["7","2","9"]},{"id":2,"k":"queue","items":[]}]},
+{"l":13,"n":"الشرط `!temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":15,"n":"العملية `Cherry` تُعيد `3`.","o":0},
+{"l":0,"n":"نطبع: `3`. نطبع: `[7,2,9]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}],["r",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"queue","items":["7","2","9"]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (37 خطوة)؛ ناتج البرنامج: 3 ↵ [7,2,9]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b23",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066Watermelon\u2069: دوران مرتّبان",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b24",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static Queue<int> Watermelon(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() < q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b25",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الدوران المعطيان",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "queue",
+          "items": [
+           1,
+           4,
+           6
+          ],
+          "label": "\u2066q1\u2069"
+         },
+         {
+          "kind": "queue",
+          "items": [
+           2,
+           3,
+           7,
+           9
+          ],
+          "label": "\u2066q2\u2069"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: دور من الرأس إلى الذيل: 1، 4، 6 (`q1`)؛ دور من الرأس إلى الذيل: 2، 3، 7، 9 (`q2`)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b26",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " الدوران "
+        },
+        {
+         "text": "q1",
+         "dir": "ltr"
+        },
+        {
+         "text": " و "
+        },
+        {
+         "text": "q2",
+         "dir": "ltr"
+        },
+        {
+         "text": " مرتّبان تصاعديًا من الرأس إلى النهاية. نُفّذ الاستدعاء "
+        },
+        {
+         "text": "Queue<int> res = Watermelon(q1, q2);",
+         "dir": "ltr"
+        },
+        {
+         "text": ". أ. كيف سيبدو الدور "
+        },
+        {
+         "text": "res",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ ب. كم مرة يُنفَّذ الأمر "
+        },
+        {
+         "text": "res.Insert(q1.Remove());",
+         "dir": "ltr"
+        },
+        {
+         "text": " خلال الاستدعاء؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b27",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة الأولى تعمل ما دام الدوران كلاهما غير فارغين. في كل دورة نقارن الرأسين وننقل الأصغر إلى \u2066res\u2069."
+        },
+        {
+         "text": "\u20661 < 2\u2069: ننقل 1 من \u2066q1\u2069. بعدها رأس \u2066q1\u2069 هو 4، وهو ليس أصغر من 2 ولا من 3: ننقل 2 ثم 3 من \u2066q2\u2069."
+        },
+        {
+         "text": "\u20664 < 7\u2069: ننقل 4 من \u2066q1\u2069. ثم \u20666 < 7\u2069: ننقل 6 من \u2066q1\u2069. الآن \u2066q1\u2069 فارغ، و \u2066res\u2069 يساوي \u2066[1,2,3,4,6]\u2069."
+        },
+        {
+         "text": "الحلقة الثانية لا تدور لأن \u2066q1\u2069 فارغ. الحلقة الثالثة تنقل ما بقي في \u2066q2\u2069 كما هو: 7 ثم 9."
+        },
+        {
+         "text": "النتيجة: أ. \u2066res = [1,2,3,4,6,7,9]\u2069: دور واحد مرتّب فيه كل القيم، أي أنّ العملية تدمج دورين مرتّبين. ب. الأمر يُنفَّذ 3 مرات، كلها في الحلقة الأولى: عند نقل 1 ثم 4 ثم 6."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p01-b28",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع حل سؤال 5",
+       "description": "راقب الرأسين في كل مقارنة: أيهما ينتقل إلى \u2066res\u2069؟",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Queue<int> Watermelon(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() < q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
+        "given": "الدوران `q1 = [1,4,6]` و `q2 = [2,3,7,9]`، والاستدعاء `Watermelon(q1, q2)`.",
+        "out": "[1,2,3,4,6,7,9]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Watermelon` مع `q1` = الدور `[1,4,6]`، `q2` = الدور `[2,3,7,9]`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]},{"name":"Watermelon","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["1","4","6"]},{"id":2,"k":"queue","items":["2","3","7","9"]}]},
+{"l":3,"n":"ننشئ دورًا فارغًا باسم `res`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]},{"name":"Watermelon","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}],["res",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["1","4","6"]},{"id":2,"k":"queue","items":["2","3","7","9"]},{"id":3,"k":"queue","items":[]}]},
+{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الدور `q1` هو `1` (لا يخرج). رأس الدور `q2` هو `2` (لا يخرج). الشرط `q1.Head() < q2.Head()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"نخرج `1` من رأس الدور `q1`. ندخل `1` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["4","6"]},{"id":2,"k":"queue","items":["2","3","7","9"]},{"id":3,"k":"queue","items":["1"]}]},
+{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الدور `q1` هو `4` (لا يخرج). رأس الدور `q2` هو `2` (لا يخرج). الشرط `q1.Head() < q2.Head()` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"نخرج `2` من رأس الدور `q2`. ندخل `2` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["4","6"]},{"id":2,"k":"queue","items":["3","7","9"]},{"id":3,"k":"queue","items":["1","2"]}]},
+{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الدور `q1` هو `4` (لا يخرج). رأس الدور `q2` هو `3` (لا يخرج). الشرط `q1.Head() < q2.Head()` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"نخرج `3` من رأس الدور `q2`. ندخل `3` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["4","6"]},{"id":2,"k":"queue","items":["7","9"]},{"id":3,"k":"queue","items":["1","2","3"]}]},
+{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الدور `q1` هو `4` (لا يخرج). رأس الدور `q2` هو `7` (لا يخرج). الشرط `q1.Head() < q2.Head()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"نخرج `4` من رأس الدور `q1`. ندخل `4` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["6"]},{"id":2,"k":"queue","items":["7","9"]},{"id":3,"k":"queue","items":["1","2","3","4"]}]},
+{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"رأس الدور `q1` هو `6` (لا يخرج). رأس الدور `q2` هو `7` (لا يخرج). الشرط `q1.Head() < q2.Head()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"نخرج `6` من رأس الدور `q1`. ندخل `6` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["7","9"]},{"id":3,"k":"queue","items":["1","2","3","4","6"]}]},
+{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":11,"n":"الشرط `!q1.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":13,"n":"الشرط `!q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"نخرج `7` من رأس الدور `q2`. ندخل `7` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["9"]},{"id":3,"k":"queue","items":["1","2","3","4","6","7"]}]},
+{"l":13,"n":"الشرط `!q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"نخرج `9` من رأس الدور `q2`. ندخل `9` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":[]},{"id":3,"k":"queue","items":["1","2","3","4","6","7","9"]}]},
+{"l":13,"n":"الشرط `!q2.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":15,"n":"العملية `Watermelon` تُعيد الدور `[1,2,3,4,6,7,9]`.","o":0},
+{"l":0,"n":"نطبع: `[1,2,3,4,6,7,9]`. انتهى التنفيذ.","o":16,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":[]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (26 خطوة)؛ ناتج البرنامج: [1,2,3,4,6,7,9]."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m05-l06-p02",
+     "title": "وظيفة: أسئلة تتبّع",
+     "order": 2,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 195,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+     },
+     "keywords": [
+      "وظيفة",
+      "تتبّع",
+      "دور",
+      "حذف دائري"
+     ],
+     "blocks": [
+      {
+       "id": "m05-l06-p02-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة للبيت، مرتّبة من الأسهل إلى الأصعب. تتبّع الكود "
+        },
+        {
+         "text": "بدون",
+         "style": "strong"
+        },
+        {
+         "text": " حاسوب وأجب، ثم اضغط «الحل»: تفتح نافذة فيها الشرح وتتبّع البرنامج خطوة بخطوة. القيمة الأولى من اليسار هي رأس الدور."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Head\u2069 و \u2066Remove\u2069 في أمر واحد",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main(string[] args)\n{\n    Queue<int> q = new Queue<int>();\n    q.Insert(4);\n    q.Insert(9);\n    q.Insert(q.Head() + q.Remove());\n    q.Insert(q.Head() * 2);\n    q.Remove();\n    Console.WriteLine(q);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b04",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا يطبع مقطع البرنامج؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[13,18]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[8,18]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[9,8,18]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[4,9,8,16]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "\u2066Head\u2069 تعيد 4 دون إخراجها، ثم \u2066Remove\u2069 تُخرج 4 نفسها، فيدخل \u20664 + 4 = 8\u2069. بعدها الرأس 9 فيدخل 18، ثم تخرج 9."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b05",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066Head\u2069 و \u2066Remove\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "بعد الإدخالين: "
+          },
+          {
+           "text": "[4,9]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "في الأمر "
+          },
+          {
+           "text": "q.Insert(q.Head() + q.Remove());",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُحسب "
+          },
+          {
+           "text": "q.Head()",
+           "dir": "ltr"
+          },
+          {
+           "text": " أولًا: تعيد 4 والدور لا يتغيّر. ثم "
+          },
+          {
+           "text": "q.Remove()",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُخرج 4 نفسها. المجموع 8 يدخل إلى النهاية: "
+          },
+          {
+           "text": "[9,8]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الرأس الآن 9، فالأمر "
+          },
+          {
+           "text": "q.Insert(q.Head() * 2);",
+           "dir": "ltr"
+          },
+          {
+           "text": " يُدخل 18: "
+          },
+          {
+           "text": "[9,8,18]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الأمر "
+          },
+          {
+           "text": "q.Remove();",
+           "dir": "ltr"
+          },
+          {
+           "text": " يُخرج الرأس 9. يبقى "
+          },
+          {
+           "text": "[8,18]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "يُطبع "
+        },
+        {
+         "text": "[8,18]",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Main(string[] args)\n{\n    Queue<int> q = new Queue<int>();\n    q.Insert(4);\n    q.Insert(9);\n    q.Insert(q.Head() + q.Remove());\n    q.Insert(q.Head() * 2);\n    q.Remove();\n    Console.WriteLine(q);\n}",
+         "out": "[8,18]\n",
+         "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"ننشئ دورًا فارغًا باسم `q`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":[]}]},
+{"l":4,"n":"ندخل `4` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["4"]}]},
+{"l":5,"n":"ندخل `9` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["4","9"]}]},
+{"l":6,"n":"رأس الدور `q` هو `4` (لا يخرج). نخرج `4` من رأس الدور `q`. ندخل `8` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["9","8"]}]},
+{"l":7,"n":"رأس الدور `q` هو `9` (لا يخرج). ندخل `18` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["9","8","18"]}]},
+{"l":8,"n":"نخرج `9` من رأس الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["8","18"]}]},
+{"l":9,"n":"نطبع: `[8,18]`.","o":7},
+{"l":10,"n":"ينتهي البرنامج.","o":7}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: بعد الإدخالين: [4,9]. في الأمر q.Insert(q.Head() + q.Remove()); تُحسب q.Head() أولًا: تعيد 4 والدور لا يتغيّر. ثم q.Remove() تُخرج 4 نفسها. المجموع 8 يدخل إلى النهاية: [9,8]. الرأس الآن 9، فالأمر q.Insert(q.Head() * 2); يُدخل 18: [9,8,18]. الأمر q.Remove(); يُخرج الرأس 9. يبقى [8,18]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b06",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066Grapes\u2069: كلمات في دورين",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b07",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3697,7 +4265,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b18",
+       "id": "m05-l06-p02-b08",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -3729,7 +4297,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b19",
+       "id": "m05-l06-p02-b09",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -3776,21 +4344,179 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p01-b20",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m05-l06-p02-b10",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Grapes\u2069",
+       "title": "حل سؤال 2 — \u2066Grapes\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "q.Head().Length",
+           "dir": "ltr"
+          },
+          {
+           "text": " هو طول الكلمة التي في رأس الدور. "
+          },
+          {
+           "text": "Head",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا تُخرج الكلمة؛ التي تُخرجها هي "
+          },
+          {
+           "text": "Remove",
+           "dir": "ltr"
+          },
+          {
+           "text": " في السطر التالي."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "إذا كان الطول أكبر من 5 تنتقل الكلمة إلى "
+          },
+          {
+           "text": "a",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وإلا تنتقل إلى "
+          },
+          {
+           "text": "b",
+           "dir": "ltr"
+          },
+          {
+           "text": ". الطول 5 بالضبط يذهب إلى "
+          },
+          {
+           "text": "b",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "important",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "encyclopedia",
+           "dir": "ltr"
+          },
+          {
+           "text": " أطول من 5 حروف فتذهبان إلى "
+          },
+          {
+           "text": "a",
+           "dir": "ltr"
+          },
+          {
+           "text": ". الباقي يدخل "
+          },
+          {
+           "text": "b",
+           "dir": "ltr"
+          },
+          {
+           "text": " بترتيب وصوله: "
+          },
+          {
+           "text": "I",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "love",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "to",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "sing",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "المطبوع هو "
+          },
+          {
+           "text": "b",
+           "dir": "ltr"
+          },
+          {
+           "text": ". والدور "
+          },
+          {
+           "text": "q",
+           "dir": "ltr"
+          },
+          {
+           "text": " نفسه يبقى فارغًا بعد الاستدعاء."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "للدور المعطى يُطبع "
+        },
+        {
+         "text": "[I,love,to,sing]",
+         "dir": "ltr"
+        },
+        {
+         "text": ". والدور "
+        },
+        {
+         "text": "b",
+         "dir": "ltr"
+        },
+        {
+         "text": " لا يحوي أبدًا كلمة أطول من 5 حروف."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static void Grapes(Queue<string> q)\n{\n    int x;\n    Queue<string> a = new Queue<string>();\n    Queue<string> b = new Queue<string>();\n    while (!q.IsEmpty())\n    {\n        x = q.Head().Length;\n        if (x > 5)\n            a.Insert(q.Remove());\n        else\n            b.Insert(q.Remove());\n    }\n    Console.WriteLine(b);\n}",
-        "given": "الدور `q = [I,important,love,to,encyclopedia,sing]`، والاستدعاء `Grapes(q)`.",
-        "out": "[I,love,to,sing]\n",
-        "steps": [
+        "trace": {
+         "code": "public static void Grapes(Queue<string> q)\n{\n    int x;\n    Queue<string> a = new Queue<string>();\n    Queue<string> b = new Queue<string>();\n    while (!q.IsEmpty())\n    {\n        x = q.Head().Length;\n        if (x > 5)\n            a.Insert(q.Remove());\n        else\n            b.Insert(q.Remove());\n    }\n    Console.WriteLine(b);\n}",
+         "given": "الدور `q = [I,important,love,to,encyclopedia,sing]`، والاستدعاء `Grapes(q)`.",
+         "out": "[I,love,to,sing]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Grapes` مع `q` = الدور `[I,important,love,to,encyclopedia,sing]`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["I","important","love","to","encyclopedia","sing"]}]},
 {"l":3,"n":"نعرّف المتغيّر `x`.","o":0},
 {"l":4,"n":"ننشئ دورًا فارغًا باسم `a`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Grapes","vars":[["q",{"t":"ref","id":1}],["a",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["I","important","love","to","encyclopedia","sing"]},{"id":2,"k":"queue","items":[]}]},
@@ -3824,50 +4550,22 @@ const m05: ContentModule = {
 {"l":15,"n":"تنتهي العملية `Grapes` ونعود إلى من استدعاها.","o":17},
 {"l":0,"n":"انتهى التنفيذ.","o":17,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":[]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (32 خطوة)؛ ناتج البرنامج: [I,love,to,sing]."
+        "text": "حل السؤال: q.Head().Length هو طول الكلمة التي في رأس الدور. Head لا تُخرج الكلمة؛ التي تُخرجها هي Remove في السطر التالي. إذا كان الطول أكبر من 5 تنتقل الكلمة إلى a، وإلا تنتقل إلى b. الطول 5 بالضبط يذهب إلى b. important و encyclopedia أطول من 5 حروف فتذهبان إلى a. الباقي يدخل b بترتيب وصوله: I ثم love ثم to ثم sing. المطبوع هو b. والدور q نفسه يبقى فارغًا بعد الاستدعاء."
        },
        "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m05-l06-p02",
-     "title": "أسئلة تتبّع (2)",
-     "order": 2,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 195,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
-     },
-     "keywords": [
-      "تتبّع",
-      "دور مساعد",
-      "دمج",
-      "حذف دائري"
-     ],
-     "blocks": [
-      {
-       "id": "m05-l06-p02-b01",
-       "type": "text",
-       "spans": [
-        {
-         "text": "أسئلة أصعب قليلًا: في كل سؤال عملية ودور معطى. القيمة الأولى من اليسار هي رأس الدور."
-        }
-       ],
-       "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b02",
+       "id": "m05-l06-p02-b11",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 5 — العملية \u2066Peach\u2069",
+       "text": "سؤال 3 · متوسط — \u2066Peach\u2069: أزواج",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b03",
+       "id": "m05-l06-p02-b12",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -3875,7 +4573,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b04",
+       "id": "m05-l06-p02-b13",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -3907,21 +4605,115 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b05",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m05-l06-p02-b14",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Peach\u2069",
+       "title": "حل سؤال 3 — \u2066Peach\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "في كل دورة تُخرج قيمتان من "
+          },
+          {
+           "text": "q1",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الأولى "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " والثانية "
+          },
+          {
+           "text": "y",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "تُدخل "
+          },
+          {
+           "text": "y",
+           "dir": "ltr"
+          },
+          {
+           "text": " أولًا ثم "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": ": كل زوج يدخل "
+          },
+          {
+           "text": "q2",
+           "dir": "ltr"
+          },
+          {
+           "text": " بترتيب مقلوب."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الأزواج هي (8، 2) ثم (1، 7) ثم (3، 5)، فترتيب الإدخال: 2، 8، 7، 1، 5، 3."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الفرع "
+          },
+          {
+           "text": "else",
+           "dir": "ltr"
+          },
+          {
+           "text": " يعمل فقط إذا كان عدد القيم فرديًا: عندها تدخل القيمة الأخيرة مرّتين. هنا العدد زوجي فلا يعمل."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "يُطبع "
+        },
+        {
+         "text": "q2=[2,8,7,1,5,3]",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static void Peach(Queue<int> q1)\n{\n    Queue<int> q2 = new Queue<int>();\n    int x, y;\n    while (!q1.IsEmpty())\n    {\n        x = q1.Remove();\n        if (!q1.IsEmpty())\n        {\n            y = q1.Remove();\n            q2.Insert(y);\n        }\n        else\n            q2.Insert(x);\n        q2.Insert(x);\n    }\n    Console.WriteLine(\"q2=\" + q2);\n}",
-        "given": "الدور `q1 = [8,2,1,7,3,5]`، والاستدعاء `Peach(q1)`.",
-        "out": "q2=[2,8,7,1,5,3]\n",
-        "steps": [
+        "trace": {
+         "code": "public static void Peach(Queue<int> q1)\n{\n    Queue<int> q2 = new Queue<int>();\n    int x, y;\n    while (!q1.IsEmpty())\n    {\n        x = q1.Remove();\n        if (!q1.IsEmpty())\n        {\n            y = q1.Remove();\n            q2.Insert(y);\n        }\n        else\n            q2.Insert(x);\n        q2.Insert(x);\n    }\n    Console.WriteLine(\"q2=\" + q2);\n}",
+         "given": "الدور `q1 = [8,2,1,7,3,5]`، والاستدعاء `Peach(q1)`.",
+         "out": "q2=[2,8,7,1,5,3]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Peach` مع `q1` = الدور `[8,2,1,7,3,5]`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}]]},{"name":"Peach","vars":[["q1",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["8","2","1","7","3","5"]}]},
 {"l":3,"n":"ننشئ دورًا فارغًا باسم `q2`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}]]},{"name":"Peach","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["8","2","1","7","3","5"]},{"id":2,"k":"queue","items":[]}]},
 {"l":4,"n":"نعرّف المتغيّر `x`. نعرّف المتغيّر `y`.","o":0},
@@ -3948,165 +4740,22 @@ const m05: ContentModule = {
 {"l":18,"n":"تنتهي العملية `Peach` ونعود إلى من استدعاها.","o":17},
 {"l":0,"n":"انتهى التنفيذ.","o":17,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":[]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (25 خطوة)؛ ناتج البرنامج: q2=[2,8,7,1,5,3]."
+        "text": "حل السؤال: في كل دورة تُخرج قيمتان من q1: الأولى x والثانية y. تُدخل y أولًا ثم x: كل زوج يدخل q2 بترتيب مقلوب. الأزواج هي (8، 2) ثم (1، 7) ثم (3، 5)، فترتيب الإدخال: 2، 8، 7، 1، 5، 3. الفرع else يعمل فقط إذا كان عدد القيم فرديًا: عندها تدخل القيمة الأخيرة مرّتين. هنا العدد زوجي فلا يعمل."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b06",
+       "id": "m05-l06-p02-b15",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 6 — العملية \u2066Cherry\u2069",
+       "text": "سؤال 4 · متوسط — \u2066Banana\u2069: أكبر قيمة",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b07",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int Cherry(Queue<int> q, int num)\n{\n    int count = 0;\n    Queue<int> temp = new Queue<int>();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x != num)\n            temp.Insert(x);\n        else\n            count++;\n    }\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n    return count;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b08",
-       "type": "text",
-       "spans": [
-        {
-         "text": "معطى الدور "
-        },
-        {
-         "text": "q = [4,7,4,2,4,9]",
-         "dir": "ltr"
-        },
-        {
-         "text": "، ونُفّذ الاستدعاء "
-        },
-        {
-         "text": "int r = Cherry(q, 4);",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b09",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي ستُخزَّن في المتغيّر \u2066r\u2069؟",
-        "answer": "3",
-        "feedback": {
-         "explanation": "العدد 4 يظهر في الدور ثلاث مرات، وفي كل مرة يزيد \u2066count\u2069 بواحد."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b10",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف سيبدو الدور \u2066q\u2069 بعد انتهاء الاستدعاء؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[9,2,7]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[4,4,4]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[7,2,9]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[4,7,4,2,4,9]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "القيم المساوية لـ 4 لم تُدخل إلى \u2066temp\u2069 فحُذفت. الدور يحافظ على ترتيب الإدخال، فالنقل إلى \u2066temp\u2069 ثم العودة يُبقي الترتيب الأصلي، وتكون 7 في الرأس."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b11",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066Cherry\u2069",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
-        "interactive": true
-       },
-       "config": {
-        "code": "public static int Cherry(Queue<int> q, int num)\n{\n    int count = 0;\n    Queue<int> temp = new Queue<int>();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x != num)\n            temp.Insert(x);\n        else\n            count++;\n    }\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n    return count;\n}",
-        "given": "الدور `q = [4,7,4,2,4,9]`، والاستدعاء `Cherry(q, 4)`.",
-        "out": "3\n",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `Cherry` مع `q` = الدور `[4,7,4,2,4,9]`، `num = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["4","7","4","2","4","9"]}]},
-{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}]]}]},
-{"l":4,"n":"ننشئ دورًا فارغًا باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["4","7","4","2","4","9"]},{"id":2,"k":"queue","items":[]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":7,"n":"نخرج `4` من رأس الدور `q`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["7","4","2","4","9"]},{"id":2,"k":"queue","items":[]}]},
-{"l":8,"n":"الشرط `x != num` خطأ: ننتقل إلى `else`.","o":0},
-{"l":11,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}]]}]},
-{"l":7,"n":"نخرج `7` من رأس الدور `q`. `x = 7`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"queue","items":["4","2","4","9"]},{"id":2,"k":"queue","items":[]}]},
-{"l":8,"n":"الشرط `x != num` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"ندخل `7` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["4","2","4","9"]},{"id":2,"k":"queue","items":["7"]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}]]}]},
-{"l":7,"n":"نخرج `4` من رأس الدور `q`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["2","4","9"]},{"id":2,"k":"queue","items":["7"]}]},
-{"l":8,"n":"الشرط `x != num` خطأ: ننتقل إلى `else`.","o":0},
-{"l":11,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}]]}]},
-{"l":7,"n":"نخرج `2` من رأس الدور `q`. `x = 2`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"2"}]]}],"h":[{"id":1,"k":"queue","items":["4","9"]},{"id":2,"k":"queue","items":["7"]}]},
-{"l":8,"n":"الشرط `x != num` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"ندخل `2` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["4","9"]},{"id":2,"k":"queue","items":["7","2"]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}]]}]},
-{"l":7,"n":"نخرج `4` من رأس الدور `q`. `x = 4`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"queue","items":["9"]},{"id":2,"k":"queue","items":["7","2"]}]},
-{"l":8,"n":"الشرط `x != num` خطأ: ننتقل إلى `else`.","o":0},
-{"l":11,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"4"}]]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}]]}]},
-{"l":7,"n":"نخرج `9` من رأس الدور `q`. `x = 9`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}],["x",{"t":"v","s":"9"}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["7","2"]}]},
-{"l":8,"n":"الشرط `x != num` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":9,"n":"ندخل `9` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["7","2","9"]}]},
-{"l":5,"n":"الشرط `!q.IsEmpty()` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Cherry","vars":[["q",{"t":"ref","id":1}],["num",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["temp",{"t":"ref","id":2}]]}]},
-{"l":13,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":14,"n":"نخرج `7` من رأس الدور `temp`. ندخل `7` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["7"]},{"id":2,"k":"queue","items":["2","9"]}]},
-{"l":13,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":14,"n":"نخرج `2` من رأس الدور `temp`. ندخل `2` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["7","2"]},{"id":2,"k":"queue","items":["9"]}]},
-{"l":13,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":14,"n":"نخرج `9` من رأس الدور `temp`. ندخل `9` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["7","2","9"]},{"id":2,"k":"queue","items":[]}]},
-{"l":13,"n":"الشرط `!temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
-{"l":15,"n":"العملية `Cherry` تُعيد `3`.","o":0},
-{"l":0,"n":"نطبع: `3`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}],["r",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"queue","items":["7","2","9"]}]}
-]
-       },
-       "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (37 خطوة)؛ ناتج البرنامج: 3."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b12",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 7 — العملية \u2066Banana\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b13",
+       "id": "m05-l06-p02-b16",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -4114,7 +4763,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b14",
+       "id": "m05-l06-p02-b17",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -4146,7 +4795,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b15",
+       "id": "m05-l06-p02-b18",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -4178,21 +4827,112 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b16",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m05-l06-p02-b19",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Banana\u2069",
+       "title": "حل سؤال 4 — \u2066Banana\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ برأس الدور، وهو 6. الحلقة الأولى تنقل كل القيم إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتحدّث "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": " كلما وجدت قيمة أكبر: يصير 9."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الحلقة الثانية تعيد القيم إلى "
+          },
+          {
+           "text": "q",
+           "dir": "ltr"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "ما عدا",
+           "style": "strong"
+          },
+          {
+           "text": " كل قيمة تساوي "
+          },
+          {
+           "text": "max",
+           "dir": "ltr"
+          },
+          {
+           "text": ": تعود 6 ثم 3 ثم 1."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "في النهاية الأمر "
+          },
+          {
+           "text": "q.Insert(max);",
+           "dir": "ltr"
+          },
+          {
+           "text": " يُدخل 9 مرة واحدة، إلى نهاية الدور."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "كانت 9 تظهر مرّتين، فنقص عدد القيم من 5 إلى 4."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "الدور يصير "
+        },
+        {
+         "text": "[6,3,1,9]",
+         "dir": "ltr"
+        },
+        {
+         "text": ": أكبر قيمة انتقلت إلى نهاية الدور وحُذفت تكراراتها."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static void Banana(Queue<int> q)\n{\n    Queue<int> temp = new Queue<int>();\n    int max = q.Head();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x > max)\n            max = x;\n        temp.Insert(x);\n    }\n    while (!temp.IsEmpty())\n    {\n        int x = temp.Remove();\n        if (x != max)\n            q.Insert(x);\n    }\n    q.Insert(max);\n}",
-        "given": "الدور `q = [6,9,3,9,1]`، والاستدعاء `Banana(q)`.",
-        "out": "[6,3,1,9]\n",
-        "steps": [
+        "trace": {
+         "code": "public static void Banana(Queue<int> q)\n{\n    Queue<int> temp = new Queue<int>();\n    int max = q.Head();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x > max)\n            max = x;\n        temp.Insert(x);\n    }\n    while (!temp.IsEmpty())\n    {\n        int x = temp.Remove();\n        if (x != max)\n            q.Insert(x);\n    }\n    q.Insert(max);\n}",
+         "given": "الدور `q = [6,9,3,9,1]`، والاستدعاء `Banana(q)`.",
+         "out": "[6,3,1,9]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Banana` مع `q` = الدور `[6,9,3,9,1]`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Banana","vars":[["q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["6","9","3","9","1"]}]},
 {"l":3,"n":"ننشئ دورًا فارغًا باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Banana","vars":[["q",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["6","9","3","9","1"]},{"id":2,"k":"queue","items":[]}]},
 {"l":4,"n":"رأس الدور `q` هو `6` (لا يخرج). `max = 6`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Banana","vars":[["q",{"t":"ref","id":1}],["temp",{"t":"ref","id":2}],["max",{"t":"v","s":"6"}]]}]},
@@ -4241,162 +4981,22 @@ const m05: ContentModule = {
 {"l":19,"n":"تنتهي العملية `Banana` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"نطبع: `[6,3,1,9]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["6","3","1","9"]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (47 خطوة)؛ ناتج البرنامج: [6,3,1,9]."
+        "text": "حل السؤال: max يبدأ برأس الدور، وهو 6. الحلقة الأولى تنقل كل القيم إلى temp وتحدّث max كلما وجدت قيمة أكبر: يصير 9. الحلقة الثانية تعيد القيم إلى q ما عدا كل قيمة تساوي max: تعود 6 ثم 3 ثم 1. في النهاية الأمر q.Insert(max); يُدخل 9 مرة واحدة، إلى نهاية الدور. كانت 9 تظهر مرّتين، فنقص عدد القيم من 5 إلى 4."
        },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b17",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 8 — العملية \u2066Watermelon\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b18",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Queue<int> Watermelon(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() < q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b19",
-       "type": "text",
-       "spans": [
-        {
-         "text": "معطى الدوران "
-        },
-        {
-         "text": "q1 = [1,4,6]",
-         "dir": "ltr"
-        },
-        {
-         "text": " و "
-        },
-        {
-         "text": "q2 = [2,3,7,9]",
-         "dir": "ltr"
-        },
-        {
-         "text": "، وكل منهما مرتّب تصاعديًا من الرأس إلى النهاية. نُفّذ الاستدعاء "
-        },
-        {
-         "text": "Queue<int> res = Watermelon(q1, q2);",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
-        }
-       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m05-l06-p02-b20",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف سيبدو الدور الذي تُرجعه العملية \u2066Watermelon\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[1,2,3,4,6,7,9]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[1,4,6,2,3,7,9]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[9,7,6,4,3,2,1]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[1,2,3,4,6]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "في كل دورة نقارن بين الرأسين ونُخرج القيمة الأصغر إلى \u2066res\u2069. عندما يفرغ أحد الدورين، تُنقل القيم الباقية في الدور الآخر كما هي. النتيجة دور واحد مرتّب تصاعديًا فيه كل القيم."
-        }
-       },
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066Strawberry\u2069: دور يدور",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m05-l06-p02-b21",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "كم مرة يُنفَّذ الأمر \u2066res.Insert(q1.Remove());\u2069 خلال هذا الاستدعاء؟",
-        "answer": "3",
-        "feedback": {
-         "explanation": "في الحلقة الأولى يُنفَّذ فقط عندما يكون رأس \u2066q1\u2069 أصغر من رأس \u2066q2\u2069: المقارنات \u20661 < 2\u2069 و \u20664 < 7\u2069 و \u20666 < 7\u2069، أي 3 مرات. بعدها يفرغ \u2066q1\u2069، فالحلقة الثانية (وفيها الأمر نفسه) لا تدور أبدًا، والقيمتان 7 و9 تنتقلان في الحلقة الثالثة."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b22",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066Watermelon\u2069",
-       "description": "دمج دورين مرتّبين في دور واحد مرتّب.",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
-        "interactive": true
-       },
-       "config": {
-        "code": "public static Queue<int> Watermelon(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() < q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
-        "given": "الدوران `q1 = [1,4,6]` و `q2 = [2,3,7,9]`، والاستدعاء `Watermelon(q1, q2)`.",
-        "out": "[1,2,3,4,6,7,9]\n",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `Watermelon` مع `q1` = الدور `[1,4,6]`، `q2` = الدور `[2,3,7,9]`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]},{"name":"Watermelon","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["1","4","6"]},{"id":2,"k":"queue","items":["2","3","7","9"]}]},
-{"l":3,"n":"ننشئ دورًا فارغًا باسم `res`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]},{"name":"Watermelon","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}],["res",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["1","4","6"]},{"id":2,"k":"queue","items":["2","3","7","9"]},{"id":3,"k":"queue","items":[]}]},
-{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"رأس الدور `q1` هو `1` (لا يخرج). رأس الدور `q2` هو `2` (لا يخرج). الشرط `q1.Head() < q2.Head()` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":7,"n":"نخرج `1` من رأس الدور `q1`. ندخل `1` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["4","6"]},{"id":2,"k":"queue","items":["2","3","7","9"]},{"id":3,"k":"queue","items":["1"]}]},
-{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"رأس الدور `q1` هو `4` (لا يخرج). رأس الدور `q2` هو `2` (لا يخرج). الشرط `q1.Head() < q2.Head()` خطأ: ننتقل إلى `else`.","o":0},
-{"l":9,"n":"نخرج `2` من رأس الدور `q2`. ندخل `2` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["4","6"]},{"id":2,"k":"queue","items":["3","7","9"]},{"id":3,"k":"queue","items":["1","2"]}]},
-{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"رأس الدور `q1` هو `4` (لا يخرج). رأس الدور `q2` هو `3` (لا يخرج). الشرط `q1.Head() < q2.Head()` خطأ: ننتقل إلى `else`.","o":0},
-{"l":9,"n":"نخرج `3` من رأس الدور `q2`. ندخل `3` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["4","6"]},{"id":2,"k":"queue","items":["7","9"]},{"id":3,"k":"queue","items":["1","2","3"]}]},
-{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"رأس الدور `q1` هو `4` (لا يخرج). رأس الدور `q2` هو `7` (لا يخرج). الشرط `q1.Head() < q2.Head()` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":7,"n":"نخرج `4` من رأس الدور `q1`. ندخل `4` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":["6"]},{"id":2,"k":"queue","items":["7","9"]},{"id":3,"k":"queue","items":["1","2","3","4"]}]},
-{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"رأس الدور `q1` هو `6` (لا يخرج). رأس الدور `q2` هو `7` (لا يخرج). الشرط `q1.Head() < q2.Head()` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":7,"n":"نخرج `6` من رأس الدور `q1`. ندخل `6` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["7","9"]},{"id":3,"k":"queue","items":["1","2","3","4","6"]}]},
-{"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
-{"l":11,"n":"الشرط `!q1.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
-{"l":13,"n":"الشرط `!q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":14,"n":"نخرج `7` من رأس الدور `q2`. ندخل `7` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["9"]},{"id":3,"k":"queue","items":["1","2","3","4","6","7"]}]},
-{"l":13,"n":"الشرط `!q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":14,"n":"نخرج `9` من رأس الدور `q2`. ندخل `9` إلى نهاية الدور `res`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":[]},{"id":3,"k":"queue","items":["1","2","3","4","6","7","9"]}]},
-{"l":13,"n":"الشرط `!q2.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
-{"l":15,"n":"العملية `Watermelon` تُعيد الدور `[1,2,3,4,6,7,9]`.","o":0},
-{"l":0,"n":"نطبع: `[1,2,3,4,6,7,9]`. انتهى التنفيذ.","o":16,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":[]}]}
-]
-       },
-       "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (26 خطوة)؛ ناتج البرنامج: [1,2,3,4,6,7,9]."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b23",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 9 — العملية \u2066Strawberry\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b24",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -4404,7 +5004,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b25",
+       "id": "m05-l06-p02-b22",
        "type": "text",
        "spans": [
         {
@@ -4428,7 +5028,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b26",
+       "id": "m05-l06-p02-b23",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -4460,7 +5060,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b27",
+       "id": "m05-l06-p02-b24",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -4492,7 +5092,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b28",
+       "id": "m05-l06-p02-b25",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -4524,40 +5124,152 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p02-b29",
-       "type": "callout",
-       "kind": "tip",
-       "title": "تدوير الدور",
-       "spans": [
+       "id": "m05-l06-p02-b26",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 5 — \u2066Strawberry\u2069",
+       "steps": [
         {
-         "text": "الأمر "
+         "id": "s1",
+         "text": [
+          {
+           "text": "الأمر "
+          },
+          {
+           "text": "q.Insert(q.Remove());",
+           "dir": "ltr"
+          },
+          {
+           "text": " ينقل الرأس إلى النهاية: الدور «يدور» خطوة واحدة ولا تضيع أي قيمة."
+          }
+         ]
         },
         {
-         "text": "q.Insert(q.Remove());",
+         "id": "s2",
+         "text": [
+          {
+           "text": "الحلقة الداخلية تنفّذه "
+          },
+          {
+           "text": "k - 1",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرات، أي مرّتين. بعدها "
+          },
+          {
+           "text": "last = q.Remove();",
+           "dir": "ltr"
+          },
+          {
+           "text": " يُخرج القيمة الثالثة ويطبعها."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الدورة الأولى: "
+          },
+          {
+           "text": "[1,2,3,4,5,6]",
+           "dir": "ltr"
+          },
+          {
+           "text": " يدور خطوتين فيصير "
+          },
+          {
+           "text": "[3,4,5,6,1,2]",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وتخرج 3. يبقى "
+          },
+          {
+           "text": "[4,5,6,1,2]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الدورة الثانية: يدور فيصير "
+          },
+          {
+           "text": "[6,1,2,4,5]",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وتخرج 6. الثالثة: "
+          },
+          {
+           "text": "[4,5,1,2]",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتخرج 4. الرابعة: "
+          },
+          {
+           "text": "[2,5,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتخرج 2."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "بقي "
+          },
+          {
+           "text": "[5,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": ": خطوتان تعيدانه كما هو، فتخرج 5. ثم تخرج 1 وهي آخر قيمة، فتُعاد."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "يُطبع "
+        },
+        {
+         "text": "3 6 4 2 5 1",
          "dir": "ltr"
         },
         {
-         "text": " ينقل الرأس إلى النهاية: الدور «يدور» خطوة واحدة ولا تضيع أي قيمة. إذا نفّذته عددًا من المرات يساوي طول الدور عاد الدور كما كان. هذه حيلة خاصة بالدور، ولا مثيل لها في الراصّة."
+         "text": "، و "
+        },
+        {
+         "text": "r = 1",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
         }
        ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p02-b30",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066Strawberry\u2069",
+       "explanation": "هذه هي المسألة المعروفة بالحذف الدائري (مسألة يوسيفوس): أشخاص في دائرة، وفي كل مرة يخرج الشخص رقم k.",
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static int Strawberry(Queue<int> q, int k)\n{\n    int last = 0;\n    while (!q.IsEmpty())\n    {\n        for (int i = 1; i < k; i++)\n            q.Insert(q.Remove());\n        last = q.Remove();\n        Console.Write(last + \" \");\n    }\n    return last;\n}",
-        "given": "الدور `q = [1,2,3,4,5,6]`، والاستدعاء `Strawberry(q, 3)`.",
-        "out": "3 6 4 2 5 1 r=1",
-        "steps": [
+        "trace": {
+         "code": "public static int Strawberry(Queue<int> q, int k)\n{\n    int last = 0;\n    while (!q.IsEmpty())\n    {\n        for (int i = 1; i < k; i++)\n            q.Insert(q.Remove());\n        last = q.Remove();\n        Console.Write(last + \" \");\n    }\n    return last;\n}",
+         "given": "الدور `q = [1,2,3,4,5,6]`، والاستدعاء `Strawberry(q, 3)`.",
+         "out": "3 6 4 2 5 1 r=1",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Strawberry` مع `q` = الدور `[1,2,3,4,5,6]`، `k = 3`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Strawberry","vars":[["q",{"t":"ref","id":1}],["k",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"queue","items":["1","2","3","4","5","6"]}]},
 {"l":3,"n":"`last = 0`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"Strawberry","vars":[["q",{"t":"ref","id":1}],["k",{"t":"v","s":"3"}],["last",{"t":"v","s":"0"}]]}]},
 {"l":4,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
@@ -4630,32 +5342,52 @@ const m05: ContentModule = {
 {"l":11,"n":"العملية `Strawberry` تُعيد `1`.","o":12},
 {"l":0,"n":"نطبع: `r=1` (بلا سطر جديد). انتهى التنفيذ.","o":15,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}],["r",{"t":"v","s":"1"}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (71 خطوة)؛ ناتج البرنامج: 3 6 4 2 5 1 r=1."
+        "text": "حل السؤال: الأمر q.Insert(q.Remove()); ينقل الرأس إلى النهاية: الدور «يدور» خطوة واحدة ولا تضيع أي قيمة. الحلقة الداخلية تنفّذه k - 1 مرات، أي مرّتين. بعدها last = q.Remove(); يُخرج القيمة الثالثة ويطبعها. الدورة الأولى: [1,2,3,4,5,6] يدور خطوتين فيصير [3,4,5,6,1,2]، وتخرج 3. يبقى [4,5,6,1,2]. الدورة الثانية: يدور فيصير [6,1,2,4,5]، وتخرج 6. الثالثة: [4,5,1,2] وتخرج 4. الرابعة: [2,5,1] وتخرج 2. بقي [5,1]: خطوتان تعيدانه كما هو، فتخرج 5. ثم تخرج 1 وهي آخر قيمة، فتُعاد."
        },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p02-b27",
+       "type": "callout",
+       "kind": "tip",
+       "title": "تدوير الدور",
+       "spans": [
+        {
+         "text": "الأمر "
+        },
+        {
+         "text": "q.Insert(q.Remove());",
+         "dir": "ltr"
+        },
+        {
+         "text": " ينقل الرأس إلى النهاية. إذا نفّذته عددًا من المرات يساوي طول الدور عاد الدور كما كان. هذه حيلة خاصة بالدور، ولا مثيل لها في الراصّة."
+        }
+       ],
        "origin": "teacher-enrichment"
       }
      ]
     },
     {
      "id": "899271d-m05-l06-p03",
-     "title": "أسئلة كتابة: اكتب العملية",
+     "title": "أسئلة كتابة محلولة",
      "order": 3,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
-      "pdfPageStart": 220,
-      "pdfPageEnd": 225,
-      "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 220–225"
+      "pdfPageStart": 195,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
      },
      "keywords": [
       "كتابة عملية",
+      "أسئلة محلولة",
       "SumOdd",
+      "GetMax",
       "IsSorted",
       "Passed",
-      "IsSymmetric",
-      "IsCircular"
+      "IsSymmetric"
      ],
      "blocks": [
       {
@@ -4663,14 +5395,14 @@ const m05: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "اكتب كل عملية في دفترك أو في محرّر الكود "
+         "text": "خمسة أسئلة كتابة مع حلولها، مرتّبة من الأسهل إلى الأصعب. اقرأ «المطلوب» واكتب العملية في دفترك أو في محرّر الكود "
         },
         {
          "text": "قبل",
          "style": "strong"
         },
         {
-         "text": " أن تنتقل إلى صفحتَي الحلول. الأسئلة الثلاثة الأولى من ورقة المعلّم، والثلاثة التالية من تمارين الكتاب. في الأمثلة: القيمة الأولى من اليسار هي رأس الدور."
+         "text": " أن تقرأ الحل. بعد كل حل: ما يُفحص فيه، وفكرته، وتتبّعه. في الأمثلة: القيمة الأولى من اليسار هي رأس الدور."
         }
        ],
        "origin": "teacher-enrichment"
@@ -4679,14 +5411,14 @@ const m05: ContentModule = {
        "id": "m05-l06-p03-b02",
        "type": "heading",
        "level": 3,
-       "text": "من ورقة المعلّم",
+       "text": "سؤال 1 · سهل — \u2066SumOdd\u2069: مجموع الأعداد الفردية",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m05-l06-p03-b03",
        "type": "example",
        "mode": "practice",
-       "title": "سؤال 1 — \u2066SumOdd\u2069 (بدون الحفاظ على الدور)",
+       "title": "المطلوب (من ورقة المعلّم)",
        "prompt": "اكتب العملية \u2066SumOdd\u2069 التي تستقبل دورًا من الأعداد الصحيحة \u2066q\u2069، وتُرجع مجموع الأعداد الفردية الموجودة فيه. لا حاجة للحفاظ على الدور: مسموح أن يبقى الدور فارغًا بعد الاستدعاء. مثال: للدور \u2066[7,4,9,2,5,8]\u2069 تُرجع العملية 21، لأن \u20667 + 9 + 5 = 21\u2069.",
        "steps": [],
        "origin": "teacher-enrichment"
@@ -4696,339 +5428,11 @@ const m05: ContentModule = {
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static int SumOdd(Queue<int> q)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b05",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 2 — \u2066IsSorted\u2069 (يجب الحفاظ على الدور)",
-       "prompt": "اكتب العملية \u2066IsSorted\u2069 التي تستقبل دورًا غير فارغ من الأعداد الصحيحة \u2066q\u2069، وتُرجع \u2066true\u2069 إذا كانت قيمه مرتّبة تصاعديًا من الرأس إلى النهاية (كل قيمة أصغر من القيمة التي بعدها أو تساويها)، وإلا تُرجع \u2066false\u2069. يجب الحفاظ على الدور: في نهاية العملية يعود \u2066q\u2069 كما كان تمامًا، بنفس القيم ونفس الترتيب. أمثلة: \u2066[2,5,5,8,11]\u2069 ← \u2066true\u2069، و \u2066[2,5,3,8]\u2069 ← \u2066false\u2069.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b06",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsSorted(Queue<int> q)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b07",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 3 — \u2066Passed\u2069 (دور كائنات)",
-       "prompt": "معطاة الفئة \u2066Student\u2069. اكتب العملية \u2066Passed\u2069 التي تستقبل دور طلاب \u2066q\u2069 من نوع \u2066Queue<Student>\u2069، وتُرجع دورًا جديدًا فيه الطلاب الذين علامتهم 55 أو أكثر، بنفس ترتيبهم في الدور الأصلي. يجب الحفاظ على الدور الأصلي \u2066q\u2069 بدون تغيير.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b08",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public class Student\n{\n    private string name;\n    private int grade;\n    public Student(string name, int grade)\n    {\n        this.name = name;\n        this.grade = grade;\n    }\n    public string GetName() { return name; }\n    public int GetGrade() { return grade; }\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b09",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Queue<Student> Passed(Queue<Student> q)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b10",
-       "type": "heading",
-       "level": 3,
-       "text": "من تمارين الكتاب",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b11",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 13 (القسم 2) من الكتاب — \u2066IsSymmetric\u2069",
-       "prompt": "اكتبوا عملية تتلقّى كبارامتر دورًا من نمط صحيح وتعيد \u2066true\u2069 إذا كان تماثليًا (\u2066Symmetric\u2069) وإلا فتعيد \u2066false\u2069. مثال: الدور \u2066[5,6,4,1,4,6,5]\u2069 تماثلي.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m05-l06-p03-b12",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsSymmetric(Queue<int> q)",
-       "origin": "book"
-      },
-      {
-       "id": "m05-l06-p03-b13",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 15 من الكتاب",
-       "prompt": "1. اكتب عملية تتلقّى كبارامترات قائمة انتظار من نوع صحيح وعددًا صحيحًا موجبًا \u2066k\u2069. العملية تعيد \u2066true\u2069 إذا تحقّق الشرط التالي: القيمة الأولى من بين كل \u2066k\u2069 قيم متتالية هي مجموع باقي القيم. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: بالنسبة للدور \u2066[15,5,10,12,4,8]\u2069 و \u2066k=3\u2069 تعيد العملية \u2066true\u2069: القيمة الأولى في الثلاثية الأولى هي 15 وهي مساوية لمجموع باقي القيم في الثلاثية وهي 5 و10، والقيمة الأولى في الثلاثية الثانية هي 12 وهي مساوية لمجموع 4 و8. افترض أنّ قائمة الانتظار ليست فارغة وأنّ عدد قيمها من مضاعفات \u2066k\u2069. 2. ما هي درجة نجاعة العملية؟ علّل الإجابة.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m05-l06-p03-b14",
-       "type": "text",
-       "spans": [
-        {
-         "text": "الكتاب لا يعطي رأس العملية في هذا السؤال. نقترح:"
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b15",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool Check(Queue<int> Q, int k)",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b16",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 19 من الكتاب — \u2066IsCircular\u2069 (تحدٍّ)",
-       "prompt": "1. اكتب عملية تتلقّى دورين \u2066Q1\u2069 و \u2066Q2\u2069 من نوع \u2066Queue<char>\u2069. العملية تعيد \u2066true\u2069 إذا كان الدور \u2066Q2\u2069 عبارة عن نتيجة إزاحة لقيم الدور \u2066Q1\u2069 إلى اليمين. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: إذا كان الدور الأول \u2066[G,F,E,D,C,B,A]\u2069 والدور الثاني \u2066[D,C,B,A,G,F,E]\u2069 فإنّ الدور الثاني تمّ الحصول عليه نتيجة إزاحة الخلايا \u2066E\u2069 و \u2066F\u2069 و \u2066G\u2069 من الدور الأول. 2. حدّد درجة نجاعة العملية \u2066IsCircular\u2069 مع شرح وافٍ للإجابة.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m05-l06-p03-b17",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsCircular(Queue<char> Q1, Queue<char> Q2)",
-       "origin": "book"
-      },
-      {
-       "id": "m05-l06-p03-b18",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "مثال الكتاب لسؤال 19",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "queue",
-          "items": [
-           "G",
-           "F",
-           "E",
-           "D",
-           "C",
-           "B",
-           "A"
-          ],
-          "label": "الدور الأول \u2066Q1\u2069"
-         },
-         {
-          "kind": "queue",
-          "items": [
-           "D",
-           "C",
-           "B",
-           "A",
-           "G",
-           "F",
-           "E"
-          ],
-          "label": "الدور الثاني \u2066Q2\u2069"
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: دور من الرأس إلى الذيل: G، F، E، D، C، B، A (الدور الأول `Q1`)؛ دور من الرأس إلى الذيل: D، C، B، A، G، F، E (الدور الثاني `Q2`)."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b19",
-       "type": "callout",
-       "kind": "clarification",
-       "title": "في الكتاب",
-       "spans": [
-        {
-         "text": "الدوران مرسومان في الكتاب ورأسهما في اليمين: "
-        },
-        {
-         "text": "A B C D E F G",
-         "dir": "ltr"
-        },
-        {
-         "text": " ثم "
-        },
-        {
-         "text": "E F G A B C D",
-         "dir": "ltr"
-        },
-        {
-         "text": ". «الإزاحة إلى اليمين» هناك تعني أنّ القيمة تخرج من الرأس وتعود إلى النهاية. بكتابتنا (الرأس في اليسار): خرجت "
-        },
-        {
-         "text": "G",
-         "dir": "ltr"
-        },
-        {
-         "text": " ثم "
-        },
-        {
-         "text": "F",
-         "dir": "ltr"
-        },
-        {
-         "text": " ثم "
-        },
-        {
-         "text": "E",
-         "dir": "ltr"
-        },
-        {
-         "text": " من الرأس وعادت إلى النهاية."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p03-b20",
-       "type": "list",
-       "variant": "checklist",
-       "title": "افحص حلّك قبل أن ترى الحل",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "هل توقيع العملية صحيح (ما تستقبله وما تعيده)؟"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "هل تفحص "
-          },
-          {
-           "text": "IsEmpty",
-           "dir": "ltr"
-          },
-          {
-           "text": " قبل كل "
-          },
-          {
-           "text": "Remove",
-           "dir": "ltr"
-          },
-          {
-           "text": " أو "
-          },
-          {
-           "text": "Head",
-           "dir": "ltr"
-          },
-          {
-           "text": "؟"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "إذا طُلب الحفاظ على الدور: هل تعيد "
-          },
-          {
-           "text": "كل",
-           "style": "strong"
-          },
-          {
-           "text": " القيم قبل أي "
-          },
-          {
-           "text": "return",
-           "dir": "ltr"
-          },
-          {
-           "text": "؟"
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "هل تصل إلى صفات الكائن بعمليات "
-          },
-          {
-           "text": "Get",
-           "dir": "ltr"
-          },
-          {
-           "text": " لا مباشرة؟"
-          }
-         ]
-        }
-       ],
-       "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m05-l06-p04",
-     "title": "حلول أسئلة الكتابة (1): ورقة المعلّم",
-     "order": 4,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 195,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
-     },
-     "keywords": [
-      "حلول",
-      "SumOdd",
-      "IsSorted",
-      "Passed"
-     ],
-     "blocks": [
-      {
-       "id": "m05-l06-p04-b01",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 1 — \u2066SumOdd\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p04-b02",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
        "code": "public static int SumOdd(Queue<int> q)\n{\n    int sum = 0;\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x % 2 != 0)\n            sum = sum + x;\n    }\n    return sum;\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b03",
-       "type": "text",
-       "spans": [
-        {
-         "text": "بما أنّ الحفاظ على الدور غير مطلوب، يكفي أن نُخرج القيم واحدة تلو الأخرى ونجمع الفردية منها، بدون دور مساعد."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p04-b04",
+       "id": "m05-l06-p03-b05",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -5119,7 +5523,24 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b05",
+       "id": "m05-l06-p03-b06",
+       "type": "text",
+       "spans": [
+        {
+         "text": "بما أنّ الحفاظ على الدور غير مطلوب، يكفي أن نُخرج القيم واحدة تلو الأخرى ونجمع الفردية منها، بدون دور مساعد. انتبه: بعد الاستدعاء يصير الدور "
+        },
+        {
+         "text": "فارغًا",
+         "style": "strong"
+        },
+        {
+         "text": "، لأن كل قيمة أُخرجت ولم تُدخل إلى أي مكان. لو طُلب الحفاظ على الدور لاحتجنا إلى دور مساعد."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b07",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -5168,46 +5589,182 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b06",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "كيف سيبدو الدور \u2066q = [7,4,9,2,5,8]\u2069 بعد انتهاء استدعاء \u2066SumOdd(q)\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[7,4,9,2,5,8]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[4,2,8]\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[8,5,2,9,4,7]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "الدور فارغ: \u2066[]\u2069",
-          "correct": true
-         }
-        ],
-        "feedback": {
-         "explanation": "كل قيمة أُخرجت بواسطة \u2066Remove()\u2069 ولم تُدخل إلى أي مكان، فيصبح الدور فارغًا، سواء كانت القيمة فردية أم زوجية. لو طُلب الحفاظ على الدور لاحتجنا إلى دور مساعد."
+       "id": "m05-l06-p03-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066GetMax\u2069: أكبر عدد في الدور",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 16 (القسم 1) من الكتاب (ص 223)",
+       "prompt": "اكتب عملية تتلقّى دورًا (\u2066Queue<int>\u2069) فيه أعداد صحيحة. تعيد العملية العدد الأكبر داخل الدور.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b10",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الكتاب لا يعطي اسمًا للعملية؛ سمّيناها "
+        },
+        {
+         "text": "GetMax",
+         "dir": "ltr"
+        },
+        {
+         "text": ". نفترض أنّ الدور غير فارغ، ونحافظ عليه."
         }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int GetMax(Queue<int> Q)\n{\n    Queue<int> Temp = CopyQueue(Q);\n    int Max = Temp.Remove();\n    while (!Temp.IsEmpty())\n    {\n        int x = Temp.Remove();\n        if (x > Max)\n            Max = x;\n    }\n    return Max;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b12",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "العمل على نسخة من الدور بواسطة "
+          },
+          {
+           "text": "CopyQueue",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فلا يتغيّر الدور الأصلي."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "Max",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ بأول قيمة في الدور، وليس بالعدد صفر: قد تكون كل القيم سالبة."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "كل قيمة تُخرج من النسخة تُقارَن بـ "
+          },
+          {
+           "text": "Max",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "إرجاع "
+          },
+          {
+           "text": "Max",
+           "dir": "ltr"
+          },
+          {
+           "text": " بعد انتهاء الحلقة."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b13",
+       "type": "text",
+       "spans": [
+        {
+         "text": "هذا هو قالب تمشيط الدور: ننسخ، ثم نُخرج من النسخة قيمة قيمة. الدور لا يسمح بالنظر إلى ما في وسطه، فالطريقة الوحيدة لرؤية كل القيم هي إخراجها."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b14",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع \u2066GetMax\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int GetMax(Queue<int> Q)\n{\n    Queue<int> Temp = CopyQueue(Q);\n    int Max = Temp.Remove();\n    while (!Temp.IsEmpty())\n    {\n        int x = Temp.Remove();\n        if (x > Max)\n            Max = x;\n    }\n    return Max;\n}",
+        "given": "الدور `Q = [12,6,37,2,23]`، والاستدعاء `GetMax(Q)`.",
+        "out": "37\n[12,6,37,2,23]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `GetMax` مع `Q` = الدور `[12,6,37,2,23]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]}]},
+{"l":3,"n":"`Temp` يشير الآن إلى الدور `[12,6,37,2,23]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]},{"id":3,"k":"queue","items":["12","6","37","2","23"]}]},
+{"l":4,"n":"نخرج `12` من رأس الدور `Temp`. `Max = 12`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"12"}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]},{"id":3,"k":"queue","items":["6","37","2","23"]}]},
+{"l":5,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"نخرج `6` من رأس الدور `Temp`. `x = 6`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"12"}],["x",{"t":"v","s":"6"}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]},{"id":3,"k":"queue","items":["37","2","23"]}]},
+{"l":8,"n":"الشرط `x > Max` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"12"}]]}]},
+{"l":7,"n":"نخرج `37` من رأس الدور `Temp`. `x = 37`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"12"}],["x",{"t":"v","s":"37"}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]},{"id":3,"k":"queue","items":["2","23"]}]},
+{"l":8,"n":"الشرط `x > Max` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"`Max = 37`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"37"}],["x",{"t":"v","s":"37"}]]}]},
+{"l":5,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"37"}]]}]},
+{"l":7,"n":"نخرج `2` من رأس الدور `Temp`. `x = 2`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"37"}],["x",{"t":"v","s":"2"}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]},{"id":3,"k":"queue","items":["23"]}]},
+{"l":8,"n":"الشرط `x > Max` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"37"}]]}]},
+{"l":7,"n":"نخرج `23` من رأس الدور `Temp`. `x = 23`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"37"}],["x",{"t":"v","s":"23"}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]},{"id":3,"k":"queue","items":[]}]},
+{"l":8,"n":"الشرط `x > Max` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!Temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"GetMax","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["Max",{"t":"v","s":"37"}]]}]},
+{"l":11,"n":"العملية `GetMax` تُعيد `37`.","o":0},
+{"l":0,"n":"نطبع: `37`. نطبع: `[12,6,37,2,23]`. انتهى التنفيذ.","o":18,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["12","6","37","2","23"]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (19 خطوة)؛ ناتج البرنامج: 37 ↵ [12,6,37,2,23]."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b07",
+       "id": "m05-l06-p03-b15",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 2 — \u2066IsSorted\u2069",
+       "text": "سؤال 3 · متوسط — \u2066IsSorted\u2069: هل الدور مرتّب؟",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b08",
+       "id": "m05-l06-p03-b16",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب (من ورقة المعلّم)",
+       "prompt": "اكتب العملية \u2066IsSorted\u2069 التي تستقبل دورًا غير فارغ من الأعداد الصحيحة \u2066q\u2069، وتُرجع \u2066true\u2069 إذا كانت قيمه مرتّبة تصاعديًا من الرأس إلى النهاية (كل قيمة أصغر من القيمة التي بعدها أو تساويها)، وإلا تُرجع \u2066false\u2069. يجب الحفاظ على الدور: في نهاية العملية يعود \u2066q\u2069 كما كان تمامًا، بنفس القيم ونفس الترتيب. أمثلة: \u2066[2,5,5,8,11]\u2069 ← \u2066true\u2069، و \u2066[2,5,3,8]\u2069 ← \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b17",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -5215,38 +5772,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b09",
-       "type": "text",
-       "spans": [
-        {
-         "text": "في الدور لا نستطيع رؤية القيمة التالية بعد الإخراج، لذلك نحفظ القيمة السابقة في "
-        },
-        {
-         "text": "prev",
-         "dir": "ltr"
-        },
-        {
-         "text": ". نتيجة الفحص تُحفظ في متغيّر منطقي، وتُرجع فقط "
-        },
-        {
-         "text": "بعد",
-         "style": "strong"
-        },
-        {
-         "text": " إعادة القيم إلى "
-        },
-        {
-         "text": "q",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p04-b10",
+       "id": "m05-l06-p03-b18",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -5387,7 +5913,38 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b11",
+       "id": "m05-l06-p03-b19",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في الدور لا نستطيع رؤية القيمة التالية بعد الإخراج، لذلك نحفظ القيمة السابقة في "
+        },
+        {
+         "text": "prev",
+         "dir": "ltr"
+        },
+        {
+         "text": ". نتيجة الفحص تُحفظ في متغيّر منطقي، وتُرجع فقط "
+        },
+        {
+         "text": "بعد",
+         "style": "strong"
+        },
+        {
+         "text": " إعادة القيم إلى "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b20",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -5447,17 +6004,21 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b12",
+       "id": "m05-l06-p03-b21",
        "type": "text",
        "spans": [
         {
-         "text": "طالب كتب الحلقة الأولى بالشكل التالي، فخرج من العملية فورًا عند اكتشاف أول خلل في الترتيب:"
+         "text": "خطأ شائع:",
+         "style": "strong"
+        },
+        {
+         "text": " طالب كتب الحلقة الأولى بالشكل التالي، فخرج من العملية فورًا عند اكتشاف أول خلل في الترتيب:"
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b13",
+       "id": "m05-l06-p03-b22",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -5465,59 +6026,83 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b14",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما المشكلة في حلّه؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "لا توجد مشكلة، الحل صحيح وأقصر"
-         },
-         {
-          "id": "o2",
-          "text": "عند اكتشاف خلل تنتهي العملية قبل إعادة القيم من الدور المساعد، فيفقد الدور الأصلي جزءًا من قيمه",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "العملية ستُرجع دائمًا القيمة \u2066false\u2069 حتى لو كان الدور مرتّبًا"
-         },
-         {
-          "id": "o4",
-          "text": "سيحدث خطأ تشغيل لأن الدور يصبح فارغًا أثناء الحلقة"
-         }
-        ],
-        "feedback": {
-         "explanation": "الإرجاع مسموح فقط بعد إعادة كل القيم إلى الدور الأصلي. السؤال التالي يبيّن ما يضيع."
+       "id": "m05-l06-p03-b23",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الجواب "
+        },
+        {
+         "text": "false",
+         "dir": "ltr"
+        },
+        {
+         "text": " صحيح، لكن الدور ضاع. للدور "
+        },
+        {
+         "text": "[2,5,3,8]",
+         "dir": "ltr"
+        },
+        {
+         "text": ": تُخرج 2 ثم 5 وتُدخلان إلى "
+        },
+        {
+         "text": "temp",
+         "dir": "ltr"
+        },
+        {
+         "text": "، ثم تُخرج 3 وعند المقارنة "
+        },
+        {
+         "text": "3 < 5",
+         "dir": "ltr"
+        },
+        {
+         "text": " تنتهي العملية. القيمتان 2 و5 بقيتا في "
+        },
+        {
+         "text": "temp",
+         "dir": "ltr"
+        },
+        {
+         "text": " والقيمة 3 لم تُدخل أصلًا، فيبقى في "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": " القيمة 8 فقط. الإرجاع مسموح فقط بعد إعادة كل القيم."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b15",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "بحلّ الطالب: ماذا يبقى في الدور \u2066q = [2,5,3,8]\u2069 بعد الاستدعاء؟ اكتب الدور كما يُطبع.",
-        "answer": "[8]",
-        "feedback": {
-         "explanation": "تُخرج 2 ثم 5 وتُدخلان إلى \u2066temp\u2069، ثم تُخرج 3 وعند المقارنة \u20663 < 5\u2069 تنتهي العملية. القيمتان 2 و5 بقيتا في \u2066temp\u2069 والقيمة 3 لم تُدخل أصلًا، فيبقى في \u2066q\u2069 القيمة 8 فقط."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p04-b16",
+       "id": "m05-l06-p03-b24",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 3 — \u2066Passed\u2069",
+       "text": "سؤال 4 · متوسط — \u2066Passed\u2069: دور كائنات",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b17",
+       "id": "m05-l06-p03-b25",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب (من ورقة المعلّم)",
+       "prompt": "معطاة الفئة \u2066Student\u2069. اكتب العملية \u2066Passed\u2069 التي تستقبل دور طلاب \u2066q\u2069 من نوع \u2066Queue<Student>\u2069، وتُرجع دورًا جديدًا فيه الطلاب الذين علامتهم 55 أو أكثر، بنفس ترتيبهم في الدور الأصلي. يجب الحفاظ على الدور الأصلي \u2066q\u2069 بدون تغيير.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b26",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public class Student\n{\n    private string name;\n    private int grade;\n    public Student(string name, int grade)\n    {\n        this.name = name;\n        this.grade = grade;\n    }\n    public string GetName() { return name; }\n    public int GetGrade() { return grade; }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b27",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -5525,38 +6110,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b18",
-       "type": "text",
-       "spans": [
-        {
-         "text": "الدور يحافظ على ترتيب الإدخال، لذلك الإدخال إلى "
-        },
-        {
-         "text": "res",
-         "dir": "ltr"
-        },
-        {
-         "text": " في المرور الأول يعطي نفس الترتيب الأصلي، بعكس الراصّة التي كانت تعكس الترتيب. الدور المساعد "
-        },
-        {
-         "text": "temp",
-         "dir": "ltr"
-        },
-        {
-         "text": " مطلوب فقط لإعادة "
-        },
-        {
-         "text": "q",
-         "dir": "ltr"
-        },
-        {
-         "text": " كما كان."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p04-b19",
+       "id": "m05-l06-p03-b28",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -5668,7 +6222,66 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b20",
+       "id": "m05-l06-p03-b29",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الدور يحافظ على ترتيب الإدخال، لذلك الإدخال إلى "
+        },
+        {
+         "text": "res",
+         "dir": "ltr"
+        },
+        {
+         "text": " في المرور الأول يعطي نفس الترتيب الأصلي، بعكس الراصّة التي كانت تعكس الترتيب. الدور المساعد "
+        },
+        {
+         "text": "temp",
+         "dir": "ltr"
+        },
+        {
+         "text": " مطلوب فقط لإعادة "
+        },
+        {
+         "text": "q",
+         "dir": "ltr"
+        },
+        {
+         "text": " كما كان. في المثال الذي في التتبّع يعود ثلاثة طلاب: "
+        },
+        {
+         "text": "Rami",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "Adam",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "Lina",
+         "dir": "ltr"
+        },
+        {
+         "text": "، و "
+        },
+        {
+         "text": "Lina",
+         "dir": "ltr"
+        },
+        {
+         "text": " بينهم لأن علامتها 55 بالضبط."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b30",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -5731,76 +6344,33 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p04-b21",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "للدور في المثال، أي طلاب في الدور الذي تعيده \u2066Passed\u2069، من الرأس إلى النهاية؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066Rami\u2069 ثم \u2066Adam\u2069 ثم \u2066Lina\u2069",
-          "correct": true
-         },
-         {
-          "id": "o2",
-          "text": "\u2066Lina\u2069 ثم \u2066Adam\u2069 ثم \u2066Rami\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "\u2066Rami\u2069 ثم \u2066Adam\u2069 فقط"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066Adam\u2069 ثم \u2066Rami\u2069 ثم \u2066Lina\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "الطلاب الذين علامتهم 55 أو أكثر ثلاثة، والشرط \u2066>=\u2069 يشمل \u2066Lina\u2069 لأن علامتها 55 بالضبط. الطلاب يُخرجون من الرأس بالترتيب ويُدخلون إلى نهاية \u2066res\u2069، فيكون \u2066Rami\u2069 في الرأس كما في الدور الأصلي."
-        }
-       },
+       "id": "m05-l06-p03-b31",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066IsSymmetric\u2069: دور تماثلي",
        "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m05-l06-p05",
-     "title": "حلول أسئلة الكتابة (2): تمارين الكتاب",
-     "order": 5,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 195,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
-     },
-     "keywords": [
-      "حلول",
-      "IsSymmetric",
-      "Check",
-      "IsCircular",
-      "نجاعة"
-     ],
-     "blocks": [
+      },
       {
-       "id": "m05-l06-p05-b01",
+       "id": "m05-l06-p03-b32",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 13 (القسم 2) من الكتاب (ص 220)",
+       "prompt": "اكتبوا عملية تتلقّى كبارامتر دورًا من نمط صحيح وتعيد \u2066true\u2069 إذا كان تماثليًا (\u2066Symmetric\u2069) وإلا فتعيد \u2066false\u2069. مثال: الدور \u2066[5,6,4,1,4,6,5]\u2069 تماثلي. رأس العملية المطلوبة: \u2066public static bool IsSymmetric(Queue<int> q)\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b33",
        "type": "text",
        "spans": [
         {
-         "text": "الكتاب لا يعطي حلولًا لتمارينه. الحلول التالية كتبناها نحن؛ وقد يكون حلّك مختلفًا وصحيحًا."
+         "text": "الكتاب لا يعطي حلولًا لتمارينه؛ هذا الحل كتبناه نحن، وهو يحافظ على الدور."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b02",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 13 (القسم 2) — \u2066IsSymmetric\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b03",
+       "id": "m05-l06-p03-b34",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -5808,24 +6378,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b04",
-       "type": "text",
-       "spans": [
-        {
-         "text": "ننقل القيم إلى دور مساعد (يحفظ الترتيب) وإلى راصّة (تقلبه) في الوقت نفسه. ثم نقارن: ما يخرج من الدور هو القيم من البداية، وما يخرج من الراصّة هو القيم من النهاية. الدور تماثلي إذا تطابقا في كل مرة. قارن مع "
-        },
-        {
-         "text": "Check",
-         "dir": "ltr"
-        },
-        {
-         "text": " في سؤال 8 من الكتاب: هناك ضاع الدور، وهنا يعود كما كان."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b05",
+       "id": "m05-l06-p03-b35",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -5880,7 +6433,24 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b06",
+       "id": "m05-l06-p03-b36",
+       "type": "text",
+       "spans": [
+        {
+         "text": "ننقل القيم إلى دور مساعد (يحفظ الترتيب) وإلى راصّة (تقلبه) في الوقت نفسه. ثم نقارن: ما يخرج من الدور هو القيم من البداية، وما يخرج من الراصّة هو القيم من النهاية. الدور تماثلي إذا تطابقا في كل مرة. قارن مع "
+        },
+        {
+         "text": "Check",
+         "dir": "ltr"
+        },
+        {
+         "text": " في سؤال 8 من الكتاب: هناك ضاع الدور، وهنا يعود كما كان."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p03-b37",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
@@ -5949,90 +6519,49 @@ const m05: ContentModule = {
         "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (48 خطوة)؛ ناتج البرنامج: True ↵ [5,6,4,6,5]."
        },
        "origin": "teacher-enrichment"
-      },
+      }
+     ]
+    },
+    {
+     "id": "899271d-m05-l06-p04",
+     "title": "وظيفة: أسئلة كتابة",
+     "order": 4,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 195,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+     },
+     "keywords": [
+      "وظيفة",
+      "كتابة عملية",
+      "Check",
+      "InsertSorted",
+      "IsCircular",
+      "نجاعة"
+     ],
+     "blocks": [
       {
-       "id": "m05-l06-p05-b07",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تعيدها \u2066IsSymmetric\u2069 لمثال الكتاب \u2066[5,6,4,1,4,6,5]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "true",
-        "feedback": {
-         "explanation": "الدور يُقرأ من الرأس إلى النهاية ومن النهاية إلى الرأس بالشكل نفسه."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b08",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "وما القيمة التي تعيدها للدور \u2066[5,6,4,5,6]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "false",
-        "feedback": {
-         "explanation": "من الرأس: 5 ثم 6، ومن النهاية: 6 ثم 5. المقارنة الأولى \u20665 != 6\u2069 تجعل \u2066sym\u2069 مساويًا \u2066false\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b09",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 15 — \u2066Check\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b10",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool Check(Queue<int> Q, int k)\n{\n    Queue<int> Temp = CopyQueue(Q);\n    while (!Temp.IsEmpty())\n    {\n        int First = Temp.Remove();\n        int Sum = 0;\n        for (int i = 1; i < k; i++)\n            Sum += Temp.Remove();\n        if (First != Sum)\n            return false;\n    }\n    return true;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b11",
+       "id": "m05-l06-p04-b01",
        "type": "text",
        "spans": [
         {
-         "text": "قالب التمشيط مع النسخة "
-        },
-        {
-         "text": "Temp",
-         "dir": "ltr"
-        },
-        {
-         "text": ". في كل دورة من الحلقة الخارجية نعالج مجموعة واحدة: نُخرج قيمتها الأولى، ثم نجمع القيم الـ "
-        },
-        {
-         "text": "k - 1",
-         "dir": "ltr"
-        },
-        {
-         "text": " التي بعدها. يجوز هنا "
-        },
-        {
-         "text": "return false;",
-         "dir": "ltr"
-        },
-        {
-         "text": " داخل الحلقة لأننا نعمل على النسخة."
+         "text": "أربعة أسئلة كتابة للبيت، مرتّبة من الأسهل إلى الأصعب. اكتب كل عملية في دفترك أو في محرّر الكود، ثم اضغط «الحل» وقارن: في النافذة كود الحل وما يُفحص فيه وتتبّعه. قد يكون حلّك مختلفًا وصحيحًا. في الأمثلة: القيمة الأولى من اليسار هي رأس الدور."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b12",
+       "id": "m05-l06-p04-b02",
        "type": "list",
        "variant": "checklist",
-       "title": "ما يُفحص في الحل",
+       "title": "افحص حلّك قبل أن تفتح الحل",
        "items": [
         {
          "id": "i1",
          "text": [
           {
-           "text": "العمل على نسخة من الدور (أو إعادة القيم إليه)."
+           "text": "هل توقيع العملية صحيح (ما تستقبله وما تعيده)؟"
           }
          ]
         },
@@ -6040,14 +6569,28 @@ const m05: ContentModule = {
          "id": "i2",
          "text": [
           {
-           "text": "حلقة داخلية تدور "
+           "text": "هل تفحص "
           },
           {
-           "text": "k - 1",
+           "text": "IsEmpty",
            "dir": "ltr"
           },
           {
-           "text": " مرات وتجمع باقي قيم المجموعة."
+           "text": " قبل كل "
+          },
+          {
+           "text": "Remove",
+           "dir": "ltr"
+          },
+          {
+           "text": " أو "
+          },
+          {
+           "text": "Head",
+           "dir": "ltr"
+          },
+          {
+           "text": "؟"
           }
          ]
         },
@@ -6055,36 +6598,21 @@ const m05: ContentModule = {
          "id": "i3",
          "text": [
           {
-           "text": "المجموع "
+           "text": "إذا طُلب الحفاظ على الدور: هل تعيد "
           },
           {
-           "text": "Sum",
-           "dir": "ltr"
-          },
-          {
-           "text": " يبدأ من صفر "
-          },
-          {
-           "text": "لكل مجموعة",
+           "text": "كل",
            "style": "strong"
           },
           {
-           "text": "، لا مرة واحدة قبل الحلقة."
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "إرجاع "
+           "text": " القيم قبل أي "
           },
           {
-           "text": "true",
+           "text": "return",
            "dir": "ltr"
           },
           {
-           "text": " فقط بعد فحص كل المجموعات."
+           "text": "؟"
           }
          ]
         }
@@ -6092,21 +6620,597 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b13",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m05-l06-p04-b03",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — قائمة انتظار «متميّزة»",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b04",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 25 من الكتاب (ص 231)",
+       "prompt": "قائمة انتظار «متميّزة» هي قائمة انتظار تحتوي على أعداد صحيحة وتحقّق الشرط التالي: القيمة الأولى في القائمة تساوي حاصل جمع باقي القيم. مثال: القائمة \u2066[23,6,7,-1,0,5,2,3,0,1]\u2069 «متميّزة»، لأن \u20661 + 0 + 3 + 2 + 5 + 0 - 1 + 7 + 6 = 23\u2069. اكتب عملية باسم \u2066Check\u2069 تتلقّى قائمة \u2066Queue<int>\u2069 ثم تقوم بفحصها وإعادة \u2066true\u2069 إذا كانت «متميّزة». خلاف ذلك تعيد العملية \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b05",
+       "type": "callout",
+       "kind": "clarification",
+       "title": "في الكتاب",
+       "spans": [
+        {
+         "text": "القائمة مرسومة في الكتاب ورأسها في اليمين، فالقيمة الأولى هي 23. بكتابتنا (الرأس في اليسار): "
+        },
+        {
+         "text": "[23,6,7,-1,0,5,2,3,0,1]",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b06",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Check(Queue<int> Q)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b07",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Check\u2069 على مثال الكتاب",
+       "title": "حل سؤال 1 — \u2066Check\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "دور فارغ ليس فيه قيمة أولى: نعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "ننسخ الدور بالعملية "
+          },
+          {
+           "text": "CopyQueue",
+           "dir": "ltr"
+          },
+          {
+           "text": " التي في الوحدة ونعمل على النسخة "
+          },
+          {
+           "text": "Temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فلا يتغيّر الدور الأصلي."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "نُخرج القيمة الأولى ونحفظها في "
+          },
+          {
+           "text": "First",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم نجمع كل القيم الباقية في "
+          },
+          {
+           "text": "Sum",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "نعيد نتيجة المقارنة "
+          },
+          {
+           "text": "First == Sum",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool Check(Queue<int> Q)\n{\n    if (Q.IsEmpty())\n        return false;\n    Queue<int> Temp = CopyQueue(Q);\n    int First = Temp.Remove();\n    int Sum = 0;\n    while (!Temp.IsEmpty())\n        Sum += Temp.Remove();\n    return First == Sum;\n}",
+        "checklist": [
+         "العمل على نسخة من الدور (أو إعادة القيم إليه).",
+         "القيمة الأولى تُخرج **قبل** الحلقة، ولا تدخل في المجموع.",
+         "المجموع يبدأ من صفر.",
+         "إرجاع نتيجة المقارنة بعد انتهاء الحلقة."
+        ],
+        "trace": {
+         "code": "public static bool Check(Queue<int> Q)\n{\n    if (Q.IsEmpty())\n        return false;\n    Queue<int> Temp = CopyQueue(Q);\n    int First = Temp.Remove();\n    int Sum = 0;\n    while (!Temp.IsEmpty())\n        Sum += Temp.Remove();\n    return First == Sum;\n}",
+         "given": "الدور `Q = [10,3,5,2]`، والاستدعاء `Check(Q)`.",
+         "out": "True\n[10,3,5,2]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Check` مع `Q` = الدور `[10,3,5,2]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]}]},
+{"l":3,"n":"الشرط `Q.IsEmpty()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"`Temp` يشير الآن إلى الدور `[10,3,5,2]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]},{"id":3,"k":"queue","items":["10","3","5","2"]}]},
+{"l":6,"n":"نخرج `10` من رأس الدور `Temp`. `First = 10`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["First",{"t":"v","s":"10"}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]},{"id":3,"k":"queue","items":["3","5","2"]}]},
+{"l":7,"n":"`Sum = 0`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["First",{"t":"v","s":"10"}],["Sum",{"t":"v","s":"0"}]]}]},
+{"l":8,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `3` من رأس الدور `Temp`. `Sum` كانت `0` وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["First",{"t":"v","s":"10"}],["Sum",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]},{"id":3,"k":"queue","items":["5","2"]}]},
+{"l":8,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `5` من رأس الدور `Temp`. `Sum` كانت `3` وتصبح `8`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["First",{"t":"v","s":"10"}],["Sum",{"t":"v","s":"8"}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]},{"id":3,"k":"queue","items":["2"]}]},
+{"l":8,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"نخرج `2` من رأس الدور `Temp`. `Sum` كانت `8` وتصبح `10`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":3}],["First",{"t":"v","s":"10"}],["Sum",{"t":"v","s":"10"}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]},{"id":3,"k":"queue","items":[]}]},
+{"l":8,"n":"الشرط `!Temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":10,"n":"العملية `Check` تُعيد `true`.","o":0},
+{"l":0,"n":"نطبع: `True`. نطبع: `[10,3,5,2]`. انتهى التنفيذ.","o":16,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["10","3","5","2"]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: دور فارغ ليس فيه قيمة أولى: نعيد false. ننسخ الدور بالعملية CopyQueue التي في الوحدة ونعمل على النسخة Temp، فلا يتغيّر الدور الأصلي. نُخرج القيمة الأولى ونحفظها في First، ثم نجمع كل القيم الباقية في Sum. نعيد نتيجة المقارنة First == Sum."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b08",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Check\u2069 لمثال الكتاب \u2066[23,6,7,-1,0,5,2,3,0,1]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "true",
+        "feedback": {
+         "explanation": "مجموع القيم التي بعد الأولى هو 23، وهو يساوي القيمة الأولى."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b09",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066InsertSorted\u2069: إدخال إلى دور مرتّب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b10",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066InsertSorted\u2069 التي تستقبل دورًا \u2066q\u2069 من الأعداد الصحيحة، مرتّبًا تصاعديًا من الرأس إلى النهاية، وعددًا صحيحًا \u2066x\u2069. العملية تُدخل \u2066x\u2069 إلى الدور في مكانه الصحيح، بحيث يبقى الدور مرتّبًا. مثال: للدور \u2066[2,5,8,11]\u2069 والعدد 7 يصير الدور \u2066[2,5,7,8,11]\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void InsertSorted(Queue<int> q, int x)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b12",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066InsertSorted\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "Insert",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُدخل إلى نهاية الدور فقط. لنضع "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " في الوسط نبني الدور من جديد في دور مساعد "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الحلقة الأولى تنقل إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " كل القيم الأصغر من "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": ". نفحص "
+          },
+          {
+           "text": "q.IsEmpty()",
+           "dir": "ltr"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "قبل",
+           "style": "strong"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "q.Head()",
+           "dir": "ltr"
+          },
+          {
+           "text": ": إذا كان "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " أكبر من كل القيم يفرغ الدور، و "
+          },
+          {
+           "text": "Head",
+           "dir": "ltr"
+          },
+          {
+           "text": " تشترط دورًا غير فارغ."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الآن ندخل "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم ننقل إليه ما بقي في "
+          },
+          {
+           "text": "q",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الحلقة الأخيرة تعيد كل القيم من "
+          },
+          {
+           "text": "temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "q",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الدور يحافظ على الترتيب."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void InsertSorted(Queue<int> q, int x)\n{\n    Queue<int> temp = new Queue<int>();\n    while (!q.IsEmpty() && q.Head() < x)\n        temp.Insert(q.Remove());\n    temp.Insert(x);\n    while (!q.IsEmpty())\n        temp.Insert(q.Remove());\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n}",
+        "checklist": [
+         "دور مساعد، وليس راصّة: الراصّة كانت ستقلب الترتيب.",
+         "الشرط `!q.IsEmpty() && q.Head() < x` بهذا الترتيب.",
+         "إدخال `x` مرة واحدة فقط، بين القيم الأصغر منه والقيم الباقية.",
+         "إعادة كل القيم إلى `q` في النهاية."
+        ],
+        "trace": {
+         "code": "public static void InsertSorted(Queue<int> q, int x)\n{\n    Queue<int> temp = new Queue<int>();\n    while (!q.IsEmpty() && q.Head() < x)\n        temp.Insert(q.Remove());\n    temp.Insert(x);\n    while (!q.IsEmpty())\n        temp.Insert(q.Remove());\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n}",
+         "given": "الدور `q = [2,5,8,11]`، والاستدعاء `InsertSorted(q, 7)`.",
+         "out": "[2,5,7,8,11]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `InsertSorted` مع `q` = الدور `[2,5,8,11]`، `x = 7`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"InsertSorted","vars":[["q",{"t":"ref","id":1}],["x",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"queue","items":["2","5","8","11"]}]},
+{"l":3,"n":"ننشئ دورًا فارغًا باسم `temp`.","o":0,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]},{"name":"InsertSorted","vars":[["q",{"t":"ref","id":1}],["x",{"t":"v","s":"7"}],["temp",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["2","5","8","11"]},{"id":2,"k":"queue","items":[]}]},
+{"l":4,"n":"رأس الدور `q` هو `2` (لا يخرج). الشرط `!q.IsEmpty() && q.Head() < x` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `2` من رأس الدور `q`. ندخل `2` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["5","8","11"]},{"id":2,"k":"queue","items":["2"]}]},
+{"l":4,"n":"رأس الدور `q` هو `5` (لا يخرج). الشرط `!q.IsEmpty() && q.Head() < x` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نخرج `5` من رأس الدور `q`. ندخل `5` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["8","11"]},{"id":2,"k":"queue","items":["2","5"]}]},
+{"l":4,"n":"رأس الدور `q` هو `8` (لا يخرج). الشرط `!q.IsEmpty() && q.Head() < x` خطأ: نخرج من الحلقة.","o":0},
+{"l":6,"n":"ندخل `7` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["8","11"]},{"id":2,"k":"queue","items":["2","5","7"]}]},
+{"l":7,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"نخرج `8` من رأس الدور `q`. ندخل `8` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":["11"]},{"id":2,"k":"queue","items":["2","5","7","8"]}]},
+{"l":7,"n":"الشرط `!q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"نخرج `11` من رأس الدور `q`. ندخل `11` إلى نهاية الدور `temp`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"queue","items":["2","5","7","8","11"]}]},
+{"l":7,"n":"الشرط `!q.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":9,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نخرج `2` من رأس الدور `temp`. ندخل `2` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["2"]},{"id":2,"k":"queue","items":["5","7","8","11"]}]},
+{"l":9,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نخرج `5` من رأس الدور `temp`. ندخل `5` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["2","5"]},{"id":2,"k":"queue","items":["7","8","11"]}]},
+{"l":9,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نخرج `7` من رأس الدور `temp`. ندخل `7` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["2","5","7"]},{"id":2,"k":"queue","items":["8","11"]}]},
+{"l":9,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نخرج `8` من رأس الدور `temp`. ندخل `8` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["2","5","7","8"]},{"id":2,"k":"queue","items":["11"]}]},
+{"l":9,"n":"الشرط `!temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نخرج `11` من رأس الدور `temp`. ندخل `11` إلى نهاية الدور `q`.","o":0,"h":[{"id":1,"k":"queue","items":["2","5","7","8","11"]},{"id":2,"k":"queue","items":[]}]},
+{"l":9,"n":"الشرط `!temp.IsEmpty()` خطأ: نخرج من الحلقة.","o":0},
+{"l":11,"n":"تنتهي العملية `InsertSorted` ونعود إلى من استدعاها.","o":0},
+{"l":0,"n":"نطبع: `[2,5,7,8,11]`. انتهى التنفيذ.","o":13,"f":[{"name":"Main","vars":[["q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["2","5","7","8","11"]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: Insert تُدخل إلى نهاية الدور فقط. لنضع x في الوسط نبني الدور من جديد في دور مساعد temp. الحلقة الأولى تنقل إلى temp كل القيم الأصغر من x. نفحص q.IsEmpty() قبل q.Head(): إذا كان x أكبر من كل القيم يفرغ الدور، و Head تشترط دورًا غير فارغ. الآن ندخل x إلى temp، ثم ننقل إليه ما بقي في q. الحلقة الأخيرة تعيد كل القيم من temp إلى q: الدور يحافظ على الترتيب."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b13",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "كيف يصير الدور \u2066[3,6,9]\u2069 بعد استدعاء \u2066InsertSorted(q, 10)\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[10,3,6,9]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[3,6,9,10]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[3,6,10,9]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "خطأ في التشغيل: \u2066Head\u2069 على دور فارغ"
+         }
+        ],
+        "feedback": {
+         "explanation": "كل القيم أصغر من 10 فتنتقل كلها إلى \u2066temp\u2069 ويفرغ \u2066q\u2069. الشرط \u2066!q.IsEmpty()\u2069 يوقف الحلقة قبل استدعاء \u2066Head\u2069، ثم يدخل 10 في النهاية."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b14",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متقدّم — مجموعات من \u2066k\u2069 قيم",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b15",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 15 من الكتاب (ص 222)",
+       "prompt": "1. اكتب عملية تتلقّى كبارامترات قائمة انتظار من نوع صحيح وعددًا صحيحًا موجبًا \u2066k\u2069. العملية تعيد \u2066true\u2069 إذا تحقّق الشرط التالي: القيمة الأولى من بين كل \u2066k\u2069 قيم متتالية هي مجموع باقي القيم. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: بالنسبة للدور \u2066[15,5,10,12,4,8]\u2069 و \u2066k=3\u2069 تعيد العملية \u2066true\u2069: القيمة الأولى في الثلاثية الأولى هي 15 وهي مساوية لمجموع باقي القيم في الثلاثية وهي 5 و10، والقيمة الأولى في الثلاثية الثانية هي 12 وهي مساوية لمجموع 4 و8. افترض أنّ قائمة الانتظار ليست فارغة وأنّ عدد قيمها من مضاعفات \u2066k\u2069. 2. ما هي درجة نجاعة العملية؟ علّل الإجابة.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b16",
+       "type": "text",
+       "spans": [
+        {
+         "text": "الكتاب لا يعطي رأس العملية في هذا السؤال. نقترح:"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b17",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Check(Queue<int> Q, int k)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b18",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066Check\u2069 مع \u2066k\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "قالب التمشيط: ننسخ الدور بالعملية "
+          },
+          {
+           "text": "CopyQueue",
+           "dir": "ltr"
+          },
+          {
+           "text": " ونعمل على النسخة "
+          },
+          {
+           "text": "Temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "كل دورة من الحلقة الخارجية تعالج مجموعة واحدة: نُخرج قيمتها الأولى "
+          },
+          {
+           "text": "First",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الحلقة الداخلية تدور "
+          },
+          {
+           "text": "k - 1",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرات وتجمع باقي قيم المجموعة في "
+          },
+          {
+           "text": "Sum",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "إذا اختلف "
+          },
+          {
+           "text": "First",
+           "dir": "ltr"
+          },
+          {
+           "text": " عن "
+          },
+          {
+           "text": "Sum",
+           "dir": "ltr"
+          },
+          {
+           "text": " نعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": " فورًا. هذا مسموح هنا لأننا نعمل على النسخة، والدور الأصلي سليم."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "النجاعة "
+          },
+          {
+           "text": "O(n)",
+           "dir": "ltr"
+          },
+          {
+           "text": ": مع أنّ هناك حلقة داخل حلقة، كل قيمة تُخرج من "
+          },
+          {
+           "text": "Temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة واحدة فقط."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
         "interactive": true
        },
        "config": {
         "code": "public static bool Check(Queue<int> Q, int k)\n{\n    Queue<int> Temp = CopyQueue(Q);\n    while (!Temp.IsEmpty())\n    {\n        int First = Temp.Remove();\n        int Sum = 0;\n        for (int i = 1; i < k; i++)\n            Sum += Temp.Remove();\n        if (First != Sum)\n            return false;\n    }\n    return true;\n}",
-        "given": "الدور `Q = [15,5,10,12,4,8]`، والاستدعاء `Check(Q, 3)`.",
-        "out": "True\n[15,5,10,12,4,8]\n",
-        "steps": [
+        "checklist": [
+         "العمل على نسخة من الدور (أو إعادة القيم إليه).",
+         "حلقة داخلية تدور `k - 1` مرات وتجمع باقي قيم المجموعة.",
+         "المجموع `Sum` يبدأ من صفر **لكل مجموعة**، لا مرة واحدة قبل الحلقة.",
+         "إرجاع `true` فقط بعد فحص كل المجموعات."
+        ],
+        "trace": {
+         "code": "public static bool Check(Queue<int> Q, int k)\n{\n    Queue<int> Temp = CopyQueue(Q);\n    while (!Temp.IsEmpty())\n    {\n        int First = Temp.Remove();\n        int Sum = 0;\n        for (int i = 1; i < k; i++)\n            Sum += Temp.Remove();\n        if (First != Sum)\n            return false;\n    }\n    return true;\n}",
+         "given": "الدور `Q = [15,5,10,12,4,8]`، والاستدعاء `Check(Q, 3)`.",
+         "out": "True\n[15,5,10,12,4,8]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Check` مع `Q` = الدور `[15,5,10,12,4,8]`، `k = 3`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["k",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"queue","items":["15","5","10","12","4","8"]}]},
 {"l":3,"n":"`Temp` يشير الآن إلى الدور `[15,5,10,12,4,8]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"Check","vars":[["Q",{"t":"ref","id":1}],["k",{"t":"v","s":"3"}],["Temp",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["15","5","10","12","4","8"]},{"id":3,"k":"queue","items":["15","5","10","12","4","8"]}]},
 {"l":4,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
@@ -6137,14 +7241,15 @@ const m05: ContentModule = {
 {"l":13,"n":"العملية `Check` تُعيد `true`.","o":0},
 {"l":0,"n":"نطبع: `True`. نطبع: `[15,5,10,12,4,8]`. انتهى التنفيذ.","o":22,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["15","5","10","12","4","8"]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (29 خطوة)؛ ناتج البرنامج: True ↵ [15,5,10,12,4,8]."
+        "text": "حل السؤال: قالب التمشيط: ننسخ الدور بالعملية CopyQueue ونعمل على النسخة Temp. كل دورة من الحلقة الخارجية تعالج مجموعة واحدة: نُخرج قيمتها الأولى First. الحلقة الداخلية تدور k - 1 مرات وتجمع باقي قيم المجموعة في Sum. إذا اختلف First عن Sum نعيد false فورًا. هذا مسموح هنا لأننا نعمل على النسخة، والدور الأصلي سليم. النجاعة O(n): مع أنّ هناك حلقة داخل حلقة، كل قيمة تُخرج من Temp مرة واحدة فقط."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b14",
+       "id": "m05-l06-p04-b19",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -6157,7 +7262,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b15",
+       "id": "m05-l06-p04-b20",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6189,160 +7294,171 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b16",
+       "id": "m05-l06-p04-b21",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 19 — \u2066IsCircular\u2069",
+       "text": "سؤال 4 · متقدّم — \u2066IsCircular\u2069: إزاحة دائرية",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b17",
-       "type": "text",
+       "id": "m05-l06-p04-b22",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 19 من الكتاب (ص 225)",
+       "prompt": "1. اكتب عملية تتلقّى دورين \u2066Q1\u2069 و \u2066Q2\u2069 من نوع \u2066Queue<char>\u2069. العملية تعيد \u2066true\u2069 إذا كان الدور \u2066Q2\u2069 عبارة عن نتيجة إزاحة لقيم الدور \u2066Q1\u2069 إلى اليمين. خلاف ذلك تعيد العملية \u2066false\u2069. مثال: إذا كان الدور الأول \u2066[G,F,E,D,C,B,A]\u2069 والدور الثاني \u2066[D,C,B,A,G,F,E]\u2069 فإنّ الدور الثاني تمّ الحصول عليه نتيجة إزاحة الخلايا \u2066E\u2069 و \u2066F\u2069 و \u2066G\u2069 من الدور الأول. 2. حدّد درجة نجاعة العملية \u2066IsCircular\u2069 مع شرح وافٍ للإجابة.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b23",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "مثال الكتاب لسؤال 19",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "queue",
+          "items": [
+           "G",
+           "F",
+           "E",
+           "D",
+           "C",
+           "B",
+           "A"
+          ],
+          "label": "الدور الأول \u2066Q1\u2069"
+         },
+         {
+          "kind": "queue",
+          "items": [
+           "D",
+           "C",
+           "B",
+           "A",
+           "G",
+           "F",
+           "E"
+          ],
+          "label": "الدور الثاني \u2066Q2\u2069"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: دور من الرأس إلى الذيل: G، F، E، D، C، B، A (الدور الأول `Q1`)؛ دور من الرأس إلى الذيل: D، C، B، A، G، F، E (الدور الثاني `Q2`)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p04-b24",
+       "type": "callout",
+       "kind": "clarification",
+       "title": "في الكتاب",
        "spans": [
         {
-         "text": "الفكرة: ندوّر "
+         "text": "الدوران مرسومان في الكتاب ورأسهما في اليمين: "
         },
         {
-         "text": "Q1",
+         "text": "A B C D E F G",
          "dir": "ltr"
         },
         {
-         "text": " خطوة بعد خطوة بالأمر "
+         "text": " ثم "
         },
         {
-         "text": "Q1.Insert(Q1.Remove());",
+         "text": "E F G A B C D",
          "dir": "ltr"
         },
         {
-         "text": "، وبعد كل خطوة نفحص: هل صار ترتيبه مثل ترتيب "
+         "text": ". «الإزاحة إلى اليمين» هناك تعني أنّ القيمة تخرج من الرأس وتعود إلى النهاية. بكتابتنا (الرأس في اليسار): خرجت "
         },
         {
-         "text": "Q2",
+         "text": "G",
          "dir": "ltr"
         },
         {
-         "text": "؟ بعد "
+         "text": " ثم "
         },
         {
-         "text": "n",
+         "text": "F",
          "dir": "ltr"
         },
         {
-         "text": " خطوات يعود "
+         "text": " ثم "
         },
         {
-         "text": "Q1",
+         "text": "E",
          "dir": "ltr"
         },
         {
-         "text": " كما كان. نحتاج إلى عمليتين مساعدتين: "
-        },
-        {
-         "text": "Size",
-         "dir": "ltr"
-        },
-        {
-         "text": " تعيد طول الدور، و "
-        },
-        {
-         "text": "SameOrder",
-         "dir": "ltr"
-        },
-        {
-         "text": " تفحص إن كان لدورين من الطول "
-        },
-        {
-         "text": "n",
-         "dir": "ltr"
-        },
-        {
-         "text": " القيم نفسها بالترتيب نفسه (وتدوّر الاثنين "
-        },
-        {
-         "text": "n",
-         "dir": "ltr"
-        },
-        {
-         "text": " مرات فيعودان كما كانا)."
+         "text": " من الرأس وعادت إلى النهاية."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b18",
+       "id": "m05-l06-p04-b25",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static bool IsCircular(Queue<char> Q1, Queue<char> Q2)\n{\n    int n = Size(Q1);\n    if (n != Size(Q2))\n        return false;\n    bool found = false;\n    for (int i = 0; i < n; i++)\n    {\n        if (SameOrder(Q1, Q2, n))\n            found = true;\n        Q1.Insert(Q1.Remove());\n    }\n    return found;\n}",
+       "code": "public static bool IsCircular(Queue<char> Q1, Queue<char> Q2)\n{\n    // اكتب هنا\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b19",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int Size(Queue<char> Q)\n{\n    Queue<char> Temp = new Queue<char>();\n    int n = 0;\n    while (!Q.IsEmpty())\n    {\n        Temp.Insert(Q.Remove());\n        n++;\n    }\n    while (!Temp.IsEmpty())\n        Q.Insert(Temp.Remove());\n    return n;\n}\npublic static bool SameOrder(Queue<char> Q1, Queue<char> Q2, int n)\n{\n    bool same = true;\n    for (int i = 0; i < n; i++)\n    {\n        if (Q1.Head() != Q2.Head())\n            same = false;\n        Q1.Insert(Q1.Remove());\n        Q2.Insert(Q2.Remove());\n    }\n    return same;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b20",
-       "type": "list",
-       "variant": "checklist",
-       "title": "ما يُفحص في الحل",
-       "items": [
+       "id": "m05-l06-p04-b26",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066IsCircular\u2069",
+       "steps": [
         {
-         "id": "i1",
+         "id": "s1",
          "text": [
           {
-           "text": "إذا اختلف الطولان فالجواب "
-          },
-          {
-           "text": "false",
-           "dir": "ltr"
-          },
-          {
-           "text": " فورًا."
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "تجربة كل الإزاحات الممكنة: "
-          },
-          {
-           "text": "n",
-           "dir": "ltr"
-          },
-          {
-           "text": " إزاحات."
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "الدوران يعودان كما كانا: كل منهما دُوِّر عددًا من المرات يساوي مضاعفًا لطوله."
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "لا "
-          },
-          {
-           "text": "return",
-           "dir": "ltr"
-          },
-          {
-           "text": " داخل الحلقة قبل أن يكتمل تدوير "
+           "text": "الفكرة: ندوّر "
           },
           {
            "text": "Q1",
+           "dir": "ltr"
+          },
+          {
+           "text": " خطوة بعد خطوة بالأمر "
+          },
+          {
+           "text": "Q1.Insert(Q1.Remove());",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وبعد كل خطوة نفحص: هل صار ترتيبه مثل ترتيب "
+          },
+          {
+           "text": "Q2",
+           "dir": "ltr"
+          },
+          {
+           "text": "؟"
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "العملية المساعدة "
+          },
+          {
+           "text": "Size",
+           "dir": "ltr"
+          },
+          {
+           "text": " تعيد طول الدور وتحافظ عليه. إذا اختلف الطولان فالجواب "
+          },
+          {
+           "text": "false",
            "dir": "ltr"
           },
           {
@@ -6351,33 +7467,124 @@ const m05: ContentModule = {
          ]
         },
         {
-         "id": "i5",
+         "id": "s3",
          "text": [
           {
-           "text": "نفترض أنّ الدورين غير فارغين."
+           "text": "العملية المساعدة "
+          },
+          {
+           "text": "SameOrder",
+           "dir": "ltr"
+          },
+          {
+           "text": " تقارن الرأسين ثم تدوّر الدورين معًا. بعد "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " خطوات يكون قد مرّ كل زوج من القيم، ويعود الدوران كما كانا."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "في "
+          },
+          {
+           "text": "IsCircular",
+           "dir": "ltr"
+          },
+          {
+           "text": " نجرّب "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " إزاحات. لا نكتب "
+          },
+          {
+           "text": "return",
+           "dir": "ltr"
+          },
+          {
+           "text": " داخل الحلقة: نكمل التدوير حتى يعود "
+          },
+          {
+           "text": "Q1",
+           "dir": "ltr"
+          },
+          {
+           "text": " كما كان، ونحفظ النتيجة في "
+          },
+          {
+           "text": "found",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "النجاعة "
+          },
+          {
+           "text": "O(n²)",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الحلقة تدور "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرات، وفي كل مرة تستدعي "
+          },
+          {
+           "text": "SameOrder",
+           "dir": "ltr"
+          },
+          {
+           "text": " التي تدور "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرات."
           }
          ]
         }
        ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l06-p05-b21",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066IsCircular\u2069",
-       "description": "راقب \u2066Q1\u2069 يدور خطوة في كل دورة من الحلقة. العمليتان المساعدتان تعملان دون خطوات خاصة بهما.",
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static bool IsCircular(Queue<char> Q1, Queue<char> Q2)\n{\n    int n = Size(Q1);\n    if (n != Size(Q2))\n        return false;\n    bool found = false;\n    for (int i = 0; i < n; i++)\n    {\n        if (SameOrder(Q1, Q2, n))\n            found = true;\n        Q1.Insert(Q1.Remove());\n    }\n    return found;\n}",
-        "given": "الدوران `Q1 = [A,B,C,D]` و `Q2 = [C,D,A,B]`، والاستدعاء `IsCircular(Q1, Q2)`.",
-        "out": "True\n[A,B,C,D]\n",
-        "steps": [
+        "code": "public static bool IsCircular(Queue<char> Q1, Queue<char> Q2)\n{\n    int n = Size(Q1);\n    if (n != Size(Q2))\n        return false;\n    bool found = false;\n    for (int i = 0; i < n; i++)\n    {\n        if (SameOrder(Q1, Q2, n))\n            found = true;\n        Q1.Insert(Q1.Remove());\n    }\n    return found;\n}\npublic static int Size(Queue<char> Q)\n{\n    Queue<char> Temp = new Queue<char>();\n    int n = 0;\n    while (!Q.IsEmpty())\n    {\n        Temp.Insert(Q.Remove());\n        n++;\n    }\n    while (!Temp.IsEmpty())\n        Q.Insert(Temp.Remove());\n    return n;\n}\npublic static bool SameOrder(Queue<char> Q1, Queue<char> Q2, int n)\n{\n    bool same = true;\n    for (int i = 0; i < n; i++)\n    {\n        if (Q1.Head() != Q2.Head())\n            same = false;\n        Q1.Insert(Q1.Remove());\n        Q2.Insert(Q2.Remove());\n    }\n    return same;\n}",
+        "checklist": [
+         "إذا اختلف الطولان فالجواب `false` فورًا.",
+         "تجربة كل الإزاحات الممكنة: `n` إزاحات.",
+         "الدوران يعودان كما كانا: كل منهما دُوِّر عددًا من المرات يساوي مضاعفًا لطوله.",
+         "لا `return` داخل الحلقة قبل أن يكتمل تدوير `Q1`.",
+         "نفترض أنّ الدورين غير فارغين."
+        ],
+        "trace": {
+         "code": "public static bool IsCircular(Queue<char> Q1, Queue<char> Q2)\n{\n    int n = Size(Q1);\n    if (n != Size(Q2))\n        return false;\n    bool found = false;\n    for (int i = 0; i < n; i++)\n    {\n        if (SameOrder(Q1, Q2, n))\n            found = true;\n        Q1.Insert(Q1.Remove());\n    }\n    return found;\n}",
+         "given": "الدوران `Q1 = [A,B,C,D]` و `Q2 = [C,D,A,B]`، والاستدعاء `IsCircular(Q1, Q2)`. العمليتان المساعدتان تعملان دون خطوات خاصة بهما.",
+         "out": "True\n[A,B,C,D]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `IsCircular` مع `Q1` = الدور `[A,B,C,D]`، `Q2` = الدور `[C,D,A,B]`.","o":0,"f":[{"name":"Main","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}]]},{"name":"IsCircular","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["A","B","C","D"]},{"id":2,"k":"queue","items":["C","D","A","B"]}]},
 {"l":3,"n":"`n = 4`.","o":0,"f":[{"name":"Main","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}]]},{"name":"IsCircular","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}],["n",{"t":"v","s":"4"}]]}]},
 {"l":4,"n":"الشرط `n != Size(Q2)` خطأ: نتخطّى ما بعد `if`.","o":0},
@@ -6404,14 +7611,15 @@ const m05: ContentModule = {
 {"l":13,"n":"العملية `IsCircular` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}]]},{"name":"IsCircular","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}],["n",{"t":"v","s":"4"}],["found",{"t":"v","s":"true"}]]}]},
 {"l":0,"n":"نطبع: `True`. نطبع: `[A,B,C,D]`. انتهى التنفيذ.","o":15,"f":[{"name":"Main","vars":[["Q1",{"t":"ref","id":1}],["Q2",{"t":"ref","id":2}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (25 خطوة)؛ ناتج البرنامج: True ↵ [A,B,C,D]."
+        "text": "حل السؤال: الفكرة: ندوّر Q1 خطوة بعد خطوة بالأمر Q1.Insert(Q1.Remove());، وبعد كل خطوة نفحص: هل صار ترتيبه مثل ترتيب Q2؟ العملية المساعدة Size تعيد طول الدور وتحافظ عليه. إذا اختلف الطولان فالجواب false. العملية المساعدة SameOrder تقارن الرأسين ثم تدوّر الدورين معًا. بعد n خطوات يكون قد مرّ كل زوج من القيم، ويعود الدوران كما كانا. في IsCircular نجرّب n إزاحات. لا نكتب return داخل الحلقة: نكمل التدوير حتى يعود Q1 كما كان، ونحفظ النتيجة في found. النجاعة O(n²): الحلقة تدور n مرات، وفي كل مرة تستدعي SameOrder التي تدور n مرات."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b22",
+       "id": "m05-l06-p04-b27",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -6424,7 +7632,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b23",
+       "id": "m05-l06-p04-b28",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -6437,7 +7645,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p05-b24",
+       "id": "m05-l06-p04-b29",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6471,9 +7679,9 @@ const m05: ContentModule = {
      ]
     },
     {
-     "id": "899271d-m05-l06-p06",
+     "id": "899271d-m05-l06-p05",
      "title": "تدريبات الوحدة",
-     "order": 6,
+     "order": 5,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
@@ -6487,7 +7695,7 @@ const m05: ContentModule = {
      ],
      "blocks": [
       {
-       "id": "m05-l06-p06-b01",
+       "id": "m05-l06-p05-b01",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6519,7 +7727,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b02",
+       "id": "m05-l06-p05-b02",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6566,7 +7774,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b03",
+       "id": "m05-l06-p05-b03",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6574,7 +7782,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b04",
+       "id": "m05-l06-p05-b04",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -6587,7 +7795,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b05",
+       "id": "m05-l06-p05-b05",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6601,7 +7809,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b06",
+       "id": "m05-l06-p05-b06",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6609,7 +7817,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b07",
+       "id": "m05-l06-p05-b07",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -6622,7 +7830,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b08",
+       "id": "m05-l06-p05-b08",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6654,7 +7862,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b09",
+       "id": "m05-l06-p05-b09",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6686,7 +7894,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b10",
+       "id": "m05-l06-p05-b10",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -6699,7 +7907,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b11",
+       "id": "m05-l06-p05-b11",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6736,7 +7944,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b12",
+       "id": "m05-l06-p05-b12",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6788,7 +7996,7 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b13",
+       "id": "m05-l06-p05-b13",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6845,7 +8053,28 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l06-p06-b14",
+       "id": "m05-l06-p05-b14",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool IsSorted(Queue<int> q)\n{\n    Queue<int> temp = new Queue<int>();\n    int prev = q.Head();\n    while (!q.IsEmpty())\n    {\n        int x = q.Remove();\n        if (x < prev)\n            return false;\n        prev = x;\n        temp.Insert(x);\n    }\n    while (!temp.IsEmpty())\n        q.Insert(temp.Remove());\n    return true;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p05-b15",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "العملية أعلاه كتبها طالب ليفحص إن كان الدور مرتّبًا تصاعديًا، والمطلوب أن تحافظ على الدور. ماذا يبقى في الدور \u2066q = [2,5,3,8]\u2069 بعد استدعائها؟ اكتب الدور كما يُطبع.",
+        "answer": "[8]",
+        "feedback": {
+         "explanation": "تُخرج 2 ثم 5 وتُدخلان إلى \u2066temp\u2069، ثم تُخرج 3 وعند المقارنة \u20663 < 5\u2069 تنتهي العملية بالأمر \u2066return false;\u2069. القيمتان 2 و5 بقيتا في \u2066temp\u2069 والقيمة 3 لم تُدخل أصلًا، فيبقى في \u2066q\u2069 القيمة 8 فقط. الإرجاع مسموح فقط بعد إعادة كل القيم."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l06-p05-b16",
        "type": "practice",
        "reveal": true,
        "question": {

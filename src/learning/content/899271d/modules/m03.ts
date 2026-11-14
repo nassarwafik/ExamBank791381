@@ -11,7 +11,7 @@ const m03: ContentModule = {
  "id": "899271d-m03",
  "title": "سلاسل الخلايا المترابطة (Node)",
  "shortTitle": "سلاسل الخلايا",
- "description": "الخلية والسلسلة وواجهة الفئة Node، بناء سلسلة، قالب التمشيط (طباعة، طول، مجموع، بحث)، عمليات تتلقّى سلسلة أو تبنيها، حذف خلايا وإدخالها، الفئة العامة للخلية، المبنى التراجعي للسلسلة، وأسئلة تتبّع وكتابة.",
+ "description": "الخلية والسلسلة وواجهة الفئة Node، بناء سلسلة، قالب التمشيط (طباعة، طول، مجموع، بحث)، عمليات تتلقّى سلسلة أو تبنيها، حذف خلايا وإدخالها، الفئة العامة للخلية، المبنى التراجعي للسلسلة، وأسئلة تتبّع وكتابة: خمسة محلولة من كل نوع، ووظيفة لكل سؤال فيها نافذة حل.",
  "order": 4,
  "lessons": [
   {
@@ -4966,26 +4966,25 @@ const m03: ContentModule = {
   },
   {
    "id": "899271d-m03-l07",
-   "title": "أسئلة تتبّع وكتابة",
+   "title": "أسئلة وتمارين",
    "order": 7,
    "pages": [
     {
      "id": "899271d-m03-l07-p01",
-     "title": "أسئلة تتبّع من الكتاب",
+     "title": "أسئلة تتبّع محلولة",
      "order": 1,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
-      "pdfPageStart": 139,
-      "pdfPageEnd": 142,
-      "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 139–142"
+      "pdfPageStart": 105,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
      },
      "keywords": [
       "تتبّع",
+      "أسئلة محلولة",
       "What",
-      "What1",
-      "What2",
-      "تمارين الكتاب"
+      "تمشيط",
+      "تراجعية"
      ],
      "blocks": [
       {
@@ -4993,41 +4992,193 @@ const m03: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "ثلاثة أسئلة من تمارين الكتاب. اقرأ العملية وتتبّعها "
+         "text": "خمسة أسئلة تتبّع محلولة، مرتّبة من الأسهل إلى الأصعب. اقرأ العملية وتتبّعها "
         },
         {
          "text": "بدون",
          "style": "strong"
         },
         {
-         "text": " الحاسوب، أجب، ثم افتح التتبّع لتتأكد. في تمارين الكتاب تُسمّى السلسلة أحيانًا «قائمة»، والمقصود واحد."
+         "text": " الحاسوب، ثم قارن جوابك بالحل، وافتح التتبّع لترى السلسلة والمؤشّرات خطوة بخطوة. في تمارين الكتاب تُسمّى السلسلة أحيانًا «قائمة»، والمقصود واحد."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m03-l07-p01-b02",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 1 من الكتاب",
-       "prompt": "معطاة العملية \u2066What\u2069. (1) تتبّع تنفيذ العملية \u2066What\u2069 بالنسبة للقائمة \u2066[2,4,2,7,5,2]\u2069 وحدّد ماذا تُعيد. (2) ماذا ستُعيد العملية إذا كان طول القائمة 1؟ (3) ما هي مهمة العملية \u2066What\u2069؟ (4) حدّد درجة نجاعة العملية \u2066What\u2069. اشرح.",
-       "steps": [],
-       "origin": "book"
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Secret\u2069",
+       "origin": "teacher-enrichment"
       },
       {
        "id": "m03-l07-p01-b03",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static bool What(Node<int> Head)\n{\n    if (Head == null)\n        return false;\n    int f = Head.GetValue();\n    Node<int> Pos = Head;\n    while (Pos.HasNext())\n    {\n        Pos = Pos.GetNext();\n    }\n    if (f == Pos.GetValue())\n        return true;\n    return false;\n}",
-       "origin": "book"
+       "code": "public static int Secret(Node<int> Head)\n{\n    int s = 0;\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        if (Pos.GetValue() % 2 == 0)\n            s += Pos.GetValue();\n        else\n            s -= Pos.GetValue();\n        Pos = Pos.GetNext();\n    }\n    return s;\n}",
+       "origin": "teacher-enrichment"
       },
       {
        "id": "m03-l07-p01-b04",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
-       "title": "القائمة المعطاة في السؤال 1",
+       "title": "السلسلة المعطاة في السؤال 1",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           2,
+           7,
+           10,
+           1
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 2 ← 7 ← 10 ← 1 ← null."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b05",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ماذا تُعيد "
+        },
+        {
+         "text": "Secret(Head)",
+         "dir": "ltr"
+        },
+        {
+         "text": " للسلسلة "
+        },
+        {
+         "text": "[2,7,10,1]",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وما مهمة العملية؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b06",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "\u2066s\u2069 يبدأ من 0، والمؤشّر \u2066Pos\u2069 يمرّ على الخلايا واحدة واحدة (قالب التمشيط)."
+        },
+        {
+         "text": "الخلية 2 زوجية: تُضاف قيمتها، فيصير \u2066s\u2069 مساويًا 2. الخلية 7 فردية: تُطرح قيمتها، فيصير \u2066s\u2069 مساويًا \u2066-5\u2069."
+        },
+        {
+         "text": "الخلية 10 زوجية: يصير \u2066s\u2069 مساويًا 5. الخلية 1 فردية: يصير \u2066s\u2069 مساويًا 4."
+        },
+        {
+         "text": "المهمة: العملية تُعيد مجموع القيم الزوجية ناقص مجموع القيم الفردية."
+        },
+        {
+         "text": "النتيجة: تُعيد العملية \u20664\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b07",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066Secret\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int Secret(Node<int> Head)\n{\n    int s = 0;\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        if (Pos.GetValue() % 2 == 0)\n            s += Pos.GetValue();\n        else\n            s -= Pos.GetValue();\n        Pos = Pos.GetNext();\n    }\n    return s;\n}",
+        "given": "السلسلة `Head = [2,7,10,1]`، والاستدعاء `Secret(Head)`.",
+        "out": "4\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Secret` مع `Head` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"10","next":1},{"id":3,"k":"node","v":"7","next":2},{"id":4,"k":"node","v":"2","next":3}]},
+{"l":3,"n":"`s = 0`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"0"}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`s` كانت `0` وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"2"}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":11,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"2"}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() % 2 == 0` خطأ: ننتقل إلى `else`.","o":0},
+{"l":10,"n":"`s` كانت `2` وتصبح `-5`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"-5"}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":11,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"-5"}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`s` كانت `-5` وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"5"}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":11,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"5"}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() % 2 == 0` خطأ: ننتقل إلى `else`.","o":0},
+{"l":10,"n":"`s` كانت `5` وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"4"}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":11,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Secret","vars":[["Head",{"t":"ref","id":4}],["s",{"t":"v","s":"4"}],["Pos",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":13,"n":"العملية `Secret` تُعيد `4`.","o":0},
+{"l":0,"n":"نطبع: `4`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (22 خطوة)؛ ناتج البرنامج: 4."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066What\u2069 — سؤال 1 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 1 من الكتاب (ص 139)",
+       "prompt": "معطاة العملية \u2066What\u2069. (1) تتبّع تنفيذ العملية \u2066What\u2069 بالنسبة للقائمة \u2066[2,4,2,7,5,2]\u2069 وحدّد ماذا تُعيد. (2) ماذا ستُعيد العملية إذا كان طول القائمة 1؟ (3) ما هي مهمة العملية \u2066What\u2069؟ (4) حدّد درجة نجاعة العملية \u2066What\u2069. اشرح.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b10",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool What(Node<int> Head)\n{\n    if (Head == null)\n        return false;\n    int f = Head.GetValue();\n    Node<int> Pos = Head;\n    while (Pos.HasNext())\n    {\n        Pos = Pos.GetNext();\n    }\n    if (f == Pos.GetValue())\n        return true;\n    return false;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b11",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "القائمة المعطاة في السؤال 2",
        "capabilities": {
         "fullscreen": true
        },
@@ -5058,120 +5209,35 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b05",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تُعيد \u2066What(Head)\u2069 للقائمة المعطاة؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066true\u2069",
-          "correct": true
-         },
-         {
-          "id": "o2",
-          "text": "\u2066false\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "العدد 2"
-         },
-         {
-          "id": "o4",
-          "text": "خطأ في التشغيل"
-         }
-        ],
-        "feedback": {
-         "explanation": "\u2066f\u2069 يحفظ قيمة الخلية الأولى (2). الحلقة تقدّم \u2066Pos\u2069 حتى الخلية الأخيرة، وقيمتها 2 أيضًا. القيمتان متساويتان، فتُعاد \u2066true\u2069."
+       "id": "m03-l07-p01-b12",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "البند 1: المتغيّر \u2066f\u2069 يحفظ قيمة الخلية الأولى، وهي 2. الحلقة تقدّم \u2066Pos\u2069 حتى الخلية الأخيرة، وقيمتها 2 أيضًا. القيمتان متساويتان، فتُعاد \u2066true\u2069."
+        },
+        {
+         "text": "البند 2: في قائمة طولها 1 الخلية الأولى هي الأخيرة أيضًا. الحلقة لا تدور، فتُعاد \u2066true\u2069."
+        },
+        {
+         "text": "البند 3: العملية تفحص إن كانت قيمة الخلية الأولى تساوي قيمة الخلية الأخيرة. لا تنظر إلى القيم التي في الوسط، وللقائمة الفارغة تُعيد \u2066false\u2069."
+        },
+        {
+         "text": "البند 4: لنصل إلى الخلية الأخيرة نمرّ على كل الخلايا. الحلقة تدور \u2066n - 1\u2069 مرة، فدرجة النجاعة \u2066O(n)\u2069."
+        },
+        {
+         "text": "النتيجة: للقائمة \u2066[2,4,2,7,5,2]\u2069 تُعيد العملية \u2066true\u2069."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b06",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ماذا تُعيد العملية إذا كان طول القائمة 1، مثل \u2066[9]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "true",
-        "feedback": {
-         "explanation": "الخلية الأولى هي الأخيرة أيضًا: الحلقة لا تدور، و \u2066f\u2069 يساوي \u2066Pos.GetValue()\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b07",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما مهمة العملية \u2066What\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تفحص إن كانت كل قيم القائمة متساوية"
-         },
-         {
-          "id": "o2",
-          "text": "تفحص إن كانت قيمة الخلية الأولى تساوي قيمة الخلية الأخيرة",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "تفحص إن كانت القيمة الأولى تظهر مرة أخرى في القائمة"
-         },
-         {
-          "id": "o4",
-          "text": "تُعيد \u2066true\u2069 إذا كانت القائمة غير فارغة"
-         }
-        ],
-        "feedback": {
-         "explanation": "العملية لا تنظر إلى القيم التي في الوسط: تقارن الأولى بالأخيرة فقط. وللقائمة الفارغة تُعيد \u2066false\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b08",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما درجة نجاعة العملية \u2066What\u2069 لقائمة فيها \u2066n\u2069 خلايا؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066O(1)\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066O(n)\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066O(n²)\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066O(log n)\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "لنصل إلى الخلية الأخيرة يجب أن نمرّ على كل الخلايا: الحلقة تدور \u2066n - 1\u2069 مرة."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b09",
+       "id": "m03-l07-p01-b13",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع سؤال 1: \u2066What\u2069",
+       "title": "تتبّع الحل: \u2066What\u2069",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -5208,24 +5274,31 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b10",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 2 من الكتاب",
-       "prompt": "العملية \u2066What\u2069 تتلقّى قائمة أعداد صحيحة طولها زوجي وأكبر من 0، وعددًا صحيحًا \u2066s\u2069. (1) تتبّع تنفيذ الاستدعاء \u2066What(Head, 5)\u2069 بالنسبة للقائمة \u2066[2,3,0,5,1,4]\u2069 وحدّد ماذا يُعاد. (2) ما هي مهمة العملية \u2066What\u2069؟ (3) حدّد درجة نجاعة العملية \u2066What\u2069. اشرح.",
-       "steps": [],
-       "origin": "book"
+       "id": "m03-l07-p01-b14",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066What1\u2069 — سؤال 2 من الكتاب",
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b11",
+       "id": "m03-l07-p01-b15",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 2 من الكتاب (ص 140)",
+       "prompt": "العملية \u2066What\u2069 تتلقّى قائمة أعداد صحيحة طولها زوجي وأكبر من 0، وعددًا صحيحًا \u2066s\u2069. (1) تتبّع تنفيذ الاستدعاء \u2066What(Head, 5)\u2069 بالنسبة للقائمة \u2066[2,3,0,5,1,4]\u2069 وحدّد ماذا يُعاد. (2) ما هي مهمة العملية \u2066What\u2069؟ (3) حدّد درجة نجاعة العملية \u2066What\u2069. اشرح.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b16",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
        "code": "public static bool What1(Node<int> Head, int s)\n{\n    Node<int> Pos = Head;\n    int a, b;\n    while (Pos != null)\n    {\n        a = Pos.GetValue();\n        b = Pos.GetNext().GetValue();\n        if (a + b != s) return false;\n        Pos = Pos.GetNext().GetNext();\n    }\n    return true;\n}",
-       "origin": "book"
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b12",
+       "id": "m03-l07-p01-b17",
        "type": "callout",
        "kind": "clarification",
        "title": "في الكتاب",
@@ -5258,120 +5331,38 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b13",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا يُعاد للاستدعاء \u2066What1(Head, 5)\u2069 والقائمة \u2066[2,3,0,5,1,4]\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066true\u2069",
-          "correct": true
-         },
-         {
-          "id": "o2",
-          "text": "\u2066false\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "العدد 5"
-         },
-         {
-          "id": "o4",
-          "text": "خطأ في التشغيل"
-         }
-        ],
-        "feedback": {
-         "explanation": "العملية تأخذ القيم زوجًا زوجًا: \u20662 + 3 = 5\u2069 و \u20660 + 5 = 5\u2069 و \u20661 + 4 = 5\u2069. لم يختلف أي مجموع عن \u2066s\u2069، فتُعاد \u2066true\u2069."
+       "id": "m03-l07-p01-b18",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في كل دورة تُقرأ خليتان متتاليتان، \u2066a\u2069 ثم \u2066b\u2069، وبعدها يتقدّم \u2066Pos\u2069 خليتين."
+        },
+        {
+         "text": "البند 1: الأزواج هي \u20662 + 3 = 5\u2069 ثم \u20660 + 5 = 5\u2069 ثم \u20661 + 4 = 5\u2069. لم يختلف أي مجموع عن \u2066s\u2069، فتنتهي الحلقة وتُعاد \u2066true\u2069."
+        },
+        {
+         "text": "البند 2: العملية تفحص إن كان مجموع كل زوج متتالٍ (الأولى والثانية، الثالثة والرابعة، وهكذا) يساوي \u2066s\u2069. أول زوج يخالف يُنهي العملية بالقيمة \u2066false\u2069."
+        },
+        {
+         "text": "البند 3: الحلقة تدور نصف عدد الخلايا على الأكثر، فدرجة النجاعة \u2066O(n)\u2069."
+        },
+        {
+         "text": "لماذا «طولها زوجي»؟ في قائمة طولها فردي تبقى في النهاية خلية بلا زوج: \u2066Pos.GetNext()\u2069 تساوي \u2066null\u2069، واستدعاء \u2066GetValue()\u2069 عليها خطأ في التشغيل."
+        },
+        {
+         "text": "النتيجة: الاستدعاء \u2066What1(Head, 5)\u2069 يُعيد \u2066true\u2069."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b14",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "وماذا يُعاد للاستدعاء \u2066What1(Head, 5)\u2069 إذا كانت القائمة \u2066[2,3,4,5,1,4]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "false",
-        "feedback": {
-         "explanation": "الزوج الأول \u20662 + 3 = 5\u2069، لكن الزوج الثاني \u20664 + 5 = 9\u2069 لا يساوي 5، فتُعاد \u2066false\u2069 فورًا."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b15",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما مهمة العملية \u2066What1\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تفحص إن كان مجموع كل قيم القائمة يساوي \u2066s\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "تفحص إن كان في القائمة زوج واحد على الأقل مجموعه \u2066s\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "تفحص إن كان مجموع كل زوج متتالٍ (الأولى والثانية، الثالثة والرابعة، …) يساوي \u2066s\u2069",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "تعدّ الأزواج التي مجموعها \u2066s\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "في كل دورة تُقرأ خليتان، ثم يتقدّم \u2066Pos\u2069 خليتين. أول زوج مجموعه لا يساوي \u2066s\u2069 يُنهي العملية بـ \u2066false\u2069. نجاعتها \u2066O(n)\u2069: الحلقة تدور نصف عدد الخلايا على الأكثر."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b16",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "لماذا يشترط السؤال أنّ طول القائمة زوجي؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "لأنّ العملية تُعيد \u2066false\u2069 دائمًا لطول فردي"
-         },
-         {
-          "id": "o2",
-          "text": "لأنّ \u2066Pos.GetNext().GetValue()\u2069 تصير استدعاء على \u2066null\u2069 عند الخلية الأخيرة في قائمة طولها فردي",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "لأنّ الحلقة لا تنتهي لطول فردي"
-         },
-         {
-          "id": "o4",
-          "text": "لا سبب، الشرط زائد"
-         }
-        ],
-        "feedback": {
-         "explanation": "في قائمة طولها فردي تبقى في النهاية خلية بلا زوج: \u2066Pos.GetNext()\u2069 تساوي \u2066null\u2069، واستدعاء \u2066GetValue()\u2069 عليها خطأ في التشغيل."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b17",
+       "id": "m03-l07-p01-b19",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع سؤال 2: \u2066What1\u2069",
+       "title": "تتبّع الحل: \u2066What1\u2069",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -5411,24 +5402,1083 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b18",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 5 من الكتاب",
-       "prompt": "معطاة سلسلة من الخلايا المترابطة كل قيمها أعداد موجبة صحيحة: \u2066[130,65,32,16,8,5,2]\u2069، والمؤشّر \u2066Chain\u2069 يشير إلى خليتها الأولى. (1) ماذا تُعيد العملية \u2066What1\u2069 إذا أرسلنا لها \u2066pos\u2069 وهو يؤشّر على الخلية 32؟ (2) ماذا تكون نتيجة المناداة \u2066What2(chain)\u2069؟ (3) أعطِ مثالًا لسلسلة يُعاد بالنسبة لها عكس ما أُعيد في القسم ب. (4) اكتب ادّعاء الدخول وادّعاء الخروج لكل من العمليتين \u2066What1\u2069 و \u2066What2\u2069.",
-       "steps": [],
-       "origin": "book"
+       "id": "m03-l07-p01-b20",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — \u2066Thin\u2069",
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b19",
+       "id": "m03-l07-p01-b21",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Thin(Node<int> Head)\n{\n    Node<int> Pos = Head;\n    while (Pos != null && Pos.HasNext())\n    {\n        Pos.SetNext(Pos.GetNext().GetNext());\n        Pos = Pos.GetNext();\n    }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b22",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السلسلة المعطاة في السؤال 4",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           10,
+           20,
+           30,
+           40,
+           50
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 10 ← 20 ← 30 ← 40 ← 50 ← null."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b23",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كيف تبدو السلسلة "
+        },
+        {
+         "text": "[10,20,30,40,50]",
+         "dir": "ltr"
+        },
+        {
+         "text": " بعد الاستدعاء "
+        },
+        {
+         "text": "Thin(Head)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وما مهمة العملية؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b24",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "\u2066Pos\u2069 على الخلية 10: الأمر \u2066Pos.SetNext(Pos.GetNext().GetNext());\u2069 يجعلها تشير إلى الخلية 30، فتخرج الخلية 20 من السلسلة."
+        },
+        {
+         "text": "\u2066Pos\u2069 يتقدّم إلى الخلية التالية الجديدة، وهي 30. الأمر نفسه يجعلها تشير إلى الخلية 50، فتخرج الخلية 40."
+        },
+        {
+         "text": "\u2066Pos\u2069 يتقدّم إلى الخلية 50. لا خلية بعدها: \u2066Pos.HasNext()\u2069 تُعيد \u2066false\u2069، فتنتهي الحلقة."
+        },
+        {
+         "text": "المهمة: العملية تحذف كل خلية ثانية (الثانية، الرابعة، وهكذا). الشرط \u2066Pos.HasNext()\u2069 يضمن أنّ بعد \u2066Pos\u2069 خلية نحذفها."
+        },
+        {
+         "text": "النتيجة: السلسلة تصير \u2066[10,30,50]\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b25",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066Thin\u2069",
+       "description": "راقب الرسم: الخلية المحذوفة تخرج من السلسلة حين يتخطّاها المؤشّر \u2066Next\u2069.",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void Thin(Node<int> Head)\n{\n    Node<int> Pos = Head;\n    while (Pos != null && Pos.HasNext())\n    {\n        Pos.SetNext(Pos.GetNext().GetNext());\n        Pos = Pos.GetNext();\n    }\n}",
+        "given": "السلسلة `Head = [10,20,30,40,50]`، والاستدعاء `Thin(Head)`.",
+        "out": "[10,30,50]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Thin` مع `Head` = الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Thin","vars":[["Head",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"node","v":"50","next":null},{"id":2,"k":"node","v":"40","next":1},{"id":3,"k":"node","v":"30","next":2},{"id":4,"k":"node","v":"20","next":3},{"id":5,"k":"node","v":"10","next":4}]},
+{"l":3,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Thin","vars":[["Head",{"t":"ref","id":5}],["Pos",{"t":"ref","id":5}]]}]},
+{"l":4,"n":"الشرط `Pos != null && Pos.HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الخلية `Pos` (قيمتها `10`) تشير الآن إلى الخلية التي قيمتها `30`.","o":0,"h":[{"id":1,"k":"node","v":"50","next":null},{"id":2,"k":"node","v":"40","next":1},{"id":3,"k":"node","v":"30","next":2},{"id":5,"k":"node","v":"10","next":3}]},
+{"l":7,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `30`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Thin","vars":[["Head",{"t":"ref","id":5}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":4,"n":"الشرط `Pos != null && Pos.HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الخلية `Pos` (قيمتها `30`) تشير الآن إلى الخلية التي قيمتها `50`.","o":0,"h":[{"id":1,"k":"node","v":"50","next":null},{"id":3,"k":"node","v":"30","next":1},{"id":5,"k":"node","v":"10","next":3}]},
+{"l":7,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Thin","vars":[["Head",{"t":"ref","id":5}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":4,"n":"الشرط `Pos != null && Pos.HasNext()` خطأ: نخرج من الحلقة.","o":0},
+{"l":9,"n":"تنتهي العملية `Thin` ونعود إلى من استدعاها.","o":0},
+{"l":0,"n":"نطبع: `[10,30,50]`. انتهى التنفيذ.","o":11,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (11 خطوة)؛ ناتج البرنامج: [10,30,50]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b26",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066Rec\u2069 — عملية تراجعية",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b27",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Rec(Node<int> Pos)\n{\n    if (!Pos.HasNext())\n        return Pos.GetValue();\n    int m = Rec(Pos.GetNext());\n    if (Pos.GetValue() > m)\n        return Pos.GetValue();\n    return m;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b28",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السلسلة المعطاة في السؤال 5",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           4,
+           9,
+           2,
+           7
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 4 ← 9 ← 2 ← 7 ← null."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b29",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ماذا تُعيد "
+        },
+        {
+         "text": "Rec(Head)",
+         "dir": "ltr"
+        },
+        {
+         "text": " للسلسلة "
+        },
+        {
+         "text": "[4,9,2,7]",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وما مهمة العملية؟ افترض أنّ السلسلة غير فارغة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b30",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "شرط التوقّف: الخلية الأخيرة (لا خلية بعدها) تُعيد قيمتها."
+        },
+        {
+         "text": "الاستدعاءات تنزل خلية بعد خلية حتى الخلية 7، وهي الأخيرة: تُعيد 7."
+        },
+        {
+         "text": "نعود إلى الخلية 2: \u2066m\u2069 يساوي 7، و2 ليست أكبر من 7، فيُعاد 7."
+        },
+        {
+         "text": "نعود إلى الخلية 9: \u2066m\u2069 يساوي 7، و9 أكبر منه، فيُعاد 9."
+        },
+        {
+         "text": "نعود إلى الخلية 4: \u2066m\u2069 يساوي 9، و4 ليست أكبر منه، فيُعاد 9."
+        },
+        {
+         "text": "المهمة: العملية تُعيد أكبر قيمة في السلسلة. الفكرة التراجعية: أكبر قيمة هي الأكبر بين قيمة الخلية الأولى وأكبر قيمة في بقية السلسلة."
+        },
+        {
+         "text": "النتيجة: تُعيد العملية \u20669\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p01-b31",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066Rec\u2069",
+       "description": "راقب مكدّس الاستدعاءات: في كل استدعاء يشير \u2066Pos\u2069 إلى خلية أبعد، ثم تعود القيم من الأخير إلى الأول.",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int Rec(Node<int> Pos)\n{\n    if (!Pos.HasNext())\n        return Pos.GetValue();\n    int m = Rec(Pos.GetNext());\n    if (Pos.GetValue() > m)\n        return Pos.GetValue();\n    return m;\n}",
+        "given": "السلسلة `Head = [4,9,2,7]`، والاستدعاء `Rec(Head)`.",
+        "out": "9\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Rec` مع `Pos` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"7","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"4","next":3}]},
+{"l":3,"n":"الشرط `!Pos.HasNext()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Rec` مع `Pos` = الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `!Pos.HasNext()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Rec` مع `Pos` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":3}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `!Pos.HasNext()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Rec` مع `Pos` = الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":3}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":2}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `!Pos.HasNext()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Rec` تُعيد `7`.","o":0},
+{"l":5,"n":"`m = 7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":3}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":2}],["m",{"t":"v","s":"7"}]]}]},
+{"l":6,"n":"الشرط `Pos.GetValue() > m` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `Rec` تُعيد `7`.","o":0},
+{"l":5,"n":"`m = 7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":3}],["m",{"t":"v","s":"7"}]]}]},
+{"l":6,"n":"الشرط `Pos.GetValue() > m` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"العملية `Rec` تُعيد `9`.","o":0},
+{"l":5,"n":"`m = 9`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Rec","vars":[["Pos",{"t":"ref","id":4}],["m",{"t":"v","s":"9"}]]}]},
+{"l":6,"n":"الشرط `Pos.GetValue() > m` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"العملية `Rec` تُعيد `9`.","o":0},
+{"l":0,"n":"نطبع: `9`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (19 خطوة)؛ ناتج البرنامج: 9."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m03-l07-p02",
+     "title": "وظيفة: أسئلة تتبّع",
+     "order": 2,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 105,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
+     },
+     "keywords": [
+      "وظيفة",
+      "تتبّع",
+      "نافذة الحل",
+      "What1",
+      "What2"
+     ],
+     "blocks": [
+      {
+       "id": "m03-l07-p02-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "أربعة أسئلة تتبّع للوظيفة، مرتّبة من الأسهل إلى الأصعب. أجب عن كل سؤال أولًا، ثم اضغط «الحل»: تفتح نافذة فيها الجواب وشرحه وتتبّع البرنامج خطوة بخطوة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Change\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Change(Node<int> Head)\n{\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        if (Pos.GetValue() % 2 == 0)\n            Pos.SetValue(Pos.GetValue() / 2);\n        else\n            Pos.SetValue(Pos.GetValue() * 3);\n        Pos = Pos.GetNext();\n    }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b04",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السلسلة المعطاة في السؤال 1",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           4,
+           5,
+           10,
+           1
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 4 ← 5 ← 10 ← 1 ← null."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b05",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "كيف تبدو السلسلة \u2066Head = [4,5,10,1]\u2069 بعد الاستدعاء \u2066Change(Head)\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[8,15,20,3]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[2,15,5,3]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[2,5,5,1]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[4,15,10,3]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "القيمة الزوجية تُقسم على 2، والقيمة الفردية تُضرب في 3. فتصير 4 إلى 2، و5 إلى 15، و10 إلى 5، و1 إلى 3."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066Change\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "المؤشّر "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " يمرّ على كل الخلايا بقالب التمشيط."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "في كل خلية: إذا كانت القيمة زوجية تُقسم على 2، وإلا تُضرب في 3. العملية "
+          },
+          {
+           "text": "SetValue",
+           "dir": "ltr"
+          },
+          {
+           "text": " تغيّر القيمة داخل الخلية نفسها."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الخلية 4 تصير 2، والخلية 5 تصير 15، والخلية 10 تصير 5، والخلية 1 تصير 3."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "عدد الخلايا وترتيبها لا يتغيّران: المؤشّرات "
+          },
+          {
+           "text": "Next",
+           "dir": "ltr"
+          },
+          {
+           "text": " لم تُمسّ."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "السلسلة تصير "
+        },
+        {
+         "text": "[2,15,5,3]",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Change(Node<int> Head)\n{\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        if (Pos.GetValue() % 2 == 0)\n            Pos.SetValue(Pos.GetValue() / 2);\n        else\n            Pos.SetValue(Pos.GetValue() * 3);\n        Pos = Pos.GetNext();\n    }\n}",
+         "given": "السلسلة `Head = [4,5,10,1]`، والاستدعاء `Change(Head)`.",
+         "out": "[2,15,5,3]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Change` مع `Head` = الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Change","vars":[["Head",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"10","next":1},{"id":3,"k":"node","v":"5","next":2},{"id":4,"k":"node","v":"4","next":3}]},
+{"l":3,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Change","vars":[["Head",{"t":"ref","id":4}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":4,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `Pos.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"قيمة الخلية `Pos` تتغيّر من `4` إلى `2`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"10","next":1},{"id":3,"k":"node","v":"5","next":2},{"id":4,"k":"node","v":"2","next":3}]},
+{"l":10,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Change","vars":[["Head",{"t":"ref","id":4}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":4,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `Pos.GetValue() % 2 == 0` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"قيمة الخلية `Pos` تتغيّر من `5` إلى `15`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"10","next":1},{"id":3,"k":"node","v":"15","next":2},{"id":4,"k":"node","v":"2","next":3}]},
+{"l":10,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Change","vars":[["Head",{"t":"ref","id":4}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":4,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `Pos.GetValue() % 2 == 0` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"قيمة الخلية `Pos` تتغيّر من `10` إلى `5`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"5","next":1},{"id":3,"k":"node","v":"15","next":2},{"id":4,"k":"node","v":"2","next":3}]},
+{"l":10,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Change","vars":[["Head",{"t":"ref","id":4}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":4,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `Pos.GetValue() % 2 == 0` خطأ: ننتقل إلى `else`.","o":0},
+{"l":9,"n":"قيمة الخلية `Pos` تتغيّر من `1` إلى `3`.","o":0,"h":[{"id":1,"k":"node","v":"3","next":null},{"id":2,"k":"node","v":"5","next":1},{"id":3,"k":"node","v":"15","next":2},{"id":4,"k":"node","v":"2","next":3}]},
+{"l":10,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"Change","vars":[["Head",{"t":"ref","id":4}],["Pos",{"t":"null"}]]}]},
+{"l":4,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":12,"n":"تنتهي العملية `Change` ونعود إلى من استدعاها.","o":0},
+{"l":0,"n":"نطبع: `[2,15,5,3]`. انتهى التنفيذ.","o":11,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: المؤشّر Pos يمرّ على كل الخلايا بقالب التمشيط. في كل خلية: إذا كانت القيمة زوجية تُقسم على 2، وإلا تُضرب في 3. العملية SetValue تغيّر القيمة داخل الخلية نفسها. الخلية 4 تصير 2، والخلية 5 تصير 15، والخلية 10 تصير 5، والخلية 1 تصير 3. عدد الخلايا وترتيبها لا يتغيّران: المؤشّرات Next لم تُمسّ."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b07",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066Build\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b08",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static Node<int> Build(Node<int> Head)\n{\n    Node<int> Res = null;\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        Res = new Node<int>(Pos.GetValue(), Res);\n        Pos = Pos.GetNext();\n    }\n    return Res;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b09",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السلسلة المعطاة في السؤال 2",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           13,
+           15,
+           17
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 13 ← 15 ← 17 ← null."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b10",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا تُعيد \u2066Build(Head)\u2069 للسلسلة \u2066Head = [13,15,17]\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[13,15,17]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[17,15,13]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[17]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066null\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "كل خلية جديدة تُنشأ وهي تشير إلى \u2066Res\u2069، ثم تصير هي \u2066Res\u2069: أي أنها تدخل في بداية السلسلة الجديدة. آخر قيمة تُقرأ (17) تصير الأولى."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b11",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "وكيف تبدو السلسلة الأصلية \u2066Head\u2069 بعد الاستدعاء؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[13,15,17]\u2069: لم تتغيّر",
+          "correct": true
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[17,15,13]\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "فارغة"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[13]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "العملية تقرأ من السلسلة الأصلية بـ \u2066GetValue\u2069 و \u2066GetNext\u2069 فقط، وتبني خلايا جديدة. لا يوجد \u2066SetNext\u2069 ولا \u2066SetValue\u2069 على خلايا \u2066Head\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b12",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066Build\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "Res",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ بالقيمة "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": ": السلسلة الجديدة فارغة."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "عند الخلية 13: تُنشأ خلية جديدة قيمتها 13 تشير إلى "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": "، و "
+          },
+          {
+           "text": "Res",
+           "dir": "ltr"
+          },
+          {
+           "text": " يشير إليها. السلسلة الجديدة "
+          },
+          {
+           "text": "[13]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "عند الخلية 15: تُنشأ خلية قيمتها 15 تشير إلى الخلية 13، و "
+          },
+          {
+           "text": "Res",
+           "dir": "ltr"
+          },
+          {
+           "text": " يشير إليها. السلسلة الجديدة "
+          },
+          {
+           "text": "[15,13]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "عند الخلية 17: السلسلة الجديدة "
+          },
+          {
+           "text": "[17,15,13]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "المهمة: العملية تبني نسخة "
+          },
+          {
+           "text": "مقلوبة",
+           "style": "strong"
+          },
+          {
+           "text": " عن السلسلة، لأنّ كل خلية جديدة تدخل في البداية."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "تُعيد العملية سلسلة جديدة "
+        },
+        {
+         "text": "[17,15,13]",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والسلسلة الأصلية تبقى "
+        },
+        {
+         "text": "[13,15,17]",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static Node<int> Build(Node<int> Head)\n{\n    Node<int> Res = null;\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        Res = new Node<int>(Pos.GetValue(), Res);\n        Pos = Pos.GetNext();\n    }\n    return Res;\n}",
+         "given": "السلسلة `Head = [13,15,17]`، والاستدعاء `Build(Head)`.",
+         "out": "[17,15,13]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Build` مع `Head` = الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2}]},
+{"l":3,"n":"`Res` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"null"}]]}]},
+{"l":4,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"null"}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"ننشئ خلية جديدة قيمتها `13`، وبعدها `null`. `Res` يشير إلى الخلية الجديدة.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"ref","id":4}],["Pos",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2},{"id":4,"k":"node","v":"13","next":null}]},
+{"l":8,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `15`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"ref","id":4}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"ننشئ خلية جديدة قيمتها `15`، تشير إلى الخلية التي قيمتها `13`. `Res` يشير إلى الخلية الجديدة.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"ref","id":5}],["Pos",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2},{"id":4,"k":"node","v":"13","next":null},{"id":5,"k":"node","v":"15","next":4}]},
+{"l":8,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `17`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"ref","id":5}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"ننشئ خلية جديدة قيمتها `17`، تشير إلى الخلية التي قيمتها `15`. `Res` يشير إلى الخلية الجديدة.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"ref","id":6}],["Pos",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2},{"id":4,"k":"node","v":"13","next":null},{"id":5,"k":"node","v":"15","next":4},{"id":6,"k":"node","v":"17","next":5}]},
+{"l":8,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"Build","vars":[["Head",{"t":"ref","id":3}],["Res",{"t":"ref","id":6}],["Pos",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":10,"n":"العملية `Build` تُعيد الخلية التي قيمتها `17`.","o":0},
+{"l":0,"n":"نطبع: `[17,15,13]`. انتهى التنفيذ.","o":11,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}],["R",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: Res يبدأ بالقيمة null: السلسلة الجديدة فارغة. عند الخلية 13: تُنشأ خلية جديدة قيمتها 13 تشير إلى null، و Res يشير إليها. السلسلة الجديدة [13]. عند الخلية 15: تُنشأ خلية قيمتها 15 تشير إلى الخلية 13، و Res يشير إليها. السلسلة الجديدة [15,13]. عند الخلية 17: السلسلة الجديدة [17,15,13]. المهمة: العملية تبني نسخة مقلوبة عن السلسلة، لأنّ كل خلية جديدة تدخل في البداية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b13",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متقدّم — \u2066Check\u2069 — حلقتان متداخلتان",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b14",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Check(Node<int> Head)\n{\n    Node<int> P = Head;\n    while (P != null)\n    {\n        Node<int> Q = P.GetNext();\n        while (Q != null)\n        {\n            if (P.GetValue() == Q.GetValue())\n                return true;\n            Q = Q.GetNext();\n        }\n        P = P.GetNext();\n    }\n    return false;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b15",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السلسلة المعطاة في السؤال 3",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           3,
+           8,
+           5,
+           8,
+           1
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 3 ← 8 ← 5 ← 8 ← 1 ← null."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b16",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا تُعيد \u2066Check(Head)\u2069 للسلسلة \u2066Head = [3,8,5,8,1]\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066true\u2069",
+          "correct": true
+         },
+         {
+          "id": "o2",
+          "text": "\u2066false\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "العدد 8"
+         },
+         {
+          "id": "o4",
+          "text": "خطأ في التشغيل"
+         }
+        ],
+        "feedback": {
+         "explanation": "لكل خلية \u2066P\u2069 يمرّ \u2066Q\u2069 على الخلايا التي بعدها. حين يكون \u2066P\u2069 على الخلية 8 الأولى يصل \u2066Q\u2069 إلى الخلية 8 الثانية: القيمتان متساويتان، فتُعاد \u2066true\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b17",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "كم مرة يُنفَّذ الأمر \u2066Q = Q.GetNext();\u2069 خلال هذا الاستدعاء؟",
+        "answer": "5",
+        "feedback": {
+         "explanation": "حين يكون \u2066P\u2069 على الخلية 3 يمرّ \u2066Q\u2069 على أربع خلايا ولا يجد قيمة مساوية: 4 مرات. حين يكون \u2066P\u2069 على الخلية 8 يتقدّم \u2066Q\u2069 مرة واحدة (بعد الخلية 5)، ثم يجد 8 فتنتهي العملية."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b18",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066Check\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الحلقة الخارجية: "
+          },
+          {
+           "text": "P",
+           "dir": "ltr"
+          },
+          {
+           "text": " يمرّ على كل خلية. الحلقة الداخلية: "
+          },
+          {
+           "text": "Q",
+           "dir": "ltr"
+          },
+          {
+           "text": " يمرّ على كل الخلايا التي "
+          },
+          {
+           "text": "بعد",
+           "style": "strong"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "P",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "P",
+           "dir": "ltr"
+          },
+          {
+           "text": " على الخلية 3: "
+          },
+          {
+           "text": "Q",
+           "dir": "ltr"
+          },
+          {
+           "text": " يمرّ على 8 ثم 5 ثم 8 ثم 1. لا قيمة تساوي 3، و "
+          },
+          {
+           "text": "Q",
+           "dir": "ltr"
+          },
+          {
+           "text": " تقدّم 4 مرات."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "P",
+           "dir": "ltr"
+          },
+          {
+           "text": " على الخلية 8: "
+          },
+          {
+           "text": "Q",
+           "dir": "ltr"
+          },
+          {
+           "text": " على الخلية 5 (ليست مساوية، يتقدّم)، ثم على الخلية 8: القيمتان متساويتان، فتُعاد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "المهمة: العملية تفحص إن كانت في السلسلة قيمة تتكرّر."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "النجاعة: في أسوأ الحالات (لا تكرار) تُقارَن كل خلية بكل الخلايا التي بعدها، فدرجة النجاعة "
+          },
+          {
+           "text": "O(n²)",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "تُعيد العملية "
+        },
+        {
+         "text": "true",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والأمر "
+        },
+        {
+         "text": "Q = Q.GetNext();",
+         "dir": "ltr"
+        },
+        {
+         "text": " يُنفَّذ 5 مرات."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static bool Check(Node<int> Head)\n{\n    Node<int> P = Head;\n    while (P != null)\n    {\n        Node<int> Q = P.GetNext();\n        while (Q != null)\n        {\n            if (P.GetValue() == Q.GetValue())\n                return true;\n            Q = Q.GetNext();\n        }\n        P = P.GetNext();\n    }\n    return false;\n}",
+         "given": "السلسلة `Head = [3,8,5,8,1]`، والاستدعاء `Check(Head)`.",
+         "out": "True\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Check` مع `Head` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"8","next":1},{"id":3,"k":"node","v":"5","next":2},{"id":4,"k":"node","v":"8","next":3},{"id":5,"k":"node","v":"3","next":4}]},
+{"l":3,"n":"`P` يشير الآن إلى الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":5}]]}]},
+{"l":4,"n":"الشرط `P != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`Q` يشير الآن إلى الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":5}],["Q",{"t":"ref","id":4}]]}]},
+{"l":7,"n":"الشرط `Q != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"الشرط `P.GetValue() == Q.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":11,"n":"`Q` يشير الآن إلى الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":5}],["Q",{"t":"ref","id":3}]]}]},
+{"l":7,"n":"الشرط `Q != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"الشرط `P.GetValue() == Q.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":11,"n":"`Q` يشير الآن إلى الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":5}],["Q",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"الشرط `Q != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"الشرط `P.GetValue() == Q.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":11,"n":"`Q` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":5}],["Q",{"t":"ref","id":1}]]}]},
+{"l":7,"n":"الشرط `Q != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"الشرط `P.GetValue() == Q.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":11,"n":"`Q` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":5}],["Q",{"t":"null"}]]}]},
+{"l":7,"n":"الشرط `Q != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":13,"n":"`P` يشير الآن إلى الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":4}],["Q",{"t":"null"}]]}]},
+{"l":4,"n":"الشرط `P != null` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":4}]]}]},
+{"l":6,"n":"`Q` يشير الآن إلى الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":4}],["Q",{"t":"ref","id":3}]]}]},
+{"l":7,"n":"الشرط `Q != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"الشرط `P.GetValue() == Q.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":11,"n":"`Q` يشير الآن إلى الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]},{"name":"Check","vars":[["Head",{"t":"ref","id":5}],["P",{"t":"ref","id":4}],["Q",{"t":"ref","id":2}]]}]},
+{"l":7,"n":"الشرط `Q != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"الشرط `P.GetValue() == Q.GetValue()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":10,"n":"العملية `Check` تُعيد `true`.","o":0},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: الحلقة الخارجية: P يمرّ على كل خلية. الحلقة الداخلية: Q يمرّ على كل الخلايا التي بعد P. P على الخلية 3: Q يمرّ على 8 ثم 5 ثم 8 ثم 1. لا قيمة تساوي 3، و Q تقدّم 4 مرات. P على الخلية 8: Q على الخلية 5 (ليست مساوية، يتقدّم)، ثم على الخلية 8: القيمتان متساويتان، فتُعاد true. المهمة: العملية تفحص إن كانت في السلسلة قيمة تتكرّر. النجاعة: في أسوأ الحالات (لا تكرار) تُقارَن كل خلية بكل الخلايا التي بعدها، فدرجة النجاعة O(n²)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b19",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — \u2066What1\u2069 و \u2066What2\u2069 — سؤال 5 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b20",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 5 من الكتاب (ص 142)",
+       "prompt": "معطاة سلسلة من الخلايا المترابطة كل قيمها أعداد موجبة صحيحة: \u2066[130,65,32,16,8,5,2]\u2069، والمؤشّر \u2066Chain\u2069 يشير إلى خليتها الأولى. (1) ماذا تُعيد العملية \u2066What1\u2069 إذا أرسلنا لها \u2066pos\u2069 وهو يؤشّر على الخلية 32؟ (2) ماذا تكون نتيجة المناداة \u2066What2(chain)\u2069؟ (3) أعطِ مثالًا لسلسلة يُعاد بالنسبة لها عكس ما أُعيد في القسم ب. (4) اكتب ادّعاء الدخول وادّعاء الخروج لكل من العمليتين \u2066What1\u2069 و \u2066What2\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p02-b21",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
        "code": "public static int What1(Node<int> pos)\n{\n    if (pos.GetNext() == null) return 0;\n    else\n        return pos.GetNext().GetValue() + What1(pos.GetNext());\n}\npublic static bool What2(Node<int> pos)\n{\n    if (pos == null) return true ;\n    else\n    {\n        int x = What1(pos);\n        if (pos.GetValue() <= x)\n        {\n            Console.WriteLine (\"Node:\" + pos.GetValue());\n            return false && What2(pos.GetNext());\n        }\n        else\n            return true && What2(pos.GetNext());\n    }\n\n}",
-       "origin": "book"
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b20",
+       "id": "m03-l07-p02-b22",
        "type": "callout",
        "kind": "clarification",
        "title": "في الكتاب",
@@ -5454,11 +6504,11 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b21",
+       "id": "m03-l07-p02-b23",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
-       "title": "السلسلة المعطاة في السؤال 5",
+       "title": "السلسلة المعطاة في السؤال 4",
        "capabilities": {
         "fullscreen": true
        },
@@ -5498,11 +6548,11 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b22",
+       "id": "m03-l07-p02-b24",
        "type": "practice",
        "question": {
         "kind": "shortInput",
-        "prompt": "ماذا تُعيد \u2066What1(pos)\u2069 حين يؤشّر \u2066pos\u2069 على الخلية 32؟",
+        "prompt": "البند 1: ماذا تُعيد \u2066What1(pos)\u2069 حين يؤشّر \u2066pos\u2069 على الخلية 32؟",
         "answer": "31",
         "feedback": {
          "explanation": "\u2066What1\u2069 تجمع قيم كل الخلايا التي بعد \u2066pos\u2069: \u206616 + 8 + 5 + 2 = 31\u2069. قيمة الخلية 32 نفسها لا تدخل في المجموع."
@@ -5511,12 +6561,12 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b23",
+       "id": "m03-l07-p02-b25",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "ماذا تكون نتيجة المناداة \u2066What2(Chain)\u2069؟",
+        "prompt": "البند 2: ماذا تكون نتيجة المناداة \u2066What2(Chain)\u2069؟",
         "options": [
          {
           "id": "o1",
@@ -5543,12 +6593,12 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b24",
+       "id": "m03-l07-p02-b26",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "أي سلسلة تُعيد لها \u2066What2\u2069 القيمة \u2066false\u2069؟",
+        "prompt": "البند 3: أي سلسلة تُعيد لها \u2066What2\u2069 القيمة \u2066false\u2069؟",
         "options": [
          {
           "id": "o1",
@@ -5575,15 +6625,205 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p01-b25",
-       "type": "list",
-       "variant": "plain",
-       "title": "حل البند 4: ادّعاء الدخول وادّعاء الخروج",
-       "items": [
+       "id": "m03-l07-p02-b27",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066What1\u2069 و \u2066What2\u2069",
+       "steps": [
         {
-         "id": "i1",
-         "term": "\u2066What1\u2069 — ادّعاء الدخول",
+         "id": "s1",
          "text": [
+          {
+           "text": "What1(pos)",
+           "dir": "ltr"
+          },
+          {
+           "text": " تراجعية: تُعيد قيمة الخلية التي بعد "
+          },
+          {
+           "text": "pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " + نتيجة "
+          },
+          {
+           "text": "What1",
+           "dir": "ltr"
+          },
+          {
+           "text": " لتلك الخلية. أي مجموع قيم كل الخلايا التي "
+          },
+          {
+           "text": "بعد",
+           "style": "strong"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "pos",
+           "dir": "ltr"
+          },
+          {
+           "text": ". من الخلية 32: "
+          },
+          {
+           "text": "16 + 8 + 5 + 2 = 31",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "What2(pos)",
+           "dir": "ltr"
+          },
+          {
+           "text": " تحسب "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وهو مجموع ما بعد الخلية، وتقارنه بقيمة الخلية. إذا كانت القيمة أكبر من "
+          },
+          {
+           "text": "x",
+           "dir": "ltr"
+          },
+          {
+           "text": " تكمل إلى الخلية التالية."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "للسلسلة المعطاة: "
+          },
+          {
+           "text": "130 > 128",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "65 > 63",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "32 > 31",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "16 > 15",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "8 > 7",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "5 > 2",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "2 > 0",
+           "dir": "ltr"
+          },
+          {
+           "text": ". كل المقارنات تنجح حتى "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فتُعاد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": " ولا يُطبع شيء."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "البند 3: نريد سلسلة فيها قيمة ليست أكبر من مجموع ما بعدها، مثل "
+          },
+          {
+           "text": "[5,3,2,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": ": تُطبع "
+          },
+          {
+           "text": "Node:5",
+           "dir": "ltr"
+          },
+          {
+           "text": " وتُعاد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": ". التعبير "
+          },
+          {
+           "text": "false && …",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا يحسب طرفه الأيمن، فلا تكمل العملية إلى بقية الخلايا."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "ادّعاء الدخول للعملية "
+          },
+          {
+           "text": "What1",
+           "dir": "ltr"
+          },
+          {
+           "text": ": "
+          },
           {
            "text": "pos",
            "dir": "ltr"
@@ -5596,16 +6836,7 @@ const m03: ContentModule = {
            "dir": "ltr"
           },
           {
-           "text": ")."
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "term": "\u2066What1\u2069 — ادّعاء الخروج",
-         "text": [
-          {
-           "text": "تُعيد مجموع قيم الخلايا التي بعد الخلية "
+           "text": "). ادّعاء الخروج: تُعيد مجموع قيم الخلايا التي بعد الخلية "
           },
           {
            "text": "pos",
@@ -5617,24 +6848,24 @@ const m03: ContentModule = {
          ]
         },
         {
-         "id": "i3",
-         "term": "\u2066What2\u2069 — ادّعاء الدخول",
+         "id": "s6",
          "text": [
+          {
+           "text": "ادّعاء الدخول للعملية "
+          },
+          {
+           "text": "What2",
+           "dir": "ltr"
+          },
+          {
+           "text": ": "
+          },
           {
            "text": "pos",
            "dir": "ltr"
           },
           {
-           "text": " مؤشّر إلى سلسلة أعداد صحيحة موجبة (قد تكون فارغة)."
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "term": "\u2066What2\u2069 — ادّعاء الخروج",
-         "text": [
-          {
-           "text": "تُعيد "
+           "text": " مؤشّر إلى سلسلة أعداد صحيحة موجبة (قد تكون فارغة). ادّعاء الخروج: تُعيد "
           },
           {
            "text": "true",
@@ -5653,64 +6884,45 @@ const m03: ContentModule = {
          ]
         }
        ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b26",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع سؤال 5: \u2066What1\u2069 من الخلية 32",
+       "result": [
+        {
+         "text": "What1",
+         "dir": "ltr"
+        },
+        {
+         "text": " تُعيد "
+        },
+        {
+         "text": "31",
+         "dir": "ltr"
+        },
+        {
+         "text": "، و "
+        },
+        {
+         "text": "What2(Chain)",
+         "dir": "ltr"
+        },
+        {
+         "text": " تُعيد "
+        },
+        {
+         "text": "true",
+         "dir": "ltr"
+        },
+        {
+         "text": " ولا تطبع شيئًا."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static int What1(Node<int> pos)\n{\n    if (pos.GetNext() == null) return 0;\n    else\n        return pos.GetNext().GetValue() + What1(pos.GetNext());\n}\npublic static bool What2(Node<int> pos)\n{\n    if (pos == null) return true ;\n    else\n    {\n        int x = What1(pos);\n        if (pos.GetValue() <= x)\n        {\n            Console.WriteLine (\"Node:\" + pos.GetValue());\n            return false && What2(pos.GetNext());\n        }\n        else\n            return true && What2(pos.GetNext());\n    }\n\n}",
-        "given": "السلسلة `Chain = [130,65,32,16,8,5,2]`، و `pos` يؤشّر على الخلية 32، والاستدعاء `What1(pos)`.",
-        "out": "31\n",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `What1` مع `pos` = الخلية التي قيمتها `32`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"node","v":"2","next":null},{"id":2,"k":"node","v":"5","next":1},{"id":3,"k":"node","v":"8","next":2},{"id":4,"k":"node","v":"16","next":3},{"id":5,"k":"node","v":"32","next":4},{"id":6,"k":"node","v":"65","next":5},{"id":7,"k":"node","v":"130","next":6}]},
-{"l":3,"n":"الشرط `pos.GetNext() == null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `pos` = الخلية التي قيمتها `16`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]}]},
-{"l":3,"n":"الشرط `pos.GetNext() == null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `pos` = الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":3}]]}]},
-{"l":3,"n":"الشرط `pos.GetNext() == null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `pos` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":3}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":2}]]}]},
-{"l":3,"n":"الشرط `pos.GetNext() == null` خطأ: ننتقل إلى `else`.","o":0},
-{"l":1,"n":"تبدأ العملية `What1` مع `pos` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":3}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":2}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":1}]]}]},
-{"l":3,"n":"الشرط `pos.GetNext() == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":3,"n":"العملية `What1` تُعيد `0`.","o":0},
-{"l":5,"n":"العملية `What1` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":3}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":2}]]}]},
-{"l":5,"n":"العملية `What1` تُعيد `7`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":3}]]}]},
-{"l":5,"n":"العملية `What1` تُعيد `15`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":4}]]}]},
-{"l":5,"n":"العملية `What1` تُعيد `31`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]},{"name":"What1","vars":[["pos",{"t":"ref","id":5}]]}]},
-{"l":0,"n":"نطبع: `31`. انتهى التنفيذ.","o":3,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}],["pos",{"t":"ref","id":5}]]}]}
-]
-       },
-       "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (16 خطوة)؛ ناتج البرنامج: 31."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p01-b27",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع سؤال 5: \u2066What2\u2069 على السلسلة كلها",
-       "description": "استدعاءات \u2066What1\u2069 تُنفَّذ هنا بلا خطوات خاصة بها: القيمة \u2066x\u2069 هي ما تُعيده.",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
-        "interactive": true
-       },
-       "config": {
-        "code": "public static int What1(Node<int> pos)\n{\n    if (pos.GetNext() == null) return 0;\n    else\n        return pos.GetNext().GetValue() + What1(pos.GetNext());\n}\npublic static bool What2(Node<int> pos)\n{\n    if (pos == null) return true ;\n    else\n    {\n        int x = What1(pos);\n        if (pos.GetValue() <= x)\n        {\n            Console.WriteLine (\"Node:\" + pos.GetValue());\n            return false && What2(pos.GetNext());\n        }\n        else\n            return true && What2(pos.GetNext());\n    }\n\n}",
-        "given": "السلسلة `Chain = [130,65,32,16,8,5,2]`، والاستدعاء `What2(Chain)`.",
-        "out": "True\n",
-        "steps": [
+        "trace": {
+         "code": "public static int What1(Node<int> pos)\n{\n    if (pos.GetNext() == null) return 0;\n    else\n        return pos.GetNext().GetValue() + What1(pos.GetNext());\n}\npublic static bool What2(Node<int> pos)\n{\n    if (pos == null) return true ;\n    else\n    {\n        int x = What1(pos);\n        if (pos.GetValue() <= x)\n        {\n            Console.WriteLine (\"Node:\" + pos.GetValue());\n            return false && What2(pos.GetNext());\n        }\n        else\n            return true && What2(pos.GetNext());\n    }\n\n}",
+         "given": "السلسلة `Chain = [130,65,32,16,8,5,2]`، والاستدعاء `What2(Chain)`. استدعاءات `What1` تُنفَّذ بلا خطوات خاصة بها: القيمة `x` هي ما تُعيده.",
+         "out": "True\n",
+         "steps": [
 {"l":7,"n":"تبدأ العملية `What2` مع `pos` = الخلية التي قيمتها `130`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}]]},{"name":"What2","vars":[["pos",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"node","v":"2","next":null},{"id":2,"k":"node","v":"5","next":1},{"id":3,"k":"node","v":"8","next":2},{"id":4,"k":"node","v":"16","next":3},{"id":5,"k":"node","v":"32","next":4},{"id":6,"k":"node","v":"65","next":5},{"id":7,"k":"node","v":"130","next":6}]},
 {"l":9,"n":"الشرط `pos == null` خطأ: ننتقل إلى `else`.","o":0},
 {"l":12,"n":"`x = 128`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}]]},{"name":"What2","vars":[["pos",{"t":"ref","id":7}],["x",{"t":"v","s":"128"}]]}]},
@@ -5751,69 +6963,249 @@ const m03: ContentModule = {
 {"l":19,"n":"العملية `What2` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}]]},{"name":"What2","vars":[["pos",{"t":"ref","id":7}],["x",{"t":"v","s":"128"}]]}]},
 {"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":7}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (39 خطوة)؛ ناتج البرنامج: True."
+        "text": "حل السؤال: What1(pos) تراجعية: تُعيد قيمة الخلية التي بعد pos + نتيجة What1 لتلك الخلية. أي مجموع قيم كل الخلايا التي بعد pos. من الخلية 32: 16 + 8 + 5 + 2 = 31. What2(pos) تحسب x، وهو مجموع ما بعد الخلية، وتقارنه بقيمة الخلية. إذا كانت القيمة أكبر من x تكمل إلى الخلية التالية. للسلسلة المعطاة: 130 > 128 و 65 > 63 و 32 > 31 و 16 > 15 و 8 > 7 و 5 > 2 و 2 > 0. كل المقارنات تنجح حتى null، فتُعاد true ولا يُطبع شيء. البند 3: نريد سلسلة فيها قيمة ليست أكبر من مجموع ما بعدها، مثل [5,3,2,1]: تُطبع Node:5 وتُعاد false. التعبير false && … لا يحسب طرفه الأيمن، فلا تكمل العملية إلى بقية الخلايا. ادّعاء الدخول للعملية What1: pos يؤشّر على خلية في سلسلة أعداد صحيحة (ليس null). ادّعاء الخروج: تُعيد مجموع قيم الخلايا التي بعد الخلية pos. ادّعاء الدخول للعملية What2: pos مؤشّر إلى سلسلة أعداد صحيحة موجبة (قد تكون فارغة). ادّعاء الخروج: تُعيد true إذا كانت كل قيمة أكبر من مجموع القيم التي بعدها. خلاف ذلك تطبع أول قيمة لا تحقّق الشرط وتُعيد false."
        },
        "origin": "teacher-enrichment"
       }
      ]
     },
     {
-     "id": "899271d-m03-l07-p02",
-     "title": "أسئلة كتابة من الكتاب",
-     "order": 2,
+     "id": "899271d-m03-l07-p03",
+     "title": "أسئلة كتابة محلولة",
+     "order": 3,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
-      "pdfPageStart": 141,
-      "pdfPageEnd": 148,
-      "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 141–148"
+      "pdfPageStart": 105,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
      },
      "keywords": [
       "كتابة عملية",
+      "أسئلة محلولة",
       "BeginsWith",
+      "IsFibonacci",
+      "InsertSorted",
       "تقاطع",
-      "اتحاد",
-      "مثلّثة"
+      "اتحاد"
      ],
      "blocks": [
       {
-       "id": "m03-l07-p02-b01",
+       "id": "m03-l07-p03-b01",
        "type": "text",
        "spans": [
         {
-         "text": "أربعة أسئلة من تمارين الكتاب. اكتب كل عملية في دفترك أو في محرّر الكود "
-        },
-        {
-         "text": "قبل",
-         "style": "strong"
-        },
-        {
-         "text": " أن تنتقل إلى الصفحة التالية، ففيها الحلول مع تتبّعها."
+         "text": "خمسة أسئلة كتابة محلولة، مرتّبة من الأسهل إلى الأصعب. حاول أن تكتب العملية في دفترك قبل أن تقرأ الحل. الكتاب لا يعرض حلولًا لتمارينه: الحلول هنا إضافة، وكل حل منها فُحص بالتتبّع. قد يكون حلّك مختلفًا وصحيحًا: افحصه بقائمة «ما يُفحص في الحل»."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p02-b02",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 3 من الكتاب",
-       "prompt": "تتلقّى العملية التالية قائمتين من نمط صحيح \u2066L1\u2069 و \u2066L2\u2069. العملية يجب أن تُعيد \u2066true\u2069 إذا تبيّن لها أنّ \u2066L1\u2069 تبدأ بـ \u2066L2\u2069. خلاف ذلك تُعيد \u2066false\u2069. (1) أكمل الناقص بحيث تؤدّي العملية المطلوب منها. (2) حدّد درجة نجاعة زمن تشغيل العملية. اشرح.",
-       "steps": [],
-       "origin": "book"
+       "id": "m03-l07-p03-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066CountValue\u2069 — عدّ قيمة",
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p02-b03",
+       "id": "m03-l07-p03-b03",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066CountValue\u2069 التي تتلقّى مؤشّرًا إلى رأس سلسلة من نمط \u2066Node<int>\u2069 وعددًا صحيحًا \u2066Num\u2069، وتُعيد عدد الخلايا التي قيمتها \u2066Num\u2069. مثال: للسلسلة \u2066[4,7,4,2]\u2069 والعدد 4 تُعيد العملية 2.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b04",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int CountValue(Node<int> Head, int Num)\n{\n    int Count = 0;\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        if (Pos.GetValue() == Num)\n            Count++;\n        Pos = Pos.GetNext();\n    }\n    return Count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b05",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "العدّاد "
+          },
+          {
+           "text": "Count",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ من 0 "
+          },
+          {
+           "text": "قبل",
+           "style": "strong"
+          },
+          {
+           "text": " الحلقة."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "قالب التمشيط كاملًا: "
+          },
+          {
+           "text": "Pos = Head",
+           "dir": "ltr"
+          },
+          {
+           "text": "، الشرط "
+          },
+          {
+           "text": "Pos != null",
+           "dir": "ltr"
+          },
+          {
+           "text": "، والتقديم "
+          },
+          {
+           "text": "Pos = Pos.GetNext();",
+           "dir": "ltr"
+          },
+          {
+           "text": " في كل دورة."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "المقارنة بقيمة الخلية: "
+          },
+          {
+           "text": "Pos.GetValue() == Num",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "return Count;",
+           "dir": "ltr"
+          },
+          {
+           "text": " بعد الحلقة، لا داخلها."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b06",
+       "type": "text",
+       "spans": [
+        {
+         "text": "هذا قالب التمشيط نفسه، وما نكتبه مكان "
+        },
+        {
+         "text": "// ...",
+         "dir": "ltr"
+        },
+        {
+         "text": " هو فحص واحد. للسلسلة الفارغة لا تدور الحلقة، فتُعاد 0. العملية تمرّ على كل الخلايا مرة واحدة: النجاعة "
+        },
+        {
+         "text": "O(n)",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b07",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066CountValue\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int CountValue(Node<int> Head, int Num)\n{\n    int Count = 0;\n    Node<int> Pos = Head;\n    while (Pos != null)\n    {\n        if (Pos.GetValue() == Num)\n            Count++;\n        Pos = Pos.GetNext();\n    }\n    return Count;\n}",
+        "given": "السلسلة `Head = [4,7,4,2]`، والاستدعاء `CountValue(Head, 4)`.",
+        "out": "2\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `CountValue` مع `Head` = الخلية التي قيمتها `4`، `Num = 4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"node","v":"2","next":null},{"id":2,"k":"node","v":"4","next":1},{"id":3,"k":"node","v":"7","next":2},{"id":4,"k":"node","v":"4","next":3}]},
+{"l":3,"n":"`Count = 0`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"0"}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() == Num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`Count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"1"}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"1"}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() == Num` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"1"}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() == Num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`Count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"2"}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"2"}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() == Num` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":9,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"CountValue","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"4"}],["Count",{"t":"v","s":"2"}],["Pos",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":11,"n":"العملية `CountValue` تُعيد `2`.","o":0},
+{"l":0,"n":"نطبع: `2`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (20 خطوة)؛ ناتج البرنامج: 2."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066BeginsWith\u2069 — سؤال 3 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 3 من الكتاب (ص 141)",
+       "prompt": "تتلقّى العملية التالية قائمتين من نمط صحيح \u2066L1\u2069 و \u2066L2\u2069. العملية يجب أن تُعيد \u2066true\u2069 إذا تبيّن لها أنّ \u2066L1\u2069 تبدأ بـ \u2066L2\u2069. خلاف ذلك تُعيد \u2066false\u2069. (1) أكمل الناقص بحيث تؤدّي العملية المطلوب منها. (2) حدّد درجة نجاعة زمن تشغيل العملية. اشرح.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b10",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
        "code": "public static bool BeginsWith(Node<int> L1, Node<int> L2)\n{\n    Node<int> Pos1 = _______;\n    Node<int> Pos2 = _______;\n    while(______________ && ______________)\n    {\n        if (Pos1.GetValue() != Pos2.GetValue())\n            return _______;\n        Pos1 = Pos1.GetNext();\n        Pos2 = Pos2.GetNext();\n    }\n    return ______________;\n}",
-       "origin": "book"
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p02-b04",
+       "id": "m03-l07-p03-b11",
        "type": "text",
        "spans": [
         {
@@ -5838,286 +7230,20 @@ const m03: ContentModule = {
          "dir": "ltr"
         },
         {
-         "text": "."
+         "text": ". "
+        },
+        {
+         "text": "الحل",
+         "style": "strong"
+        },
+        {
+         "text": " — العملية بعد إكمال الفراغات الستة:"
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p02-b05",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 9 من الكتاب",
-       "prompt": "(1) اكتب عملية تتلقّى كبارامتر سلسلتي خلايا مترابطة من نوع \u2066Node<int>\u2069. على العملية أن تُعيد سلسلة جديدة تحتوي على القيم المشتركة بين السلسلتين (أي تقاطع قيم السلسلتين) بدون تكرار. مثال: للسلسلتين \u2066[7,9,12,30]\u2069 و \u2066[9,10,12,17]\u2069 تُعيد العملية السلسلة \u2066[9,12]\u2069. (2) اكتب عملية تتلقّى كبارامتر سلسلتي خلايا مترابطة من نوع \u2066Node<int>\u2069. على العملية أن تُعيد سلسلة جديدة تحتوي على اتحاد قيم السلسلتين، أي جميع القيم الموجودة في السلسلتين لكن بدون تكرار. مثال: للسلسلتين نفسيهما تُعيد العملية السلسلة \u2066[7,9,12,30,10,17]\u2069. ملاحظة: حاول كتابة عمليات مساعدة واستعمالها في القسمين.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m03-l07-p02-b06",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Node<int> Intersection(Node<int> Chain1, Node<int> Chain2)\n{\n    // اكتب هنا\n}\n\npublic static Node<int> Union(Node<int> Chain1, Node<int> Chain2)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p02-b07",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 13 من الكتاب",
-       "prompt": "اكتب عملية تتلقّى كبارامتر قائمة من نوع \u2066Node<int>\u2069. العملية تحذف من القائمة كل عدد زوجي مُحاط مباشرة بعددين فرديين بحيث تكون درجة نجاعة زمن التشغيل خطّية. مثال: القائمة \u2066[5,2,9,4,7,12,14,9]\u2069 تصبح \u2066[5,9,7,12,14,9]\u2069. شرح: القيمة 2 زوجية وهي مُحاطة بالعددين الفرديين 5 و9، والقيمة 4 زوجية وهي مُحاطة بالعددين الفرديين 9 و7.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m03-l07-p02-b08",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "السؤال 13: القائمة قبل وبعد",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "chain",
-          "items": [
-           5,
-           2,
-           9,
-           4,
-           7,
-           12,
-           14,
-           9
-          ],
-          "pointers": [
-           [
-            "L",
-            0
-           ]
-          ],
-          "hi": [
-           1,
-           3
-          ],
-          "label": "قبل: الخليتان 2 و4 بين عددين فرديين"
-         },
-         {
-          "kind": "chain",
-          "items": [
-           5,
-           9,
-           7,
-           12,
-           14,
-           9
-          ],
-          "pointers": [
-           [
-            "L",
-            0
-           ]
-          ],
-          "label": "بعد تفعيل العملية"
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: سلسلة خلايا: 5 ← 2 ← 9 ← 4 ← 7 ← 12 ← 14 ← 9 ← null (قبل: الخليتان 2 و4 بين عددين فرديين)؛ سلسلة خلايا: 5 ← 9 ← 7 ← 12 ← 14 ← 9 ← null (بعد تفعيل العملية)."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p02-b09",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static void RemoveEvenBetweenOdds(Node<int> L)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p02-b10",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 14 من الكتاب",
-       "prompt": "سلسلة خلايا مترابطة من نوع \u2066Node<int>\u2069 تُعتبر مُثَلَّثَة إذا توفّرت فيها الشروط التالية: عدد الخلايا فيها من مضاعفات العدد 3، والأعداد في خلايا الثلث الأول مساوية للأعداد في خلايا الثلث الثاني والثلث الثالث وتظهر أيضًا بنفس الترتيب. اكتب عملية تتلقّى كبارامتر الخلية الأولى في سلسلة الخلايا المترابطة ثم تقوم بفحص السلسلة وإعادة \u2066true\u2069 إذا كانت مُثَلَّثَة، وخلاف ذلك تُعيد \u2066false\u2069.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m03-l07-p02-b11",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "السؤال 14: سلسلة مُثَلَّثَة",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "chain",
-          "items": [
-           2,
-           5,
-           3,
-           7,
-           2,
-           5,
-           3,
-           7,
-           2,
-           5,
-           3,
-           7
-          ],
-          "pointers": [
-           [
-            "Chain",
-            0
-           ]
-          ],
-          "hi": [
-           4,
-           5,
-           6,
-           7
-          ],
-          "label": "الأثلاث الثلاثة متساوية: \u2066[2,5,3,7]\u2069 ثلاث مرات"
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: سلسلة خلايا: 2 ← 5 ← 3 ← 7 ← 2 ← 5 ← 3 ← 7 ← 2 ← 5 ← 3 ← 7 ← null (الأثلاث الثلاثة متساوية: `[2,5,3,7]` ثلاث مرات)."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p02-b12",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsTripled(Node<int> Chain)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p02-b13",
-       "type": "list",
-       "variant": "checklist",
-       "title": "افحص حلّك قبل أن ترى الحل",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "هل توقيع العملية صحيح (ما تتلقّاه وما تُعيده)؟"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "هل تفحص أنّ المؤشّر ليس "
-          },
-          {
-           "text": "null",
-           "dir": "ltr"
-          },
-          {
-           "text": " قبل كل "
-          },
-          {
-           "text": "GetValue",
-           "dir": "ltr"
-          },
-          {
-           "text": " أو "
-          },
-          {
-           "text": "GetNext",
-           "dir": "ltr"
-          },
-          {
-           "text": "؟"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "هل يتقدّم المؤشّر في كل دورة، فلا تكون الحلقة لانهائية؟"
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "هل يعمل حلّك لسلسلة فارغة، ولسلسلة من خلية واحدة؟"
-          }
-         ]
-        },
-        {
-         "id": "i5",
-         "text": [
-          {
-           "text": "في الحذف: هل وجدت الخلية "
-          },
-          {
-           "text": "السابقة",
-           "style": "strong"
-          },
-          {
-           "text": " للخلية التي تحذفها؟"
-          }
-         ]
-        }
-       ],
-       "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m03-l07-p03",
-     "title": "حلول أسئلة الكتابة",
-     "order": 3,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 105,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
-     },
-     "keywords": [
-      "حلول",
-      "BeginsWith",
-      "Intersection",
-      "Union",
-      "IsTripled"
-     ],
-     "blocks": [
-      {
-       "id": "m03-l07-p03-b01",
-       "type": "text",
-       "spans": [
-        {
-         "text": "الكتاب لا يعرض حلولًا لتمارينه. الحلول التالية إضافة، وكل حل منها فُحص بالتتبّع. قد يكون حلّك مختلفًا وصحيحًا: افحصه بالقوائم التي بعد كل حل."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p03-b02",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 3 — \u2066BeginsWith\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p03-b03",
+       "id": "m03-l07-p03-b12",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6125,7 +7251,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b04",
+       "id": "m03-l07-p03-b13",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -6214,21 +7340,7 @@ const m03: ContentModule = {
            "dir": "ltr"
           },
           {
-           "text": ". لو انتهت "
-          },
-          {
-           "text": "L1",
-           "dir": "ltr"
-          },
-          {
-           "text": " أولًا فالقائمة "
-          },
-          {
-           "text": "L2",
-           "dir": "ltr"
-          },
-          {
-           "text": " أطول منها."
+           "text": "."
           }
          ]
         }
@@ -6236,42 +7348,84 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b05",
+       "id": "m03-l07-p03-b14",
        "type": "text",
        "spans": [
         {
-         "text": "النجاعة: الحلقة تدور على الأكثر بعدد خلايا القائمة الأقصر، وفي كل دورة عمليات نجاعتها "
+         "text": "انتبه إلى السطر الأخير: من يكتب "
         },
         {
-         "text": "O(1)",
+         "text": "return true;",
          "dir": "ltr"
         },
         {
-         "text": ". إذن النجاعة خطّية: "
+         "text": " يخطئ حين تكون "
+        },
+        {
+         "text": "L2",
+         "dir": "ltr"
+        },
+        {
+         "text": " أطول. مثلًا "
+        },
+        {
+         "text": "L1 = [2,4]",
+         "dir": "ltr"
+        },
+        {
+         "text": " و "
+        },
+        {
+         "text": "L2 = [2,4,6]",
+         "dir": "ltr"
+        },
+        {
+         "text": ": تنتهي الحلقة لأنّ "
+        },
+        {
+         "text": "Pos1",
+         "dir": "ltr"
+        },
+        {
+         "text": " صار "
+        },
+        {
+         "text": "null",
+         "dir": "ltr"
+        },
+        {
+         "text": "، لكن "
+        },
+        {
+         "text": "Pos2",
+         "dir": "ltr"
+        },
+        {
+         "text": " ما زال على الخلية 6، فالجواب الصحيح "
+        },
+        {
+         "text": "false",
+         "dir": "ltr"
+        },
+        {
+         "text": ". النجاعة: الحلقة تدور على الأكثر بعدد خلايا القائمة الأقصر، فهي خطّية: "
         },
         {
          "text": "O(n)",
          "dir": "ltr"
         },
         {
-         "text": "، حيث "
-        },
-        {
-         "text": "n",
-         "dir": "ltr"
-        },
-        {
-         "text": " طول القائمة الأقصر."
+         "text": "."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b06",
+       "id": "m03-l07-p03-b15",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066BeginsWith\u2069: هل \u2066[2,4,6,8]\u2069 تبدأ بـ \u2066[2,4]\u2069؟",
+       "title": "تتبّع الحل: هل \u2066[2,4,6,8]\u2069 تبدأ بـ \u2066[2,4]\u2069؟",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -6304,46 +7458,494 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b07",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تُعيد \u2066BeginsWith(L1, L2)\u2069 حين \u2066L1 = [2,4]\u2069 و \u2066L2 = [2,4,6]\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066true\u2069، لأنّ القيم التي قورنت متساوية"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066false\u2069، لأنّ \u2066L1\u2069 انتهت و \u2066L2\u2069 لم تنتهِ",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "خطأ في التشغيل"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066true\u2069، لأنّ \u2066L2\u2069 تبدأ بـ \u2066L1\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "بعد دورتين يصير \u2066Pos1\u2069 مساويًا \u2066null\u2069 فتنتهي الحلقة، لكن \u2066Pos2\u2069 ما زال على الخلية 6. الشرط \u2066Pos2 == null\u2069 خطأ، فتُعاد \u2066false\u2069. من يكتب \u2066return true;\u2069 في النهاية يخطئ في هذه الحالة."
+       "id": "m03-l07-p03-b16",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066IsFibonacci\u2069 — سؤال 24 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b17",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 24 من الكتاب (ص 161)",
+       "prompt": "قائمة «فيبوناتشي» هي عبارة عن قائمة تحتوي على عدد معيّن من حدود متتالية فيبوناتشي التي فيها: الحدّ الأول 0، الحدّ الثاني 1، وكل حدّ إضافي عبارة عن مجموع الحدّين السابقين له. مثال لقائمة «فيبوناتشي»: \u2066[0,1,1,2,3,5,8,13]\u2069. اكتب عملية باسم \u2066IsFibonacci\u2069 تتلقّى كبارامتر قائمة ثم تقوم بفحصها وإرجاع \u2066true\u2069 إذا كانت قائمة «فيبوناتشي». خلاف ذلك ترجع العملية \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b18",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool IsFibonacci(Node<int> List)\n{\n    if (List == null || List.GetValue() != 0)\n        return false;\n    if (!List.HasNext())\n        return true;\n    if (List.GetNext().GetValue() != 1)\n        return false;\n    Node<int> Pos = List;\n    while (Pos.GetNext().HasNext())\n    {\n        Node<int> Second = Pos.GetNext();\n        Node<int> Third = Second.GetNext();\n        if (Third.GetValue() != Pos.GetValue() + Second.GetValue())\n            return false;\n        Pos = Second;\n    }\n    return true;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b19",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "الحدّ الأول يجب أن يكون 0 (والقائمة الفارغة ليست قائمة «فيبوناتشي»)."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "قائمة من خلية واحدة قيمتها 0 مقبولة. إذا وُجدت خلية ثانية فقيمتها يجب أن تكون 1."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "في الحلقة ثلاث خلايا متتالية: "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "Second",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "Third",
+           "dir": "ltr"
+          },
+          {
+           "text": "، والفحص: قيمة الثالثة = مجموع الاثنتين اللتين قبلها."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "شرط الحلقة "
+          },
+          {
+           "text": "Pos.GetNext().HasNext()",
+           "dir": "ltr"
+          },
+          {
+           "text": " يضمن وجود الخلية الثالثة قبل قراءتها."
+          }
+         ]
+        },
+        {
+         "id": "i5",
+         "text": [
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " يتقدّم خلية واحدة فقط في كل دورة، لا ثلاثًا."
+          }
+         ]
         }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b20",
+       "type": "text",
+       "spans": [
+        {
+         "text": "نفحص أولًا الحدّين الأولين، لأنّ لهما قيمتين ثابتتين. بعدها كل حدّ يُفحص بالحدّين اللذين قبله، فنحرّك «نافذة» من ثلاث خلايا خلية واحدة في كل دورة. أول خلل يُعيد "
+        },
+        {
+         "text": "false",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b21",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066IsFibonacci\u2069 على \u2066[0,1,1,2,3]\u2069",
+       "description": "راقب المؤشّرات الثلاثة \u2066Pos\u2069 و \u2066Second\u2069 و \u2066Third\u2069: تتحرّك معًا خلية واحدة في كل دورة.",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool IsFibonacci(Node<int> List)\n{\n    if (List == null || List.GetValue() != 0)\n        return false;\n    if (!List.HasNext())\n        return true;\n    if (List.GetNext().GetValue() != 1)\n        return false;\n    Node<int> Pos = List;\n    while (Pos.GetNext().HasNext())\n    {\n        Node<int> Second = Pos.GetNext();\n        Node<int> Third = Second.GetNext();\n        if (Third.GetValue() != Pos.GetValue() + Second.GetValue())\n            return false;\n        Pos = Second;\n    }\n    return true;\n}",
+        "given": "القائمة `List = [0,1,1,2,3]`، والاستدعاء `IsFibonacci(List)`.",
+        "out": "True\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `IsFibonacci` مع `List` = الخلية التي قيمتها `0`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"node","v":"3","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"node","v":"1","next":3},{"id":5,"k":"node","v":"0","next":4}]},
+{"l":3,"n":"الشرط `List == null || List.GetValue() != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `!List.HasNext()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"الشرط `List.GetNext().GetValue() != 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `0`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":5}]]}]},
+{"l":10,"n":"الشرط `Pos.GetNext().HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":12,"n":"`Second` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":5}],["Second",{"t":"ref","id":4}]]}]},
+{"l":13,"n":"`Third` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":5}],["Second",{"t":"ref","id":4}],["Third",{"t":"ref","id":3}]]}]},
+{"l":14,"n":"الشرط `Third.GetValue() != Pos.GetValue() + Second.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":16,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":4}],["Second",{"t":"ref","id":4}],["Third",{"t":"ref","id":3}]]}]},
+{"l":10,"n":"الشرط `Pos.GetNext().HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":12,"n":"`Second` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":4}],["Second",{"t":"ref","id":3}]]}]},
+{"l":13,"n":"`Third` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":4}],["Second",{"t":"ref","id":3}],["Third",{"t":"ref","id":2}]]}]},
+{"l":14,"n":"الشرط `Third.GetValue() != Pos.GetValue() + Second.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":16,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":3}],["Second",{"t":"ref","id":3}],["Third",{"t":"ref","id":2}]]}]},
+{"l":10,"n":"الشرط `Pos.GetNext().HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":12,"n":"`Second` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":3}],["Second",{"t":"ref","id":2}]]}]},
+{"l":13,"n":"`Third` يشير الآن إلى الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":3}],["Second",{"t":"ref","id":2}],["Third",{"t":"ref","id":1}]]}]},
+{"l":14,"n":"الشرط `Third.GetValue() != Pos.GetValue() + Second.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":16,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":2}],["Second",{"t":"ref","id":2}],["Third",{"t":"ref","id":1}]]}]},
+{"l":10,"n":"الشرط `Pos.GetNext().HasNext()` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]},{"name":"IsFibonacci","vars":[["List",{"t":"ref","id":5}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":18,"n":"العملية `IsFibonacci` تُعيد `true`.","o":0},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["List",{"t":"ref","id":5}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (23 خطوة)؛ ناتج البرنامج: True."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b08",
+       "id": "m03-l07-p03-b22",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 9 — التقاطع والاتحاد",
+       "text": "سؤال 4 · متوسط — \u2066InsertSorted\u2069 — إدخال في سلسلة مرتّبة",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b09",
+       "id": "m03-l07-p03-b23",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066InsertSorted\u2069 التي تتلقّى مؤشّرًا إلى رأس سلسلة من نمط \u2066Node<int>\u2069 قيمها مرتّبة تصاعديًا، وعددًا صحيحًا \u2066Num\u2069. العملية تُدخل خلية جديدة فيها \u2066Num\u2069 في مكانها الصحيح، بحيث تبقى السلسلة مرتّبة، وتُعيد مؤشّرًا إلى رأس السلسلة. مثال: إدخال 7 إلى \u2066[2,5,9,12]\u2069 يعطي \u2066[2,5,7,9,12]\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b24",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "إدخال 7 إلى سلسلة مرتّبة",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           2,
+           5,
+           9,
+           12
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ],
+           [
+            "Pos",
+            1
+           ]
+          ],
+          "label": "\u2066Pos\u2069 يقف على آخر خلية قيمتها أصغر من 7"
+         },
+         {
+          "kind": "chain",
+          "items": [
+           2,
+           5,
+           7,
+           9,
+           12
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ],
+           [
+            "Pos",
+            1
+           ]
+          ],
+          "hi": [
+           2
+          ],
+          "label": "الخلية الجديدة تدخل بعد \u2066Pos\u2069"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 2 ← 5 ← 9 ← 12 ← null (`Pos` يقف على آخر خلية قيمتها أصغر من 7)؛ سلسلة خلايا: 2 ← 5 ← 7 ← 9 ← 12 ← null (الخلية الجديدة تدخل بعد `Pos`)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b25",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static Node<int> InsertSorted(Node<int> Head, int Num)\n{\n    if (Head == null || Num <= Head.GetValue())\n        return new Node<int>(Num, Head);\n    Node<int> Pos = Head;\n    while (Pos.HasNext() && Pos.GetNext().GetValue() < Num)\n        Pos = Pos.GetNext();\n    Pos.SetNext(new Node<int>(Num, Pos.GetNext()));\n    return Head;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b26",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "حالة خاصة أولًا: السلسلة فارغة، أو "
+          },
+          {
+           "text": "Num",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا يزيد عن قيمة الرأس. عندها الخلية الجديدة تصير هي الرأس، ونُعيدها."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "في الحالة العامة نبحث عن الخلية "
+          },
+          {
+           "text": "السابقة",
+           "style": "strong"
+          },
+          {
+           "text": " لمكان الإدخال: نتقدّم طالما القيمة التي بعد "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " أصغر من "
+          },
+          {
+           "text": "Num",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "الفحص "
+          },
+          {
+           "text": "Pos.HasNext()",
+           "dir": "ltr"
+          },
+          {
+           "text": " قبل "
+          },
+          {
+           "text": "Pos.GetNext().GetValue()",
+           "dir": "ltr"
+          },
+          {
+           "text": "، حتى لا نقرأ من "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": " حين يكون "
+          },
+          {
+           "text": "Num",
+           "dir": "ltr"
+          },
+          {
+           "text": " أكبر من كل القيم."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "الإدخال كما في "
+          },
+          {
+           "text": "AddAfter",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الخلية الجديدة تشير إلى ما بعد "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " تشير إليها."
+          }
+         ]
+        },
+        {
+         "id": "i5",
+         "text": [
+          {
+           "text": "العملية تُعيد الرأس، ومن يستدعيها يكتب: "
+          },
+          {
+           "text": "Head = InsertSorted(Head, 7);",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b27",
+       "type": "text",
+       "spans": [
+        {
+         "text": "لماذا تُعيد العملية الرأس؟ لأنّ الرأس قد يتغيّر: إذا كان "
+        },
+        {
+         "text": "Num",
+         "dir": "ltr"
+        },
+        {
+         "text": " أصغر من كل القيم تصير الخلية الجديدة هي الأولى، والعملية لا تستطيع تغيير المتغيّر "
+        },
+        {
+         "text": "Head",
+         "dir": "ltr"
+        },
+        {
+         "text": " الموجود عند من استدعاها. التتبّع الأول للحالة العامة، والثاني لإدخال قبل الرأس."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b28",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: إدخال 7 إلى \u2066[2,5,9,12]\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Node<int> InsertSorted(Node<int> Head, int Num)\n{\n    if (Head == null || Num <= Head.GetValue())\n        return new Node<int>(Num, Head);\n    Node<int> Pos = Head;\n    while (Pos.HasNext() && Pos.GetNext().GetValue() < Num)\n        Pos = Pos.GetNext();\n    Pos.SetNext(new Node<int>(Num, Pos.GetNext()));\n    return Head;\n}",
+        "given": "السلسلة `Head = [2,5,9,12]`، والاستدعاء `Head = InsertSorted(Head, 7);`.",
+        "out": "[2,5,7,9,12]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `InsertSorted` مع `Head` = الخلية التي قيمتها `2`، `Num = 7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"InsertSorted","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"7"}]]}],"h":[{"id":1,"k":"node","v":"12","next":null},{"id":2,"k":"node","v":"9","next":1},{"id":3,"k":"node","v":"5","next":2},{"id":4,"k":"node","v":"2","next":3}]},
+{"l":3,"n":"الشرط `Head == null || Num <= Head.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"InsertSorted","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"7"}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":6,"n":"الشرط `Pos.HasNext() && Pos.GetNext().GetValue() < Num` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]},{"name":"InsertSorted","vars":[["Head",{"t":"ref","id":4}],["Num",{"t":"v","s":"7"}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"الشرط `Pos.HasNext() && Pos.GetNext().GetValue() < Num` خطأ: نخرج من الحلقة.","o":0},
+{"l":8,"n":"ننشئ خلية جديدة قيمتها `7`، تشير إلى الخلية التي قيمتها `9`. الخلية `Pos` (قيمتها `5`) تشير الآن إلى الخلية التي قيمتها `7`.","o":0,"h":[{"id":1,"k":"node","v":"12","next":null},{"id":2,"k":"node","v":"9","next":1},{"id":3,"k":"node","v":"5","next":5},{"id":4,"k":"node","v":"2","next":3},{"id":5,"k":"node","v":"7","next":2}]},
+{"l":9,"n":"العملية `InsertSorted` تُعيد الخلية التي قيمتها `2`.","o":0},
+{"l":0,"n":"نطبع: `[2,5,7,9,12]`. انتهى التنفيذ.","o":13,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (9 خطوة)؛ ناتج البرنامج: [2,5,7,9,12]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b29",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: إدخال 1 قبل الرأس",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Node<int> InsertSorted(Node<int> Head, int Num)\n{\n    if (Head == null || Num <= Head.GetValue())\n        return new Node<int>(Num, Head);\n    Node<int> Pos = Head;\n    while (Pos.HasNext() && Pos.GetNext().GetValue() < Num)\n        Pos = Pos.GetNext();\n    Pos.SetNext(new Node<int>(Num, Pos.GetNext()));\n    return Head;\n}",
+        "given": "السلسلة `Head = [2,5,9]`، والاستدعاء `Head = InsertSorted(Head, 1);`.",
+        "out": "[1,2,5,9]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `InsertSorted` مع `Head` = الخلية التي قيمتها `2`، `Num = 1`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"InsertSorted","vars":[["Head",{"t":"ref","id":3}],["Num",{"t":"v","s":"1"}]]}],"h":[{"id":1,"k":"node","v":"9","next":null},{"id":2,"k":"node","v":"5","next":1},{"id":3,"k":"node","v":"2","next":2}]},
+{"l":3,"n":"الشرط `Head == null || Num <= Head.GetValue()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"ننشئ خلية جديدة قيمتها `1`، تشير إلى الخلية التي قيمتها `2`. العملية `InsertSorted` تُعيد الخلية التي قيمتها `1`.","o":0},
+{"l":0,"n":"نطبع: `[1,2,5,9]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"9","next":null},{"id":2,"k":"node","v":"5","next":1},{"id":3,"k":"node","v":"2","next":2},{"id":4,"k":"node","v":"1","next":3}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (4 خطوة)؛ ناتج البرنامج: [1,2,5,9]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b30",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — التقاطع والاتحاد — سؤال 9 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b31",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 9 من الكتاب (ص 145)",
+       "prompt": "(1) اكتب عملية تتلقّى كبارامتر سلسلتي خلايا مترابطة من نوع \u2066Node<int>\u2069. على العملية أن تُعيد سلسلة جديدة تحتوي على القيم المشتركة بين السلسلتين (أي تقاطع قيم السلسلتين) بدون تكرار. مثال: للسلسلتين \u2066[7,9,12,30]\u2069 و \u2066[9,10,12,17]\u2069 تُعيد العملية السلسلة \u2066[9,12]\u2069. (2) اكتب عملية تتلقّى كبارامتر سلسلتي خلايا مترابطة من نوع \u2066Node<int>\u2069. على العملية أن تُعيد سلسلة جديدة تحتوي على اتحاد قيم السلسلتين، أي جميع القيم الموجودة في السلسلتين لكن بدون تكرار. مثال: للسلسلتين نفسيهما تُعيد العملية السلسلة \u2066[7,9,12,30,10,17]\u2069. ملاحظة: حاول كتابة عمليات مساعدة واستعمالها في القسمين.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b32",
        "type": "text",
        "spans": [
         {
@@ -6381,7 +7983,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b10",
+       "id": "m03-l07-p03-b33",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6389,7 +7991,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b11",
+       "id": "m03-l07-p03-b34",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6397,7 +7999,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b12",
+       "id": "m03-l07-p03-b35",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6405,7 +8007,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b13",
+       "id": "m03-l07-p03-b36",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -6413,7 +8015,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b14",
+       "id": "m03-l07-p03-b37",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -6518,12 +8120,35 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b15",
+       "id": "m03-l07-p03-b38",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في الاتحاد تدخل أولًا قيم "
+        },
+        {
+         "text": "Chain1",
+         "dir": "ltr"
+        },
+        {
+         "text": " كلها، ثم من "
+        },
+        {
+         "text": "Chain2",
+         "dir": "ltr"
+        },
+        {
+         "text": " فقط القيم غير الموجودة: الترتيب بحسب الدخول، لا تصاعديًا. في التتبّعين تُنفَّذ العمليات المساعدة بلا خطوات خاصة بها: راقب السلسلة الثالثة وهي تُبنى."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p03-b39",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Intersection\u2069",
-       "description": "العمليتان المساعدتان تُنفَّذان بلا خطوات خاصة بهما. راقب السلسلة الثالثة وهي تُبنى.",
+       "title": "تتبّع الحل: \u2066Intersection\u2069",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -6566,63 +8191,946 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b16",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تُعيد \u2066Union(Chain1, Chain2)\u2069 لسلسلتَي المثال؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[7,9,12,30,9,10,12,17]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[7,9,12,30,10,17]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[9,12]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[7,9,10,12,17,30]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "أولًا تدخل قيم \u2066Chain1\u2069 كلها: \u2066[7,9,12,30]\u2069. ثم من \u2066Chain2\u2069 تدخل فقط القيم غير الموجودة: 10 و17. القيمتان 9 و12 موجودتان فلا تتكرّران. الترتيب بحسب الدخول، لا تصاعديًا."
-        }
+       "id": "m03-l07-p03-b40",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066Union\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Node<int> Union(Node<int> Chain1, Node<int> Chain2)\n{\n    Node<int> Chain3 = null;\n    Node<int> Pos = Chain1;\n    while (Pos != null)\n    {\n        if (!Exists(Chain3, Pos.GetValue()))\n            Chain3 = AddLast(Chain3, Pos.GetValue());\n        Pos = Pos.GetNext();\n    }\n    Pos = Chain2;\n    while (Pos != null)\n    {\n        if (!Exists(Chain3, Pos.GetValue()))\n            Chain3 = AddLast(Chain3, Pos.GetValue());\n        Pos = Pos.GetNext();\n    }\n    return Chain3;\n}",
+        "given": "السلسلتان `Chain1 = [7,9,12,30]` و `Chain2 = [9,10,12,17]`، والاستدعاء `Union(Chain1, Chain2)`.",
+        "out": "[7,9,12,30,10,17]\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Union` مع `Chain1` = الخلية التي قيمتها `7`، `Chain2` = الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]}],"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7}]},
+{"l":3,"n":"`Chain3` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"null"}]]}]},
+{"l":4,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"null"}],["Pos",{"t":"ref","id":4}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`Chain3` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7},{"id":9,"k":"node","v":"7","next":null}]},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`Chain3` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7},{"id":9,"k":"node","v":"7","next":10},{"id":10,"k":"node","v":"9","next":null}]},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `12`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`Chain3` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7},{"id":9,"k":"node","v":"7","next":10},{"id":10,"k":"node","v":"9","next":11},{"id":11,"k":"node","v":"12","next":null}]},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `30`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`Chain3` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7},{"id":9,"k":"node","v":"7","next":10},{"id":10,"k":"node","v":"9","next":11},{"id":11,"k":"node","v":"12","next":12},{"id":12,"k":"node","v":"30","next":null}]},
+{"l":9,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":11,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `9`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":8}]]}]},
+{"l":12,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":16,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":7}]]}]},
+{"l":12,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":15,"n":"`Chain3` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7},{"id":9,"k":"node","v":"7","next":10},{"id":10,"k":"node","v":"9","next":11},{"id":11,"k":"node","v":"12","next":12},{"id":12,"k":"node","v":"30","next":13},{"id":13,"k":"node","v":"10","next":null}]},
+{"l":16,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `12`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":6}]]}]},
+{"l":12,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":16,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `17`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"ref","id":5}]]}]},
+{"l":12,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":14,"n":"الشرط `!Exists(Chain3, Pos.GetValue())` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":15,"n":"`Chain3` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"h":[{"id":1,"k":"node","v":"30","next":null},{"id":2,"k":"node","v":"12","next":1},{"id":3,"k":"node","v":"9","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"17","next":null},{"id":6,"k":"node","v":"12","next":5},{"id":7,"k":"node","v":"10","next":6},{"id":8,"k":"node","v":"9","next":7},{"id":9,"k":"node","v":"7","next":10},{"id":10,"k":"node","v":"9","next":11},{"id":11,"k":"node","v":"12","next":12},{"id":12,"k":"node","v":"30","next":13},{"id":13,"k":"node","v":"10","next":14},{"id":14,"k":"node","v":"17","next":null}]},
+{"l":16,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}]]},{"name":"Union","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Chain3",{"t":"ref","id":9}],["Pos",{"t":"null"}]]}]},
+{"l":12,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":18,"n":"العملية `Union` تُعيد الخلية التي قيمتها `7`.","o":0},
+{"l":0,"n":"نطبع: `[7,9,12,30,10,17]`. انتهى التنفيذ.","o":18,"f":[{"name":"Main","vars":[["Chain1",{"t":"ref","id":4}],["Chain2",{"t":"ref","id":8}],["Result",{"t":"ref","id":9}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (38 خطوة)؛ ناتج البرنامج: [7,9,12,30,10,17]."
        },
        "origin": "teacher-enrichment"
-      },
+      }
+     ]
+    },
+    {
+     "id": "899271d-m03-l07-p04",
+     "title": "وظيفة: أسئلة كتابة",
+     "order": 4,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 105,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
+     },
+     "keywords": [
+      "وظيفة",
+      "كتابة عملية",
+      "نافذة الحل",
+      "GetMaxPos",
+      "DeleteAll",
+      "مثلّثة"
+     ],
+     "blocks": [
       {
-       "id": "m03-l07-p03-b17",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 13 — حذف عدد زوجي بين عددين فرديين",
+       "id": "m03-l07-p04-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة كتابة للوظيفة، مرتّبة من الأسهل إلى الأصعب. اكتب كل عملية في دفترك أو في محرّر الكود، ثم اضغط «الحل» وقارن: في النافذة كود الحل، وما يُفحص فيه، وتتبّعه خطوة بخطوة."
+        }
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b18",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static void RemoveEvenBetweenOdds(Node<int> L)\n{\n    Node<int> Pos = L;\n    while (Pos != null && Pos.HasNext() && Pos.GetNext().HasNext())\n    {\n        Node<int> Mid = Pos.GetNext();\n        Node<int> After = Mid.GetNext();\n        if (Pos.GetValue() % 2 != 0 && Mid.GetValue() % 2 == 0 && After.GetValue() % 2 != 0)\n            Pos.SetNext(After);\n        Pos = Pos.GetNext();\n    }\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p03-b19",
+       "id": "m03-l07-p04-b02",
        "type": "list",
        "variant": "checklist",
-       "title": "ما يُفحص في الحل",
+       "title": "افحص حلّك قبل أن تفتح نافذة الحل",
        "items": [
         {
          "id": "i1",
          "text": [
           {
-           "text": "ننظر إلى ثلاث خلايا متتالية: "
+           "text": "هل توقيع العملية صحيح (ما تتلقّاه وما تُعيده)؟"
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "هل تفحص أنّ المؤشّر ليس "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": " قبل كل "
+          },
+          {
+           "text": "GetValue",
+           "dir": "ltr"
+          },
+          {
+           "text": " أو "
+          },
+          {
+           "text": "GetNext",
+           "dir": "ltr"
+          },
+          {
+           "text": "؟"
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "هل يتقدّم المؤشّر في كل دورة، فلا تكون الحلقة لانهائية؟"
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "هل يعمل حلّك لسلسلة فارغة، ولسلسلة من خلية واحدة؟"
+          }
+         ]
+        },
+        {
+         "id": "i5",
+         "text": [
+          {
+           "text": "في الحذف: هل وجدت الخلية "
+          },
+          {
+           "text": "السابقة",
+           "style": "strong"
+          },
+          {
+           "text": " للخلية التي تحذفها؟"
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b03",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066GetMaxPos\u2069 — الخلية التي فيها أكبر قيمة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b04",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066GetMaxPos\u2069 التي تتلقّى مؤشّرًا إلى رأس سلسلة غير فارغة من نمط \u2066Node<int>\u2069، وتُعيد مؤشّرًا إلى الخلية التي فيها أكبر قيمة. مثال: للسلسلة \u2066[8,21,13]\u2069 تُعيد العملية مؤشّرًا إلى الخلية 21.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b05",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static Node<int> GetMaxPos(Node<int> Head)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066GetMaxPos\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "هذه العملية "
+          },
+          {
+           "text": "GetMaxValue",
+           "dir": "ltr"
+          },
+          {
+           "text": " من الكتاب، لكننا نحفظ "
+          },
+          {
+           "text": "مؤشّرًا",
+           "style": "strong"
+          },
+          {
+           "text": " إلى الخلية الأكبر بدل أن نحفظ قيمتها."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "MaxPos",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ على الخلية الأولى، والتمشيط يبدأ من الخلية الثانية."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "كلما وجدنا خلية قيمتها أكبر من قيمة "
+          },
+          {
+           "text": "MaxPos",
+           "dir": "ltr"
+          },
+          {
+           "text": " ننقل "
+          },
+          {
+           "text": "MaxPos",
+           "dir": "ltr"
+          },
+          {
+           "text": " إليها."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "تمشيط واحد للسلسلة: درجة النجاعة "
+          },
+          {
+           "text": "O(n)",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Node<int> GetMaxPos(Node<int> Head)\n{\n    Node<int> MaxPos = Head;\n    Node<int> Pos = Head.GetNext();\n    while (Pos != null)\n    {\n        if (Pos.GetValue() > MaxPos.GetValue())\n            MaxPos = Pos;\n        Pos = Pos.GetNext();\n    }\n    return MaxPos;\n}",
+        "checklist": [
+         "العملية تُعيد `Node<int>`، لا `int`.",
+         "`MaxPos` يبدأ بـ `Head` (السلسلة غير فارغة).",
+         "المقارنة بين **قيمتين**: `Pos.GetValue() > MaxPos.GetValue()`.",
+         "تقديم `Pos` في كل دورة، و `return MaxPos;` بعد الحلقة."
+        ],
+        "trace": {
+         "code": "public static Node<int> GetMaxPos(Node<int> Head)\n{\n    Node<int> MaxPos = Head;\n    Node<int> Pos = Head.GetNext();\n    while (Pos != null)\n    {\n        if (Pos.GetValue() > MaxPos.GetValue())\n            MaxPos = Pos;\n        Pos = Pos.GetNext();\n    }\n    return MaxPos;\n}",
+         "given": "السلسلة `Head = [8,21,13]`، والاستدعاء `GetMaxPos(Head)`.",
+         "out": "21\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `GetMaxPos` مع `Head` = الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"GetMaxPos","vars":[["Head",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"13","next":null},{"id":2,"k":"node","v":"21","next":1},{"id":3,"k":"node","v":"8","next":2}]},
+{"l":3,"n":"`MaxPos` يشير الآن إلى الخلية التي قيمتها `8`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"GetMaxPos","vars":[["Head",{"t":"ref","id":3}],["MaxPos",{"t":"ref","id":3}]]}]},
+{"l":4,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `21`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"GetMaxPos","vars":[["Head",{"t":"ref","id":3}],["MaxPos",{"t":"ref","id":3}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() > MaxPos.GetValue()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":8,"n":"`MaxPos` يشير الآن إلى الخلية التي قيمتها `21`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"GetMaxPos","vars":[["Head",{"t":"ref","id":3}],["MaxPos",{"t":"ref","id":2}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":9,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"GetMaxPos","vars":[["Head",{"t":"ref","id":3}],["MaxPos",{"t":"ref","id":2}],["Pos",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"الشرط `Pos.GetValue() > MaxPos.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":9,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}]]},{"name":"GetMaxPos","vars":[["Head",{"t":"ref","id":3}],["MaxPos",{"t":"ref","id":2}],["Pos",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":11,"n":"العملية `GetMaxPos` تُعيد الخلية التي قيمتها `21`.","o":0},
+{"l":0,"n":"نطبع: `21`. انتهى التنفيذ.","o":3,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":3}],["Max",{"t":"ref","id":2}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: هذه العملية GetMaxValue من الكتاب، لكننا نحفظ مؤشّرًا إلى الخلية الأكبر بدل أن نحفظ قيمتها. MaxPos يبدأ على الخلية الأولى، والتمشيط يبدأ من الخلية الثانية. كلما وجدنا خلية قيمتها أكبر من قيمة MaxPos ننقل MaxPos إليها. تمشيط واحد للسلسلة: درجة النجاعة O(n)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b07",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "في السلسلة \u2066[5,12,9,12]\u2069 تظهر أكبر قيمة مرتين. إلى أي خلية تُعيد عملية الحل (بالشرط \u2066>\u2069) مؤشّرًا؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "إلى الخلية الثانية: أول خلية قيمتها 12",
+          "correct": true
+         },
+         {
+          "id": "o2",
+          "text": "إلى الخلية الرابعة: آخر خلية قيمتها 12"
+         },
+         {
+          "id": "o3",
+          "text": "إلى الخلية الأولى"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066null\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "حين يصل \u2066Pos\u2069 إلى الخلية الرابعة يكون \u2066MaxPos\u2069 على الخلية الثانية، و12 ليست أكبر من 12، فلا ينتقل \u2066MaxPos\u2069. لو كتبنا \u2066>=\u2069 لأُعيدت الخلية الأخيرة."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066CheckList\u2069 — سؤال 26 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b09",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 26 من الكتاب (ص 163)",
+       "prompt": "قائمة «مُتَمَيِّزة» هي عبارة عن قائمة تحتوي على ثلاثيات من الأعداد الصحيحة \u2066(a,b,c)\u2069 تحقّق كل ثلاثية المعادلة \u2066a² + b² = c\u2069. القائمة \u2066[2,3,13,6,2,40,2,5,29]\u2069 هي قائمة «مُتَمَيِّزة»، لأنّ \u20662² + 3² = 13\u2069 و \u20666² + 2² = 40\u2069 و \u20662² + 5² = 29\u2069. اكتب عملية باسم \u2066CheckList\u2069 تتلقّى قائمة \u2066Node<int>\u2069 ثم تقوم بفحصها وإعادة \u2066true\u2069 إذا كانت «مُتَمَيِّزة». خلاف ذلك تُعيد العملية \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b10",
+       "type": "callout",
+       "kind": "clarification",
+       "title": "في الكتاب",
+       "spans": [
+        {
+         "text": "المعادلة مطبوعة في الكتاب "
+        },
+        {
+         "text": "a2 + b2 = c",
+         "dir": "ltr"
+        },
+        {
+         "text": "، وكذلك "
+        },
+        {
+         "text": "22 + 32 = 13",
+         "dir": "ltr"
+        },
+        {
+         "text": ": الأسّ نزل إلى السطر. المقصود "
+        },
+        {
+         "text": "a² + b² = c",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool CheckList(Node<int> L)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b12",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066CheckList\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "نقرأ القائمة ثلاث خلايا في كل دورة: "
+          },
+          {
+           "text": "a",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "b",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "c",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "قبل القراءة نفحص أنّ الخلايا الثلاث موجودة. إذا بقيت خلية أو خليتان بلا ثلاثية كاملة فالقائمة ليست مُتَمَيِّزة."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إذا كان "
+          },
+          {
+           "text": "a * a + b * b",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا يساوي "
+          },
+          {
+           "text": "c",
+           "dir": "ltr"
+          },
+          {
+           "text": " نُعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": " فورًا."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "بعد كل ثلاثية صحيحة يتقدّم "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثلاث خلايا. إذا وصل إلى "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": " فكل الثلاثيات صحيحة: نُعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool CheckList(Node<int> L)\n{\n    Node<int> Pos = L;\n    while (Pos != null)\n    {\n        if (!Pos.HasNext() || !Pos.GetNext().HasNext())\n            return false;\n        int a = Pos.GetValue();\n        int b = Pos.GetNext().GetValue();\n        int c = Pos.GetNext().GetNext().GetValue();\n        if (a * a + b * b != c)\n            return false;\n        Pos = Pos.GetNext().GetNext().GetNext();\n    }\n    return true;\n}",
+        "checklist": [
+         "فحص وجود الخلية الثانية والثالثة قبل `GetValue`: `Pos.HasNext()` و `Pos.GetNext().HasNext()`.",
+         "التربيع بالضرب: `a * a`، لا بالرمز `^`.",
+         "`return false` عند أول ثلاثية لا تحقّق المعادلة.",
+         "تقديم `Pos` **ثلاث** خلايا في كل دورة."
+        ],
+        "trace": {
+         "code": "public static bool CheckList(Node<int> L)\n{\n    Node<int> Pos = L;\n    while (Pos != null)\n    {\n        if (!Pos.HasNext() || !Pos.GetNext().HasNext())\n            return false;\n        int a = Pos.GetValue();\n        int b = Pos.GetNext().GetValue();\n        int c = Pos.GetNext().GetNext().GetValue();\n        if (a * a + b * b != c)\n            return false;\n        Pos = Pos.GetNext().GetNext().GetNext();\n    }\n    return true;\n}",
+         "given": "القائمة `L = [2,3,13,1,2,5]` (ثلاثيتان)، والاستدعاء `CheckList(L)`.",
+         "out": "True\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `CheckList` مع `L` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"node","v":"5","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"node","v":"13","next":3},{"id":5,"k":"node","v":"3","next":4},{"id":6,"k":"node","v":"2","next":5}]},
+{"l":3,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":6}]]}]},
+{"l":4,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `!Pos.HasNext() || !Pos.GetNext().HasNext()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"`a = 2`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":6}],["a",{"t":"v","s":"2"}]]}]},
+{"l":9,"n":"`b = 3`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":6}],["a",{"t":"v","s":"2"}],["b",{"t":"v","s":"3"}]]}]},
+{"l":10,"n":"`c = 13`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":6}],["a",{"t":"v","s":"2"}],["b",{"t":"v","s":"3"}],["c",{"t":"v","s":"13"}]]}]},
+{"l":11,"n":"الشرط `a * a + b * b != c` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":3}],["a",{"t":"v","s":"2"}],["b",{"t":"v","s":"3"}],["c",{"t":"v","s":"13"}]]}]},
+{"l":4,"n":"الشرط `Pos != null` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"الشرط `!Pos.HasNext() || !Pos.GetNext().HasNext()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"`a = 1`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":3}],["a",{"t":"v","s":"1"}]]}]},
+{"l":9,"n":"`b = 2`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":3}],["a",{"t":"v","s":"1"}],["b",{"t":"v","s":"2"}]]}]},
+{"l":10,"n":"`c = 5`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"ref","id":3}],["a",{"t":"v","s":"1"}],["b",{"t":"v","s":"2"}],["c",{"t":"v","s":"5"}]]}]},
+{"l":11,"n":"الشرط `a * a + b * b != c` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"`Pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"null"}],["a",{"t":"v","s":"1"}],["b",{"t":"v","s":"2"}],["c",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `Pos != null` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]},{"name":"CheckList","vars":[["L",{"t":"ref","id":6}],["Pos",{"t":"null"}]]}]},
+{"l":15,"n":"العملية `CheckList` تُعيد `true`.","o":0},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: نقرأ القائمة ثلاث خلايا في كل دورة: a ثم b ثم c. قبل القراءة نفحص أنّ الخلايا الثلاث موجودة. إذا بقيت خلية أو خليتان بلا ثلاثية كاملة فالقائمة ليست مُتَمَيِّزة. إذا كان a * a + b * b لا يساوي c نُعيد false فورًا. بعد كل ثلاثية صحيحة يتقدّم Pos ثلاث خلايا. إذا وصل إلى null فكل الثلاثيات صحيحة: نُعيد true."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b13",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا تُعيد \u2066CheckList(L)\u2069 للقائمة \u2066[2,3,13,6,2,41]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "false",
+        "feedback": {
+         "explanation": "الثلاثية الأولى صحيحة: \u20664 + 9 = 13\u2069. في الثانية \u206636 + 4 = 40\u2069، والقيمة الثالثة 41، فتُعاد \u2066false\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b14",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066DeleteAll\u2069 — حذف كل ظهور لقيمة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b15",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066DeleteAll\u2069 التي تتلقّى مؤشّرًا إلى رأس سلسلة من نمط \u2066Node<int>\u2069 وعددًا صحيحًا \u2066Num\u2069. العملية تحذف من السلسلة كل الخلايا التي قيمتها \u2066Num\u2069، حتى لو كانت في بداية السلسلة، وتُعيد مؤشّرًا إلى رأس السلسلة بعد الحذف. مثال: حذف 4 من \u2066[4,7,4,4,2,4]\u2069 يعطي \u2066[7,2]\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b16",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "حذف كل ظهور للقيمة 4",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           4,
+           7,
+           4,
+           4,
+           2,
+           4
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ],
+          "hi": [
+           0,
+           2,
+           3,
+           5
+          ],
+          "label": "قبل: أربع خلايا قيمتها 4، وإحداها الرأس"
+         },
+         {
+          "kind": "chain",
+          "items": [
+           7,
+           2
+          ],
+          "pointers": [
+           [
+            "Head",
+            0
+           ]
+          ],
+          "label": "بعد الحذف: الرأس تغيّر"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 4 ← 7 ← 4 ← 4 ← 2 ← 4 ← null (قبل: أربع خلايا قيمتها 4، وإحداها الرأس)؛ سلسلة خلايا: 7 ← 2 ← null (بعد الحذف: الرأس تغيّر)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b17",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static Node<int> DeleteAll(Node<int> Head, int Num)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b18",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066DeleteAll\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الحلقة الأولى تعالج بداية السلسلة: طالما قيمة الرأس "
+          },
+          {
+           "text": "Num",
+           "dir": "ltr"
+          },
+          {
+           "text": " ننقل "
+          },
+          {
+           "text": "Head",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى الخلية التالية."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الحلقة الثانية تعالج بقية السلسلة: "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " هي الخلية "
+          },
+          {
+           "text": "السابقة",
+           "style": "strong"
+          },
+          {
+           "text": "، وننظر إلى الخلية التي بعدها."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إذا كانت قيمة الخلية التي بعد "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " هي "
+          },
+          {
+           "text": "Num",
+           "dir": "ltr"
+          },
+          {
+           "text": " نحذفها: "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " تتخطّاها. "
+          },
+          {
+           "text": "لا نقدّم",
+           "style": "strong"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " في هذه الدورة، لأنّ الخلية التالية الجديدة قد تكون "
+          },
+          {
+           "text": "Num",
+           "dir": "ltr"
+          },
+          {
+           "text": " أيضًا."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "وإلا نقدّم "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " خلية واحدة."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "العملية تُعيد الرأس لأنه قد يتغيّر، ومن يستدعيها يكتب: "
+          },
+          {
+           "text": "Head = DeleteAll(Head, 4);",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static Node<int> DeleteAll(Node<int> Head, int Num)\n{\n    while (Head != null && Head.GetValue() == Num)\n        Head = Head.GetNext();\n    Node<int> Pos = Head;\n    while (Pos != null && Pos.HasNext())\n    {\n        if (Pos.GetNext().GetValue() == Num)\n            Pos.SetNext(Pos.GetNext().GetNext());\n        else\n            Pos = Pos.GetNext();\n    }\n    return Head;\n}",
+        "checklist": [
+         "حلقة خاصة لحذف الخلايا من **بداية** السلسلة، مع الفحص `Head != null`.",
+         "في بقية السلسلة: الحذف من الخلية السابقة بالأمر `Pos.SetNext(Pos.GetNext().GetNext());`.",
+         "تقديم `Pos` **فقط** حين لا نحذف (داخل `else`).",
+         "`return Head;` في النهاية، وقد يكون `null` إذا حُذفت كل الخلايا."
+        ],
+        "trace": {
+         "code": "public static Node<int> DeleteAll(Node<int> Head, int Num)\n{\n    while (Head != null && Head.GetValue() == Num)\n        Head = Head.GetNext();\n    Node<int> Pos = Head;\n    while (Pos != null && Pos.HasNext())\n    {\n        if (Pos.GetNext().GetValue() == Num)\n            Pos.SetNext(Pos.GetNext().GetNext());\n        else\n            Pos = Pos.GetNext();\n    }\n    return Head;\n}",
+         "given": "السلسلة `Head = [4,7,4,4,2,4]`، والاستدعاء `Head = DeleteAll(Head, 4);`.",
+         "out": "[7,2]\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `DeleteAll` مع `Head` = الخلية التي قيمتها `4`، `Num = 4`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":6}]]},{"name":"DeleteAll","vars":[["Head",{"t":"ref","id":6}],["Num",{"t":"v","s":"4"}]]}],"h":[{"id":1,"k":"node","v":"4","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"4","next":2},{"id":4,"k":"node","v":"4","next":3},{"id":5,"k":"node","v":"7","next":4},{"id":6,"k":"node","v":"4","next":5}]},
+{"l":3,"n":"الشرط `Head != null && Head.GetValue() == Num` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`Head` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":6}]]},{"name":"DeleteAll","vars":[["Head",{"t":"ref","id":5}],["Num",{"t":"v","s":"4"}]]}]},
+{"l":3,"n":"الشرط `Head != null && Head.GetValue() == Num` خطأ: نخرج من الحلقة.","o":0},
+{"l":5,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":6}]]},{"name":"DeleteAll","vars":[["Head",{"t":"ref","id":5}],["Num",{"t":"v","s":"4"}],["Pos",{"t":"ref","id":5}]]}]},
+{"l":6,"n":"الشرط `Pos != null && Pos.HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `Pos.GetNext().GetValue() == Num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"الخلية `Pos` (قيمتها `7`) تشير الآن إلى الخلية التي قيمتها `4`.","o":0,"h":[{"id":1,"k":"node","v":"4","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"4","next":2},{"id":5,"k":"node","v":"7","next":3},{"id":6,"k":"node","v":"4","next":5}]},
+{"l":6,"n":"الشرط `Pos != null && Pos.HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `Pos.GetNext().GetValue() == Num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"الخلية `Pos` (قيمتها `7`) تشير الآن إلى الخلية التي قيمتها `2`.","o":0,"h":[{"id":1,"k":"node","v":"4","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":5,"k":"node","v":"7","next":2},{"id":6,"k":"node","v":"4","next":5}]},
+{"l":6,"n":"الشرط `Pos != null && Pos.HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `Pos.GetNext().GetValue() == Num` خطأ: ننتقل إلى `else`.","o":0},
+{"l":11,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":6}]]},{"name":"DeleteAll","vars":[["Head",{"t":"ref","id":5}],["Num",{"t":"v","s":"4"}],["Pos",{"t":"ref","id":2}]]}]},
+{"l":6,"n":"الشرط `Pos != null && Pos.HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `Pos.GetNext().GetValue() == Num` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"الخلية `Pos` (قيمتها `2`) تشير الآن إلى `null`.","o":0,"h":[{"id":2,"k":"node","v":"2","next":null},{"id":5,"k":"node","v":"7","next":2},{"id":6,"k":"node","v":"4","next":5}]},
+{"l":6,"n":"الشرط `Pos != null && Pos.HasNext()` خطأ: نخرج من الحلقة.","o":0},
+{"l":13,"n":"العملية `DeleteAll` تُعيد الخلية التي قيمتها `7`.","o":0},
+{"l":0,"n":"نطبع: `[7,2]`. انتهى التنفيذ.","o":6,"f":[{"name":"Main","vars":[["Head",{"t":"ref","id":5}]]}],"h":[{"id":2,"k":"node","v":"2","next":null},{"id":5,"k":"node","v":"7","next":2}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: الحلقة الأولى تعالج بداية السلسلة: طالما قيمة الرأس Num ننقل Head إلى الخلية التالية. الحلقة الثانية تعالج بقية السلسلة: Pos هي الخلية السابقة، وننظر إلى الخلية التي بعدها. إذا كانت قيمة الخلية التي بعد Pos هي Num نحذفها: Pos تتخطّاها. لا نقدّم Pos في هذه الدورة، لأنّ الخلية التالية الجديدة قد تكون Num أيضًا. وإلا نقدّم Pos خلية واحدة. العملية تُعيد الرأس لأنه قد يتغيّر، ومن يستدعيها يكتب: Head = DeleteAll(Head, 4);."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b19",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا تُعيد \u2066DeleteAll(Head, 5)\u2069 للسلسلة \u2066Head = [5,5,5]\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "مؤشّرًا إلى الخلية الأولى"
+         },
+         {
+          "id": "o2",
+          "text": "مؤشّرًا إلى الخلية الأخيرة"
+         },
+         {
+          "id": "o3",
+          "text": "\u2066null\u2069: حُذفت كل الخلايا",
+          "correct": true
+         },
+         {
+          "id": "o4",
+          "text": "خطأ في التشغيل"
+         }
+        ],
+        "feedback": {
+         "explanation": "الحلقة الأولى تنقل \u2066Head\u2069 ثلاث مرات حتى يصير \u2066null\u2069. الفحص \u2066Head != null\u2069 في شرطها يمنع خطأ التشغيل، والحلقة الثانية لا تدور."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b20",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — حذف عدد زوجي بين عددين فرديين — سؤال 13 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b21",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 13 من الكتاب (ص 147)",
+       "prompt": "اكتب عملية تتلقّى كبارامتر قائمة من نوع \u2066Node<int>\u2069. العملية تحذف من القائمة كل عدد زوجي مُحاط مباشرة بعددين فرديين بحيث تكون درجة نجاعة زمن التشغيل خطّية. مثال: القائمة \u2066[5,2,9,4,7,12,14,9]\u2069 تصبح \u2066[5,9,7,12,14,9]\u2069. شرح: القيمة 2 زوجية وهي مُحاطة بالعددين الفرديين 5 و9، والقيمة 4 زوجية وهي مُحاطة بالعددين الفرديين 9 و7.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b22",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السؤال 4: القائمة قبل وبعد",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           5,
+           2,
+           9,
+           4,
+           7,
+           12,
+           14,
+           9
+          ],
+          "pointers": [
+           [
+            "L",
+            0
+           ]
+          ],
+          "hi": [
+           1,
+           3
+          ],
+          "label": "قبل: الخليتان 2 و4 بين عددين فرديين"
+         },
+         {
+          "kind": "chain",
+          "items": [
+           5,
+           9,
+           7,
+           12,
+           14,
+           9
+          ],
+          "pointers": [
+           [
+            "L",
+            0
+           ]
+          ],
+          "label": "بعد تفعيل العملية"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 5 ← 2 ← 9 ← 4 ← 7 ← 12 ← 14 ← 9 ← null (قبل: الخليتان 2 و4 بين عددين فرديين)؛ سلسلة خلايا: 5 ← 9 ← 7 ← 12 ← 14 ← 9 ← null (بعد تفعيل العملية)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b23",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void RemoveEvenBetweenOdds(Node<int> L)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b24",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066RemoveEvenBetweenOdds\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "ننظر في كل دورة إلى ثلاث خلايا متتالية: "
           },
           {
            "text": "Pos",
@@ -6643,29 +9151,53 @@ const m03: ContentModule = {
            "dir": "ltr"
           },
           {
-           "text": ". شرط الحلقة يضمن أنّ الثلاث موجودة."
+           "text": "."
           }
          ]
         },
         {
-         "id": "i2",
+         "id": "s2",
          "text": [
+          {
+           "text": "إذا كانت "
+          },
           {
            "text": "Pos",
            "dir": "ltr"
           },
           {
-           "text": " هي الخلية "
+           "text": " فردية و "
           },
           {
-           "text": "السابقة",
-           "style": "strong"
+           "text": "Mid",
+           "dir": "ltr"
           },
           {
-           "text": " للخلية التي قد تُحذف، فالحذف أمر واحد: "
+           "text": " زوجية و "
           },
           {
-           "text": "Pos.SetNext(After);",
+           "text": "After",
+           "dir": "ltr"
+          },
+          {
+           "text": " فردية نحذف "
+          },
+          {
+           "text": "Mid",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الخلية "
+          },
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " تشير إلى "
+          },
+          {
+           "text": "After",
            "dir": "ltr"
           },
           {
@@ -6674,7 +9206,19 @@ const m03: ContentModule = {
          ]
         },
         {
-         "id": "i3",
+         "id": "s3",
+         "text": [
+          {
+           "text": "Pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " هي الخلية السابقة للخلية المحذوفة، فلا نحتاج إلى بحث إضافي عنها."
+          }
+         ]
+        },
+        {
+         "id": "s4",
          "text": [
           {
            "text": "بعد الحذف يتقدّم "
@@ -6691,59 +9235,42 @@ const m03: ContentModule = {
            "dir": "ltr"
           },
           {
-           "text": " (عدد فردي)، وقد يكون هو نفسه يسار عدد زوجي آخر."
+           "text": "، وهي عدد فردي قد يكون يسار عدد زوجي آخر."
           }
          ]
         },
         {
-         "id": "i4",
+         "id": "s5",
          "text": [
           {
-           "text": "الخلية الأولى لا تُحذف أبدًا (لا خلية قبلها)، فالرأس لا يتغيّر والعملية "
-          },
-          {
-           "text": "void",
-           "dir": "ltr"
-          },
-          {
-           "text": "."
-          }
-         ]
-        },
-        {
-         "id": "i5",
-         "text": [
-          {
-           "text": "تمشيط واحد للقائمة: النجاعة خطّية "
+           "text": "تمشيط واحد للقائمة: درجة النجاعة خطّية، "
           },
           {
            "text": "O(n)",
            "dir": "ltr"
           },
           {
-           "text": " كما يطلب السؤال."
+           "text": "، كما يطلب السؤال."
           }
          ]
         }
        ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p03-b20",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066RemoveEvenBetweenOdds\u2069 على قائمة الكتاب",
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
         "code": "public static void RemoveEvenBetweenOdds(Node<int> L)\n{\n    Node<int> Pos = L;\n    while (Pos != null && Pos.HasNext() && Pos.GetNext().HasNext())\n    {\n        Node<int> Mid = Pos.GetNext();\n        Node<int> After = Mid.GetNext();\n        if (Pos.GetValue() % 2 != 0 && Mid.GetValue() % 2 == 0 && After.GetValue() % 2 != 0)\n            Pos.SetNext(After);\n        Pos = Pos.GetNext();\n    }\n}",
-        "given": "القائمة `L = [5,2,9,4,7,12,14,9]`، والاستدعاء `RemoveEvenBetweenOdds(L)`.",
-        "out": "[5,9,7,12,14,9]\n",
-        "steps": [
+        "checklist": [
+         "شرط الحلقة يضمن وجود ثلاث خلايا: `Pos != null && Pos.HasNext() && Pos.GetNext().HasNext()`.",
+         "فحص الزوجي بـ `% 2 == 0` والفردي بـ `% 2 != 0`.",
+         "الحذف بأمر واحد من الخلية السابقة: `Pos.SetNext(After);`.",
+         "الخلية الأولى لا تُحذف أبدًا (لا خلية قبلها)، فالرأس لا يتغيّر والعملية `void`."
+        ],
+        "trace": {
+         "code": "public static void RemoveEvenBetweenOdds(Node<int> L)\n{\n    Node<int> Pos = L;\n    while (Pos != null && Pos.HasNext() && Pos.GetNext().HasNext())\n    {\n        Node<int> Mid = Pos.GetNext();\n        Node<int> After = Mid.GetNext();\n        if (Pos.GetValue() % 2 != 0 && Mid.GetValue() % 2 == 0 && After.GetValue() % 2 != 0)\n            Pos.SetNext(After);\n        Pos = Pos.GetNext();\n    }\n}",
+         "given": "القائمة `L = [5,2,9,4,7,12,14,9]`، والاستدعاء `RemoveEvenBetweenOdds(L)`.",
+         "out": "[5,9,7,12,14,9]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `RemoveEvenBetweenOdds` مع `L` = الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":8}]]},{"name":"RemoveEvenBetweenOdds","vars":[["L",{"t":"ref","id":8}]]}],"h":[{"id":1,"k":"node","v":"9","next":null},{"id":2,"k":"node","v":"14","next":1},{"id":3,"k":"node","v":"12","next":2},{"id":4,"k":"node","v":"7","next":3},{"id":5,"k":"node","v":"4","next":4},{"id":6,"k":"node","v":"9","next":5},{"id":7,"k":"node","v":"2","next":6},{"id":8,"k":"node","v":"5","next":7}]},
 {"l":3,"n":"`Pos` يشير الآن إلى الخلية التي قيمتها `5`.","o":0,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":8}]]},{"name":"RemoveEvenBetweenOdds","vars":[["L",{"t":"ref","id":8}],["Pos",{"t":"ref","id":8}]]}]},
 {"l":4,"n":"الشرط `Pos != null && Pos.HasNext() && Pos.GetNext().HasNext()` صحيح: ننفّذ جسم الحلقة.","o":0},
@@ -6772,19 +9299,20 @@ const m03: ContentModule = {
 {"l":12,"n":"تنتهي العملية `RemoveEvenBetweenOdds` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"نطبع: `[5,9,7,12,14,9]`. انتهى التنفيذ.","o":16,"f":[{"name":"Main","vars":[["L",{"t":"ref","id":8}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (27 خطوة)؛ ناتج البرنامج: [5,9,7,12,14,9]."
+        "text": "حل السؤال: ننظر في كل دورة إلى ثلاث خلايا متتالية: Pos ثم Mid ثم After. إذا كانت Pos فردية و Mid زوجية و After فردية نحذف Mid: الخلية Pos تشير إلى After. Pos هي الخلية السابقة للخلية المحذوفة، فلا نحتاج إلى بحث إضافي عنها. بعد الحذف يتقدّم Pos إلى After، وهي عدد فردي قد يكون يسار عدد زوجي آخر. تمشيط واحد للقائمة: درجة النجاعة خطّية، O(n)، كما يطلب السؤال."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b21",
+       "id": "m03-l07-p04-b25",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "كيف تبدو القائمة \u2066L = [3,8,5,6,6,1,4,7]\u2069 بعد استدعاء العملية؟",
+        "prompt": "كيف تبدو القائمة \u2066L = [3,8,5,6,6,1,4,7]\u2069 بعد استدعاء عملية الحل؟",
         "options": [
          {
           "id": "o1",
@@ -6811,70 +9339,96 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b22",
+       "id": "m03-l07-p04-b26",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 14 — السلسلة المُثَلَّثَة",
+       "text": "سؤال 5 · متقدّم — السلسلة المُثَلَّثَة — سؤال 14 من الكتاب",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b23",
-       "type": "text",
-       "spans": [
-        {
-         "text": "نحسب طول السلسلة بالعملية "
-        },
-        {
-         "text": "GetLength",
-         "dir": "ltr"
-        },
-        {
-         "text": " من الكتاب. ثم نضع ثلاثة مؤشّرات: على بداية الثلث الأول، وبداية الثاني، وبداية الثالث، ونقدّمها معًا. العملية المساعدة "
-        },
-        {
-         "text": "Skip",
-         "dir": "ltr"
-        },
-        {
-         "text": " تُعيد المؤشّر بعد أن يتقدّم "
-        },
-        {
-         "text": "k",
-         "dir": "ltr"
-        },
-        {
-         "text": " خلايا."
-        }
-       ],
+       "id": "m03-l07-p04-b27",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 14 من الكتاب (ص 148)",
+       "prompt": "سلسلة خلايا مترابطة من نوع \u2066Node<int>\u2069 تُعتبر مُثَلَّثَة إذا توفّرت فيها الشروط التالية: عدد الخلايا فيها من مضاعفات العدد 3، والأعداد في خلايا الثلث الأول مساوية للأعداد في خلايا الثلث الثاني والثلث الثالث وتظهر أيضًا بنفس الترتيب. اكتب عملية تتلقّى كبارامتر الخلية الأولى في سلسلة الخلايا المترابطة ثم تقوم بفحص السلسلة وإعادة \u2066true\u2069 إذا كانت مُثَلَّثَة، وخلاف ذلك تُعيد \u2066false\u2069.",
+       "steps": [],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b24",
+       "id": "m03-l07-p04-b28",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "السؤال 5: سلسلة مُثَلَّثَة",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "chain",
+          "items": [
+           2,
+           5,
+           3,
+           7,
+           2,
+           5,
+           3,
+           7,
+           2,
+           5,
+           3,
+           7
+          ],
+          "pointers": [
+           [
+            "Chain",
+            0
+           ]
+          ],
+          "hi": [
+           4,
+           5,
+           6,
+           7
+          ],
+          "label": "الأثلاث الثلاثة متساوية: \u2066[2,5,3,7]\u2069 ثلاث مرات"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: سلسلة خلايا: 2 ← 5 ← 3 ← 7 ← 2 ← 5 ← 3 ← 7 ← 2 ← 5 ← 3 ← 7 ← null (الأثلاث الثلاثة متساوية: `[2,5,3,7]` ثلاث مرات)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p04-b29",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static bool IsTripled(Node<int> Chain)\n{\n    int Length = GetLength(Chain);\n    if (Length % 3 != 0)\n        return false;\n    Node<int> Pos1 = Chain;\n    Node<int> Pos2 = Skip(Chain, Length / 3);\n    Node<int> Pos3 = Skip(Pos2, Length / 3);\n    while (Pos3 != null)\n    {\n        if (Pos1.GetValue() != Pos2.GetValue() || Pos2.GetValue() != Pos3.GetValue())\n            return false;\n        Pos1 = Pos1.GetNext();\n        Pos2 = Pos2.GetNext();\n        Pos3 = Pos3.GetNext();\n    }\n    return true;\n}",
+       "code": "public static bool IsTripled(Node<int> Chain)\n{\n    // اكتب هنا\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b25",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Node<int> Skip(Node<int> Pos, int k)\n{\n    for (int i = 0; i < k; i++)\n        Pos = Pos.GetNext();\n    return Pos;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p03-b26",
-       "type": "list",
-       "variant": "checklist",
-       "title": "ما يُفحص في الحل",
-       "items": [
+       "id": "m03-l07-p04-b30",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 5 — \u2066IsTripled\u2069",
+       "steps": [
         {
-         "id": "i1",
+         "id": "s1",
          "text": [
           {
-           "text": "إذا لم يكن الطول من مضاعفات 3 نُعيد "
+           "text": "نحسب طول السلسلة بالعملية "
+          },
+          {
+           "text": "GetLength",
+           "dir": "ltr"
+          },
+          {
+           "text": " من الكتاب. إذا لم يكن من مضاعفات 3 نُعيد "
           },
           {
            "text": "false",
@@ -6886,29 +9440,68 @@ const m03: ContentModule = {
          ]
         },
         {
-         "id": "i2",
+         "id": "s2",
          "text": [
+          {
+           "text": "نضع ثلاثة مؤشّرات: "
+          },
+          {
+           "text": "Pos1",
+           "dir": "ltr"
+          },
+          {
+           "text": " على بداية الثلث الأول، "
+          },
           {
            "text": "Pos2",
            "dir": "ltr"
           },
           {
-           "text": " يبدأ بعد ثلث السلسلة، و "
+           "text": " على بداية الثاني، و "
           },
           {
            "text": "Pos3",
            "dir": "ltr"
           },
           {
-           "text": " بعد ثلثين."
+           "text": " على بداية الثالث. العملية المساعدة "
+          },
+          {
+           "text": "Skip",
+           "dir": "ltr"
+          },
+          {
+           "text": " تُعيد المؤشّر بعد أن يتقدّم "
+          },
+          {
+           "text": "k",
+           "dir": "ltr"
+          },
+          {
+           "text": " خلايا."
           }
          ]
         },
         {
-         "id": "i3",
+         "id": "s3",
          "text": [
           {
-           "text": "الحلقة تنتهي حين يصل "
+           "text": "نقدّم المؤشّرات الثلاثة معًا، ونقارن القيم الثلاث في كل دورة. أول اختلاف يُعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "حين يصل "
           },
           {
            "text": "Pos3",
@@ -6922,18 +9515,10 @@ const m03: ContentModule = {
            "dir": "ltr"
           },
           {
-           "text": ": عندها قورنت كل خلايا الأثلاث."
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "عند أول اختلاف بين القيم الثلاث نُعيد "
+           "text": " تكون كل خلايا الأثلاث قد قورنت: نُعيد "
           },
           {
-           "text": "false",
+           "text": "true",
            "dir": "ltr"
           },
           {
@@ -6942,25 +9527,22 @@ const m03: ContentModule = {
          ]
         }
        ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m03-l07-p03-b27",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066IsTripled\u2069 على \u2066[2,5,2,5,2,5]\u2069",
-       "description": "راقب المؤشّرات الثلاثة على الرسم: تتقدّم معًا، كل واحد في ثلثه.",
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static bool IsTripled(Node<int> Chain)\n{\n    int Length = GetLength(Chain);\n    if (Length % 3 != 0)\n        return false;\n    Node<int> Pos1 = Chain;\n    Node<int> Pos2 = Skip(Chain, Length / 3);\n    Node<int> Pos3 = Skip(Pos2, Length / 3);\n    while (Pos3 != null)\n    {\n        if (Pos1.GetValue() != Pos2.GetValue() || Pos2.GetValue() != Pos3.GetValue())\n            return false;\n        Pos1 = Pos1.GetNext();\n        Pos2 = Pos2.GetNext();\n        Pos3 = Pos3.GetNext();\n    }\n    return true;\n}",
-        "given": "السلسلة `Chain = [2,5,2,5,2,5]` (طولها 6، وكل ثلث فيه خليتان)، والاستدعاء `IsTripled(Chain)`.",
-        "out": "True\n",
-        "steps": [
+        "code": "public static bool IsTripled(Node<int> Chain)\n{\n    int Length = GetLength(Chain);\n    if (Length % 3 != 0)\n        return false;\n    Node<int> Pos1 = Chain;\n    Node<int> Pos2 = Skip(Chain, Length / 3);\n    Node<int> Pos3 = Skip(Pos2, Length / 3);\n    while (Pos3 != null)\n    {\n        if (Pos1.GetValue() != Pos2.GetValue() || Pos2.GetValue() != Pos3.GetValue())\n            return false;\n        Pos1 = Pos1.GetNext();\n        Pos2 = Pos2.GetNext();\n        Pos3 = Pos3.GetNext();\n    }\n    return true;\n}\npublic static Node<int> Skip(Node<int> Pos, int k)\n{\n    for (int i = 0; i < k; i++)\n        Pos = Pos.GetNext();\n    return Pos;\n}",
+        "checklist": [
+         "فحص أنّ الطول من مضاعفات 3: `Length % 3 != 0`.",
+         "`Pos2` يبدأ بعد ثلث السلسلة، و `Pos3` بعد ثلثين.",
+         "المقارنة بين القيم الثلاث في **الموضع نفسه** من كل ثلث.",
+         "شرط الحلقة على `Pos3`: هو أول مؤشّر يصل إلى `null`."
+        ],
+        "trace": {
+         "code": "public static bool IsTripled(Node<int> Chain)\n{\n    int Length = GetLength(Chain);\n    if (Length % 3 != 0)\n        return false;\n    Node<int> Pos1 = Chain;\n    Node<int> Pos2 = Skip(Chain, Length / 3);\n    Node<int> Pos3 = Skip(Pos2, Length / 3);\n    while (Pos3 != null)\n    {\n        if (Pos1.GetValue() != Pos2.GetValue() || Pos2.GetValue() != Pos3.GetValue())\n            return false;\n        Pos1 = Pos1.GetNext();\n        Pos2 = Pos2.GetNext();\n        Pos3 = Pos3.GetNext();\n    }\n    return true;\n}\npublic static Node<int> Skip(Node<int> Pos, int k)\n{\n    for (int i = 0; i < k; i++)\n        Pos = Pos.GetNext();\n    return Pos;\n}",
+         "given": "السلسلة `Chain = [2,5,2,5,2,5]` (طولها 6، وكل ثلث فيه خليتان)، والاستدعاء `IsTripled(Chain)`. العمليتان `GetLength` و `Skip` تُنفَّذان بلا خطوات خاصة بهما.",
+         "out": "True\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `IsTripled` مع `Chain` = الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":6}]]},{"name":"IsTripled","vars":[["Chain",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"node","v":"5","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"5","next":2},{"id":4,"k":"node","v":"2","next":3},{"id":5,"k":"node","v":"5","next":4},{"id":6,"k":"node","v":"2","next":5}]},
 {"l":3,"n":"`Length = 6`.","o":0,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":6}]]},{"name":"IsTripled","vars":[["Chain",{"t":"ref","id":6}],["Length",{"t":"v","s":"6"}]]}]},
 {"l":4,"n":"الشرط `Length % 3 != 0` خطأ: نتخطّى ما بعد `if`.","o":0},
@@ -6981,14 +9563,15 @@ const m03: ContentModule = {
 {"l":17,"n":"العملية `IsTripled` تُعيد `true`.","o":0},
 {"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["Chain",{"t":"ref","id":6}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (19 خطوة)؛ ناتج البرنامج: True."
+        "text": "حل السؤال: نحسب طول السلسلة بالعملية GetLength من الكتاب. إذا لم يكن من مضاعفات 3 نُعيد false فورًا. نضع ثلاثة مؤشّرات: Pos1 على بداية الثلث الأول، Pos2 على بداية الثاني، و Pos3 على بداية الثالث. العملية المساعدة Skip تُعيد المؤشّر بعد أن يتقدّم k خلايا. نقدّم المؤشّرات الثلاثة معًا، ونقارن القيم الثلاث في كل دورة. أول اختلاف يُعيد false. حين يصل Pos3 إلى null تكون كل خلايا الأثلاث قد قورنت: نُعيد true."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b28",
+       "id": "m03-l07-p04-b31",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7001,7 +9584,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p03-b29",
+       "id": "m03-l07-p04-b32",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7016,9 +9599,9 @@ const m03: ContentModule = {
      ]
     },
     {
-     "id": "899271d-m03-l07-p04",
+     "id": "899271d-m03-l07-p05",
      "title": "تدريبات الوحدة",
-     "order": 4,
+     "order": 5,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
@@ -7033,7 +9616,7 @@ const m03: ContentModule = {
      ],
      "blocks": [
       {
-       "id": "m03-l07-p04-b01",
+       "id": "m03-l07-p05-b01",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7065,7 +9648,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b02",
+       "id": "m03-l07-p05-b02",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7112,7 +9695,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b03",
+       "id": "m03-l07-p05-b03",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7120,7 +9703,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b04",
+       "id": "m03-l07-p05-b04",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7133,7 +9716,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b05",
+       "id": "m03-l07-p05-b05",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7175,7 +9758,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b06",
+       "id": "m03-l07-p05-b06",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7183,7 +9766,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b07",
+       "id": "m03-l07-p05-b07",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7215,7 +9798,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b08",
+       "id": "m03-l07-p05-b08",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7272,7 +9855,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b09",
+       "id": "m03-l07-p05-b09",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7286,7 +9869,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b10",
+       "id": "m03-l07-p05-b10",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7294,7 +9877,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b11",
+       "id": "m03-l07-p05-b11",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7307,7 +9890,28 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b12",
+       "id": "m03-l07-p05-b12",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool What1(Node<int> Head, int s)\n{\n    Node<int> Pos = Head;\n    int a, b;\n    while (Pos != null)\n    {\n        a = Pos.GetValue();\n        b = Pos.GetNext().GetValue();\n        if (a + b != s) return false;\n        Pos = Pos.GetNext().GetNext();\n    }\n    return true;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p05-b13",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "العملية \u2066What1\u2069 أعلاه من سؤال 2 في الكتاب. ماذا يُعاد للاستدعاء \u2066What1(Head, 5)\u2069 إذا كانت القائمة \u2066[2,3,4,5,1,4]\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "false",
+        "feedback": {
+         "explanation": "العملية تفحص القيم زوجًا زوجًا. الزوج الأول \u20662 + 3 = 5\u2069، لكن الزوج الثاني \u20664 + 5 = 9\u2069 لا يساوي 5، فتُعاد \u2066false\u2069 فورًا."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m03-l07-p05-b14",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7371,7 +9975,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b13",
+       "id": "m03-l07-p05-b15",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7403,7 +10007,7 @@ const m03: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m03-l07-p04-b14",
+       "id": "m03-l07-p05-b16",
        "type": "practice",
        "reveal": true,
        "question": {

@@ -6617,12 +6617,12 @@ const m02: ContentModule = {
   },
   {
    "id": "899271d-m02-l07",
-   "title": "أسئلة تتبّع وتدريبات",
+   "title": "أسئلة وتمارين",
    "order": 7,
    "pages": [
     {
      "id": "899271d-m02-l07-p01",
-     "title": "أسئلة تتبّع وعدّ",
+     "title": "أسئلة تتبّع وعدّ محلولة",
      "order": 1,
      "source": {
       "kind": "book",
@@ -6631,9 +6631,13 @@ const m02: ContentModule = {
       "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
      },
      "keywords": [
+      "أسئلة محلولة",
       "تتبّع",
       "عدّ",
-      "درجة النجاعة"
+      "Kiwi",
+      "Mango",
+      "BinarySearch",
+      "Fib_Recursive"
      ],
      "blocks": [
       {
@@ -6641,14 +6645,7 @@ const m02: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "تمعّن في كل عملية وتتبّعها "
-        },
-        {
-         "text": "بدون",
-         "style": "strong"
-        },
-        {
-         "text": " الاستعانة بالحاسوب. أجب أولًا، ثم افتح التتبّع لتتأكد. في كل سؤال جزءان: ماذا تعيد العملية لإدخال صغير، وما درجة نجاعتها."
+         "text": "خمسة أسئلة محلولة، مرتّبة من الأسهل إلى الأصعب. في كل سؤال: اقرأ الكود وحاول أن تجيب وحدك، ثم اقرأ الحل، ثم تتبّع البرنامج خطوة بخطوة لتتأكد. أسئلة الكتاب لهذا الفصل غير موجودة في النسخة التي بين أيدينا، فهذه الأسئلة من إعدادنا بأسلوب الفصل."
         }
        ],
        "origin": "teacher-enrichment"
@@ -6657,7 +6654,7 @@ const m02: ContentModule = {
        "id": "m02-l07-p01-b02",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 1 — العملية \u2066Mango\u2069",
+       "text": "سؤال 1 · سهل — حلقة تقفز خطوتين",
        "origin": "teacher-enrichment"
       },
       {
@@ -6665,52 +6662,42 @@ const m02: ContentModule = {
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static int Mango(int n)\n{\n    int count = 0;\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            count++;\n    return count;\n}",
+       "code": "public static void Main()\n{\n    for (int i = 0; i < 10; i += 2)\n        Console.Write(i + \" \");\n}",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m02-l07-p01-b04",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تعيدها \u2066Mango(5)\u2069؟",
-        "answer": "10",
-        "feedback": {
-         "explanation": "حين \u2066i = 0\u2069 تدور الحلقة الداخلية 4 مرات، ثم 3، ثم 2، ثم 1، ثم لا تدور: \u20664 + 3 + 2 + 1 = 10\u2069."
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ماذا يطبع البرنامج؟ وكم مرة يُنفَّذ أمر الطباعة؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m02-l07-p01-b05",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما درجة نجاعة العملية \u2066Mango\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "خطية \u2066O(n)\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "تربيعية \u2066O(n²)\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "لوغاريثمية \u2066O(log n)\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "خطية لوغاريثمية \u2066O(n log n)\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "عدد الدورات \u2066(n – 1) + (n – 2) + ... + 1 = n(n – 1) / 2\u2069. الحدّ صاحب أكبر قوّة هو \u2066n²\u2069، تمامًا كما في ترتيب الفقاعات."
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "العدّاد \u2066i\u2069 يبدأ من 0 ويزيد 2 في كل دورة: 0 ثم 2 ثم 4 ثم 6 ثم 8."
+        },
+        {
+         "text": "حين تصير \u2066i\u2069 مساوية 10 يكون الشرط \u2066i < 10\u2069 خطأ، فتتوقف الحلقة ولا تُطبع 10."
+        },
+        {
+         "text": "أمر الطباعة نُفّذ مرة لكل قيمة: 5 مرات، أي نصف العدد 10."
+        },
+        {
+         "text": "النتيجة: يُطبع \u20660 2 4 6 8\u2069، وأمر الطباعة يُنفَّذ 5 مرات."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
@@ -6718,7 +6705,212 @@ const m02: ContentModule = {
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Mango(4)\u2069",
+       "title": "تتبّع الحل: حلقة تقفز خطوتين",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void Main()\n{\n    for (int i = 0; i < 10; i += 2)\n        Console.Write(i + \" \");\n}",
+        "out": "0 2 4 6 8 ",
+        "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[["i",{"t":"v","s":"0"}]]}]},
+{"l":3,"n":"الشرط `i < 10` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"نطبع: `0 ` (بلا سطر جديد).","o":2},
+{"l":3,"n":"`i` كانت `0` وتصبح `2`.","o":2,"f":[{"name":"Main","vars":[["i",{"t":"v","s":"2"}]]}]},
+{"l":3,"n":"الشرط `i < 10` صحيح: ننفّذ جسم الحلقة.","o":2},
+{"l":4,"n":"نطبع: `2 ` (بلا سطر جديد).","o":4},
+{"l":3,"n":"`i` كانت `2` وتصبح `4`.","o":4,"f":[{"name":"Main","vars":[["i",{"t":"v","s":"4"}]]}]},
+{"l":3,"n":"الشرط `i < 10` صحيح: ننفّذ جسم الحلقة.","o":4},
+{"l":4,"n":"نطبع: `4 ` (بلا سطر جديد).","o":6},
+{"l":3,"n":"`i` كانت `4` وتصبح `6`.","o":6,"f":[{"name":"Main","vars":[["i",{"t":"v","s":"6"}]]}]},
+{"l":3,"n":"الشرط `i < 10` صحيح: ننفّذ جسم الحلقة.","o":6},
+{"l":4,"n":"نطبع: `6 ` (بلا سطر جديد).","o":8},
+{"l":3,"n":"`i` كانت `6` وتصبح `8`.","o":8,"f":[{"name":"Main","vars":[["i",{"t":"v","s":"8"}]]}]},
+{"l":3,"n":"الشرط `i < 10` صحيح: ننفّذ جسم الحلقة.","o":8},
+{"l":4,"n":"نطبع: `8 ` (بلا سطر جديد).","o":10},
+{"l":3,"n":"`i` كانت `8` وتصبح `10`.","o":10,"f":[{"name":"Main","vars":[["i",{"t":"v","s":"10"}]]}]},
+{"l":3,"n":"الشرط `i < 10` خطأ: نخرج من الحلقة.","o":10},
+{"l":5,"n":"ينتهي البرنامج.","o":10,"f":[{"name":"Main","vars":[]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (19 خطوة)؛ ناتج البرنامج: 0 2 4 6 8."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b07",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066Kiwi\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b08",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Kiwi(int n)\n{\n    int count = 0;\n    while (n > 0)\n    {\n        n = n / 10;\n        count++;\n    }\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b09",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما القيمة التي تعيدها "
+        },
+        {
+         "text": "Kiwi(2024)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وماذا تحسب العملية؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b10",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في كل دورة يُقسم \u2066n\u2069 على 10 قسمة صحيحة، أي يُحذف رقمه الأخير، ويزيد العدّاد \u2066count\u2069 بواحد."
+        },
+        {
+         "text": "قيم \u2066n\u2069 بالترتيب: 2024 ثم 202 ثم 20 ثم 2 ثم 0. هذه أربع عمليات قسمة."
+        },
+        {
+         "text": "حين تصير \u2066n\u2069 صفرًا يكون الشرط \u2066n > 0\u2069 خطأ وتتوقف الحلقة."
+        },
+        {
+         "text": "النتيجة: تعيد العملية \u20664\u2069: هي تعدّ أرقام العدد."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b11",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066Kiwi(2024)\u2069",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int Kiwi(int n)\n{\n    int count = 0;\n    while (n > 0)\n    {\n        n = n / 10;\n        count++;\n    }\n    return count;\n}",
+        "given": "الاستدعاء `Kiwi(2024)`.",
+        "out": "4\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Kiwi` مع `n = 2024`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2024"}]]}],"h":[]},
+{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2024"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`n = 202`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"202"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"202"}],["count",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`n = 20`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"20"}],["count",{"t":"v","s":"1"}]]}]},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"20"}],["count",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`n = 2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2"}],["count",{"t":"v","s":"2"}]]}]},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2"}],["count",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`n = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"0"}],["count",{"t":"v","s":"3"}]]}]},
+{"l":7,"n":"`count` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"0"}],["count",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `n > 0` خطأ: نخرج من الحلقة.","o":0},
+{"l":9,"n":"العملية `Kiwi` تُعيد `4`.","o":0},
+{"l":0,"n":"نطبع: `4`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (17 خطوة)؛ ناتج البرنامج: 4."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b12",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066Mango\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b13",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Mango(int n)\n{\n    int count = 0;\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b14",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما القيمة التي تعيدها "
+        },
+        {
+         "text": "Mango(4)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وما القيمة التي تعيدها "
+        },
+        {
+         "text": "Mango(5)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b15",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة الداخلية تبدأ من \u2066j = i + 1\u2069، فعدد دوراتها يقلّ كلما كبرت \u2066i\u2069."
+        },
+        {
+         "text": "حين \u2066i = 0\u2069 تأخذ \u2066j\u2069 القيم 1 و2 و3: ثلاث دورات. حين \u2066i = 1\u2069: دورتان. حين \u2066i = 2\u2069: دورة واحدة. حين \u2066i = 3\u2069: لا تدور."
+        },
+        {
+         "text": "المجموع \u20663 + 2 + 1 = 6\u2069."
+        },
+        {
+         "text": "بالطريقة نفسها تعيد \u2066Mango(5)\u2069 المجموع \u20664 + 3 + 2 + 1 = 10\u2069."
+        },
+        {
+         "text": "النتيجة: \u2066Mango(4)\u2069 تعيد \u20666\u2069، و \u2066Mango(5)\u2069 تعيد \u206610\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b16",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066Mango(4)\u2069",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -6777,204 +6969,261 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b07",
+       "id": "m02-l07-p01-b17",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 2 — العملية \u2066Kiwi\u2069",
+       "text": "سؤال 4 · متوسط — \u2066BinarySearch\u2069: كم مرة ننصّف؟",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b08",
+       "id": "m02-l07-p01-b18",
+       "type": "text",
+       "spans": [
+        {
+         "text": "العملية "
+        },
+        {
+         "text": "BinarySearch",
+         "dir": "ltr"
+        },
+        {
+         "text": " هي صيغة البحث الثنائي التي أضفناها في صفحة «النجاعة اللوغاريثمية»:"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b19",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static int Kiwi(int n)\n{\n    int count = 0;\n    while (n > 0)\n    {\n        n = n / 10;\n        count++;\n    }\n    return count;\n}",
+       "code": "public static int BinarySearch(int[] A, int k)\n{\n    int low = 0;\n    int high = A.Length - 1;\n    while (low <= high)\n    {\n        int mid = (low + high) / 2;\n        if (A[mid] == k)\n            return mid;\n        if (A[mid] < k)\n            low = mid + 1;\n        else\n            high = mid - 1;\n    }\n    return -1;\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b09",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تعيدها \u2066Kiwi(2024)\u2069؟",
-        "answer": "4",
-        "feedback": {
-         "explanation": "قيم \u2066n\u2069: 2024 ثم 202 ثم 20 ثم 2 ثم 0. أربع دورات. العملية تعدّ أرقام العدد."
+       "id": "m02-l07-p01-b20",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " معطاة المصفوفة المرتّبة "
+        },
+        {
+         "text": "A = {3, 6, 9, 12, 15, 18, 21}",
+         "dir": "ltr"
+        },
+        {
+         "text": ". كم مرة يُنفَّذ الأمر "
+        },
+        {
+         "text": "int mid = (low + high) / 2;",
+         "dir": "ltr"
+        },
+        {
+         "text": " في الاستدعاء "
+        },
+        {
+         "text": "BinarySearch(A, 20)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وماذا تعيد العملية؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b10",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما درجة نجاعة العملية \u2066Kiwi\u2069 بالنسبة إلى قيمة \u2066n\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "ثابتة \u2066O(1)\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "لوغاريثمية \u2066O(log n)\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "خطية \u2066O(n)\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "تربيعية \u2066O(n²)\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "في كل دورة يُقسم \u2066n\u2069 على 10، فعدد الدورات هو عدد أرقام \u2066n\u2069، أي نحو \u2066log₁₀ n\u2069. القسمة على 10 بدل 2 تغيّر الأساس فقط، والدرجة تبقى لوغاريثمية."
+       "id": "m02-l07-p01-b21",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "البداية \u2066low = 0\u2069 و \u2066high = 6\u2069. في الدورة الأولى \u2066mid = 3\u2069، والقيمة \u2066A[3]\u2069 هي 12 وهي أصغر من 20، فيصير \u2066low = 4\u2069."
+        },
+        {
+         "text": "في الدورة الثانية \u2066mid = 5\u2069، والقيمة \u2066A[5]\u2069 هي 18 وهي أصغر من 20، فيصير \u2066low = 6\u2069."
+        },
+        {
+         "text": "في الدورة الثالثة \u2066mid = 6\u2069، والقيمة \u2066A[6]\u2069 هي 21 وهي أكبر من 20، فيصير \u2066high = 5\u2069."
+        },
+        {
+         "text": "الآن \u2066low\u2069 أكبر من \u2066high\u2069: المجال فارغ، فتتوقف الحلقة."
+        },
+        {
+         "text": "النتيجة: الأمر يُنفَّذ 3 مرات، والعملية تعيد \u2066-1\u2069. سبع خلايا احتاجت إلى 3 دورات فقط."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b11",
+       "id": "m02-l07-p01-b22",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Kiwi(2024)\u2069",
+       "title": "تتبّع الحل: \u2066BinarySearch(A, 20)\u2069",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static int Kiwi(int n)\n{\n    int count = 0;\n    while (n > 0)\n    {\n        n = n / 10;\n        count++;\n    }\n    return count;\n}",
-        "given": "الاستدعاء `Kiwi(2024)`.",
-        "out": "4\n",
+        "code": "public static int BinarySearch(int[] A, int k)\n{\n    int low = 0;\n    int high = A.Length - 1;\n    while (low <= high)\n    {\n        int mid = (low + high) / 2;\n        if (A[mid] == k)\n            return mid;\n        if (A[mid] < k)\n            low = mid + 1;\n        else\n            high = mid - 1;\n    }\n    return -1;\n}",
+        "given": "المصفوفة المرتّبة `A = {3, 6, 9, 12, 15, 18, 21}`، والاستدعاء `BinarySearch(A, 20)`.",
+        "out": "-1\n",
         "steps": [
-{"l":1,"n":"تبدأ العملية `Kiwi` مع `n = 2024`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2024"}]]}],"h":[]},
-{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2024"}],["count",{"t":"v","s":"0"}]]}]},
-{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"`n = 202`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"202"}],["count",{"t":"v","s":"0"}]]}]},
-{"l":7,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"202"}],["count",{"t":"v","s":"1"}]]}]},
-{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"`n = 20`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"20"}],["count",{"t":"v","s":"1"}]]}]},
-{"l":7,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"20"}],["count",{"t":"v","s":"2"}]]}]},
-{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"`n = 2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2"}],["count",{"t":"v","s":"2"}]]}]},
-{"l":7,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"2"}],["count",{"t":"v","s":"3"}]]}]},
-{"l":4,"n":"الشرط `n > 0` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":6,"n":"`n = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"0"}],["count",{"t":"v","s":"3"}]]}]},
-{"l":7,"n":"`count` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Kiwi","vars":[["n",{"t":"v","s":"0"}],["count",{"t":"v","s":"4"}]]}]},
-{"l":4,"n":"الشرط `n > 0` خطأ: نخرج من الحلقة.","o":0},
-{"l":9,"n":"العملية `Kiwi` تُعيد `4`.","o":0},
-{"l":0,"n":"نطبع: `4`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[]}]}
+{"l":1,"n":"تبدأ العملية `BinarySearch` مع `A = {3, 6, 9, 12, 15, 18, 21}`، `k = 20`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}]]}],"h":[]},
+{"l":3,"n":"`low = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`high = 6`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"0"}],["high",{"t":"v","s":"6"}]]}]},
+{"l":5,"n":"الشرط `low <= high` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"`mid = 3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"0"}],["high",{"t":"v","s":"6"}],["mid",{"t":"v","s":"3"}]]}]},
+{"l":8,"n":"الشرط `A[mid] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `A[mid] < k` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":11,"n":"`low = 4`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"4"}],["high",{"t":"v","s":"6"}],["mid",{"t":"v","s":"3"}]]}]},
+{"l":5,"n":"الشرط `low <= high` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"4"}],["high",{"t":"v","s":"6"}]]}]},
+{"l":7,"n":"`mid = 5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"4"}],["high",{"t":"v","s":"6"}],["mid",{"t":"v","s":"5"}]]}]},
+{"l":8,"n":"الشرط `A[mid] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `A[mid] < k` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":11,"n":"`low = 6`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"6"}],["high",{"t":"v","s":"6"}],["mid",{"t":"v","s":"5"}]]}]},
+{"l":5,"n":"الشرط `low <= high` صحيح: ننفّذ جسم الحلقة.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"6"}],["high",{"t":"v","s":"6"}]]}]},
+{"l":7,"n":"`mid = 6`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"6"}],["high",{"t":"v","s":"6"}],["mid",{"t":"v","s":"6"}]]}]},
+{"l":8,"n":"الشرط `A[mid] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":10,"n":"الشرط `A[mid] < k` خطأ: ننتقل إلى `else`.","o":0},
+{"l":13,"n":"`high = 5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"6"}],["high",{"t":"v","s":"5"}],["mid",{"t":"v","s":"6"}]]}]},
+{"l":5,"n":"الشرط `low <= high` خطأ: نخرج من الحلقة.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]},{"name":"BinarySearch","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}],["k",{"t":"v","s":"20"}],["low",{"t":"v","s":"6"}],["high",{"t":"v","s":"5"}]]}]},
+{"l":15,"n":"العملية `BinarySearch` تُعيد `-1`.","o":0},
+{"l":0,"n":"نطبع: `-1`. انتهى التنفيذ.","o":3,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["3","6","9","12","15","18","21"]}]]}]}
 ]
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (17 خطوة)؛ ناتج البرنامج: 4."
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (21 خطوة)؛ ناتج البرنامج: -1."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b12",
+       "id": "m02-l07-p01-b23",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 3 — العملية \u2066Lemon\u2069",
+       "text": "سؤال 5 · متقدّم — \u2066Fib_Recursive\u2069: كم استدعاء؟",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b13",
+       "id": "m02-l07-p01-b24",
+       "type": "text",
+       "spans": [
+        {
+         "text": "العملية "
+        },
+        {
+         "text": "Fib_Recursive",
+         "dir": "ltr"
+        },
+        {
+         "text": " من الكتاب (ص 84):"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p01-b25",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static bool Lemon(int[] A)\n{\n    for (int i = 0; i < A.Length; i++)\n        for (int j = i + 1; j < A.Length; j++)\n            if (A[i] == A[j])\n                return true;\n    return false;\n}",
+       "code": "public static int Fib_Recursive(int n)\n{\n    if (n == 0 || n == 1)\n        return n;\n\n    return Fib_Recursive(n - 1) + Fib_Recursive(n - 2);\n}",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b14",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تعيدها \u2066Lemon(A)\u2069 للمصفوفة \u2066A = {4, 8, 4, 9}\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
-        "answer": "true",
-        "feedback": {
-         "explanation": "حين \u2066i = 0\u2069 و \u2066j = 2\u2069 تتساوى القيمتان \u2066A[0]\u2069 و \u2066A[2]\u2069 (كلتاهما 4)، فتعيد العملية \u2066true\u2069 فورًا. العملية تفحص: هل في المصفوفة قيمة مكرّرة؟"
+       "id": "m02-l07-p01-b26",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " كم مرة تُستدعى العملية (مع الاستدعاء الأول) لحساب "
+        },
+        {
+         "text": "Fib_Recursive(4)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ وما القيمة المعادة؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b15",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "معطاة \u2066A = {4, 8, 1, 9, 3}\u2069 (لا تكرار فيها). كم مرة يُفحص الشرط \u2066A[i] == A[j]\u2069 في الاستدعاء \u2066Lemon(A)\u2069؟",
-        "answer": "10",
-        "feedback": {
-         "explanation": "هذه أسوأ حالة: تُقارَن كل قيمة بكل قيمة بعدها: \u20664 + 3 + 2 + 1 = 10\u2069. لذلك درجة نجاعة \u2066Lemon\u2069 في أسوأ حالة تربيعية \u2066O(n²)\u2069."
-        }
+       "id": "m02-l07-p01-b27",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة استدعاءات \u2066Fib(4)\u2069",
+       "capabilities": {
+        "fullscreen": true
        },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m02-l07-p01-b16",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما أحسن حالة للعملية \u2066Lemon\u2069، وكم مقارنة تنفّذ فيها؟",
-        "options": [
+       "config": {
+        "panels": [
          {
-          "id": "o1",
-          "text": "المصفوفة بلا تكرار: مقارنة واحدة"
-         },
-         {
-          "id": "o2",
-          "text": "القيمتان الأوليان متساويتان: مقارنة واحدة",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "المصفوفة مرتّبة: \u2066n\u2069 مقارنات"
-         },
-         {
-          "id": "o4",
-          "text": "لا توجد حالة أحسن: العدد ثابت دائمًا"
+          "kind": "tree",
+          "tree": [
+           "Fib(4)",
+           [
+            "Fib(3)",
+            [
+             "Fib(2)",
+             "Fib(1)",
+             "Fib(0)"
+            ],
+            "Fib(1)"
+           ],
+           [
+            "Fib(2)",
+            "Fib(1)",
+            "Fib(0)"
+           ]
+          ]
          }
-        ],
-        "feedback": {
-         "explanation": "إذا كانت \u2066A[0]\u2069 تساوي \u2066A[1]\u2069 تعيد العملية \u2066true\u2069 بعد أول مقارنة. لكنّنا نحلّل بحسب الحالة الأسوأ، وهي أن تخلو المصفوفة من التكرار."
-        }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة استدعاءات Fib(4) فيها 9 خلايا: Fib(4) مرة، Fib(3) مرة، Fib(2) مرتان، Fib(1) ثلاث مرات، Fib(0) مرتان."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b17",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 4 — \u2066Fib_Recursive\u2069 من الصفحة السابقة",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m02-l07-p01-b18",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "كم مرة تُستدعى العملية \u2066Fib_Recursive\u2069 (مع الاستدعاء الأول) لحساب \u2066Fib_Recursive(4)\u2069؟ ارسم شجرة الاستدعاءات ثم عدّ.",
-        "answer": "9",
-        "feedback": {
-         "explanation": "\u2066Fib(4)\u2069 مرة، \u2066Fib(3)\u2069 مرة، \u2066Fib(2)\u2069 مرتان، \u2066Fib(1)\u2069 ثلاث مرات، \u2066Fib(0)\u2069 مرتان: \u20661 + 1 + 2 + 3 + 2 = 9\u2069."
+       "id": "m02-l07-p01-b28",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "نرسم شجرة الاستدعاءات: كل استدعاء فيه \u2066n\u2069 أكبر من 1 يتفرّع إلى استدعاءين."
+        },
+        {
+         "text": "نعدّ الخلايا: \u2066Fib(4)\u2069 مرة، \u2066Fib(3)\u2069 مرة، \u2066Fib(2)\u2069 مرتان، \u2066Fib(1)\u2069 ثلاث مرات، \u2066Fib(0)\u2069 مرتان."
+        },
+        {
+         "text": "المجموع \u20661 + 1 + 2 + 3 + 2 = 9\u2069 استدعاءات."
+        },
+        {
+         "text": "القيمة المعادة هي مجموع ما تعيده الأوراق: كل \u2066Fib(1)\u2069 تعيد 1 وكل \u2066Fib(0)\u2069 تعيد 0، فالمجموع 3."
+        },
+        {
+         "text": "النتيجة: 9 استدعاءات، والقيمة المعادة \u20663\u2069."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p01-b19",
+       "id": "m02-l07-p01-b29",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Fib_Recursive(4)\u2069",
+       "title": "تتبّع الحل: \u2066Fib_Recursive(4)\u2069",
        "description": "راقب الاستدعاءات المتراكمة: كم مرة يظهر \u2066n = 2\u2069؟",
        "capabilities": {
         "fullscreen": true,
@@ -7025,8 +7274,2188 @@ const m02: ContentModule = {
     },
     {
      "id": "899271d-m02-l07-p02",
-     "title": "تدريبات الوحدة",
+     "title": "وظيفة: أسئلة تتبّع وعدّ",
      "order": 2,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 61,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+     },
+     "keywords": [
+      "وظيفة",
+      "تتبّع",
+      "عدّ",
+      "Grape",
+      "Lemon",
+      "Olive"
+     ],
+     "blocks": [
+      {
+       "id": "m02-l07-p02-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "أجب عن كل سؤال وحدك أولًا: الموقع يفحص إجابتك. بعدها اضغط «الحل»: تفتح نافذة فيها الشرح وتتبّع البرنامج خطوة بخطوة. الأسئلة مرتّبة من الأسهل إلى الأصعب."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Grape\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Grape(int n)\n{\n    int count = 0;\n    for (int i = 1; i <= n; i = i * 2)\n        count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b04",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Grape(40)\u2069؟",
+        "answer": "6",
+        "feedback": {
+         "explanation": "قيم \u2066i\u2069 هي 1 ثم 2 ثم 4 ثم 8 ثم 16 ثم 32. القيمة التالية 64 أكبر من 40 فتتوقف الحلقة: ست دورات."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b05",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066Grape\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "العدّاد "
+          },
+          {
+           "text": "i",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا يزيد بواحد، بل "
+          },
+          {
+           "text": "يتضاعف",
+           "style": "strong"
+          },
+          {
+           "text": " في كل دورة."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "قيم "
+          },
+          {
+           "text": "i",
+           "dir": "ltr"
+          },
+          {
+           "text": " التي تحقّق الشرط "
+          },
+          {
+           "text": "i <= n",
+           "dir": "ltr"
+          },
+          {
+           "text": ": 1 ثم 2 ثم 4 ثم 8 ثم 16 ثم 32."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "القيمة التالية 64 أكبر من 40، فتتوقف الحلقة بعد 6 دورات."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "لاحظ: بين 1 و40 أربعون قيمة، لكنّ الحلقة دارت 6 مرات فقط. هذا هو القالب اللوغاريثمي."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "Grape(40)",
+         "dir": "ltr"
+        },
+        {
+         "text": " تعيد "
+        },
+        {
+         "text": "6",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static int Grape(int n)\n{\n    int count = 0;\n    for (int i = 1; i <= n; i = i * 2)\n        count++;\n    return count;\n}",
+         "given": "الاستدعاء `Grape(40)`.",
+         "out": "6\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Grape` مع `n = 40`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}]]}],"h":[]},
+{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`i = 1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"1"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"`i = 2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"1"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"2"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"`i = 4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"2"}],["i",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"3"}],["i",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"`i = 8`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"3"}],["i",{"t":"v","s":"8"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`count` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"4"}],["i",{"t":"v","s":"8"}]]}]},
+{"l":4,"n":"`i = 16`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"4"}],["i",{"t":"v","s":"16"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`count` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"5"}],["i",{"t":"v","s":"16"}]]}]},
+{"l":4,"n":"`i = 32`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"5"}],["i",{"t":"v","s":"32"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`count` تزيد بواحد وتصبح `6`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"6"}],["i",{"t":"v","s":"32"}]]}]},
+{"l":4,"n":"`i = 64`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"6"}],["i",{"t":"v","s":"64"}]]}]},
+{"l":4,"n":"الشرط `i <= n` خطأ: نخرج من الحلقة.","o":0},
+{"l":6,"n":"العملية `Grape` تُعيد `6`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Grape","vars":[["n",{"t":"v","s":"40"}],["count",{"t":"v","s":"6"}]]}]},
+{"l":0,"n":"نطبع: `6`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: العدّاد i لا يزيد بواحد، بل يتضاعف في كل دورة. قيم i التي تحقّق الشرط i <= n: 1 ثم 2 ثم 4 ثم 8 ثم 16 ثم 32. القيمة التالية 64 أكبر من 40، فتتوقف الحلقة بعد 6 دورات. لاحظ: بين 1 و40 أربعون قيمة، لكنّ الحلقة دارت 6 مرات فقط. هذا هو القالب اللوغاريثمي."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b06",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — عدّادان يتقاربان",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b07",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main()\n{\n    int a = 1;\n    int b = 20;\n    while (a < b)\n    {\n        a = a * 2;\n        b = b - 2;\n    }\n    Console.Write(a + \" \" + b);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b08",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ماذا يطبع البرنامج أعلاه؟ اكتب العددين وبينهما فراغ واحد.",
+        "answer": "16 12",
+        "feedback": {
+         "explanation": "\u2066a\u2069 تتضاعف و \u2066b\u2069 تنقص 2 في كل دورة. بعد أربع دورات تصير \u2066a\u2069 مساوية 16 و \u2066b\u2069 مساوية 12، فيتوقف الشرط \u2066a < b\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b09",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "كم مرة يُنفَّذ الأمر \u2066a = a * 2;\u2069؟",
+        "answer": "4",
+        "feedback": {
+         "explanation": "الشرط \u2066a < b\u2069 صحيح للأزواج \u20661 < 20\u2069 ثم \u20662 < 18\u2069 ثم \u20664 < 16\u2069 ثم \u20668 < 14\u2069، وخطأ للزوج الخامس: أربع دورات."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b10",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — عدّادان يتقاربان",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "نكتب قيم المتغيّرين بعد كل دورة. البداية: "
+          },
+          {
+           "text": "a = 1",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "b = 20",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "بعد الدورة الأولى "
+          },
+          {
+           "text": "a = 2",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "b = 18",
+           "dir": "ltr"
+          },
+          {
+           "text": ". بعد الثانية "
+          },
+          {
+           "text": "a = 4",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "b = 16",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "بعد الثالثة "
+          },
+          {
+           "text": "a = 8",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "b = 14",
+           "dir": "ltr"
+          },
+          {
+           "text": ". بعد الرابعة "
+          },
+          {
+           "text": "a = 16",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "b = 12",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "الآن "
+          },
+          {
+           "text": "a",
+           "dir": "ltr"
+          },
+          {
+           "text": " ليست أصغر من "
+          },
+          {
+           "text": "b",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فتتوقف الحلقة ويُطبع العددان."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "يُطبع "
+        },
+        {
+         "text": "16 12",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والحلقة تدور 4 مرات."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Main()\n{\n    int a = 1;\n    int b = 20;\n    while (a < b)\n    {\n        a = a * 2;\n        b = b - 2;\n    }\n    Console.Write(a + \" \" + b);\n}",
+         "out": "16 12",
+         "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"`a = 1`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"`b = 20`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"1"}],["b",{"t":"v","s":"20"}]]}]},
+{"l":5,"n":"الشرط `a < b` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"`a = 2`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"2"}],["b",{"t":"v","s":"20"}]]}]},
+{"l":8,"n":"`b = 18`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"2"}],["b",{"t":"v","s":"18"}]]}]},
+{"l":5,"n":"الشرط `a < b` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"`a = 4`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"4"}],["b",{"t":"v","s":"18"}]]}]},
+{"l":8,"n":"`b = 16`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"4"}],["b",{"t":"v","s":"16"}]]}]},
+{"l":5,"n":"الشرط `a < b` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"`a = 8`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"8"}],["b",{"t":"v","s":"16"}]]}]},
+{"l":8,"n":"`b = 14`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"8"}],["b",{"t":"v","s":"14"}]]}]},
+{"l":5,"n":"الشرط `a < b` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"`a = 16`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"16"}],["b",{"t":"v","s":"14"}]]}]},
+{"l":8,"n":"`b = 12`.","o":0,"f":[{"name":"Main","vars":[["a",{"t":"v","s":"16"}],["b",{"t":"v","s":"12"}]]}]},
+{"l":5,"n":"الشرط `a < b` خطأ: نخرج من الحلقة.","o":0},
+{"l":10,"n":"نطبع: `16 12` (بلا سطر جديد).","o":5},
+{"l":11,"n":"ينتهي البرنامج.","o":5}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: نكتب قيم المتغيّرين بعد كل دورة. البداية: a = 1 و b = 20. بعد الدورة الأولى a = 2 و b = 18. بعد الثانية a = 4 و b = 16. بعد الثالثة a = 8 و b = 14. بعد الرابعة a = 16 و b = 12. الآن a ليست أصغر من b، فتتوقف الحلقة ويُطبع العددان."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b11",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066Lemon\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b12",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Lemon(int[] A)\n{\n    for (int i = 0; i < A.Length; i++)\n        for (int j = i + 1; j < A.Length; j++)\n            if (A[i] == A[j])\n                return true;\n    return false;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b13",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Lemon(A)\u2069 للمصفوفة \u2066A = {4, 8, 4, 9}\u2069؟ اكتب \u2066true\u2069 أو \u2066false\u2069.",
+        "answer": "true",
+        "feedback": {
+         "explanation": "حين \u2066i = 0\u2069 و \u2066j = 2\u2069 تتساوى القيمتان \u2066A[0]\u2069 و \u2066A[2]\u2069 (كلتاهما 4)، فتعيد العملية \u2066true\u2069 فورًا. العملية تفحص: هل في المصفوفة قيمة مكرّرة؟"
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b14",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "معطاة \u2066A = {4, 8, 1, 9, 3}\u2069 (لا تكرار فيها). كم مرة يُفحص الشرط \u2066A[i] == A[j]\u2069 في الاستدعاء \u2066Lemon(A)\u2069؟",
+        "answer": "10",
+        "feedback": {
+         "explanation": "هذه أسوأ حالة: تُقارَن كل قيمة بكل قيمة بعدها: \u20664 + 3 + 2 + 1 = 10\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b15",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066Lemon\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "العملية تقارن كل قيمة بكل القيم التي "
+          },
+          {
+           "text": "بعدها",
+           "style": "strong"
+          },
+          {
+           "text": "، وتعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": " عند أول قيمتين متساويتين."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "المصفوفة "
+          },
+          {
+           "text": "{4, 8, 4, 9}",
+           "dir": "ltr"
+          },
+          {
+           "text": ": المقارنة الأولى "
+          },
+          {
+           "text": "A[0]",
+           "dir": "ltr"
+          },
+          {
+           "text": " مع "
+          },
+          {
+           "text": "A[1]",
+           "dir": "ltr"
+          },
+          {
+           "text": " (4 و8)، والثانية "
+          },
+          {
+           "text": "A[0]",
+           "dir": "ltr"
+          },
+          {
+           "text": " مع "
+          },
+          {
+           "text": "A[2]",
+           "dir": "ltr"
+          },
+          {
+           "text": " (4 و4). متساويتان، فتعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": " فورًا."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "المصفوفة "
+          },
+          {
+           "text": "{4, 8, 1, 9, 3}",
+           "dir": "ltr"
+          },
+          {
+           "text": " بلا تكرار، فلا تتوقف العملية مبكّرًا: حين "
+          },
+          {
+           "text": "i = 0",
+           "dir": "ltr"
+          },
+          {
+           "text": " أربع مقارنات، ثم 3، ثم 2، ثم 1."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "المجموع "
+          },
+          {
+           "text": "4 + 3 + 2 + 1 = 10",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم تعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "للمصفوفة الأولى تعيد "
+        },
+        {
+         "text": "true",
+         "dir": "ltr"
+        },
+        {
+         "text": " بعد مقارنتين. للمصفوفة الثانية 10 مقارنات، وتعيد "
+        },
+        {
+         "text": "false",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static bool Lemon(int[] A)\n{\n    for (int i = 0; i < A.Length; i++)\n        for (int j = i + 1; j < A.Length; j++)\n            if (A[i] == A[j])\n                return true;\n    return false;\n}",
+         "given": "المصفوفة `A = {4, 8, 1, 9, 3}`، والاستدعاء `Lemon(A)`.",
+         "out": "false\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Lemon` مع `A = {4, 8, 1, 9, 3}`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]}],"h":[]},
+{"l":3,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"0"}]]}]},
+{"l":3,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`j = 1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"0"}],["j",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"0"}],["j",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"0"}],["j",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"0"}],["j",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"0"}],["j",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":3,"n":"`i` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`j = 2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":3,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"2"}]]}]},
+{"l":3,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`j = 3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":3,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"3"}]]}]},
+{"l":3,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`j = 4`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"3"}],["j",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"الشرط `A[i] == A[j]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":4,"n":"`j` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"3"}],["j",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":3,"n":"`i` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"4"}]]}]},
+{"l":3,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":4,"n":"`j = 5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"5"}]]}]},
+{"l":4,"n":"الشرط `j < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":3,"n":"`i` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}],["i",{"t":"v","s":"5"}]]}]},
+{"l":3,"n":"الشرط `i < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":7,"n":"العملية `Lemon` تُعيد `false`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]},{"name":"Lemon","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]}]},
+{"l":0,"n":"نطبع: `false`. انتهى التنفيذ.","o":6,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","8","1","9","3"]}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: العملية تقارن كل قيمة بكل القيم التي بعدها، وتعيد true عند أول قيمتين متساويتين. المصفوفة {4, 8, 4, 9}: المقارنة الأولى A[0] مع A[1] (4 و8)، والثانية A[0] مع A[2] (4 و4). متساويتان، فتعيد true فورًا. المصفوفة {4, 8, 1, 9, 3} بلا تكرار، فلا تتوقف العملية مبكّرًا: حين i = 0 أربع مقارنات، ثم 3، ثم 2، ثم 1. المجموع 4 + 3 + 2 + 1 = 10، ثم تعيد false."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b16",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — \u2066Olive\u2069: تراجعية تنصّف",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b17",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Olive(int n)\n{\n    if (n <= 1)\n        return 1;\n    return Olive(n / 2) + Olive(n / 2);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b18",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Olive(8)\u2069؟",
+        "answer": "8",
+        "feedback": {
+         "explanation": "كل استدعاء فيه \u2066n\u2069 أكبر من 1 يجمع نتيجتَي استدعاءين على \u2066n / 2\u2069. الأوراق ثمانية استدعاءات \u2066Olive(1)\u2069، كل واحد يعيد 1."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b19",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "كم مرة تُستدعى العملية \u2066Olive\u2069 (مع الاستدعاء الأول) لحساب \u2066Olive(8)\u2069؟",
+        "answer": "15",
+        "feedback": {
+         "explanation": "استدعاء واحد \u2066Olive(8)\u2069، واستدعاءان \u2066Olive(4)\u2069، وأربعة \u2066Olive(2)\u2069، وثمانية \u2066Olive(1)\u2069: \u20661 + 2 + 4 + 8 = 15\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p02-b20",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066Olive\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "نرسم شجرة الاستدعاءات. المستوى 0: استدعاء واحد "
+          },
+          {
+           "text": "Olive(8)",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "كل استدعاء فيه "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " أكبر من 1 يتفرّع إلى استدعاءين على "
+          },
+          {
+           "text": "n / 2",
+           "dir": "ltr"
+          },
+          {
+           "text": ". المستوى 1: استدعاءان "
+          },
+          {
+           "text": "Olive(4)",
+           "dir": "ltr"
+          },
+          {
+           "text": ". المستوى 2: أربعة "
+          },
+          {
+           "text": "Olive(2)",
+           "dir": "ltr"
+          },
+          {
+           "text": ". المستوى 3: ثمانية "
+          },
+          {
+           "text": "Olive(1)",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "عدد الاستدعاءات "
+          },
+          {
+           "text": "1 + 2 + 4 + 8 = 15",
+           "dir": "ltr"
+          },
+          {
+           "text": ": مجموع متوالية هندسية، كما في تحليل فيبوناتشي."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "كل "
+          },
+          {
+           "text": "Olive(1)",
+           "dir": "ltr"
+          },
+          {
+           "text": " تعيد 1، والجمع يصعد في الشجرة: 2 ثم 4 ثم 8."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "لاحظ الفرق عن "
+          },
+          {
+           "text": "Fib_Recursive",
+           "dir": "ltr"
+          },
+          {
+           "text": ": هنا "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "يُنصَّف",
+           "style": "strong"
+          },
+          {
+           "text": " في كل مستوى، فعدد المستويات "
+          },
+          {
+           "text": "log n",
+           "dir": "ltr"
+          },
+          {
+           "text": " فقط وعدد الاستدعاءات "
+          },
+          {
+           "text": "2n – 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "Olive(8)",
+         "dir": "ltr"
+        },
+        {
+         "text": " تعيد "
+        },
+        {
+         "text": "8",
+         "dir": "ltr"
+        },
+        {
+         "text": "، وعدد الاستدعاءات 15."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static int Olive(int n)\n{\n    if (n <= 1)\n        return 1;\n    return Olive(n / 2) + Olive(n / 2);\n}",
+         "given": "الاستدعاء `Olive(8)`.",
+         "out": "8\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 8`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]}],"h":[]},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":5,"n":"العملية `Olive` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]}]},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 2`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":5,"n":"العملية `Olive` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]}]},
+{"l":5,"n":"العملية `Olive` تُعيد `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]}]},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 4`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":5,"n":"العملية `Olive` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]}]},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 2`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":1,"n":"تبدأ العملية `Olive` مع `n = 1`.","o":0},
+{"l":3,"n":"الشرط `n <= 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `Olive` تُعيد `1`.","o":0},
+{"l":5,"n":"العملية `Olive` تُعيد `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"2"}]]}]},
+{"l":5,"n":"العملية `Olive` تُعيد `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]},{"name":"Olive","vars":[["n",{"t":"v","s":"4"}]]}]},
+{"l":5,"n":"العملية `Olive` تُعيد `8`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Olive","vars":[["n",{"t":"v","s":"8"}]]}]},
+{"l":0,"n":"نطبع: `8`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: نرسم شجرة الاستدعاءات. المستوى 0: استدعاء واحد Olive(8). كل استدعاء فيه n أكبر من 1 يتفرّع إلى استدعاءين على n / 2. المستوى 1: استدعاءان Olive(4). المستوى 2: أربعة Olive(2). المستوى 3: ثمانية Olive(1). عدد الاستدعاءات 1 + 2 + 4 + 8 = 15: مجموع متوالية هندسية، كما في تحليل فيبوناتشي. كل Olive(1) تعيد 1، والجمع يصعد في الشجرة: 2 ثم 4 ثم 8. لاحظ الفرق عن Fib_Recursive: هنا n يُنصَّف في كل مستوى، فعدد المستويات log n فقط وعدد الاستدعاءات 2n – 1."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m02-l07-p03",
+     "title": "أسئلة درجة النجاعة محلولة",
+     "order": 3,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 61,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+     },
+     "keywords": [
+      "أسئلة محلولة",
+      "درجة النجاعة",
+      "Apple",
+      "Pear",
+      "Kiwi",
+      "Mango",
+      "Orange"
+     ],
+     "blocks": [
+      {
+       "id": "m02-l07-p03-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في كل سؤال عملية، والمطلوب: "
+        },
+        {
+         "text": "حدّد درجة نجاعتها",
+         "style": "strong"
+        },
+        {
+         "text": ". طريقة الحل ثابتة: نعدّ كم مرة تدور كل حلقة كدالّة في حجم الإدخال "
+        },
+        {
+         "text": "n",
+         "dir": "ltr"
+        },
+        {
+         "text": "، نكتب العدد، ثم نحذف الثوابت ونبقي الحدّ صاحب أكبر قوّة. الأسئلة مرتّبة من الأسهل إلى الأصعب، وهي من إعدادنا بأسلوب الفصل."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Apple\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Apple(int[] A)\n{\n    int max = A[0];\n    for (int i = 1; i < A.Length; i++)\n        if (A[i] > max)\n            max = A[i];\n    return max;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b04",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما درجة نجاعة العملية "
+        },
+        {
+         "text": "Apple",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ حجم الإدخال "
+        },
+        {
+         "text": "n",
+         "dir": "ltr"
+        },
+        {
+         "text": " هو طول المصفوفة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b05",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في العملية حلقة واحدة تمرّ على الخلايا من 1 إلى \u2066n – 1\u2069، أي تدور \u2066n – 1\u2069 مرة."
+        },
+        {
+         "text": "في كل دورة عدد ثابت من العمليات الأساسية: مقارنة، وربما تعويض، وتحديث العدّاد."
+        },
+        {
+         "text": "خارج الحلقة عدد ثابت من العمليات أيضًا. فدالّة زمن التشغيل من الصورة \u2066T(n) = an + b\u2069."
+        },
+        {
+         "text": "نحذف الثوابت ويبقى الحدّ \u2066n\u2069."
+        },
+        {
+         "text": "النتيجة: درجة النجاعة خطية: \u2066O(n)\u2069. العملية تعيد أكبر قيمة في المصفوفة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b06",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066Pear\u2069: ثلاث حلقات متتالية",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b07",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Pear(int[] A)\n{\n    int n = A.Length;\n    int s = 0;\n    for (int i = 0; i < n; i++)\n        s += A[i];\n    for (int j = 0; j < 100; j++)\n        s++;\n    for (int k = n - 1; k >= 0; k--)\n        s -= A[k];\n    return s;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b08",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما درجة نجاعة العملية "
+        },
+        {
+         "text": "Pear",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟ حجم الإدخال "
+        },
+        {
+         "text": "n",
+         "dir": "ltr"
+        },
+        {
+         "text": " هو طول المصفوفة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b09",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة الأولى تدور \u2066n\u2069 مرة."
+        },
+        {
+         "text": "الحلقة الثانية تدور 100 مرة دائمًا: عدد ثابت لا يتعلّق بالمتغيّر \u2066n\u2069."
+        },
+        {
+         "text": "الحلقة الثالثة تنزل من \u2066n – 1\u2069 إلى 0، أي تدور \u2066n\u2069 مرة."
+        },
+        {
+         "text": "الحلقات متتالية وليست متداخلة، فنجمع: \u2066n + 100 + n = 2n + 100\u2069."
+        },
+        {
+         "text": "نحذف الثابتين 2 و100."
+        },
+        {
+         "text": "النتيجة: درجة النجاعة خطية: \u2066O(n)\u2069. الحلقات المتتالية تُجمع ولا تُضرب."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b10",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066Kiwi\u2069: القسمة على 10",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Kiwi(int n)\n{\n    int count = 0;\n    while (n > 0)\n    {\n        n = n / 10;\n        count++;\n    }\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b12",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما درجة نجاعة العملية "
+        },
+        {
+         "text": "Kiwi",
+         "dir": "ltr"
+        },
+        {
+         "text": " بالنسبة إلى قيمة "
+        },
+        {
+         "text": "n",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b13",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في كل دورة يُقسم \u2066n\u2069 على 10. بعد \u2066k\u2069 دورة تصير القيمة \u2066n / 10ᵏ\u2069."
+        },
+        {
+         "text": "الحلقة تتوقف حين تصير القيمة أقلّ من 1، أي حين يصير \u206610ᵏ\u2069 أكبر من \u2066n\u2069. إذن عدد الدورات نحو \u2066log₁₀ n\u2069."
+        },
+        {
+         "text": "مثال: لعدد من 4 أرقام 4 دورات، ولعدد من 7 أرقام 7 دورات فقط، مع أنّ العدد كبر ألف مرة."
+        },
+        {
+         "text": "القسمة على 10 بدل 2 تغيّر أساس اللوغاريثم فقط، أي ثابتًا."
+        },
+        {
+         "text": "النتيجة: درجة النجاعة لوغاريثمية: \u2066O(log n)\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b14",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — \u2066Mango\u2069: حلقة داخلية تقصر",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b15",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Mango(int n)\n{\n    int count = 0;\n    for (int i = 0; i < n; i++)\n        for (int j = i + 1; j < n; j++)\n            count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b16",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما درجة نجاعة العملية "
+        },
+        {
+         "text": "Mango",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b17",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "الحلقة الخارجية تدور \u2066n\u2069 مرة."
+        },
+        {
+         "text": "الحلقة الداخلية لا تدور العدد نفسه في كل مرة: \u2066n – 1\u2069 مرة حين \u2066i = 0\u2069، ثم \u2066n – 2\u2069، وهكذا حتى 0."
+        },
+        {
+         "text": "عدد مرات تنفيذ \u2066count++\u2069 هو \u2066(n – 1) + (n – 2) + ... + 1\u2069، وهذا مجموع متوالية حسابية يساوي \u2066n(n – 1) / 2\u2069."
+        },
+        {
+         "text": "نفكّ القوسين: \u2066n²/2 – n/2\u2069. الحدّ صاحب أكبر قوّة هو \u2066n²\u2069."
+        },
+        {
+         "text": "النتيجة: درجة النجاعة تربيعية: \u2066O(n²)\u2069، تمامًا كما في \u2066Bubble_Sort\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b18",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066Orange\u2069: حلقة مخفية في استدعاء",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b19",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Orange(int[] A, int[] B)\n{\n    int count = 0;\n    for (int i = 0; i < A.Length; i++)\n        if (LinearSearch(B, A[i]) != -1)\n            count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b20",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " العملية "
+        },
+        {
+         "text": "Orange",
+         "dir": "ltr"
+        },
+        {
+         "text": " تستدعي العملية "
+        },
+        {
+         "text": "LinearSearch",
+         "dir": "ltr"
+        },
+        {
+         "text": " من الكتاب (ص 65). طول كل من المصفوفتين "
+        },
+        {
+         "text": "n",
+         "dir": "ltr"
+        },
+        {
+         "text": ". ما درجة نجاعة "
+        },
+        {
+         "text": "Orange",
+         "dir": "ltr"
+        },
+        {
+         "text": " في أسوأ حالة؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b21",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "في \u2066Orange\u2069 حلقة واحدة ظاهرة تدور \u2066n\u2069 مرة. لكن انتبه: في كل دورة استدعاء للعملية \u2066LinearSearch\u2069."
+        },
+        {
+         "text": "نجاعة \u2066LinearSearch\u2069 في أسوأ حالة \u2066O(n)\u2069: هي نفسها حلقة تمشّط المصفوفة \u2066B\u2069."
+        },
+        {
+         "text": "إذن الاستدعاء يخفي حلقة داخل الحلقة: \u2066n\u2069 دورة، وفي كل دورة حتى \u2066n\u2069 مقارنة."
+        },
+        {
+         "text": "أسوأ حالة: لا قيمة من \u2066A\u2069 موجودة في \u2066B\u2069. عندها عدد المقارنات \u2066n × n\u2069."
+        },
+        {
+         "text": "النتيجة: درجة النجاعة تربيعية: \u2066O(n²)\u2069. استدعاء عملية داخل حلقة يُحسب بنجاعة تلك العملية."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p03-b22",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "الحلقة المخفية: \u2066Orange\u2069 مع \u2066LinearSearch\u2069",
+       "description": "أسوأ حالة: لا قيمة مشتركة. عدّ المقارنات \u2066A[i] == k\u2069 داخل \u2066LinearSearch\u2069: ثلاث في كل استدعاء، أي 9.",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int Orange(int[] A, int[] B)\n{\n    int count = 0;\n    for (int i = 0; i < A.Length; i++)\n        if (LinearSearch(B, A[i]) != -1)\n            count++;\n    return count;\n}\npublic static int LinearSearch(int[] A, int k)\n{\n    int n = A.Length;\n    for (int i = 0; i < n; i++)\n        if (A[i] == k) return i;\n    return -1;\n}",
+        "given": "المصفوفتان `A = {5, 1, 7}` و `B = {2, 3, 4}`، والاستدعاء `Orange(A, B)`.",
+        "out": "0\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Orange` مع `A = {5, 1, 7}`، `B = {2, 3, 4}`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]}],"h":[]},
+{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"تبدأ العملية `LinearSearch` مع `A = {2, 3, 4}`، `k = 5`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}]]}]},
+{"l":11,"n":"`n = 3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}],["n",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"0"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"الشرط `i < n` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"العملية `LinearSearch` تُعيد `-1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"5"}],["n",{"t":"v","s":"3"}]]}]},
+{"l":5,"n":"الشرط `LinearSearch(B, A[i]) != -1` خطأ: نتخطّى ما بعد `if`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`i` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"تبدأ العملية `LinearSearch` مع `A = {2, 3, 4}`، `k = 1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}]]}]},
+{"l":11,"n":"`n = 3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}],["n",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"0"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"الشرط `i < n` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"العملية `LinearSearch` تُعيد `-1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"1"}],["n",{"t":"v","s":"3"}]]}]},
+{"l":5,"n":"الشرط `LinearSearch(B, A[i]) != -1` خطأ: نتخطّى ما بعد `if`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `i < A.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":9,"n":"تبدأ العملية `LinearSearch` مع `A = {2, 3, 4}`، `k = 7`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}]]}]},
+{"l":11,"n":"`n = 3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}],["n",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"`i = 0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"0"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":12,"n":"الشرط `i < n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"الشرط `A[i] == k` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":12,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}],["n",{"t":"v","s":"3"}],["i",{"t":"v","s":"3"}]]}]},
+{"l":12,"n":"الشرط `i < n` خطأ: نخرج من الحلقة.","o":0},
+{"l":14,"n":"العملية `LinearSearch` تُعيد `-1`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]},{"name":"LinearSearch","vars":[["A",{"t":"arr","items":["2","3","4"]}],["k",{"t":"v","s":"7"}],["n",{"t":"v","s":"3"}]]}]},
+{"l":5,"n":"الشرط `LinearSearch(B, A[i]) != -1` خطأ: نتخطّى ما بعد `if`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `i < A.Length` خطأ: نخرج من الحلقة.","o":0},
+{"l":7,"n":"العملية `Orange` تُعيد `0`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]},{"name":"Orange","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}],["count",{"t":"v","s":"0"}]]}]},
+{"l":0,"n":"نطبع: `0`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["5","1","7"]}],["B",{"t":"arr","items":["2","3","4"]}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (57 خطوة)؛ ناتج البرنامج: 0."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m02-l07-p04",
+     "title": "وظيفة: أسئلة درجة النجاعة",
+     "order": 4,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 61,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+     },
+     "keywords": [
+      "وظيفة",
+      "درجة النجاعة",
+      "Date",
+      "Guava",
+      "Lemon",
+      "Papaya"
+     ],
+     "blocks": [
+      {
+       "id": "m02-l07-p04-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "حدّد درجة نجاعة كل عملية وأجب عن الأسئلة: الموقع يفحص إجابتك. بعدها اضغط «الحل» لترى طريقة العدّ خطوة بعد خطوة. الأسئلة مرتّبة من الأسهل إلى الأصعب."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Date\u2069: حلقة بخطوة 3",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Date(int n)\n{\n    int count = 0;\n    for (int i = 0; i < n; i += 3)\n        count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b04",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Date(30)\u2069؟",
+        "answer": "10",
+        "feedback": {
+         "explanation": "قيم \u2066i\u2069 هي 0 ثم 3 ثم 6 … حتى 27: عشر قيم، أي ثلث العدد 30."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b05",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ما درجة نجاعة العملية \u2066Date\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "ثابتة \u2066O(1)\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "لوغاريثمية \u2066O(log n)\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "خطية \u2066O(n)\u2069",
+          "correct": true
+         },
+         {
+          "id": "o4",
+          "text": "تربيعية \u2066O(n²)\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "الحلقة تدور نحو \u2066n / 3\u2069 مرة. الثلث ثابت نحذفه، فتبقى الدرجة خطية."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066Date\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "العدّاد يزيد 3 في كل دورة، فالحلقة تدور نحو "
+          },
+          {
+           "text": "n / 3",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة. مثلًا "
+          },
+          {
+           "text": "Date(30)",
+           "dir": "ltr"
+          },
+          {
+           "text": " تدور 10 مرات."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "العدد "
+          },
+          {
+           "text": "n / 3",
+           "dir": "ltr"
+          },
+          {
+           "text": " هو "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مضروبًا في ثابت (الثلث). عند تحديد الدرجة نحذف الثوابت."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "لا تخلط بين الجمع والضرب: عدّاد "
+          },
+          {
+           "text": "يزيد",
+           "style": "strong"
+          },
+          {
+           "text": " 3 في كل دورة يعطي درجة خطية، وعدّاد "
+          },
+          {
+           "text": "يُضرب",
+           "style": "strong"
+          },
+          {
+           "text": " في 3 في كل دورة يعطي درجة لوغاريثمية."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "درجة النجاعة خطية: "
+        },
+        {
+         "text": "O(n)",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {},
+       "fallback": {
+        "text": "حل السؤال: العدّاد يزيد 3 في كل دورة، فالحلقة تدور نحو n / 3 مرة. مثلًا Date(30) تدور 10 مرات. العدد n / 3 هو n مضروبًا في ثابت (الثلث). عند تحديد الدرجة نحذف الثوابت. لا تخلط بين الجمع والضرب: عدّاد يزيد 3 في كل دورة يعطي درجة خطية، وعدّاد يُضرب في 3 في كل دورة يعطي درجة لوغاريثمية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b07",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066Guava\u2069: متداخلتان ثم ثالثة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b08",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Guava(int[] A)\n{\n    int n = A.Length;\n    int count = 0;\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < n; j++)\n            if (A[i] == A[j])\n                count++;\n    for (int k = 0; k < n; k++)\n        count--;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b09",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "نستدعي \u2066Guava\u2069 على مصفوفة طولها 4. كم مرة يُفحص الشرط \u2066A[i] == A[j]\u2069؟",
+        "answer": "16",
+        "feedback": {
+         "explanation": "الحلقتان متداخلتان، وكل واحدة تدور 4 مرات: \u20664 × 4 = 16\u2069. الحلقة الثالثة لا تفحص هذا الشرط."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b10",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ما درجة نجاعة العملية \u2066Guava\u2069 لمصفوفة طولها \u2066n\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "خطية \u2066O(n)\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "تربيعية \u2066O(n²)\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "تكعيبية \u2066O(n³)\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "خطية لوغاريثمية \u2066O(n log n)\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "عدد الدورات \u2066n × n\u2069 للجزء الأول و \u2066n\u2069 للجزء الثاني: \u2066n² + n\u2069. نبقي الحدّ صاحب أكبر قوّة. ثلاث حلقات لا تعني درجة تكعيبية: الثالثة ليست داخل الأوليين."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b11",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066Guava\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الجزء الأول حلقتان "
+          },
+          {
+           "text": "متداخلتان",
+           "style": "strong"
+          },
+          {
+           "text": "، كل واحدة تدور "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة: الشرط يُفحص "
+          },
+          {
+           "text": "n × n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الجزء الثاني حلقة واحدة تدور "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "الجزآن "
+          },
+          {
+           "text": "متتاليان",
+           "style": "strong"
+          },
+          {
+           "text": "، فنجمع: "
+          },
+          {
+           "text": "n² + n",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "نبقي الحدّ صاحب أكبر قوّة "
+          },
+          {
+           "text": "n²",
+           "dir": "ltr"
+          },
+          {
+           "text": " ونحذف الباقي."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "درجة النجاعة تربيعية: "
+        },
+        {
+         "text": "O(n²)",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {},
+       "fallback": {
+        "text": "حل السؤال: الجزء الأول حلقتان متداخلتان، كل واحدة تدور n مرة: الشرط يُفحص n × n مرة. الجزء الثاني حلقة واحدة تدور n مرة. الجزآن متتاليان، فنجمع: n² + n. نبقي الحدّ صاحب أكبر قوّة n² ونحذف الباقي."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b12",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066Lemon\u2069: أحسن حالة وأسوأ حالة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b13",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool Lemon(int[] A)\n{\n    for (int i = 0; i < A.Length; i++)\n        for (int j = i + 1; j < A.Length; j++)\n            if (A[i] == A[j])\n                return true;\n    return false;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b14",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ما أحسن حالة للعملية \u2066Lemon\u2069، وكم مقارنة تنفّذ فيها؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "المصفوفة بلا تكرار: مقارنة واحدة"
+         },
+         {
+          "id": "o2",
+          "text": "القيمتان الأوليان متساويتان: مقارنة واحدة",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "المصفوفة مرتّبة: \u2066n\u2069 مقارنات"
+         },
+         {
+          "id": "o4",
+          "text": "لا توجد حالة أحسن: العدد ثابت دائمًا"
+         }
+        ],
+        "feedback": {
+         "explanation": "إذا كانت \u2066A[0]\u2069 تساوي \u2066A[1]\u2069 تعيد العملية \u2066true\u2069 بعد أول مقارنة. لكنّنا نحلّل بحسب الحالة الأسوأ، وهي أن تخلو المصفوفة من التكرار."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b15",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ما درجة نجاعة العملية \u2066Lemon\u2069 في أسوأ حالة؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "ثابتة \u2066O(1)\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "خطية \u2066O(n)\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "تربيعية \u2066O(n²)\u2069",
+          "correct": true
+         },
+         {
+          "id": "o4",
+          "text": "لوغاريثمية \u2066O(log n)\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "في أسوأ حالة لا تكرار في المصفوفة، فتُقارَن كل قيمة بكل قيمة بعدها: \u2066n(n – 1) / 2\u2069 مقارنة، والحدّ صاحب أكبر قوّة \u2066n²\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b16",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066Lemon\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "في العملية "
+          },
+          {
+           "text": "return true",
+           "dir": "ltr"
+          },
+          {
+           "text": " "
+          },
+          {
+           "text": "داخل",
+           "style": "strong"
+          },
+          {
+           "text": " الحلقتين: قد تنتهي العملية مبكّرًا، ولذلك يتعلّق عدد المقارنات بالقيم نفسها لا بطول المصفوفة فقط."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "أحسن حالة: القيمتان الأوليان متساويتان. مقارنة واحدة ثم "
+          },
+          {
+           "text": "return true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "أسوأ حالة: لا قيمتين متساويتين. عدد المقارنات "
+          },
+          {
+           "text": "(n – 1) + (n – 2) + ... + 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "، أي "
+          },
+          {
+           "text": "n(n – 1) / 2",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "نعتمد الحالة الأسوأ كما في الكتاب: الحدّ صاحب أكبر قوّة "
+          },
+          {
+           "text": "n²",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "أحسن حالة: مقارنة واحدة. أسوأ حالة: "
+        },
+        {
+         "text": "O(n²)",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {},
+       "fallback": {
+        "text": "حل السؤال: في العملية return true داخل الحلقتين: قد تنتهي العملية مبكّرًا، ولذلك يتعلّق عدد المقارنات بالقيم نفسها لا بطول المصفوفة فقط. أحسن حالة: القيمتان الأوليان متساويتان. مقارنة واحدة ثم return true. أسوأ حالة: لا قيمتين متساويتين. عدد المقارنات (n – 1) + (n – 2) + ... + 1، أي n(n – 1) / 2. نعتمد الحالة الأسوأ كما في الكتاب: الحدّ صاحب أكبر قوّة n²."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b17",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — \u2066Papaya\u2069: تبدو أسوأ مما هي",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b18",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Papaya(int n)\n{\n    int count = 0;\n    for (int i = 1; i <= n; i = i * 2)\n        for (int j = 0; j < i; j++)\n            count++;\n    return count;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b19",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "ما القيمة التي تعيدها \u2066Papaya(8)\u2069؟",
+        "answer": "15",
+        "feedback": {
+         "explanation": "الحلقة الخارجية تدور حين \u2066i\u2069 تساوي 1 و2 و4 و8، والداخلية تدور \u2066i\u2069 مرة في كل دورة: \u20661 + 2 + 4 + 8 = 15\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b20",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ما درجة نجاعة العملية \u2066Papaya\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "لوغاريثمية \u2066O(log n)\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "خطية \u2066O(n)\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "خطية لوغاريثمية \u2066O(n log n)\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "تربيعية \u2066O(n²)\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "عدد مرات تنفيذ \u2066count++\u2069 هو \u20661 + 2 + 4 + ... + n\u2069، وهذا المجموع يساوي \u20662n – 1\u2069. نحذف الثوابت فتبقى الدرجة خطية، مع أنّ الحلقتين متداخلتان."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m02-l07-p04-b21",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066Papaya\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الحلقة الخارجية عدّادها يتضاعف: "
+          },
+          {
+           "text": "i",
+           "dir": "ltr"
+          },
+          {
+           "text": " تأخذ القيم 1 ثم 2 ثم 4 … حتى "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": ". هذه نحو "
+          },
+          {
+           "text": "log n",
+           "dir": "ltr"
+          },
+          {
+           "text": " دورة."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الحلقة الداخلية تدور "
+          },
+          {
+           "text": "i",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة، لا "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " مرة. لذلك لا يصحّ أن نضرب "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " في "
+          },
+          {
+           "text": "log n",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "نجمع دورات الحلقة الداخلية: "
+          },
+          {
+           "text": "1 + 2 + 4 + ... + n",
+           "dir": "ltr"
+          },
+          {
+           "text": ". هذه متوالية هندسية مجموعها "
+          },
+          {
+           "text": "2n – 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "تحقّق: "
+          },
+          {
+           "text": "Papaya(8)",
+           "dir": "ltr"
+          },
+          {
+           "text": " تعيد "
+          },
+          {
+           "text": "1 + 2 + 4 + 8 = 15",
+           "dir": "ltr"
+          },
+          {
+           "text": "، و "
+          },
+          {
+           "text": "2 × 8 – 1 = 15",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "نحذف الثوابت: الدرجة خطية. القاعدة «المتداخلة تُضرب» تصحّ فقط حين تدور الداخلية العدد نفسه في كل مرة."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "درجة النجاعة خطية: "
+        },
+        {
+         "text": "O(n)",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static int Papaya(int n)\n{\n    int count = 0;\n    for (int i = 1; i <= n; i = i * 2)\n        for (int j = 0; j < i; j++)\n            count++;\n    return count;\n}",
+         "given": "الاستدعاء `Papaya(4)`.",
+         "out": "7\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Papaya` مع `n = 4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}]]}],"h":[]},
+{"l":3,"n":"`count = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"`i = 1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`j = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"0"}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["i",{"t":"v","s":"1"}],["j",{"t":"v","s":"1"}]]}]},
+{"l":5,"n":"الشرط `j < i` خطأ: نخرج من الحلقة.","o":0},
+{"l":4,"n":"`i = 2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["i",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`j = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"1"}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"2"}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"1"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"1"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["i",{"t":"v","s":"2"}],["j",{"t":"v","s":"2"}]]}]},
+{"l":5,"n":"الشرط `j < i` خطأ: نخرج من الحلقة.","o":0},
+{"l":4,"n":"`i = 4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["i",{"t":"v","s":"4"}]]}]},
+{"l":4,"n":"الشرط `i <= n` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`j = 0`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"3"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"4"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"0"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"4"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"1"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `5`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"5"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"1"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"5"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"2"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `6`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"6"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"2"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"6"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"3"}]]}]},
+{"l":5,"n":"الشرط `j < i` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"`count` تزيد بواحد وتصبح `7`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"7"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"3"}]]}]},
+{"l":5,"n":"`j` تزيد بواحد وتصبح `4`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"7"}],["i",{"t":"v","s":"4"}],["j",{"t":"v","s":"4"}]]}]},
+{"l":5,"n":"الشرط `j < i` خطأ: نخرج من الحلقة.","o":0},
+{"l":4,"n":"`i = 8`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"7"}],["i",{"t":"v","s":"8"}]]}]},
+{"l":4,"n":"الشرط `i <= n` خطأ: نخرج من الحلقة.","o":0},
+{"l":7,"n":"العملية `Papaya` تُعيد `7`.","o":0,"f":[{"name":"Main","vars":[]},{"name":"Papaya","vars":[["n",{"t":"v","s":"4"}],["count",{"t":"v","s":"7"}]]}]},
+{"l":0,"n":"نطبع: `7`. انتهى التنفيذ.","o":2,"f":[{"name":"Main","vars":[]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: الحلقة الخارجية عدّادها يتضاعف: i تأخذ القيم 1 ثم 2 ثم 4 … حتى n. هذه نحو log n دورة. الحلقة الداخلية تدور i مرة، لا n مرة. لذلك لا يصحّ أن نضرب n في log n. نجمع دورات الحلقة الداخلية: 1 + 2 + 4 + ... + n. هذه متوالية هندسية مجموعها 2n – 1. تحقّق: Papaya(8) تعيد 1 + 2 + 4 + 8 = 15، و 2 × 8 – 1 = 15. نحذف الثوابت: الدرجة خطية. القاعدة «المتداخلة تُضرب» تصحّ فقط حين تدور الداخلية العدد نفسه في كل مرة."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m02-l07-p05",
+     "title": "تدريبات الوحدة",
+     "order": 5,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
@@ -7041,7 +9470,7 @@ const m02: ContentModule = {
      ],
      "blocks": [
       {
-       "id": "m02-l07-p02-b01",
+       "id": "m02-l07-p05-b01",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7073,7 +9502,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b02",
+       "id": "m02-l07-p05-b02",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7105,7 +9534,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b03",
+       "id": "m02-l07-p05-b03",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7151,7 +9580,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b04",
+       "id": "m02-l07-p05-b04",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7215,7 +9644,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b05",
+       "id": "m02-l07-p05-b05",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7223,7 +9652,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b06",
+       "id": "m02-l07-p05-b06",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7236,7 +9665,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b07",
+       "id": "m02-l07-p05-b07",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7250,7 +9679,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b08",
+       "id": "m02-l07-p05-b08",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7258,7 +9687,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b09",
+       "id": "m02-l07-p05-b09",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7271,7 +9700,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b10",
+       "id": "m02-l07-p05-b10",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7303,7 +9732,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b11",
+       "id": "m02-l07-p05-b11",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7359,7 +9788,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b12",
+       "id": "m02-l07-p05-b12",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7391,7 +9820,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b13",
+       "id": "m02-l07-p05-b13",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7423,7 +9852,7 @@ const m02: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m02-l07-p02-b14",
+       "id": "m02-l07-p05-b14",
        "type": "practice",
        "reveal": true,
        "question": {

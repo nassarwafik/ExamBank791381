@@ -7,6 +7,7 @@
 //   • interactive-diagram/ds-figure/v1 — panels drawn from data, a tree's facts.
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "fs";
 import LearningActivityHost from "./LearningActivityHost";
 import { productionActivityRegistry } from "./engine";
 import type { GuidedBlock, InteractiveDiagramBlock, SimulationBlock } from "../content/types";
@@ -269,6 +270,22 @@ describe("guided/ds-solution/v1 — the «الحل» button and its window", () 
     fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.body.textContent).not.toContain("return sum;");
+  });
+  it("the steps and the answer keep their code runs left-to-right and their bold, without the Reader's own renderer in this lazy chunk", async () => {
+    const steps = [{ id: "s1", text: [{ text: "الأمر " }, { text: "st.Pop()", style: "code" as const, dir: "ltr" as const }, { text: " يُخرج " }, { text: "الرأس", style: "strong" as const }, { text: "." }] }];
+    await mount(solution({}, { steps, result: [{ text: "r = 3", style: "code", dir: "ltr" }] }));
+    fireEvent.click(btn("الحل"));
+    const dialog = screen.getByRole("dialog");
+    const step = dialog.querySelector(".learning-ds-solution-steps li")!;
+    expect(step.textContent).toBe("الأمر st.Pop() يُخرج الرأس.");
+    expect([step.querySelector("code")!.textContent, step.querySelector("code")!.getAttribute("dir")]).toEqual(["st.Pop()", "ltr"]);
+    expect(step.querySelector("strong")!.textContent).toBe("الرأس");
+    expect(dialog.querySelector(".learning-ds-solution-answer code")!.getAttribute("dir")).toBe("ltr");
+    // A lazy activity that imports the Reader's RichTextRenderer moves it out of the Reader's chunk into one more first-load file
+    // (the bundle guard then fails the Reader's first-load budget), so the data-structure activities draw spans themselves.
+    for (const f of ["DsSolutionActivity.tsx", "DsTraceView.tsx", "DsTraceActivity.tsx", "DsLabActivity.tsx", "DsFigureActivity.tsx", "DsDraw.tsx"]) {
+      expect(readFileSync(new URL("./" + f, import.meta.url), "utf8").match(/^import .*$/gm)!.join("\n"), f).not.toMatch(/RichTextRenderer|\.\.\/reader\//);
+    }
   });
   it("a recorded trace is stepped inside the window, and restarts from its first step when the window is opened again", async () => {
     await mount(solution({ trace: TRACE }));

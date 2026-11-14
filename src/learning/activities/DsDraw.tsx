@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { RichText } from "../content/types";
 
 /**
  * DS-A1 (docs/enterprise-data-structures-course.md) — the SVG drawings of the course's structures, shared by the trace, the lab
@@ -167,6 +168,19 @@ export function TreeDrawing({ cells, onPick, picked, levels }: { cells: TreeCell
       })}
     </Canvas>
   );
+}
+
+/**
+ * A guided block's safe inline spans (the steps and the answer of a solution window), drawn like `Marked`. The Reader's own
+ * RichTextRenderer is deliberately NOT imported by these lazy chunks: a lazy importer would move it out of the Reader's
+ * first-load chunk into one more file of that first load (scripts/check-bundle-budget.mjs measures it).
+ */
+export function Spans({ spans }: { spans: RichText }) {
+  return <>{spans.map((s, i) => (
+    s.style === "code" ? <code key={i} className="learning-ds-code" dir={s.dir ?? "ltr"}>{s.text}</code>
+      : s.style === "strong" ? <strong key={i} dir={s.dir}>{s.text}</strong>
+        : s.style === "em" ? <em key={i} dir={s.dir}>{s.text}</em>
+          : s.dir ? <span key={i} dir={s.dir}>{s.text}</span> : s.text))}</>;
 }
 
 /** Text with `code` runs (backticks) and **bold** — the notes of a trace, the lab's messages, a solution's checklist. */

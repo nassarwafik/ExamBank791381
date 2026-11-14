@@ -38,7 +38,14 @@ export const DEF = callout(A.DEF), NOTE = callout(A.NOTE), REM = callout(A.REM),
 export const LIST = (items, opts = {}) => A.LIST(items.map(it => (Array.isArray(it) ? [iso(it[0]), it[1]] : it)), { ...opts, ...(opts.title ? { title: iso(opts.title) } : {}) });
 export const OL = (items, opts = {}) => LIST(items, { ...opts, variant: "ordered" });
 export const TABLE = (headers, rows, opts = {}) => A.TABLE(headers.map(iso), rows.map(r => r.map(iso)), { ...opts, ...(opts.caption ? { caption: iso(opts.caption) } : {}) });
-export const EX = ({ title, prompt, steps = [], result, explanation, mode }) => A.EX({ title: iso(title), prompt: iso(prompt), steps: steps.map(st => (typeof st === "string" ? iso(st) : { text: iso(st.text), note: iso(st.note) })), result: iso(result), explanation: iso(explanation), ...(mode ? { mode } : {}) });
+// The Reader draws an example's «النتيجة» line left-to-right in a monospace face (it is meant for a short technical value, such as
+// `[3,5]` or `O(n)`), so an Arabic SENTENCE there is laid out backwards and letter-spaced. A result that is a sentence therefore
+// becomes the example's closing step, «النتيجة: …», which the Reader draws as ordinary right-to-left text.
+const SENTENCE = /[\u0600-\u06FF]/;
+export const EX = ({ title, prompt, steps = [], result, explanation, mode }) => {
+  const said = result && SENTENCE.test(result) ? [...steps, "النتيجة: " + result] : steps;
+  return A.EX({ title: iso(title), prompt: iso(prompt), steps: said.map(st => (typeof st === "string" ? iso(st) : { text: iso(st.text), note: iso(st.note) })), result: said === steps ? iso(result) : undefined, explanation: iso(explanation), ...(mode ? { mode } : {}) });
+};
 export const GUIDED = ({ title, prompt, steps, result, explanation }) => A.GUIDED({ title: iso(title), prompt, steps, result, explanation: iso(explanation) });
 export const MC = (prompt, options, explanation, extra = {}) => A.MC(iso(prompt), options.map(iso), iso(explanation), isoExtra(extra));
 export const TF = (prompt, answer, explanation, extra = {}) => A.TF(iso(prompt), answer, iso(explanation), isoExtra(extra));

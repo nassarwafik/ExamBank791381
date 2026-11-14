@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import Dialog from "../../ui/Dialog";
-import RichTextRenderer from "../reader/RichTextRenderer";
 import type { LearningActivityProps } from "./engine";
 import { readDsSolution } from "./ds";
-import { Marked } from "./DsDraw";
+import { Marked, Spans } from "./DsDraw";
 import DsTraceView from "./DsTraceView";
 
 /**
@@ -29,11 +28,11 @@ export default function DsSolutionActivity({ block, emit }: LearningActivityProp
       <button type="button" className="learning-trace-btn is-next learning-ds-solution-btn" aria-haspopup="dialog" onClick={open}>الحل</button>
       <Dialog open={opened > 0} title={block.title} onClose={() => setOpened(0)} size="lg" className="learning-ds-solution-dialog">
         <div className="learning-ds-solution-body">
-          {block.result && <p className="learning-ds-solution-answer"><span className="learning-trace-label">الجواب:</span> <RichTextRenderer spans={block.result} /></p>}
+          {block.result && <p className="learning-ds-solution-answer"><span className="learning-trace-label">الجواب:</span> <Spans spans={block.result} /></p>}
           <section aria-label="شرح الحل">
             <h4 className="learning-trace-heading">شرح الحل</h4>
             <ol className="learning-ds-solution-steps">
-              {block.steps.map(s => <li key={s.id}><RichTextRenderer spans={s.text} /></li>)}
+              {block.steps.map(s => <li key={s.id}><Spans spans={s.text} /></li>)}
             </ol>
           </section>
           {cfg.code && (

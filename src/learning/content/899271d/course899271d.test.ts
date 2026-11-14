@@ -96,6 +96,62 @@ describe("899271d — the bodies", () => {
       expect(last.blocks.filter(b => b.type === "practice" || b.type === "practice-table").length, m.id).toBeGreaterThanOrEqual(6);
     }
   }, 30000);
+  it("DS-A3 — in every chapter each category's questions run from the easiest, five are solved on the page and the rest are homework with one «الحل» window each", async () => {
+    const LEVELS = ["سهل", "متوسط", "متقدّم"];
+    const plainTitle = (t: string) => t.replace(/[\u2066\u2069]/g, "");
+    const question = (b: { type: string; text?: string }) => (b.type === "heading" ? /^سؤال (\d+) · (سهل|متوسط|متقدّم)(?: — |$)/.exec(plainTitle(b.text ?? "")) : null);
+    let solvedPages = 0, homeworkPages = 0, solved = 0, homework = 0;
+    for (const m of await loadAll()) {
+      const unit = Number(m.id.slice(-2));
+      const pages = m.lessons.flatMap(l => l.pages).map(p => ({ ...p, plain: plainTitle(p.title) }));
+      const solvedHere = pages.filter(p => /^أسئلة .+ محلولة$/.test(p.plain)), homeworkHere = pages.filter(p => p.plain.startsWith("وظيفة: "));
+      expect(pages.filter(p => /(^|\s)حلول(\s|$)/.test(p.plain)).map(p => p.plain), m.id + ": no separate solutions page").toEqual([]);   // the word, not the letters inside «محلولة»
+      if (unit >= 1 && unit <= 7) {
+        expect(solvedHere.length, m.id + " solved pages").toBe(2);
+        expect(homeworkHere.map(p => p.plain).sort(), m.id + ": a homework page per category").toEqual(solvedHere.map(p => "وظيفة: " + p.plain.replace(/ محلولة$/, "")).sort());
+      }
+      for (const p of [...solvedHere, ...homeworkHere]) {
+        const isSolved = solvedHere.includes(p);
+        const at = p.blocks.map((b, i) => (question(b) ? i : -1)).filter(i => i >= 0);
+        const qs = at.map(i => question(p.blocks[i])!);
+        expect(qs.map(q => Number(q[1])), p.id + ": numbered 1, 2, 3 …").toEqual(qs.map((_, i) => i + 1));
+        const levels = qs.map(q => LEVELS.indexOf(q[2]));
+        expect(levels.every((l, i) => i === 0 || l >= levels[i - 1]), p.id + ": from the easiest to the hardest — " + qs.map(q => q[2]).join(", ")).toBe(true);
+        expect(p.source.sourceNote, p.id + " is an added page").toMatch(/^إثراء/);
+        if (isSolved) {
+          solvedPages++; solved += qs.length;
+          expect(qs.length, p.id + ": exactly five solved questions").toBe(5);
+          expect(p.blocks.some(b => b.type === "practice" || b.type === "practice-table" || b.type === "guided"), p.id + ": a solved page shows its solutions (no exercise, no window)").toBe(false);
+        } else {
+          homeworkPages++; homework += qs.length;
+          expect(qs.length, p.id + ": homework questions").toBeGreaterThanOrEqual(unit === 8 ? 2 : 3);
+          expect(p.blocks.some(b => b.type === "simulation" && b.simulationType === "ds-trace"), p.id + ": no open trace on a homework page").toBe(false);
+          at.forEach((start, k) => {
+            const windows = p.blocks.slice(start, at[k + 1] ?? p.blocks.length).filter(b => b.type === "guided" && b.guidedType === "ds-solution");
+            expect(windows.length, p.id + " سؤال " + (k + 1) + ": exactly one «الحل» window").toBe(1);
+          });
+        }
+      }
+    }
+    expect([solvedPages, solved]).toEqual([14, 70]);                 // seven chapters × two categories × five solved
+    expect(homeworkPages).toBe(16);                                    // the same fourteen and the review unit's two
+    expect(homework).toBeGreaterThanOrEqual(14 * 3 + 6);
+  }, 30000);
+  it("a worked example never puts an Arabic sentence in the Reader's left-to-right «النتيجة» line, and a long code run wraps instead of widening the page", async () => {
+    // The Reader draws `result` left-to-right in a monospace face (a short technical value). A sentence there is laid out backwards,
+    // so the authoring tool turns it into the closing step «النتيجة: …» (scripts/ds-course/dsl.mjs).
+    const examples = pagesOf(await loadAll()).flatMap(p => p.blocks).filter(b => b.type === "example");
+    expect(examples.length).toBeGreaterThan(100);
+    expect(examples.filter(b => b.type === "example" && /[\u0600-\u06FF]/.test(b.result ?? "")).map(b => b.id)).toEqual([]);
+    expect(examples.filter(b => b.type === "example" && b.steps.some(st => st.text.startsWith("النتيجة: "))).length).toBeGreaterThanOrEqual(40);
+    // A stack of ten values (`[100,81,80,49,60,25,40,9,20,1]`) or a chained call has no break point: on a phone the step text
+    // must wrap anywhere rather than scroll the whole page sideways.
+    const css = readFileSync(fileURLToPath(new URL("../../reader/reader.css", import.meta.url)), "utf8");
+    for (const rule of [".learning-reader-example-steps", ".learning-reader-example-prompt, .learning-reader-example-result"]) {
+      const body = css.slice(css.indexOf(rule + "{"), css.indexOf("}", css.indexOf(rule + "{")));
+      expect(body, rule).toContain("overflow-wrap:anywhere");
+    }
+  }, 30000);
   it("every activity is a data-structure activity (or the guided walkthrough / a solution window) with a readable config and a fallback text", async () => {
     const blocks = pagesOf(await loadAll()).flatMap(p => p.blocks);
     let traces = 0, labs = 0, figures = 0, solutions = 0;

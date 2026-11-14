@@ -311,83 +311,16 @@
         }
       }
     },
-    "899271d-m01-l06-p01": {
-      "moduleId": "899271d-m01",
-      "activities": {
-        "m01-l06-p01-b05": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m01-l06-p01-b06": {
-          "kind": "shortInput",
-          "answer": "9"
-        },
-        "m01-l06-p01-b12": {
-          "kind": "shortInput",
-          "answer": "3"
-        },
-        "m01-l06-p01-b13": {
-          "kind": "shortInput",
-          "answer": "-998"
-        },
-        "m01-l06-p01-b15": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m01-l06-p01-b16": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m01-l06-p01-b17": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m01-l06-p01-b23": {
-          "kind": "shortInput",
-          "answer": "40"
-        },
-        "m01-l06-p01-b24": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m01-l06-p01-b25": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m01-l06-p01-b29": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m01-l06-p01-b30": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        }
-      }
-    },
     "899271d-m01-l06-p02": {
       "moduleId": "899271d-m01",
       "activities": {
+        "m01-l06-p02-b04": {
+          "kind": "shortInput",
+          "answer": "321123"
+        },
         "m01-l06-p02-b09": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
+          "kind": "shortInput",
+          "answer": "b"
         },
         "m01-l06-p02-b10": {
           "kind": "multipleChoice",
@@ -398,44 +331,92 @@
         "m01-l06-p02-b11": {
           "kind": "multipleChoice",
           "correct": [
-            "o3"
+            "o2"
           ]
-        }
-      }
-    },
-    "899271d-m01-l06-p03": {
-      "moduleId": "899271d-m01",
-      "activities": {
-        "m01-l06-p03-b06": {
-          "kind": "shortInput",
-          "answer": "18"
         },
-        "m01-l06-p03-b12": {
-          "kind": "trueFalse",
-          "answer": true
-        },
-        "m01-l06-p03-b17": {
+        "m01-l06-p02-b17": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m01-l06-p03-b22": {
+        "m01-l06-p02-b18": {
           "kind": "shortInput",
-          "answer": "42"
+          "answer": "21"
+        },
+        "m01-l06-p02-b23": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m01-l06-p02-b24": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m01-l06-p02-b30": {
+          "kind": "shortInput",
+          "answer": "8"
+        },
+        "m01-l06-p02-b31": {
+          "kind": "shortInput",
+          "answer": "81"
+        },
+        "m01-l06-p02-b32": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m01-l06-p02-b33": {
+          "kind": "shortInput",
+          "answer": "81"
+        },
+        "m01-l06-p02-b40": {
+          "kind": "shortInput",
+          "answer": "2"
+        },
+        "m01-l06-p02-b41": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
         }
       }
     },
     "899271d-m01-l06-p04": {
       "moduleId": "899271d-m01",
       "activities": {
-        "m01-l06-p04-b01": {
+        "m01-l06-p04-b06": {
+          "kind": "shortInput",
+          "answer": "2"
+        },
+        "m01-l06-p04-b11": {
+          "kind": "shortInput",
+          "answer": "false"
+        },
+        "m01-l06-p04-b16": {
+          "kind": "shortInput",
+          "answer": "bnn"
+        },
+        "m01-l06-p04-b21": {
+          "kind": "shortInput",
+          "answer": "9"
+        }
+      }
+    },
+    "899271d-m01-l06-p05": {
+      "moduleId": "899271d-m01",
+      "activities": {
+        "m01-l06-p05-b01": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m01-l06-p04-b02": {
+        "m01-l06-p05-b02": {
           "kind": "wordBank",
           "answers": {
             "w1": "شرط توقّف",
@@ -444,11 +425,11 @@
             "w4": "آخر"
           }
         },
-        "m01-l06-p04-b04": {
+        "m01-l06-p05-b04": {
           "kind": "shortInput",
           "answer": "5"
         },
-        "m01-l06-p04-b05": {
+        "m01-l06-p05-b05": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -459,15 +440,15 @@
             "c6": "g2"
           }
         },
-        "m01-l06-p04-b07": {
+        "m01-l06-p05-b07": {
           "kind": "shortInput",
           "answer": "1234"
         },
-        "m01-l06-p04-b08": {
+        "m01-l06-p05-b08": {
           "kind": "trueFalse",
           "answer": true
         },
-        "m01-l06-p04-b09": {
+        "m01-l06-p05-b09": {
           "kind": "ordering",
           "order": [
             "s1",
@@ -475,13 +456,13 @@
             "s3"
           ]
         },
-        "m01-l06-p04-b11": {
+        "m01-l06-p05-b11": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m01-l06-p04-b12": {
+        "m01-l06-p05-b12": {
           "kind": "matching",
           "pairs": {
             "l1": "r1",
@@ -491,15 +472,15 @@
             "l5": "r5"
           }
         },
-        "m01-l06-p04-b14": {
+        "m01-l06-p05-b14": {
           "kind": "shortInput",
           "answer": "7"
         },
-        "m01-l06-p04-b15": {
+        "m01-l06-p05-b15": {
           "kind": "trueFalse",
           "answer": true
         },
-        "m01-l06-p04-b16": {
+        "m01-l06-p05-b16": {
           "kind": "shortInput",
           "answer": "2"
         }
@@ -762,65 +743,102 @@
         }
       }
     },
-    "899271d-m02-l07-p01": {
-      "moduleId": "899271d-m02",
-      "activities": {
-        "m02-l07-p01-b04": {
-          "kind": "shortInput",
-          "answer": "10"
-        },
-        "m02-l07-p01-b05": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m02-l07-p01-b09": {
-          "kind": "shortInput",
-          "answer": "4"
-        },
-        "m02-l07-p01-b10": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m02-l07-p01-b14": {
-          "kind": "shortInput",
-          "answer": "true"
-        },
-        "m02-l07-p01-b15": {
-          "kind": "shortInput",
-          "answer": "10"
-        },
-        "m02-l07-p01-b16": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m02-l07-p01-b18": {
-          "kind": "shortInput",
-          "answer": "9"
-        }
-      }
-    },
     "899271d-m02-l07-p02": {
       "moduleId": "899271d-m02",
       "activities": {
-        "m02-l07-p02-b01": {
+        "m02-l07-p02-b04": {
+          "kind": "shortInput",
+          "answer": "6"
+        },
+        "m02-l07-p02-b08": {
+          "kind": "shortInput",
+          "answer": "16 12"
+        },
+        "m02-l07-p02-b09": {
+          "kind": "shortInput",
+          "answer": "4"
+        },
+        "m02-l07-p02-b13": {
+          "kind": "shortInput",
+          "answer": "true"
+        },
+        "m02-l07-p02-b14": {
+          "kind": "shortInput",
+          "answer": "10"
+        },
+        "m02-l07-p02-b18": {
+          "kind": "shortInput",
+          "answer": "8"
+        },
+        "m02-l07-p02-b19": {
+          "kind": "shortInput",
+          "answer": "15"
+        }
+      }
+    },
+    "899271d-m02-l07-p04": {
+      "moduleId": "899271d-m02",
+      "activities": {
+        "m02-l07-p04-b04": {
+          "kind": "shortInput",
+          "answer": "10"
+        },
+        "m02-l07-p04-b05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m02-l07-p04-b09": {
+          "kind": "shortInput",
+          "answer": "16"
+        },
+        "m02-l07-p04-b10": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m02-l07-p02-b02": {
+        "m02-l07-p04-b14": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m02-l07-p02-b03": {
+        "m02-l07-p04-b15": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m02-l07-p04-b19": {
+          "kind": "shortInput",
+          "answer": "15"
+        },
+        "m02-l07-p04-b20": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        }
+      }
+    },
+    "899271d-m02-l07-p05": {
+      "moduleId": "899271d-m02",
+      "activities": {
+        "m02-l07-p05-b01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m02-l07-p05-b02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m02-l07-p05-b03": {
           "kind": "wordBank",
           "answers": {
             "w1": "ثابتة",
@@ -829,7 +847,7 @@
             "w4": "لوغاريثمية"
           }
         },
-        "m02-l07-p02-b04": {
+        "m02-l07-p05-b04": {
           "kind": "matching",
           "pairs": {
             "l1": "r1",
@@ -839,25 +857,25 @@
             "l5": "r5"
           }
         },
-        "m02-l07-p02-b06": {
+        "m02-l07-p05-b06": {
           "kind": "shortInput",
           "answer": "22"
         },
-        "m02-l07-p02-b07": {
+        "m02-l07-p05-b07": {
           "kind": "trueFalse",
           "answer": false
         },
-        "m02-l07-p02-b09": {
+        "m02-l07-p05-b09": {
           "kind": "shortInput",
           "answer": "32"
         },
-        "m02-l07-p02-b10": {
+        "m02-l07-p05-b10": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m02-l07-p02-b11": {
+        "m02-l07-p05-b11": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -867,19 +885,19 @@
             "c5": "g3"
           }
         },
-        "m02-l07-p02-b12": {
+        "m02-l07-p05-b12": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m02-l07-p02-b13": {
+        "m02-l07-p05-b13": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m02-l07-p02-b14": {
+        "m02-l07-p05-b14": {
           "kind": "trueFalse",
           "answer": false
         }
@@ -1141,112 +1159,100 @@
         }
       }
     },
-    "899271d-m03-l07-p01": {
+    "899271d-m03-l07-p02": {
       "moduleId": "899271d-m03",
       "activities": {
-        "m03-l07-p01-b05": {
+        "m03-l07-p02-b05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m03-l07-p02-b10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m03-l07-p02-b11": {
           "kind": "multipleChoice",
           "correct": [
             "o1"
           ]
         },
-        "m03-l07-p01-b06": {
-          "kind": "shortInput",
-          "answer": "true"
-        },
-        "m03-l07-p01-b07": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m03-l07-p01-b08": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m03-l07-p01-b13": {
+        "m03-l07-p02-b16": {
           "kind": "multipleChoice",
           "correct": [
             "o1"
           ]
         },
-        "m03-l07-p01-b14": {
+        "m03-l07-p02-b17": {
           "kind": "shortInput",
-          "answer": "false"
+          "answer": "5"
         },
-        "m03-l07-p01-b15": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m03-l07-p01-b16": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m03-l07-p01-b22": {
+        "m03-l07-p02-b24": {
           "kind": "shortInput",
           "answer": "31"
         },
-        "m03-l07-p01-b23": {
+        "m03-l07-p02-b25": {
           "kind": "multipleChoice",
           "correct": [
             "o1"
           ]
         },
-        "m03-l07-p01-b24": {
+        "m03-l07-p02-b26": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
-        }
-      }
-    },
-    "899271d-m03-l07-p03": {
-      "moduleId": "899271d-m03",
-      "activities": {
-        "m03-l07-p03-b07": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m03-l07-p03-b16": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m03-l07-p03-b21": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m03-l07-p03-b28": {
-          "kind": "shortInput",
-          "answer": "true"
-        },
-        "m03-l07-p03-b29": {
-          "kind": "shortInput",
-          "answer": "false"
         }
       }
     },
     "899271d-m03-l07-p04": {
       "moduleId": "899271d-m03",
       "activities": {
-        "m03-l07-p04-b01": {
+        "m03-l07-p04-b07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m03-l07-p04-b13": {
+          "kind": "shortInput",
+          "answer": "false"
+        },
+        "m03-l07-p04-b19": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m03-l07-p04-b25": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m03-l07-p04-b02": {
+        "m03-l07-p04-b31": {
+          "kind": "shortInput",
+          "answer": "true"
+        },
+        "m03-l07-p04-b32": {
+          "kind": "shortInput",
+          "answer": "false"
+        }
+      }
+    },
+    "899271d-m03-l07-p05": {
+      "moduleId": "899271d-m03",
+      "activities": {
+        "m03-l07-p05-b01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m03-l07-p05-b02": {
           "kind": "wordBank",
           "answers": {
             "w1": "GetValue",
@@ -1255,11 +1261,11 @@
             "w4": "HasNext"
           }
         },
-        "m03-l07-p04-b04": {
+        "m03-l07-p05-b04": {
           "kind": "shortInput",
           "answer": "12"
         },
-        "m03-l07-p04-b05": {
+        "m03-l07-p05-b05": {
           "kind": "ordering",
           "order": [
             "s1",
@@ -1269,13 +1275,13 @@
             "s5"
           ]
         },
-        "m03-l07-p04-b07": {
+        "m03-l07-p05-b07": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m03-l07-p04-b08": {
+        "m03-l07-p05-b08": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -1286,15 +1292,19 @@
             "c6": "g1"
           }
         },
-        "m03-l07-p04-b09": {
+        "m03-l07-p05-b09": {
           "kind": "trueFalse",
           "answer": false
         },
-        "m03-l07-p04-b11": {
+        "m03-l07-p05-b11": {
           "kind": "shortInput",
           "answer": "3"
         },
-        "m03-l07-p04-b12": {
+        "m03-l07-p05-b13": {
+          "kind": "shortInput",
+          "answer": "false"
+        },
+        "m03-l07-p05-b14": {
           "kind": "matching",
           "pairs": {
             "l1": "r1",
@@ -1304,13 +1314,13 @@
             "l5": "r5"
           }
         },
-        "m03-l07-p04-b13": {
+        "m03-l07-p05-b15": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m03-l07-p04-b14": {
+        "m03-l07-p05-b16": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
@@ -1428,45 +1438,18 @@
         }
       }
     },
-    "899271d-m04-l05-p01": {
-      "moduleId": "899271d-m04",
-      "activities": {
-        "m04-l05-p01-b04": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m04-l05-p01-b08": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m04-l05-p01-b13": {
-          "kind": "shortInput",
-          "answer": "28"
-        },
-        "m04-l05-p01-b14": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        }
-      }
-    },
     "899271d-m04-l05-p02": {
       "moduleId": "899271d-m04",
       "activities": {
-        "m04-l05-p02-b04": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o1"
-          ]
-        },
-        "m04-l05-p02-b09": {
+        "m04-l05-p02-b05": {
           "kind": "shortInput",
           "answer": "3"
+        },
+        "m04-l05-p02-b06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
         },
         "m04-l05-p02-b10": {
           "kind": "multipleChoice",
@@ -1474,25 +1457,31 @@
             "o3"
           ]
         },
-        "m04-l05-p02-b14": {
+        "m04-l05-p02-b11": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m04-l05-p02-b15": {
+        "m04-l05-p02-b16": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l05-p02-b17": {
           "kind": "multipleChoice",
           "correct": [
             "o4"
           ]
         },
-        "m04-l05-p02-b19": {
+        "m04-l05-p02-b22": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m04-l05-p02-b20": {
+        "m04-l05-p02-b23": {
           "kind": "shortInput",
           "answer": "7"
         }
@@ -1501,23 +1490,27 @@
     "899271d-m04-l05-p04": {
       "moduleId": "899271d-m04",
       "activities": {
-        "m04-l05-p04-b05": {
+        "m04-l05-p04-b07": {
+          "kind": "shortInput",
+          "answer": "-3"
+        },
+        "m04-l05-p04-b13": {
+          "kind": "shortInput",
+          "answer": "true"
+        },
+        "m04-l05-p04-b20": {
           "kind": "multipleChoice",
           "correct": [
-            "o4"
+            "o3"
           ]
         },
-        "m04-l05-p04-b12": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
+        "m04-l05-p04-b26": {
+          "kind": "shortInput",
+          "answer": "false"
         },
-        "m04-l05-p04-b17": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o1"
-          ]
+        "m04-l05-p04-b32": {
+          "kind": "shortInput",
+          "answer": "4"
         }
       }
     },
@@ -1761,48 +1754,6 @@
         }
       }
     },
-    "899271d-m05-l06-p01": {
-      "moduleId": "899271d-m05",
-      "activities": {
-        "m05-l06-p01-b04": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m05-l06-p01-b08": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o1"
-          ]
-        },
-        "m05-l06-p01-b13": {
-          "kind": "shortInput",
-          "answer": "28"
-        },
-        "m05-l06-p01-b14": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m05-l06-p01-b18": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m05-l06-p01-b19": {
-          "kind": "classify",
-          "assign": {
-            "c1": "g2",
-            "c2": "g1",
-            "c3": "g2",
-            "c4": "g1"
-          }
-        }
-      }
-    },
     "899271d-m05-l06-p02": {
       "moduleId": "899271d-m05",
       "activities": {
@@ -1812,51 +1763,52 @@
             "o2"
           ]
         },
-        "m05-l06-p02-b09": {
-          "kind": "shortInput",
-          "answer": "3"
-        },
-        "m05-l06-p02-b10": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m05-l06-p02-b14": {
+        "m05-l06-p02-b08": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m05-l06-p02-b15": {
+        "m05-l06-p02-b09": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g2",
+            "c2": "g1",
+            "c3": "g2",
+            "c4": "g1"
+          }
+        },
+        "m05-l06-p02-b13": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m05-l06-p02-b17": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m05-l06-p02-b18": {
           "kind": "multipleChoice",
           "correct": [
             "o4"
           ]
         },
-        "m05-l06-p02-b20": {
+        "m05-l06-p02-b23": {
           "kind": "multipleChoice",
           "correct": [
             "o1"
           ]
         },
-        "m05-l06-p02-b21": {
-          "kind": "shortInput",
-          "answer": "3"
-        },
-        "m05-l06-p02-b26": {
+        "m05-l06-p02-b24": {
           "kind": "multipleChoice",
           "correct": [
             "o1"
           ]
         },
-        "m05-l06-p02-b27": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o1"
-          ]
-        },
-        "m05-l06-p02-b28": {
+        "m05-l06-p02-b25": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
@@ -1867,60 +1819,35 @@
     "899271d-m05-l06-p04": {
       "moduleId": "899271d-m05",
       "activities": {
-        "m05-l06-p04-b06": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o4"
-          ]
+        "m05-l06-p04-b08": {
+          "kind": "shortInput",
+          "answer": "true"
         },
-        "m05-l06-p04-b14": {
+        "m05-l06-p04-b13": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m05-l06-p04-b15": {
-          "kind": "shortInput",
-          "answer": "[8]"
-        },
-        "m05-l06-p04-b21": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o1"
-          ]
-        }
-      }
-    },
-    "899271d-m05-l06-p05": {
-      "moduleId": "899271d-m05",
-      "activities": {
-        "m05-l06-p05-b07": {
-          "kind": "shortInput",
-          "answer": "true"
-        },
-        "m05-l06-p05-b08": {
+        "m05-l06-p04-b19": {
           "kind": "shortInput",
           "answer": "false"
         },
-        "m05-l06-p05-b14": {
-          "kind": "shortInput",
-          "answer": "false"
-        },
-        "m05-l06-p05-b15": {
+        "m05-l06-p04-b20": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m05-l06-p05-b22": {
+        "m05-l06-p04-b27": {
           "kind": "shortInput",
           "answer": "true"
         },
-        "m05-l06-p05-b23": {
+        "m05-l06-p04-b28": {
           "kind": "shortInput",
           "answer": "false"
         },
-        "m05-l06-p05-b24": {
+        "m05-l06-p04-b29": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
@@ -1928,16 +1855,16 @@
         }
       }
     },
-    "899271d-m05-l06-p06": {
+    "899271d-m05-l06-p05": {
       "moduleId": "899271d-m05",
       "activities": {
-        "m05-l06-p06-b01": {
+        "m05-l06-p05-b01": {
           "kind": "multipleChoice",
           "correct": [
             "o1"
           ]
         },
-        "m05-l06-p06-b02": {
+        "m05-l06-p05-b02": {
           "kind": "wordBank",
           "answers": {
             "w1": "Insert",
@@ -1946,35 +1873,35 @@
             "w4": "IsEmpty"
           }
         },
-        "m05-l06-p06-b04": {
+        "m05-l06-p05-b04": {
           "kind": "shortInput",
           "answer": "[6,9,12]"
         },
-        "m05-l06-p06-b05": {
+        "m05-l06-p05-b05": {
           "kind": "trueFalse",
           "answer": true
         },
-        "m05-l06-p06-b07": {
+        "m05-l06-p05-b07": {
           "kind": "shortInput",
           "answer": "[1,3,4,2]"
         },
-        "m05-l06-p06-b08": {
+        "m05-l06-p05-b08": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m05-l06-p06-b09": {
+        "m05-l06-p05-b09": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m05-l06-p06-b10": {
+        "m05-l06-p05-b10": {
           "kind": "shortInput",
           "answer": "false"
         },
-        "m05-l06-p06-b11": {
+        "m05-l06-p05-b11": {
           "kind": "ordering",
           "order": [
             "s1",
@@ -1983,7 +1910,7 @@
             "s4"
           ]
         },
-        "m05-l06-p06-b12": {
+        "m05-l06-p05-b12": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -1993,7 +1920,7 @@
             "c5": "g2"
           }
         },
-        "m05-l06-p06-b13": {
+        "m05-l06-p05-b13": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -2004,7 +1931,11 @@
             "c6": "g2"
           }
         },
-        "m05-l06-p06-b14": {
+        "m05-l06-p05-b15": {
+          "kind": "shortInput",
+          "answer": "[8]"
+        },
+        "m05-l06-p05-b16": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
@@ -2216,31 +2147,6 @@
         }
       }
     },
-    "899271d-m06-l07-p01": {
-      "moduleId": "899271d-m06",
-      "activities": {
-        "m06-l07-p01-b07": {
-          "kind": "shortInput",
-          "answer": "true"
-        },
-        "m06-l07-p01-b08": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m06-l07-p01-b11": {
-          "kind": "shortInput",
-          "answer": "7"
-        },
-        "m06-l07-p01-b15": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        }
-      }
-    },
     "899271d-m06-l07-p02": {
       "moduleId": "899271d-m06",
       "activities": {
@@ -2248,24 +2154,26 @@
           "kind": "shortInput",
           "answer": "3"
         },
-        "m06-l07-p02-b06": {
+        "m06-l07-p02-b10": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m06-l07-p02-b12": {
+        "m06-l07-p02-b15": {
           "kind": "shortInput",
-          "answer": "2"
+          "answer": "14"
         },
-        "m06-l07-p02-b13": {
-          "kind": "shortInput",
-          "answer": "-1"
-        },
-        "m06-l07-p02-b14": {
+        "m06-l07-p02-b21": {
           "kind": "multipleChoice",
           "correct": [
-            "o3"
+            "o2"
+          ]
+        },
+        "m06-l07-p02-b26": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
           ]
         }
       }
@@ -2273,23 +2181,25 @@
     "899271d-m06-l07-p04": {
       "moduleId": "899271d-m06",
       "activities": {
-        "m06-l07-p04-b08": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
+        "m06-l07-p04-b07": {
+          "kind": "shortInput",
+          "answer": "0"
         },
         "m06-l07-p04-b13": {
           "kind": "shortInput",
-          "answer": "4"
+          "answer": "-2"
         },
-        "m06-l07-p04-b18": {
+        "m06-l07-p04-b19": {
           "kind": "shortInput",
           "answer": "false"
         },
-        "m06-l07-p04-b24": {
+        "m06-l07-p04-b25": {
           "kind": "shortInput",
-          "answer": "true"
+          "answer": "false"
+        },
+        "m06-l07-p04-b31": {
+          "kind": "shortInput",
+          "answer": "0"
         }
       }
     },
@@ -2343,23 +2253,29 @@
             "o2"
           ]
         },
-        "m06-l07-p05-b11": {
-          "kind": "trueFalse",
-          "answer": false
-        },
-        "m06-l07-p05-b12": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
-          ]
-        },
-        "m06-l07-p05-b13": {
+        "m06-l07-p05-b14": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m06-l07-p05-b14": {
+        "m06-l07-p05-b15": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m06-l07-p05-b16": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m06-l07-p05-b17": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m06-l07-p05-b18": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
@@ -2591,94 +2507,59 @@
         }
       }
     },
-    "899271d-m07-l08-p01": {
+    "899271d-m07-l08-p02": {
       "moduleId": "899271d-m07",
       "activities": {
-        "m07-l08-p01-b04": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m07-l08-p01-b05": {
-          "kind": "shortInput",
-          "answer": "25"
-        },
-        "m07-l08-p01-b10": {
-          "kind": "shortInput",
-          "answer": "10"
-        },
-        "m07-l08-p01-b11": {
+        "m07-l08-p02-b04": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m07-l08-p01-b12": {
+        "m07-l08-p02-b05": {
+          "kind": "shortInput",
+          "answer": "5"
+        },
+        "m07-l08-p02-b10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m07-l08-p02-b15": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m07-l08-p02-b16": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m07-l08-p01-b16": {
+        "m07-l08-p02-b20": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m07-l08-p02-b21": {
           "kind": "shortInput",
           "answer": "60"
         },
-        "m07-l08-p01-b17": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m07-l08-p01-b26": {
+        "m07-l08-p02-b28": {
           "kind": "shortInput",
           "answer": "3"
         },
-        "m07-l08-p01-b27": {
+        "m07-l08-p02-b29": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m07-l08-p01-b28": {
+        "m07-l08-p02-b30": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
-          ]
-        }
-      }
-    },
-    "899271d-m07-l08-p03": {
-      "moduleId": "899271d-m07",
-      "activities": {
-        "m07-l08-p03-b06": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m07-l08-p03-b10": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o2"
-          ]
-        },
-        "m07-l08-p03-b17": {
-          "kind": "shortInput",
-          "answer": "80"
-        },
-        "m07-l08-p03-b22": {
-          "kind": "shortInput",
-          "answer": "false"
-        },
-        "m07-l08-p03-b27": {
-          "kind": "shortInput",
-          "answer": "3"
-        },
-        "m07-l08-p03-b28": {
-          "kind": "multipleChoice",
-          "correct": [
-            "o3"
           ]
         }
       }
@@ -2686,13 +2567,34 @@
     "899271d-m07-l08-p04": {
       "moduleId": "899271d-m07",
       "activities": {
-        "m07-l08-p04-b01": {
+        "m07-l08-p04-b06": {
+          "kind": "shortInput",
+          "answer": "30"
+        },
+        "m07-l08-p04-b11": {
+          "kind": "shortInput",
+          "answer": "3"
+        },
+        "m07-l08-p04-b20": {
+          "kind": "shortInput",
+          "answer": "false"
+        },
+        "m07-l08-p04-b25": {
+          "kind": "shortInput",
+          "answer": "70"
+        }
+      }
+    },
+    "899271d-m07-l08-p05": {
+      "moduleId": "899271d-m07",
+      "activities": {
+        "m07-l08-p05-b01": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m07-l08-p04-b02": {
+        "m07-l08-p05-b02": {
           "kind": "wordBank",
           "answers": {
             "w1": "اليسرى",
@@ -2701,37 +2603,37 @@
             "w4": "تصاعديًا"
           }
         },
-        "m07-l08-p04-b03": {
+        "m07-l08-p05-b03": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m07-l08-p04-b04": {
+        "m07-l08-p05-b04": {
           "kind": "trueFalse",
           "answer": false
         },
-        "m07-l08-p04-b05": {
+        "m07-l08-p05-b05": {
           "kind": "shortInput",
           "answer": "4"
         },
-        "m07-l08-p04-b06": {
+        "m07-l08-p05-b06": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m07-l08-p04-b07": {
+        "m07-l08-p05-b07": {
           "kind": "shortInput",
           "answer": "3"
         },
-        "m07-l08-p04-b09": {
+        "m07-l08-p05-b09": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m07-l08-p04-b10": {
+        "m07-l08-p05-b10": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -2741,7 +2643,7 @@
             "c5": "g2"
           }
         },
-        "m07-l08-p04-b11": {
+        "m07-l08-p05-b11": {
           "kind": "ordering",
           "order": [
             "s1",
@@ -2750,7 +2652,7 @@
             "s4"
           ]
         },
-        "m07-l08-p04-b12": {
+        "m07-l08-p05-b12": {
           "kind": "matching",
           "pairs": {
             "l1": "r1",
@@ -2760,7 +2662,7 @@
             "l5": "r5"
           }
         },
-        "m07-l08-p04-b13": {
+        "m07-l08-p05-b13": {
           "kind": "multipleChoice",
           "correct": [
             "o3"

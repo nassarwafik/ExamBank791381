@@ -332,46 +332,46 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m01-l06",
-          "title": "أسئلة تتبّع وكتابة",
+          "title": "أسئلة وتمارين",
           "order": 6,
           "pages": [
             {
               "id": "899271d-m01-l06-p01",
-              "title": "أسئلة تتبّع من تمارين الكتاب",
+              "title": "أسئلة تتبّع محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 47,
-                "pdfPageEnd": 53,
-                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 47–53"
+                "pdfPageStart": 7,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الأول «العمليات التراجعية»"
               },
               "keywords": [
+                "تتبّع",
+                "أسئلة محلولة",
+                "شجرة متابعة",
+                "تمارين الكتاب"
+              ]
+            },
+            {
+              "id": "899271d-m01-l06-p02",
+              "title": "وظيفة: أسئلة تتبّع",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 7,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الأول «العمليات التراجعية»"
+              },
+              "keywords": [
+                "وظيفة",
                 "تتبّع",
                 "تمارين الكتاب",
                 "شجرة متابعة"
               ]
             },
             {
-              "id": "899271d-m01-l06-p02",
-              "title": "أسئلة كتابة: اكتب العملية",
-              "order": 2,
-              "source": {
-                "kind": "book",
-                "sourceId": "899271d",
-                "pdfPageStart": 46,
-                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 46"
-              },
-              "keywords": [
-                "كتابة عملية",
-                "صيغة تراجعية",
-                "Iterative",
-                "Mult"
-              ]
-            },
-            {
               "id": "899271d-m01-l06-p03",
-              "title": "حلول أسئلة الكتابة",
+              "title": "أسئلة كتابة محلولة",
               "order": 3,
               "source": {
                 "kind": "book",
@@ -380,17 +380,35 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الأول «العمليات التراجعية»"
               },
               "keywords": [
-                "حلول",
-                "F1",
-                "F2",
-                "F3",
-                "Mult"
+                "كتابة عملية",
+                "أسئلة محلولة",
+                "صيغة تراجعية",
+                "Iterative"
               ]
             },
             {
               "id": "899271d-m01-l06-p04",
-              "title": "تدريبات الوحدة",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 7,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الأول «العمليات التراجعية»"
+              },
+              "keywords": [
+                "وظيفة",
+                "كتابة عملية",
+                "SumEvenDigits",
+                "IsSorted",
+                "RemoveChar",
+                "MaxOf"
+              ]
+            },
+            {
+              "id": "899271d-m01-l06-p05",
+              "title": "تدريبات الوحدة",
+              "order": 5,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
@@ -688,12 +706,12 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m02-l07",
-          "title": "أسئلة تتبّع وتدريبات",
+          "title": "أسئلة وتمارين",
           "order": 7,
           "pages": [
             {
               "id": "899271d-m02-l07-p01",
-              "title": "أسئلة تتبّع وعدّ",
+              "title": "أسئلة تتبّع وعدّ محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
@@ -702,15 +720,77 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
               },
               "keywords": [
+                "أسئلة محلولة",
                 "تتبّع",
                 "عدّ",
-                "درجة النجاعة"
+                "Kiwi",
+                "Mango",
+                "BinarySearch",
+                "Fib_Recursive"
               ]
             },
             {
               "id": "899271d-m02-l07-p02",
-              "title": "تدريبات الوحدة",
+              "title": "وظيفة: أسئلة تتبّع وعدّ",
               "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 61,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+              },
+              "keywords": [
+                "وظيفة",
+                "تتبّع",
+                "عدّ",
+                "Grape",
+                "Lemon",
+                "Olive"
+              ]
+            },
+            {
+              "id": "899271d-m02-l07-p03",
+              "title": "أسئلة درجة النجاعة محلولة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 61,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+              },
+              "keywords": [
+                "أسئلة محلولة",
+                "درجة النجاعة",
+                "Apple",
+                "Pear",
+                "Kiwi",
+                "Mango",
+                "Orange"
+              ]
+            },
+            {
+              "id": "899271d-m02-l07-p04",
+              "title": "وظيفة: أسئلة درجة النجاعة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 61,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+              },
+              "keywords": [
+                "وظيفة",
+                "درجة النجاعة",
+                "Date",
+                "Guava",
+                "Lemon",
+                "Papaya"
+              ]
+            },
+            {
+              "id": "899271d-m02-l07-p05",
+              "title": "تدريبات الوحدة",
+              "order": 5,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
@@ -964,50 +1044,48 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m03-l07",
-          "title": "أسئلة تتبّع وكتابة",
+          "title": "أسئلة وتمارين",
           "order": 7,
           "pages": [
             {
               "id": "899271d-m03-l07-p01",
-              "title": "أسئلة تتبّع من الكتاب",
+              "title": "أسئلة تتبّع محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 139,
-                "pdfPageEnd": 142,
-                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 139–142"
+                "pdfPageStart": 105,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
               },
               "keywords": [
                 "تتبّع",
+                "أسئلة محلولة",
                 "What",
-                "What1",
-                "What2",
-                "تمارين الكتاب"
+                "تمشيط",
+                "تراجعية"
               ]
             },
             {
               "id": "899271d-m03-l07-p02",
-              "title": "أسئلة كتابة من الكتاب",
+              "title": "وظيفة: أسئلة تتبّع",
               "order": 2,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 141,
-                "pdfPageEnd": 148,
-                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 141–148"
+                "pdfPageStart": 105,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
               },
               "keywords": [
-                "كتابة عملية",
-                "BeginsWith",
-                "تقاطع",
-                "اتحاد",
-                "مثلّثة"
+                "وظيفة",
+                "تتبّع",
+                "نافذة الحل",
+                "What1",
+                "What2"
               ]
             },
             {
               "id": "899271d-m03-l07-p03",
-              "title": "حلول أسئلة الكتابة",
+              "title": "أسئلة كتابة محلولة",
               "order": 3,
               "source": {
                 "kind": "book",
@@ -1016,17 +1094,38 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
               },
               "keywords": [
-                "حلول",
+                "كتابة عملية",
+                "أسئلة محلولة",
                 "BeginsWith",
-                "Intersection",
-                "Union",
-                "IsTripled"
+                "IsFibonacci",
+                "InsertSorted",
+                "تقاطع",
+                "اتحاد"
               ]
             },
             {
               "id": "899271d-m03-l07-p04",
-              "title": "تدريبات الوحدة",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 105,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
+              },
+              "keywords": [
+                "وظيفة",
+                "كتابة عملية",
+                "نافذة الحل",
+                "GetMaxPos",
+                "DeleteAll",
+                "مثلّثة"
+              ]
+            },
+            {
+              "id": "899271d-m03-l07-p05",
+              "title": "تدريبات الوحدة",
+              "order": 5,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
@@ -1239,12 +1338,12 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m04-l05",
-          "title": "أسئلة تتبّع وكتابة",
+          "title": "أسئلة وتمارين",
           "order": 5,
           "pages": [
             {
               "id": "899271d-m04-l05-p01",
-              "title": "أسئلة تتبّع (1)",
+              "title": "أسئلة تتبّع محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
@@ -1254,12 +1353,14 @@ const manifest: LearningCourseManifest = {
               },
               "keywords": [
                 "تتبّع",
-                "راصّة"
+                "أسئلة محلولة",
+                "راصّة",
+                "راصّة مساعدة"
               ]
             },
             {
               "id": "899271d-m04-l05-p02",
-              "title": "أسئلة تتبّع (2)",
+              "title": "وظيفة: أسئلة تتبّع",
               "order": 2,
               "source": {
                 "kind": "book",
@@ -1268,14 +1369,16 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الرابع «الراصّة»"
               },
               "keywords": [
+                "وظيفة",
                 "تتبّع",
                 "راصّة مساعدة",
+                "أقواس",
                 "ترتيب"
               ]
             },
             {
               "id": "899271d-m04-l05-p03",
-              "title": "أسئلة كتابة: اكتب العملية",
+              "title": "أسئلة كتابة محلولة",
               "order": 3,
               "source": {
                 "kind": "book",
@@ -1285,14 +1388,17 @@ const manifest: LearningCourseManifest = {
               },
               "keywords": [
                 "كتابة عملية",
+                "أسئلة محلولة",
                 "SumOdd",
+                "ToNumber",
+                "CountEven",
                 "IsSorted",
                 "Passed"
               ]
             },
             {
               "id": "899271d-m04-l05-p04",
-              "title": "حلول أسئلة الكتابة",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 4,
               "source": {
                 "kind": "book",
@@ -1301,10 +1407,13 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الرابع «الراصّة»"
               },
               "keywords": [
-                "حلول",
-                "SumOdd",
-                "IsSorted",
-                "Passed"
+                "وظيفة",
+                "كتابة عملية",
+                "MaxValue",
+                "متوالية حسابية",
+                "Merge",
+                "SameKind",
+                "FindRepeated"
               ]
             },
             {
@@ -1517,12 +1626,12 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m05-l06",
-          "title": "أسئلة تتبّع وكتابة",
+          "title": "أسئلة وتمارين",
           "order": 6,
           "pages": [
             {
               "id": "899271d-m05-l06-p01",
-              "title": "أسئلة تتبّع (1)",
+              "title": "أسئلة تتبّع محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
@@ -1532,12 +1641,14 @@ const manifest: LearningCourseManifest = {
               },
               "keywords": [
                 "تتبّع",
-                "دور"
+                "دور",
+                "أسئلة محلولة",
+                "دمج"
               ]
             },
             {
               "id": "899271d-m05-l06-p02",
-              "title": "أسئلة تتبّع (2)",
+              "title": "وظيفة: أسئلة تتبّع",
               "order": 2,
               "source": {
                 "kind": "book",
@@ -1546,35 +1657,35 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
               },
               "keywords": [
+                "وظيفة",
                 "تتبّع",
-                "دور مساعد",
-                "دمج",
+                "دور",
                 "حذف دائري"
               ]
             },
             {
               "id": "899271d-m05-l06-p03",
-              "title": "أسئلة كتابة: اكتب العملية",
+              "title": "أسئلة كتابة محلولة",
               "order": 3,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 220,
-                "pdfPageEnd": 225,
-                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 220–225"
+                "pdfPageStart": 195,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
               },
               "keywords": [
                 "كتابة عملية",
+                "أسئلة محلولة",
                 "SumOdd",
+                "GetMax",
                 "IsSorted",
                 "Passed",
-                "IsSymmetric",
-                "IsCircular"
+                "IsSymmetric"
               ]
             },
             {
               "id": "899271d-m05-l06-p04",
-              "title": "حلول أسئلة الكتابة (1): ورقة المعلّم",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 4,
               "source": {
                 "kind": "book",
@@ -1583,34 +1694,18 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
               },
               "keywords": [
-                "حلول",
-                "SumOdd",
-                "IsSorted",
-                "Passed"
-              ]
-            },
-            {
-              "id": "899271d-m05-l06-p05",
-              "title": "حلول أسئلة الكتابة (2): تمارين الكتاب",
-              "order": 5,
-              "source": {
-                "kind": "book",
-                "sourceId": "899271d",
-                "pdfPageStart": 195,
-                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
-              },
-              "keywords": [
-                "حلول",
-                "IsSymmetric",
+                "وظيفة",
+                "كتابة عملية",
                 "Check",
+                "InsertSorted",
                 "IsCircular",
                 "نجاعة"
               ]
             },
             {
-              "id": "899271d-m05-l06-p06",
+              "id": "899271d-m05-l06-p05",
               "title": "تدريبات الوحدة",
-              "order": 6,
+              "order": 5,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
@@ -1846,67 +1941,68 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m06-l07",
-          "title": "أسئلة تتبّع وكتابة",
+          "title": "أسئلة وتمارين",
           "order": 7,
           "pages": [
             {
               "id": "899271d-m06-l07-p01",
-              "title": "أسئلة تتبّع (1): سؤال 5 من الكتاب",
+              "title": "أسئلة تتبّع محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 284,
-                "pdfPageEnd": 285,
-                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 284–285"
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
                 "تتبّع",
+                "أسئلة محلولة",
                 "What1",
                 "What2",
-                "What3",
-                "بحث في شجرة"
+                "مستوى خلية",
+                "راصّة"
               ]
             },
             {
               "id": "899271d-m06-l07-p02",
-              "title": "أسئلة تتبّع (2): سؤالا 7 و24 من الكتاب",
+              "title": "وظيفة: أسئلة تتبّع",
               "order": 2,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 287,
-                "pdfPageEnd": 303,
-                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 287–303"
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
+                "وظيفة",
                 "تتبّع",
-                "راصّة",
-                "مستوى خلية"
+                "مجموع مستوى",
+                "What3",
+                "تمشيط براصّة"
               ]
             },
             {
               "id": "899271d-m06-l07-p03",
-              "title": "أسئلة كتابة: اكتب العملية",
+              "title": "أسئلة كتابة محلولة",
               "order": 3,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 282,
-                "pdfPageEnd": 302,
-                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 282–302"
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
                 "كتابة عملية",
+                "أسئلة محلولة",
                 "أوراق",
+                "Mirror",
                 "HasPathSum",
-                "CountIsJud",
-                "مرآة"
+                "CountIsJud"
               ]
             },
             {
               "id": "899271d-m06-l07-p04",
-              "title": "حلول أسئلة الكتابة",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 4,
               "source": {
                 "kind": "book",
@@ -1915,11 +2011,12 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
-                "حلول",
-                "SumOfLeaves",
-                "CountIsJud",
-                "HasPathSum",
-                "Mirror"
+                "وظيفة",
+                "كتابة عملية",
+                "CountOneChild",
+                "MaxValue",
+                "AreMirror",
+                "أوراق"
               ]
             },
             {
@@ -2180,48 +2277,50 @@ const manifest: LearningCourseManifest = {
         },
         {
           "id": "899271d-m07-l08",
-          "title": "أسئلة تتبّع وكتابة",
+          "title": "أسئلة وتمارين",
           "order": 8,
           "pages": [
             {
               "id": "899271d-m07-l08-p01",
-              "title": "أسئلة تتبّع",
+              "title": "أسئلة تتبّع محلولة",
               "order": 1,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 298,
-                "pdfPageEnd": 299,
-                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 298–299"
+                "pdfPageStart": 257,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
                 "تتبّع",
-                "شجرة بحث",
-                "What",
-                "What1"
+                "أسئلة محلولة",
+                "إدخال",
+                "بحث",
+                "حذف",
+                "إعادة بناء"
               ]
             },
             {
               "id": "899271d-m07-l08-p02",
-              "title": "أسئلة كتابة: اكتب العملية",
+              "title": "وظيفة: أسئلة تتبّع",
               "order": 2,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",
-                "pdfPageStart": 281,
-                "pdfPageEnd": 295,
-                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 281–295"
+                "pdfPageStart": 257,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
-                "كتابة عملية",
-                "MaxOfBST",
-                "CountInRange",
-                "أسئلة الكتاب"
+                "وظيفة",
+                "تتبّع",
+                "Inorder",
+                "ارتفاع",
+                "حذف وإدخال",
+                "What1"
               ]
             },
             {
               "id": "899271d-m07-l08-p03",
-              "title": "حلول أسئلة الكتابة",
+              "title": "أسئلة كتابة محلولة",
               "order": 3,
               "source": {
                 "kind": "book",
@@ -2230,16 +2329,38 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
-                "حلول",
+                "كتابة عملية",
+                "أسئلة محلولة",
                 "MaxOfBST",
-                "ExistsInBST",
-                "CountInRange"
+                "PrintDescending",
+                "CountInRange",
+                "IsBST"
               ]
             },
             {
               "id": "899271d-m07-l08-p04",
-              "title": "تدريبات الوحدة",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 257,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "وظيفة",
+                "كتابة عملية",
+                "Range",
+                "LevelOf",
+                "DeleteMin",
+                "HasDuplicates",
+                "KthSmallest"
+              ]
+            },
+            {
+              "id": "899271d-m07-l08-p05",
+              "title": "تدريبات الوحدة",
+              "order": 5,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",

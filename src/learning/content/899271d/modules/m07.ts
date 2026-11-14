@@ -5771,25 +5771,26 @@ const m07: ContentModule = {
   },
   {
    "id": "899271d-m07-l08",
-   "title": "أسئلة تتبّع وكتابة",
+   "title": "أسئلة وتمارين",
    "order": 8,
    "pages": [
     {
      "id": "899271d-m07-l08-p01",
-     "title": "أسئلة تتبّع",
+     "title": "أسئلة تتبّع محلولة",
      "order": 1,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
-      "pdfPageStart": 298,
-      "pdfPageEnd": 299,
-      "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 298–299"
+      "pdfPageStart": 257,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
      },
      "keywords": [
       "تتبّع",
-      "شجرة بحث",
-      "What",
-      "What1"
+      "أسئلة محلولة",
+      "إدخال",
+      "بحث",
+      "حذف",
+      "إعادة بناء"
      ],
      "blocks": [
       {
@@ -5797,14 +5798,7 @@ const m07: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "تمعّن في كل مقطع وتتبّعه "
-        },
-        {
-         "text": "بدون",
-         "style": "strong"
-        },
-        {
-         "text": " الاستعانة بالحاسوب: ارسم الشجرة في دفترك وأجب أولًا، ثم افتح التتبّع لتتأكد. الأسئلة 1–3 تستعمل عمليات هذه الوحدة: "
+         "text": "خمسة أسئلة تتبّع محلولة، مرتّبة من الأسهل إلى الأصعب. في كل سؤال: غطِّ الحل، ارسم الشجرة في دفترك وتتبّع المقطع، ثم قارن بالحل وبالتتبّع. العمليات "
         },
         {
          "text": "ToBST",
@@ -5825,7 +5819,14 @@ const m07: ContentModule = {
          "dir": "ltr"
         },
         {
-         "text": "، وعمليات الطباعة "
+         "text": " و "
+        },
+        {
+         "text": "BuildTree",
+         "dir": "ltr"
+        },
+        {
+         "text": " هي عمليات هذه الوحدة، و "
         },
         {
          "text": "PreOrder",
@@ -5839,7 +5840,14 @@ const m07: ContentModule = {
          "dir": "ltr"
         },
         {
-         "text": " من الوحدة السابقة."
+         "text": " و "
+        },
+        {
+         "text": "PostOrder",
+         "dir": "ltr"
+        },
+        {
+         "text": " عمليات الطباعة من الوحدة السابقة."
         }
        ],
        "origin": "teacher-enrichment"
@@ -5848,7 +5856,7 @@ const m07: ContentModule = {
        "id": "m07-l08-p01-b02",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 1 — بناء وإدخال",
+       "text": "سؤال 1 · سهل — شكل الشجرة بعد الإدخال",
        "origin": "teacher-enrichment"
       },
       {
@@ -5861,55 +5869,98 @@ const m07: ContentModule = {
       },
       {
        "id": "m07-l08-p01-b04",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا يطبع المقطع أعلاه؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[10,20,25,30,40,50,60]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[40,20,10,30,25,60,50]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[40,20,60,10,30,25,50]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[40,20,10,25,30,60,50]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "بعد \u2066ToBST\u2069: الجذر \u206640\u2069، في يساره \u206620\u2069 (وله الابنان \u206610\u2069 و \u206630\u2069) وفي يمينه \u206660\u2069. القيمة \u206625\u2069 تنزل يسار \u206640\u2069 ثم يمين \u206620\u2069 ثم يسار \u206630\u2069. القيمة \u206650\u2069 تنزل يمين \u206640\u2069 ثم يسار \u206660\u2069. تمشيط \u2066Preorder\u2069 يطبع الأب ثم اليسار ثم اليمين."
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ارسم الشجرة "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " بعد تنفيذ المقطع. ماذا يطبع المقطع؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p01-b05",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "بعد تنفيذ المقطع: ما القيمة المخزّنة في الابن الأيسر للخلية \u206630\u2069؟",
-        "answer": "25",
-        "feedback": {
-         "explanation": "\u206625\u2069 أصغر من \u206640\u2069 (يسار)، ليست أصغر من \u206620\u2069 (يمين)، وأصغر من \u206630\u2069 (يسار). الابن الأيسر للخلية \u206630\u2069 كان \u2066null\u2069، فوُضعت فيه."
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "\u2066ToBST\u2069 تجعل \u206640\u2069 جذرًا. \u206620\u2069 أصغر منه فتنزل يسارًا، و \u206660\u2069 تنزل يمينًا. \u206610\u2069 تصير الابن الأيسر للخلية \u206620\u2069، و \u206630\u2069 ابنها الأيمن."
+        },
+        {
+         "text": "القيمة \u206625\u2069: أصغر من \u206640\u2069 (يسار)، ليست أصغر من \u206620\u2069 (يمين)، أصغر من \u206630\u2069 (يسار). تصير الابن الأيسر للخلية \u206630\u2069."
+        },
+        {
+         "text": "القيمة \u206650\u2069: ليست أصغر من \u206640\u2069 (يمين)، أصغر من \u206660\u2069 (يسار). تصير الابن الأيسر للخلية \u206660\u2069."
+        },
+        {
+         "text": "\u2066PreOrder\u2069 تطبع الأب، ثم الشجرة الفرعية اليسرى، ثم اليمنى."
+        },
+        {
+         "text": "النتيجة: يُطبع: \u206640 20 10 30 25 60 50\u2069."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p01-b06",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069 بعد تنفيذ المقطع",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           40,
+           [
+            20,
+            10,
+            [
+             30,
+             25,
+             null
+            ]
+           ],
+           [
+            60,
+            50,
+            null
+           ]
+          ],
+          "hi": [
+           "LRL",
+           "RL"
+          ],
+          "label": "الخليتان المظلّلتان أُدخلتا بالعملية \u2066InsertIntoBST\u2069"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (الخليتان المظلّلتان أُدخلتا بالعملية `InsertIntoBST`)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b07",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع سؤال 1",
+       "title": "تتبّع الحل",
        "description": "العمليات المساعدة تعمل هنا بلا خطوات مفصّلة: راقب الشجرة بعد كل أمر.",
        "capabilities": {
         "fullscreen": true,
@@ -5935,14 +5986,14 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b07",
+       "id": "m07-l08-p01-b08",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 2 — العملية \u2066Secret\u2069",
+       "text": "سؤال 2 · سهل — العملية \u2066Secret\u2069",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b08",
+       "id": "m07-l08-p01-b09",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -5950,7 +6001,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b09",
+       "id": "m07-l08-p01-b10",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -5988,80 +6039,48 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b10",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي يعيدها الاستدعاء \u2066Secret(bt)\u2069 للشجرة المرسومة؟",
-        "answer": "10",
-        "feedback": {
-         "explanation": "العملية تنزل إلى اليسار ما دام هناك ابن أيسر: \u206650\u2069 ثم \u206630\u2069 ثم \u206610\u2069. للخلية \u206610\u2069 ابن أيمن فقط، فلا ابن أيسر لها، وتُعاد قيمتها. القيمة \u206620\u2069 لا تُزار أبدًا."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
        "id": "m07-l08-p01-b11",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ماذا تنفّذ العملية \u2066Secret\u2069 حين تستقبل شجرة بحث غير فارغة؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "تعيد قيمة أول ورقة في الشجرة"
-         },
-         {
-          "id": "o2",
-          "text": "تعيد ارتفاع الشجرة"
-         },
-         {
-          "id": "o3",
-          "text": "تعيد أصغر قيمة في الشجرة",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "تعيد قيمة الابن الأيسر للجذر"
-         }
-        ],
-        "feedback": {
-         "explanation": "في شجرة البحث كل قيمة أصغر من خلية تقع في يسارها، فالخلية التي في أقصى اليسار فيها أصغر قيمة. هذه الخلية ليست ورقة بالضرورة: في المثال للخلية \u206610\u2069 ابن أيمن."
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ما القيمة التي يعيدها الاستدعاء "
+        },
+        {
+         "text": "Secret(bt)",
+         "dir": "ltr"
+        },
+        {
+         "text": " للشجرة المرسومة؟ ماذا تنفّذ العملية حين تستقبل شجرة بحث غير فارغة، وما درجة نجاعتها؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p01-b12",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "ما درجة نجاعة العملية \u2066Secret\u2069، حيث \u2066h\u2069 ارتفاع الشجرة و \u2066n\u2069 عدد خلاياها؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066O(1)\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066O(h)\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066O(n)\u2069 دائمًا"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066O(n * h)\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "العملية تنزل في مسار واحد إلى اليسار، فلا تزور أكثر من خلية واحدة في كل مستوى. في شجرة على شكل سلسلة إلى اليسار يساوي ذلك \u2066O(n)\u2069."
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "العملية تنزل إلى اليسار ما دام هناك ابن أيسر: من \u206650\u2069 إلى \u206630\u2069 ثم إلى \u206610\u2069."
+        },
+        {
+         "text": "للخلية \u206610\u2069 ابن أيمن فقط، فلا ابن أيسر لها: تُعاد قيمتها. القيمة \u206620\u2069 لا تُزار أبدًا."
+        },
+        {
+         "text": "في شجرة البحث كل قيمة أصغر من خلية تقع في يسارها، فالخلية التي في أقصى اليسار فيها أصغر قيمة. هذه الخلية ليست ورقة بالضرورة."
+        },
+        {
+         "text": "العملية تنزل في مسار واحد، فتزور خلية واحدة على الأكثر من كل مستوى."
+        },
+        {
+         "text": "النتيجة: تعيد \u206610\u2069. العملية تعيد أصغر قيمة في شجرة البحث، ودرجة نجاعتها \u2066O(h)\u2069 حيث \u2066h\u2069 ارتفاع الشجرة."
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
@@ -6069,7 +6088,7 @@ const m07: ContentModule = {
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066Secret\u2069",
+       "title": "تتبّع الحل",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -6101,7 +6120,7 @@ const m07: ContentModule = {
        "id": "m07-l08-p01-b14",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 3 — ثلاث عمليات حذف",
+       "text": "سؤال 3 · متوسط — أي خلايا يزورها البحث؟ — \u2066Path\u2069",
        "origin": "teacher-enrichment"
       },
       {
@@ -6109,60 +6128,293 @@ const m07: ContentModule = {
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static void Main()\n{\n    int[] A = { 50, 30, 70, 10, 40, 60, 80 };\n    BinNode<int> bt = ToBST(A);\n    bt = DeleteFromBST(bt, 10);\n    bt = DeleteFromBST(bt, 30);\n    bt = DeleteFromBST(bt, 50);\n    Console.WriteLine(bt.GetValue());\n    InOrder(bt);\n}",
+       "code": "public static void Path(BinNode<int> bt, int Value)\n{\n    while (bt != null)\n    {\n        Console.Write(bt.GetValue() + \" \");\n        if (bt.GetValue() == Value)\n            return;\n        if (bt.GetValue() > Value)\n            bt = bt.GetLeft();\n        else\n            bt = bt.GetRight();\n    }\n    Console.Write(\"X\");\n}",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p01-b16",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما العدد الذي يطبعه الأمر \u2066Console.WriteLine(bt.GetValue());\u2069 في المقطع أعلاه؟",
-        "answer": "60",
-        "feedback": {
-         "explanation": "حذف \u206610\u2069: ورقة. حذف \u206630\u2069: لها الآن ابن واحد (\u206640\u2069) فيحلّ مكانها. حذف \u206650\u2069: للجذر ابنان، وأصغر قيمة في شجرته الفرعية اليمنى هي \u206660\u2069، فتصير قيمة الجذر \u206660\u2069."
-        }
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة المعطاة \u2066bt\u2069",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           50,
+           [
+            30,
+            10,
+            40
+           ],
+           [
+            70,
+            60,
+            80
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
        },
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p01-b17",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "وماذا يطبع الأمر الأخير \u2066InOrder(bt);\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[60,40,70,80]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[40,60,70,80]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[40,50,60,70,80]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[10,30,40,60,70,80]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "حُذفت القيم \u206610\u2069 و \u206630\u2069 و \u206650\u2069 وبقيت أربع قيم. الشجرة ما زالت شجرة بحث، فتمشيط \u2066Inorder\u2069 يطبعها مرتّبة ترتيبًا تصاعديًا."
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ماذا يطبع الاستدعاء "
+        },
+        {
+         "text": "Path(bt, 60)",
+         "dir": "ltr"
+        },
+        {
+         "text": " للشجرة المرسومة؟ وماذا يطبع الاستدعاء "
+        },
+        {
+         "text": "Path(bt, 35)",
+         "dir": "ltr"
+        },
+        {
+         "text": "؟"
         }
-       },
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p01-b18",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "العملية تطبع قيمة كل خلية يمرّ بها البحث، ثم تنتقل إلى جهة واحدة: يسارًا إذا كانت قيمة الخلية أكبر من \u2066Value\u2069، وإلا يمينًا."
+        },
+        {
+         "text": "\u2066Path(bt, 60)\u2069: تطبع \u206650\u2069، ثم تنزل يمينًا وتطبع \u206670\u2069، ثم يسارًا وتطبع \u206660\u2069. وجدنا القيمة، فتنتهي العملية بالأمر \u2066return\u2069."
+        },
+        {
+         "text": "\u2066Path(bt, 35)\u2069: تطبع \u206650\u2069، ثم يسارًا \u206630\u2069، ثم يمينًا \u206640\u2069. بعدها تنزل يسارًا فتصل إلى \u2066null\u2069 وتنتهي الحلقة."
+        },
+        {
+         "text": "بعد الحلقة تطبع العملية \u2066X\u2069: علامة أنّ القيمة غير موجودة."
+        },
+        {
+         "text": "النتيجة: \u2066Path(bt, 60)\u2069 تطبع \u206650 70 60\u2069، و \u2066Path(bt, 35)\u2069 تطبع \u206650 30 40 X\u2069. في الحالتين زار البحث 3 خلايا فقط من 7."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b19",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع سؤال 3",
+       "title": "تتبّع الحل",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void Path(BinNode<int> bt, int Value)\n{\n    while (bt != null)\n    {\n        Console.Write(bt.GetValue() + \" \");\n        if (bt.GetValue() == Value)\n            return;\n        if (bt.GetValue() > Value)\n            bt = bt.GetLeft();\n        else\n            bt = bt.GetRight();\n    }\n    Console.Write(\"X\");\n}",
+        "given": "الشجرة `bt` المرسومة أعلاه، والاستدعاءان `Path(bt, 60)` ثم `Path(bt, 35)`.",
+        "out": "50 70 60 \n50 30 40 X\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `Path` مع `bt` = الخلية التي قيمتها `50`، `Value = 60`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"ref","id":7}],["Value",{"t":"v","s":"60"}]]}],"h":[{"id":1,"k":"bin","v":"10","l":null,"r":null},{"id":2,"k":"bin","v":"40","l":null,"r":null},{"id":3,"k":"bin","v":"30","l":1,"r":2},{"id":4,"k":"bin","v":"60","l":null,"r":null},{"id":5,"k":"bin","v":"80","l":null,"r":null},{"id":6,"k":"bin","v":"70","l":4,"r":5},{"id":7,"k":"bin","v":"50","l":3,"r":6}]},
+{"l":3,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"نطبع: `50 ` (بلا سطر جديد).","o":3},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":3},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` خطأ: ننتقل إلى `else`.","o":3},
+{"l":11,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `70`.","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"ref","id":6}],["Value",{"t":"v","s":"60"}]]}]},
+{"l":3,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":3},
+{"l":5,"n":"نطبع: `70 ` (بلا سطر جديد).","o":6},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":6},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` صحيح: ننفّذ ما بعد `if`.","o":6},
+{"l":9,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `60`.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"ref","id":4}],["Value",{"t":"v","s":"60"}]]}]},
+{"l":3,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":6},
+{"l":5,"n":"نطبع: `60 ` (بلا سطر جديد).","o":9},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` صحيح: ننفّذ ما بعد `if`.","o":9},
+{"l":7,"n":"نخرج من العملية `Path`.","o":9},
+{"l":1,"n":"تبدأ العملية `Path` مع `bt` = الخلية التي قيمتها `50`، `Value = 35`.","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"ref","id":7}],["Value",{"t":"v","s":"35"}]]}]},
+{"l":3,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":10},
+{"l":5,"n":"نطبع: `50 ` (بلا سطر جديد).","o":13},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":13},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` صحيح: ننفّذ ما بعد `if`.","o":13},
+{"l":9,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `30`.","o":13,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"ref","id":3}],["Value",{"t":"v","s":"35"}]]}]},
+{"l":3,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":13},
+{"l":5,"n":"نطبع: `30 ` (بلا سطر جديد).","o":16},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":16},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` خطأ: ننتقل إلى `else`.","o":16},
+{"l":11,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `40`.","o":16,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"ref","id":2}],["Value",{"t":"v","s":"35"}]]}]},
+{"l":3,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":16},
+{"l":5,"n":"نطبع: `40 ` (بلا سطر جديد).","o":19},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":19},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` صحيح: ننفّذ ما بعد `if`.","o":19},
+{"l":9,"n":"`bt` يشير الآن إلى `null`.","o":19,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"Path","vars":[["bt",{"t":"null"}],["Value",{"t":"v","s":"35"}]]}]},
+{"l":3,"n":"الشرط `bt != null` خطأ: نخرج من الحلقة.","o":19},
+{"l":13,"n":"نطبع: `X` (بلا سطر جديد).","o":20},
+{"l":14,"n":"تنتهي العملية `Path` ونعود إلى من استدعاها.","o":20},
+{"l":0,"n":"نطبع سطرًا فارغًا. انتهى التنفيذ.","o":21,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (35 خطوة)؛ ناتج البرنامج: 50 70 60  ↵ 50 30 40 X."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b20",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — ثلاث عمليات حذف",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b21",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main()\n{\n    int[] A = { 50, 30, 70, 10, 40, 60, 80 };\n    BinNode<int> bt = ToBST(A);\n    bt = DeleteFromBST(bt, 10);\n    bt = DeleteFromBST(bt, 30);\n    bt = DeleteFromBST(bt, 50);\n    Console.WriteLine(bt.GetValue());\n    InOrder(bt);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b22",
+       "type": "text",
+       "spans": [
+        {
+         "text": "السؤال:",
+         "style": "strong"
+        },
+        {
+         "text": " ارسم الشجرة بعد كل عملية حذف. ماذا يطبع المقطع في سطريه؟"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b23",
+       "type": "example",
+       "mode": "solved",
+       "title": "الحل",
+       "steps": [
+        {
+         "text": "حذف \u206610\u2069: هي ورقة، فتُحذف ببساطة."
+        },
+        {
+         "text": "حذف \u206630\u2069: صار لها ابن واحد (\u206640\u2069)، فيحلّ ابنها مكانها."
+        },
+        {
+         "text": "حذف \u206650\u2069: للجذر ابنان. أصغر قيمة في شجرته الفرعية اليمنى هي \u206660\u2069: تُخزَّن في الجذر، وتُحذف خليتها (ورقة)."
+        },
+        {
+         "text": "الأمر \u2066Console.WriteLine(bt.GetValue());\u2069 يطبع قيمة الجذر الجديدة، و \u2066InOrder\u2069 تطبع القيم الأربع الباقية مرتّبة ترتيبًا تصاعديًا."
+        },
+        {
+         "text": "النتيجة: السطر الأول: \u206660\u2069. السطر الثاني: \u206640 60 70 80\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b24",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة بعد كل خطوة",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           50,
+           [
+            30,
+            10,
+            40
+           ],
+           [
+            70,
+            60,
+            80
+           ]
+          ],
+          "label": "بعد \u2066ToBST\u2069"
+         },
+         {
+          "kind": "tree",
+          "tree": [
+           50,
+           [
+            30,
+            null,
+            40
+           ],
+           [
+            70,
+            60,
+            80
+           ]
+          ],
+          "label": "بعد حذف \u206610\u2069 (ورقة)"
+         },
+         {
+          "kind": "tree",
+          "tree": [
+           50,
+           40,
+           [
+            70,
+            60,
+            80
+           ]
+          ],
+          "label": "بعد حذف \u206630\u2069 (ابن واحد)"
+         },
+         {
+          "kind": "tree",
+          "tree": [
+           60,
+           40,
+           [
+            70,
+            null,
+            80
+           ]
+          ],
+          "hi": [
+           ""
+          ],
+          "label": "بعد حذف \u206650\u2069 (ابنان)"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية (بعد `ToBST`)؛ شجرة ثنائية (بعد حذف `10` (ورقة))؛ شجرة ثنائية (بعد حذف `30` (ابن واحد))؛ شجرة ثنائية (بعد حذف `50` (ابنان))."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b25",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
        "description": "هذه بالضبط أشكال الكتاب الثلاثة في الحذف، واحدًا بعد الآخر.",
        "capabilities": {
         "fullscreen": true,
@@ -6190,41 +6442,1325 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b19",
+       "id": "m07-l08-p01-b26",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 4 — سؤال 21 من الكتاب",
+       "text": "سؤال 5 · متقدّم — إعادة بناء شجرة — سؤال 17 من الكتاب",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b20",
+       "id": "m07-l08-p01-b27",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 17 من الكتاب، ص 295 (البندان 1 و 2)",
+       "prompt": "1. معطاة قيم شجرة ثنائية تمّت طباعتها وفق تمشيط \u2066Preorder\u2069 ووفق تمشيط \u2066Inorder\u2069 (في الجدول التالي). المطلوب: بناء، أي رسم، الشجرة وفق هذه المعطيات. 2. هل يمكننا بناء الشجرة إذا توفّرت لنا نتائج التمشيط وفق \u2066Inorder\u2069 و \u2066Postorder\u2069؟ اشرح.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b28",
+       "type": "table",
+       "headers": [
+        "التمشيط",
+        "القيم"
+       ],
+       "rows": [
+        [
+         "Preorder",
+         "17, 10, -1, 5, 12, 28"
+        ],
+        [
+         "Inorder",
+         "-1, 5, 10, 12, 17, 28"
+        ]
+       ],
+       "columnDirs": [
+        "ltr",
+        "ltr"
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b29",
+       "type": "example",
+       "mode": "solved",
+       "title": "حل البند 1",
+       "steps": [
+        {
+         "text": "أول قيمة في \u2066Preorder\u2069 هي الجذر: \u206617\u2069."
+        },
+        {
+         "text": "في \u2066Inorder\u2069 القيم التي قبل \u206617\u2069 هي \u2066-1, 5, 10, 12\u2069 (الشجرة الفرعية اليسرى)، والتي بعدها \u206628\u2069 (اليمنى)."
+        },
+        {
+         "text": "من قيم اليسار أول ما يظهر في \u2066Preorder\u2069 هو \u206610\u2069: هو الابن الأيسر للجذر. في \u2066Inorder\u2069 قبله \u2066-1, 5\u2069 وبعده \u206612\u2069."
+        },
+        {
+         "text": "من القيمتين \u2066-1, 5\u2069 تظهر \u2066-1\u2069 أولًا في \u2066Preorder\u2069، فهي الأب. في \u2066Inorder\u2069 لا شيء قبلها، و \u20665\u2069 بعدها: إذن \u20665\u2069 ابنها الأيمن."
+        },
+        {
+         "text": "\u206612\u2069 وحدها: الابن الأيمن للخلية \u206610\u2069. و \u206628\u2069 وحدها: الابن الأيمن للجذر."
+        },
+        {
+         "text": "النتيجة: الجذر \u206617\u2069؛ ابنه الأيسر \u206610\u2069 وله الابن الأيسر \u2066-1\u2069 (وابنها الأيمن \u20665\u2069) والابن الأيمن \u206612\u2069؛ والابن الأيمن للجذر \u206628\u2069."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b30",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة المطلوبة في سؤال 17",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           17,
+           [
+            10,
+            [
+             -1,
+             null,
+             5
+            ],
+            12
+           ],
+           28
+          ],
+          "facts": true
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b31",
+       "type": "example",
+       "mode": "solved",
+       "title": "حل البند 2",
+       "steps": [
+        {
+         "text": "نعم، يمكن. في \u2066Postorder\u2069 يُطبع الأب بعد ابنيه، فالجذر هو آخر قيمة، لا أولها."
+        },
+        {
+         "text": "بعد أن نعرف الجذر نبحث عنه في \u2066Inorder\u2069 ونقسّم القيم إلى يسار ويمين كما فعلنا، ونكرّر العمل لكل شجرة فرعية."
+        },
+        {
+         "text": "النتيجة: \u2066Postorder\u2069 يحدّد الأب (من آخره)، و \u2066Inorder\u2069 يحدّد الأبناء."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p01-b32",
        "type": "text",
        "spans": [
         {
-         "text": "معطاة مجموعة العمليات التالية:"
+         "text": "نتأكّد من الرسم بالحاسوب: نعيد بناء الشجرة بالعملية "
+        },
+        {
+         "text": "BuildTree",
+         "dir": "ltr"
+        },
+        {
+         "text": " ونطبعها بتمشيط "
+        },
+        {
+         "text": "Postorder",
+         "dir": "ltr"
+        },
+        {
+         "text": ". الناتج المتوقّع من الرسم: "
+        },
+        {
+         "text": "5 -1 12 10 28 17",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
         }
        ],
-       "origin": "book"
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b21",
+       "id": "m07-l08-p01-b33",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل: \u2066BuildTree\u2069 ثم \u2066PostOrder\u2069",
+       "description": "العمليتان تعملان بلا خطوات مفصّلة: قارن الشجرة التي تظهر برسمك.",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void Main()\n{\n    int[] PreA = { 17, 10, -1, 5, 12, 28 };\n    int[] InA = { -1, 5, 10, 12, 17, 28 };\n    BinNode<int> bt = BuildTree(PreA, InA);\n    PostOrder(bt);\n}",
+        "out": "5 -1 12 10 28 17 ",
+        "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"`PreA = {17, 10, -1, 5, 12, 28}`.","o":0,"f":[{"name":"Main","vars":[["PreA",{"t":"arr","items":["17","10","-1","5","12","28"]}]]}]},
+{"l":4,"n":"`InA = {-1, 5, 10, 12, 17, 28}`.","o":0,"f":[{"name":"Main","vars":[["PreA",{"t":"arr","items":["17","10","-1","5","12","28"]}],["InA",{"t":"arr","items":["-1","5","10","12","17","28"]}]]}]},
+{"l":5,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `17`.","o":0,"f":[{"name":"Main","vars":[["PreA",{"t":"arr","items":["17","10","-1","5","12","28"]}],["InA",{"t":"arr","items":["-1","5","10","12","17","28"]}],["bt",{"t":"ref","id":18}]]}],"h":[{"id":13,"k":"bin","v":"5","l":null,"r":null},{"id":14,"k":"bin","v":"-1","l":null,"r":13},{"id":15,"k":"bin","v":"12","l":null,"r":null},{"id":16,"k":"bin","v":"10","l":14,"r":15},{"id":17,"k":"bin","v":"28","l":null,"r":null},{"id":18,"k":"bin","v":"17","l":16,"r":17}]},
+{"l":6,"n":"","o":17},
+{"l":7,"n":"ينتهي البرنامج.","o":17}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (6 خطوة)؛ ناتج البرنامج: 5 -1 12 10 28 17."
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m07-l08-p02",
+     "title": "وظيفة: أسئلة تتبّع",
+     "order": 2,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 257,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+     },
+     "keywords": [
+      "وظيفة",
+      "تتبّع",
+      "Inorder",
+      "ارتفاع",
+      "حذف وإدخال",
+      "What1"
+     ],
+     "blocks": [
+      {
+       "id": "m07-l08-p02-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة تتبّع للحل في البيت، مرتّبة من الأسهل إلى الأصعب. ارسم الشجرة وأجب أولًا، ثم اضغط «الحل»: تفتح نافذة فيها الشرح وتتبّع البرنامج خطوة بخطوة."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — ماذا يطبع \u2066InOrder\u2069؟",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b03",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main()\n{\n    int[] A = { 7, 3, 9, 1, 5 };\n    BinNode<int> bt = ToBST(A);\n    InsertIntoBST(bt, 4);\n    InsertIntoBST(bt, 8);\n    InOrder(bt);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b04",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا يطبع المقطع أعلاه؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[7,3,9,1,5,4,8]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[7,3,1,5,4,9,8]\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[1,3,4,5,7,8,9]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[9,8,7,5,4,3,1]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "تمشيط \u2066Inorder\u2069 لشجرة بحث يطبع قيمها مرتّبة ترتيبًا تصاعديًا، مهما كان ترتيب إدخالها."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b05",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "بعد تنفيذ المقطع: ما قيمة أب الخلية \u20664\u2069؟",
+        "answer": "5",
+        "feedback": {
+         "explanation": "\u20664\u2069 أصغر من \u20667\u2069 (يسار)، ليست أصغر من \u20663\u2069 (يمين)، أصغر من \u20665\u2069 (يسار). تصير الابن الأيسر للخلية \u20665\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b06",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — ماذا يطبع \u2066InOrder\u2069؟",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "ToBST",
+           "dir": "ltr"
+          },
+          {
+           "text": " تبني: الجذر "
+          },
+          {
+           "text": "7",
+           "dir": "ltr"
+          },
+          {
+           "text": "، في يساره "
+          },
+          {
+           "text": "3",
+           "dir": "ltr"
+          },
+          {
+           "text": " (وله الابنان "
+          },
+          {
+           "text": "1",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": ") وفي يمينه "
+          },
+          {
+           "text": "9",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "4",
+           "dir": "ltr"
+          },
+          {
+           "text": " تنزل يسار "
+          },
+          {
+           "text": "7",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم يمين "
+          },
+          {
+           "text": "3",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم يسار "
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": ": تصير الابن الأيسر للخلية "
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "8",
+           "dir": "ltr"
+          },
+          {
+           "text": " تنزل يمين "
+          },
+          {
+           "text": "7",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم يسار "
+          },
+          {
+           "text": "9",
+           "dir": "ltr"
+          },
+          {
+           "text": ": تصير الابن الأيسر للخلية "
+          },
+          {
+           "text": "9",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "لا حاجة لتتبّع "
+          },
+          {
+           "text": "InOrder",
+           "dir": "ltr"
+          },
+          {
+           "text": " خلية خلية: الشجرة شجرة بحث، فتُطبع قيمها السبع مرتّبة ترتيبًا تصاعديًا."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "يُطبع "
+        },
+        {
+         "text": "1 3 4 5 7 8 9",
+         "dir": "ltr"
+        },
+        {
+         "text": "، وأب الخلية "
+        },
+        {
+         "text": "4",
+         "dir": "ltr"
+        },
+        {
+         "text": " هو "
+        },
+        {
+         "text": "5",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Main()\n{\n    int[] A = { 7, 3, 9, 1, 5 };\n    BinNode<int> bt = ToBST(A);\n    InsertIntoBST(bt, 4);\n    InsertIntoBST(bt, 8);\n    InOrder(bt);\n}",
+         "out": "1 3 4 5 7 8 9 ",
+         "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"`A = {7, 3, 9, 1, 5}`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["7","3","9","1","5"]}]]}]},
+{"l":4,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `7`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["7","3","9","1","5"]}],["bt",{"t":"ref","id":2}]]}],"h":[{"id":2,"k":"bin","v":"7","l":3,"r":4},{"id":3,"k":"bin","v":"3","l":5,"r":6},{"id":4,"k":"bin","v":"9","l":null,"r":null},{"id":5,"k":"bin","v":"1","l":null,"r":null},{"id":6,"k":"bin","v":"5","l":null,"r":null}]},
+{"l":5,"n":"","o":0,"h":[{"id":2,"k":"bin","v":"7","l":3,"r":4},{"id":3,"k":"bin","v":"3","l":5,"r":6},{"id":4,"k":"bin","v":"9","l":null,"r":null},{"id":5,"k":"bin","v":"1","l":null,"r":null},{"id":6,"k":"bin","v":"5","l":7,"r":null},{"id":7,"k":"bin","v":"4","l":null,"r":null}]},
+{"l":6,"n":"","o":0,"h":[{"id":2,"k":"bin","v":"7","l":3,"r":4},{"id":3,"k":"bin","v":"3","l":5,"r":6},{"id":4,"k":"bin","v":"9","l":8,"r":null},{"id":5,"k":"bin","v":"1","l":null,"r":null},{"id":6,"k":"bin","v":"5","l":7,"r":null},{"id":7,"k":"bin","v":"4","l":null,"r":null},{"id":8,"k":"bin","v":"8","l":null,"r":null}]},
+{"l":7,"n":"","o":14},
+{"l":8,"n":"ينتهي البرنامج.","o":14}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: ToBST تبني: الجذر 7، في يساره 3 (وله الابنان 1 و 5) وفي يمينه 9. 4 تنزل يسار 7 ثم يمين 3 ثم يسار 5: تصير الابن الأيسر للخلية 5. 8 تنزل يمين 7 ثم يسار 9: تصير الابن الأيسر للخلية 9. لا حاجة لتتبّع InOrder خلية خلية: الشجرة شجرة بحث، فتُطبع قيمها السبع مرتّبة ترتيبًا تصاعديًا."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b07",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — الترتيب يغيّر الارتفاع",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b08",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main()\n{\n    int[] A = { 4, 2, 6, 1, 3, 5, 7 };\n    int[] B = { 1, 2, 3, 4, 5, 6, 7 };\n    Console.WriteLine(Height(ToBST(A)));\n    Console.WriteLine(Height(ToBST(B)));\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b09",
+       "type": "text",
+       "spans": [
+        {
+         "text": "Height",
+         "dir": "ltr"
+        },
+        {
+         "text": " هي عملية الكتاب لحساب ارتفاع شجرة ثنائية (من الوحدة السابقة): ارتفاع شجرة فيها خلية واحدة هو 0."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b10",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا يطبع المقطع أعلاه في سطريه؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u20662\u2069 ثم \u20666\u2069",
+          "correct": true
+         },
+         {
+          "id": "o2",
+          "text": "\u20663\u2069 ثم \u20667\u2069"
+         },
+         {
+          "id": "o3",
+          "text": "\u20662\u2069 ثم \u20662\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u20666\u2069 ثم \u20662\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "المصفوفة \u2066A\u2069 تعطي شجرة ممتلئة من 3 مستويات (ارتفاعها 2). المصفوفة \u2066B\u2069 مرتّبة ترتيبًا تصاعديًا، فتعطي سلسلة إلى اليمين من 7 خلايا (ارتفاعها 6)."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b11",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — الترتيب يغيّر الارتفاع",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "من "
+          },
+          {
+           "text": "A",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الجذر "
+          },
+          {
+           "text": "4",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم "
+          },
+          {
+           "text": "2",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "6",
+           "dir": "ltr"
+          },
+          {
+           "text": " ابناه، ثم "
+          },
+          {
+           "text": "1",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "3",
+           "dir": "ltr"
+          },
+          {
+           "text": " تحت "
+          },
+          {
+           "text": "2",
+           "dir": "ltr"
+          },
+          {
+           "text": "، و "
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "7",
+           "dir": "ltr"
+          },
+          {
+           "text": " تحت "
+          },
+          {
+           "text": "6",
+           "dir": "ltr"
+          },
+          {
+           "text": ". شجرة ممتلئة: 3 مستويات، ارتفاعها 2."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "من "
+          },
+          {
+           "text": "B",
+           "dir": "ltr"
+          },
+          {
+           "text": ": كل قيمة أكبر من كل ما سبقها، فتنزل دائمًا إلى اليمين. سلسلة من 7 خلايا بينها 6 خطوط: ارتفاعها 6."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "القيم نفسها في الشجرتين، لكن البحث في الأولى يفحص 3 خلايا على الأكثر، وفي الثانية قد يفحص 7."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "السطر الأول "
+        },
+        {
+         "text": "2",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والسطر الثاني "
+        },
+        {
+         "text": "6",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Main()\n{\n    int[] A = { 4, 2, 6, 1, 3, 5, 7 };\n    int[] B = { 1, 2, 3, 4, 5, 6, 7 };\n    Console.WriteLine(Height(ToBST(A)));\n    Console.WriteLine(Height(ToBST(B)));\n}",
+         "out": "2\n6\n",
+         "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"`A = {4, 2, 6, 1, 3, 5, 7}`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","2","6","1","3","5","7"]}]]}]},
+{"l":4,"n":"`B = {1, 2, 3, 4, 5, 6, 7}`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["4","2","6","1","3","5","7"]}],["B",{"t":"arr","items":["1","2","3","4","5","6","7"]}]]}]},
+{"l":5,"n":"نطبع: `2`.","o":2},
+{"l":6,"n":"نطبع: `6`.","o":4},
+{"l":7,"n":"ينتهي البرنامج.","o":4}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: من A: الجذر 4، ثم 2 و 6 ابناه، ثم 1 و 3 تحت 2، و 5 و 7 تحت 6. شجرة ممتلئة: 3 مستويات، ارتفاعها 2. من B: كل قيمة أكبر من كل ما سبقها، فتنزل دائمًا إلى اليمين. سلسلة من 7 خلايا بينها 6 خطوط: ارتفاعها 6. القيم نفسها في الشجرتين، لكن البحث في الأولى يفحص 3 خلايا على الأكثر، وفي الثانية قد يفحص 7."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b12",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — هل هي شجرة بحث؟ — سؤال 1 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b13",
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال 1 من الكتاب، ص 281 (البندان 2 و 3)",
+       "prompt": "2. هل الشجرة التي أمامك شجرة بحث ثنائية؟ علّل الإجابة. 3. اطبع قيم الشجرة بحسب الطرق الثلاث: \u2066Preorder\u2069, \u2066Inorder\u2069, \u2066Postorder\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b14",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "شجرة سؤال 1 من الكتاب",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            -1,
+            -6,
+            null
+           ],
+           [
+            5,
+            8,
+            [
+             -1,
+             7,
+             null
+            ]
+           ]
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b15",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "trueFalse",
+        "prompt": "الشجرة المرسومة أعلاه شجرة بحث ثنائية.",
+        "answer": false,
+        "feedback": {
+         "explanation": "ليست شجرة بحث. مثلًا: القيمة \u20668\u2069 ابن أيسر للخلية \u20665\u2069 وهي أكبر منها."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b16",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "أي سطر هو ناتج تمشيط \u2066Inorder\u2069 لهذه الشجرة؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[3,-1,-6,5,8,-1,7]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[-6,-1,3,8,5,7,-1]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[-6,-1,8,7,-1,5,3]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[-6,-1,-1,3,5,7,8]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "\u2066Inorder\u2069: اليسار ثم الأب ثم اليمين. يسار الجذر يعطي \u2066-6\u2069 ثم \u2066-1\u2069، ثم الجذر \u20663\u2069، ثم يمينه: \u20668\u2069 ثم \u20665\u2069 ثم \u20667\u2069 ثم \u2066-1\u2069. الخيار الأخير هو القيم مرتّبة، وكان سيكون الناتج لو كانت الشجرة شجرة بحث."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b17",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — سؤال 1 من الكتاب",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "يكفي سبب واحد، وهنا سببان. الأول: القيمة "
+          },
+          {
+           "text": "8",
+           "dir": "ltr"
+          },
+          {
+           "text": " ابن "
+          },
+          {
+           "text": "أيسر",
+           "style": "strong"
+          },
+          {
+           "text": " للخلية "
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": " وهي أكبر منها."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الثاني: القيمة "
+          },
+          {
+           "text": "-1",
+           "dir": "ltr"
+          },
+          {
+           "text": " التي في اليمين تقع في الشجرة الفرعية اليمنى للجذر "
+          },
+          {
+           "text": "3",
+           "dir": "ltr"
+          },
+          {
+           "text": " وهي أصغر منه."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "Preorder",
+           "dir": "ltr"
+          },
+          {
+           "text": " (الأب، اليسار، اليمين): "
+          },
+          {
+           "text": "3 -1 -6 5 8 -1 7",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "Inorder",
+           "dir": "ltr"
+          },
+          {
+           "text": " (اليسار، الأب، اليمين): "
+          },
+          {
+           "text": "-6 -1 3 8 5 7 -1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "Postorder",
+           "dir": "ltr"
+          },
+          {
+           "text": " (اليسار، اليمين، الأب): "
+          },
+          {
+           "text": "-6 -1 8 7 -1 5 3",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s6",
+         "text": [
+          {
+           "text": "ناتج "
+          },
+          {
+           "text": "Inorder",
+           "dir": "ltr"
+          },
+          {
+           "text": " غير مرتّب ترتيبًا تصاعديًا، وهذا وحده يكفي لنعرف أنّ الشجرة ليست شجرة بحث."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "الشجرة "
+        },
+        {
+         "text": "ليست",
+         "style": "strong"
+        },
+        {
+         "text": " شجرة بحث ثنائية."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void InOrder(BinNode<int> bt)\n{\n    if (bt == null)\n        return;\n    InOrder(bt.GetLeft());\n    Console.Write(bt.GetValue() + \" \");\n    InOrder(bt.GetRight());\n}",
+         "given": "شجرة سؤال 1 (جذرها `3`)، والاستدعاء `InOrder(bt)`.",
+         "out": "-6 -1 3 8 5 7 -1 ",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"bin","v":"-6","l":null,"r":null},{"id":2,"k":"bin","v":"-1","l":1,"r":null},{"id":3,"k":"bin","v":"8","l":null,"r":null},{"id":4,"k":"bin","v":"7","l":null,"r":null},{"id":5,"k":"bin","v":"-1","l":4,"r":null},{"id":6,"k":"bin","v":"5","l":3,"r":5},{"id":7,"k":"bin","v":"3","l":2,"r":6}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `-1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `-6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":1}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":0},
+{"l":5,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":6,"n":"نطبع: `-6 ` (بلا سطر جديد).","o":3},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":1}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":3},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":3},
+{"l":7,"n":"","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":3},
+{"l":5,"n":"","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":6,"n":"نطبع: `-1 ` (بلا سطر جديد).","o":6},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":6},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":6},
+{"l":7,"n":"","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":6},
+{"l":5,"n":"","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]}]},
+{"l":6,"n":"نطبع: `3 ` (بلا سطر جديد).","o":8},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `5`.","o":8,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":8},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `8`.","o":8,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":8},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":8,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":3}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":8},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":8},
+{"l":5,"n":"","o":8,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"نطبع: `8 ` (بلا سطر جديد).","o":10},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":3}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":10},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":10},
+{"l":7,"n":"","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":10},
+{"l":5,"n":"","o":10,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":6,"n":"نطبع: `5 ` (بلا سطر جديد).","o":12},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `-1`.","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":12},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = الخلية التي قيمتها `7`.","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":12},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":4}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":12},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":12},
+{"l":5,"n":"","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":6,"n":"نطبع: `7 ` (بلا سطر جديد).","o":14},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":14,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":4}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":14},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":14},
+{"l":7,"n":"","o":14,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":14},
+{"l":5,"n":"","o":14,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":6,"n":"نطبع: `-1 ` (بلا سطر جديد).","o":17},
+{"l":1,"n":"تبدأ العملية `InOrder` مع `bt` = `null`.","o":17,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]},{"name":"InOrder","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":17},
+{"l":4,"n":"نخرج من العملية `InOrder`.","o":17},
+{"l":7,"n":"","o":17,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":17},
+{"l":7,"n":"","o":17,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":17},
+{"l":7,"n":"","o":17,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"InOrder","vars":[["bt",{"t":"ref","id":7}]]}]},
+{"l":8,"n":"تنتهي العملية `InOrder` ونعود إلى من استدعاها.","o":17},
+{"l":0,"n":"انتهى التنفيذ.","o":17,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: يكفي سبب واحد، وهنا سببان. الأول: القيمة 8 ابن أيسر للخلية 5 وهي أكبر منها. الثاني: القيمة -1 التي في اليمين تقع في الشجرة الفرعية اليمنى للجذر 3 وهي أصغر منه. Preorder (الأب، اليسار، اليمين): 3 -1 -6 5 8 -1 7. Inorder (اليسار، الأب، اليمين): -6 -1 3 8 5 7 -1. Postorder (اليسار، اليمين، الأب): -6 -1 8 7 -1 5 3. ناتج Inorder غير مرتّب ترتيبًا تصاعديًا، وهذا وحده يكفي لنعرف أنّ الشجرة ليست شجرة بحث."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b18",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — حذف ثم إدخال",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b19",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main()\n{\n    int[] A = { 50, 30, 70, 20, 40, 60, 80 };\n    BinNode<int> bt = ToBST(A);\n    bt = DeleteFromBST(bt, 50);\n    InsertIntoBST(bt, 50);\n    PreOrder(bt);\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b20",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "ماذا يطبع المقطع أعلاه؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[50,30,20,40,70,60,80]\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[60,30,20,40,50,70,80]\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[60,30,20,40,70,50,80]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[60,50,30,20,40,70,80]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "بعد الحذف يصير الجذر \u206660\u2069. القيمة \u206650\u2069 تُدخَل من جديد: أصغر من \u206660\u2069 (يسار)، ليست أصغر من \u206630\u2069 (يمين)، ليست أصغر من \u206640\u2069 (يمين). تصير الابن الأيمن للخلية \u206640\u2069، ولا تعود إلى الجذر."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b21",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "بعد تنفيذ المقطع: ما قيمة جذر الشجرة؟",
+        "answer": "60",
+        "feedback": {
+         "explanation": "للجذر \u206650\u2069 ابنان، فتُخزَّن فيه أصغر قيمة في شجرته الفرعية اليمنى: \u206660\u2069. الإدخال بعد ذلك يضيف ورقة ولا يغيّر الجذر."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b22",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — حذف ثم إدخال",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "ToBST",
+           "dir": "ltr"
+          },
+          {
+           "text": " تبني شجرة ممتلئة: الجذر "
+          },
+          {
+           "text": "50",
+           "dir": "ltr"
+          },
+          {
+           "text": "، في يساره "
+          },
+          {
+           "text": "30",
+           "dir": "ltr"
+          },
+          {
+           "text": " (وله "
+          },
+          {
+           "text": "20",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "40",
+           "dir": "ltr"
+          },
+          {
+           "text": ") وفي يمينه "
+          },
+          {
+           "text": "70",
+           "dir": "ltr"
+          },
+          {
+           "text": " (وله "
+          },
+          {
+           "text": "60",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "80",
+           "dir": "ltr"
+          },
+          {
+           "text": ")."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "حذف "
+          },
+          {
+           "text": "50",
+           "dir": "ltr"
+          },
+          {
+           "text": ": للجذر ابنان. أصغر قيمة في شجرته الفرعية اليمنى هي "
+          },
+          {
+           "text": "60",
+           "dir": "ltr"
+          },
+          {
+           "text": ": تُخزَّن في الجذر وتُحذف ورقتها. تبقى للخلية "
+          },
+          {
+           "text": "70",
+           "dir": "ltr"
+          },
+          {
+           "text": " ابن أيمن فقط."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إدخال "
+          },
+          {
+           "text": "50",
+           "dir": "ltr"
+          },
+          {
+           "text": ": أصغر من "
+          },
+          {
+           "text": "60",
+           "dir": "ltr"
+          },
+          {
+           "text": " (يسار)، ليست أصغر من "
+          },
+          {
+           "text": "30",
+           "dir": "ltr"
+          },
+          {
+           "text": " (يمين)، ليست أصغر من "
+          },
+          {
+           "text": "40",
+           "dir": "ltr"
+          },
+          {
+           "text": " (يمين): تصير الابن الأيمن للخلية "
+          },
+          {
+           "text": "40",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "PreOrder",
+           "dir": "ltr"
+          },
+          {
+           "text": ": الجذر "
+          },
+          {
+           "text": "60",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم يساره "
+          },
+          {
+           "text": "30 20 40 50",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ثم يمينه "
+          },
+          {
+           "text": "70 80",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "الدرس: القيمة التي نحذفها ثم ندخلها من جديد لا تعود إلى مكانها القديم، لأن الإدخال يضيف دائمًا "
+          },
+          {
+           "text": "ورقة",
+           "style": "strong"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "يُطبع "
+        },
+        {
+         "text": "60 30 20 40 50 70 80",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void Main()\n{\n    int[] A = { 50, 30, 70, 20, 40, 60, 80 };\n    BinNode<int> bt = ToBST(A);\n    bt = DeleteFromBST(bt, 50);\n    InsertIntoBST(bt, 50);\n    PreOrder(bt);\n}",
+         "out": "60 30 20 40 50 70 80 ",
+         "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"`A = {50, 30, 70, 20, 40, 60, 80}`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["50","30","70","20","40","60","80"]}]]}]},
+{"l":4,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["A",{"t":"arr","items":["50","30","70","20","40","60","80"]}],["bt",{"t":"ref","id":2}]]}],"h":[{"id":2,"k":"bin","v":"50","l":3,"r":4},{"id":3,"k":"bin","v":"30","l":5,"r":6},{"id":4,"k":"bin","v":"70","l":7,"r":8},{"id":5,"k":"bin","v":"20","l":null,"r":null},{"id":6,"k":"bin","v":"40","l":null,"r":null},{"id":7,"k":"bin","v":"60","l":null,"r":null},{"id":8,"k":"bin","v":"80","l":null,"r":null}]},
+{"l":5,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `60`.","o":0,"h":[{"id":2,"k":"bin","v":"60","l":3,"r":4},{"id":3,"k":"bin","v":"30","l":5,"r":6},{"id":4,"k":"bin","v":"70","l":null,"r":8},{"id":5,"k":"bin","v":"20","l":null,"r":null},{"id":6,"k":"bin","v":"40","l":null,"r":null},{"id":8,"k":"bin","v":"80","l":null,"r":null}]},
+{"l":6,"n":"","o":0,"h":[{"id":2,"k":"bin","v":"60","l":3,"r":4},{"id":3,"k":"bin","v":"30","l":5,"r":6},{"id":4,"k":"bin","v":"70","l":null,"r":8},{"id":5,"k":"bin","v":"20","l":null,"r":null},{"id":6,"k":"bin","v":"40","l":null,"r":9},{"id":8,"k":"bin","v":"80","l":null,"r":null},{"id":9,"k":"bin","v":"50","l":null,"r":null}]},
+{"l":7,"n":"","o":21},
+{"l":8,"n":"ينتهي البرنامج.","o":21}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: ToBST تبني شجرة ممتلئة: الجذر 50، في يساره 30 (وله 20 و 40) وفي يمينه 70 (وله 60 و 80). حذف 50: للجذر ابنان. أصغر قيمة في شجرته الفرعية اليمنى هي 60: تُخزَّن في الجذر وتُحذف ورقتها. تبقى للخلية 70 ابن أيمن فقط. إدخال 50: أصغر من 60 (يسار)، ليست أصغر من 30 (يمين)، ليست أصغر من 40 (يمين): تصير الابن الأيمن للخلية 40. PreOrder: الجذر 60، ثم يساره 30 20 40 50، ثم يمينه 70 80. الدرس: القيمة التي نحذفها ثم ندخلها من جديد لا تعود إلى مكانها القديم، لأن الإدخال يضيف دائمًا ورقة."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b23",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066What\u2069 و \u2066What1\u2069 — سؤال 21 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b24",
+       "type": "text",
+       "spans": [
+        {
+         "text": "معطاة مجموعة العمليات التالية (سؤال 21 من الكتاب، ص 298–299):"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p02-b25",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
        "code": "public static int What(BinNode<int> Root)\n{\n    int x = 0;\n    int y = 0;\n    if (Root.GetLeft() != null)\n        x = 1 + What(Root.GetLeft());\n    if (Root.GetRight() != null)\n        y = 1 + What(Root.GetRight());\n    return Math.Max(x, y);\n}\npublic static void What1(BinNode<int> Root)\n{\n    int[] A = new int[What(Root)+1];\n    What2(Root, A, 0);\n}\npublic static void What2(BinNode<int> Root, int[] A, int Len)\n{\n    if (Root == null) return;\n\n    A[Len] = Root.GetValue();\n    Len++;\n\n    if (Root.GetLeft() == null && Root.GetRight() == null)\n        PrintArray(A, Len);\n    else\n    {\n        What2(Root.GetLeft(), A, Len);\n        What2(Root.GetRight(), A, Len);\n    }\n}\npublic static void PrintArray(int[] A, int Len)\n{\n    for (int i = 0; i < Len; i++) Console.Write(A[i] + \" \");\n    Console.WriteLine(\"\");\n}",
-       "origin": "book"
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b22",
+       "id": "m07-l08-p02-b26",
        "type": "example",
        "mode": "practice",
-       "title": "سؤال 21 من الكتاب",
+       "title": "سؤال 21 من الكتاب، ص 298–299",
        "prompt": "1. معطاة القيم التالية: \u206615, 17, 9, 5, 10, 21, 19\u2069. قم ببناء شجرة بحث ثنائية \u2066bst\u2069 (اختيار القيم من اليسار إلى اليمين، أي أنّ 15 سيصبح الجذر) ثمّ تتبّع تنفيذ المقطع \u2066What(bst);\u2069 وحدّد المخرج. 2. ما هي وظيفة العملية \u2066What\u2069؟ 3. تتبّع تنفيذ المقطع \u2066What1(bst);\u2069 وحدّد المخرج – لا حاجة لتتبّع تنفيذ استدعاءات العملية \u2066What\u2069 والعملية \u2066PrintArray\u2069.",
        "steps": [],
-       "origin": "book"
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b23",
+       "id": "m07-l08-p02-b27",
        "type": "callout",
        "kind": "clarification",
        "title": "في الكتاب",
@@ -6250,68 +7786,20 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b24",
-       "type": "text",
-       "spans": [
-        {
-         "text": "ابنِ الشجرة في دفترك أولًا، ثم قارنها بالرسم التالي:"
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p01-b25",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "الشجرة \u2066bst\u2069 بعد إدخال القيم بالترتيب",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           15,
-           [
-            9,
-            5,
-            10
-           ],
-           [
-            17,
-            null,
-            [
-             21,
-             19,
-             null
-            ]
-           ]
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p01-b26",
+       "id": "m07-l08-p02-b28",
        "type": "practice",
        "question": {
         "kind": "shortInput",
         "prompt": "ما القيمة التي يعيدها الاستدعاء \u2066What(bst)\u2069؟",
         "answer": "3",
         "feedback": {
-         "explanation": "للخلية التي لا أبناء لها تعيد العملية 0. لكل خلية أخرى: 1 + أكبر النتيجتين من جهتيها. أطول مسار نازل من الجذر هو \u206615\u2069 ثم \u206617\u2069 ثم \u206621\u2069 ثم \u206619\u2069، وفيه 3 خطوط."
+         "explanation": "للخلية التي لا أبناء لها تعيد العملية 0. لكل خلية أخرى: واحد زائد أكبر النتيجتين من جهتيها. أطول مسار نازل من الجذر هو \u206615\u2069 ثم \u206617\u2069 ثم \u206621\u2069 ثم \u206619\u2069، وفيه 3 خطوط."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b27",
+       "id": "m07-l08-p02-b29",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6343,7 +7831,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b28",
+       "id": "m07-l08-p02-b30",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -6369,28 +7857,279 @@ const m07: ContentModule = {
          }
         ],
         "feedback": {
-         "explanation": "\u2066What2\u2069 تحفظ في المصفوفة قيم المسار من الجذر إلى الخلية الحالية، وحين تصل إلى ورقة تطبع المسار كله. في الشجرة ثلاث أوراق (\u20665\u2069 و \u206610\u2069 و \u206619\u2069)، فتُطبع ثلاثة مسارات. حجم المصفوفة \u2066What(Root)+1\u2069 هو عدد الخلايا في أطول مسار."
+         "explanation": "\u2066What2\u2069 تحفظ في المصفوفة قيم المسار من الجذر إلى الخلية الحالية، وحين تصل إلى ورقة تطبع المسار كله. في الشجرة ثلاث أوراق (\u20665\u2069 و \u206610\u2069 و \u206619\u2069)، فتُطبع ثلاثة مسارات."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p01-b29",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m07-l08-p02-b31",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066What1(bst)\u2069",
-       "description": "راقب المصفوفة \u2066A\u2069 والمتغيّر \u2066Len\u2069: كل استدعاء يكتب قيمته في خانة مستواه.",
+       "title": "حل سؤال 5 — سؤال 21 من الكتاب",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "الشجرة: الجذر "
+          },
+          {
+           "text": "15",
+           "dir": "ltr"
+          },
+          {
+           "text": ". في يساره "
+          },
+          {
+           "text": "9",
+           "dir": "ltr"
+          },
+          {
+           "text": " وله الابنان "
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "10",
+           "dir": "ltr"
+          },
+          {
+           "text": ". في يمينه "
+          },
+          {
+           "text": "17",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وابنه الأيمن "
+          },
+          {
+           "text": "21",
+           "dir": "ltr"
+          },
+          {
+           "text": "، والابن الأيسر للخلية "
+          },
+          {
+           "text": "21",
+           "dir": "ltr"
+          },
+          {
+           "text": " هو "
+          },
+          {
+           "text": "19",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "What",
+           "dir": "ltr"
+          },
+          {
+           "text": ": خلية بلا أبناء تعيد 0. كل خلية أخرى تعيد واحدًا زائد أكبر النتيجتين من جهتيها. هذا هو "
+          },
+          {
+           "text": "ارتفاع الشجرة",
+           "style": "strong"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "أطول مسار نازل من الجذر: "
+          },
+          {
+           "text": "15",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "17",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "21",
+           "dir": "ltr"
+          },
+          {
+           "text": " ثم "
+          },
+          {
+           "text": "19",
+           "dir": "ltr"
+          },
+          {
+           "text": ". فيه 3 خطوط، فتعيد "
+          },
+          {
+           "text": "What(bst)",
+           "dir": "ltr"
+          },
+          {
+           "text": " القيمة "
+          },
+          {
+           "text": "3",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "What1",
+           "dir": "ltr"
+          },
+          {
+           "text": " تنشئ مصفوفة حجمها "
+          },
+          {
+           "text": "What(Root)+1",
+           "dir": "ltr"
+          },
+          {
+           "text": "، أي 4: عدد الخلايا في أطول مسار."
+          }
+         ]
+        },
+        {
+         "id": "s5",
+         "text": [
+          {
+           "text": "What2",
+           "dir": "ltr"
+          },
+          {
+           "text": " تكتب قيمة الخلية الحالية في الخانة "
+          },
+          {
+           "text": "Len",
+           "dir": "ltr"
+          },
+          {
+           "text": " (رقم مستواها). حين تصل إلى ورقة تطبع الخانات من 0 حتى "
+          },
+          {
+           "text": "Len",
+           "dir": "ltr"
+          },
+          {
+           "text": ": المسار من الجذر إلى تلك الورقة."
+          }
+         ]
+        },
+        {
+         "id": "s6",
+         "text": [
+          {
+           "text": "في الشجرة ثلاث أوراق ("
+          },
+          {
+           "text": "5",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "10",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "19",
+           "dir": "ltr"
+          },
+          {
+           "text": ")، فتُطبع ثلاثة مسارات، من اليسار إلى اليمين."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "What(bst)",
+         "dir": "ltr"
+        },
+        {
+         "text": " تعيد "
+        },
+        {
+         "text": "3",
+         "dir": "ltr"
+        },
+        {
+         "text": " (ارتفاع الشجرة). "
+        },
+        {
+         "text": "What1(bst)",
+         "dir": "ltr"
+        },
+        {
+         "text": " تطبع ثلاثة أسطر: "
+        },
+        {
+         "text": "15 9 5",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "15 9 10",
+         "dir": "ltr"
+        },
+        {
+         "text": " ثم "
+        },
+        {
+         "text": "15 17 21 19",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static int What(BinNode<int> Root)\n{\n    int x = 0;\n    int y = 0;\n    if (Root.GetLeft() != null)\n        x = 1 + What(Root.GetLeft());\n    if (Root.GetRight() != null)\n        y = 1 + What(Root.GetRight());\n    return Math.Max(x, y);\n}\npublic static void What1(BinNode<int> Root)\n{\n    int[] A = new int[What(Root)+1];\n    What2(Root, A, 0);\n}\npublic static void What2(BinNode<int> Root, int[] A, int Len)\n{\n    if (Root == null) return;\n\n    A[Len] = Root.GetValue();\n    Len++;\n\n    if (Root.GetLeft() == null && Root.GetRight() == null)\n        PrintArray(A, Len);\n    else\n    {\n        What2(Root.GetLeft(), A, Len);\n        What2(Root.GetRight(), A, Len);\n    }\n}\npublic static void PrintArray(int[] A, int Len)\n{\n    for (int i = 0; i < Len; i++) Console.Write(A[i] + \" \");\n    Console.WriteLine(\"\");\n}",
-        "given": "الشجرة `bst` المرسومة أعلاه، والاستدعاء `What1(bst)`.",
-        "out": "15 9 5 \n15 9 10 \n15 17 21 19 \n",
-        "steps": [
+        "trace": {
+         "code": "public static int What(BinNode<int> Root)\n{\n    int x = 0;\n    int y = 0;\n    if (Root.GetLeft() != null)\n        x = 1 + What(Root.GetLeft());\n    if (Root.GetRight() != null)\n        y = 1 + What(Root.GetRight());\n    return Math.Max(x, y);\n}\npublic static void What1(BinNode<int> Root)\n{\n    int[] A = new int[What(Root)+1];\n    What2(Root, A, 0);\n}\npublic static void What2(BinNode<int> Root, int[] A, int Len)\n{\n    if (Root == null) return;\n\n    A[Len] = Root.GetValue();\n    Len++;\n\n    if (Root.GetLeft() == null && Root.GetRight() == null)\n        PrintArray(A, Len);\n    else\n    {\n        What2(Root.GetLeft(), A, Len);\n        What2(Root.GetRight(), A, Len);\n    }\n}\npublic static void PrintArray(int[] A, int Len)\n{\n    for (int i = 0; i < Len; i++) Console.Write(A[i] + \" \");\n    Console.WriteLine(\"\");\n}",
+         "given": "الشجرة `bst` التي بُنيت من القيم `15, 17, 9, 5, 10, 21, 19` بهذا الترتيب، والاستدعاء `What1(bst)`.",
+         "out": "15 9 5 \n15 9 10 \n15 17 21 19 \n",
+         "steps": [
 {"l":11,"n":"تبدأ العملية `What1` مع `Root` = الخلية التي قيمتها `15`.","o":0,"f":[{"name":"Main","vars":[["V",{"t":"arr","items":["15","17","9","5","10","21","19"]}],["bst",{"t":"ref","id":2}]]},{"name":"What1","vars":[["Root",{"t":"ref","id":2}]]}],"h":[{"id":2,"k":"bin","v":"15","l":4,"r":3},{"id":3,"k":"bin","v":"17","l":null,"r":7},{"id":4,"k":"bin","v":"9","l":5,"r":6},{"id":5,"k":"bin","v":"5","l":null,"r":null},{"id":6,"k":"bin","v":"10","l":null,"r":null},{"id":7,"k":"bin","v":"21","l":8,"r":null},{"id":8,"k":"bin","v":"19","l":null,"r":null}]},
 {"l":13,"n":"`A = {0, 0, 0, 0}`.","o":0,"f":[{"name":"Main","vars":[["V",{"t":"arr","items":["15","17","9","5","10","21","19"]}],["bst",{"t":"ref","id":2}]]},{"name":"What1","vars":[["Root",{"t":"ref","id":2}],["A",{"t":"arr","items":["0","0","0","0"]}]]}]},
 {"l":16,"n":"تبدأ العملية `What2` مع `Root` = الخلية التي قيمتها `15`، `A = {0, 0, 0, 0}`، `Len = 0`.","o":0,"f":[{"name":"Main","vars":[["V",{"t":"arr","items":["15","17","9","5","10","21","19"]}],["bst",{"t":"ref","id":2}]]},{"name":"What1","vars":[["Root",{"t":"ref","id":2}],["A",{"t":"arr","items":["0","0","0","0"]}]]},{"name":"What2","vars":[["Root",{"t":"ref","id":2}],["A",{"t":"arr","items":["0","0","0","0"]}],["Len",{"t":"v","s":"0"}]]}]},
@@ -6456,260 +8195,18 @@ const m07: ContentModule = {
 {"l":15,"n":"تنتهي العملية `What1` ونعود إلى من استدعاها.","o":30},
 {"l":0,"n":"انتهى التنفيذ.","o":30,"f":[{"name":"Main","vars":[["V",{"t":"arr","items":["15","17","9","5","10","21","19"]}],["bst",{"t":"ref","id":2}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (64 خطوة)؛ ناتج البرنامج: 15 9 5  ↵ 15 9 10  ↵ 15 17 21 19."
+        "text": "حل السؤال: الشجرة: الجذر 15. في يساره 9 وله الابنان 5 و 10. في يمينه 17، وابنه الأيمن 21، والابن الأيسر للخلية 21 هو 19. What: خلية بلا أبناء تعيد 0. كل خلية أخرى تعيد واحدًا زائد أكبر النتيجتين من جهتيها. هذا هو ارتفاع الشجرة. أطول مسار نازل من الجذر: 15 ثم 17 ثم 21 ثم 19. فيه 3 خطوط، فتعيد What(bst) القيمة 3. What1 تنشئ مصفوفة حجمها What(Root)+1، أي 4: عدد الخلايا في أطول مسار. What2 تكتب قيمة الخلية الحالية في الخانة Len (رقم مستواها). حين تصل إلى ورقة تطبع الخانات من 0 حتى Len: المسار من الجذر إلى تلك الورقة. في الشجرة ثلاث أوراق (5 و 10 و 19)، فتُطبع ثلاثة مسارات، من اليسار إلى اليمين."
        },
-       "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m07-l08-p02",
-     "title": "أسئلة كتابة: اكتب العملية",
-     "order": 2,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 281,
-      "pdfPageEnd": 295,
-      "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 281–295"
-     },
-     "keywords": [
-      "كتابة عملية",
-      "MaxOfBST",
-      "CountInRange",
-      "أسئلة الكتاب"
-     ],
-     "blocks": [
-      {
-       "id": "m07-l08-p02-b01",
-       "type": "text",
-       "spans": [
-        {
-         "text": "حلّ كل سؤال في دفترك أو في محرّر الكود "
-        },
-        {
-         "text": "قبل",
-         "style": "strong"
-        },
-        {
-         "text": " أن تنتقل إلى الصفحة التالية، ففيها الحلول مع تتبّعها. السؤالان الأولان من تمارين الكتاب، والثلاثة التالية أسئلة كتابة أضفناها."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b02",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 1 من الكتاب (البندان 2 و 3)",
-       "prompt": "2. هل الشجرة التي أمامك شجرة بحث ثنائية؟ علّل الإجابة. 3. اطبع قيم الشجرة بحسب الطرق الثلاث: \u2066Preorder\u2069, \u2066Inorder\u2069, \u2066Postorder\u2069.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m07-l08-p02-b03",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "شجرة سؤال 1 من الكتاب",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           3,
-           [
-            -1,
-            -6,
-            null
-           ],
-           [
-            5,
-            8,
-            [
-             -1,
-             7,
-             null
-            ]
-           ]
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b04",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 17 من الكتاب (البندان 1 و 2)",
-       "prompt": "1. معطاة قيم شجرة ثنائية تمّت طباعتها وفق تمشيط \u2066Preorder\u2069 ووفق تمشيط \u2066Inorder\u2069 (في الجدول التالي). المطلوب: بناء، أي رسم، الشجرة وفق هذه المعطيات. 2. هل يمكننا بناء الشجرة إذا توفّرت لنا نتائج التمشيط وفق \u2066Inorder\u2069 و \u2066Postorder\u2069؟ اشرح.",
-       "steps": [],
-       "origin": "book"
-      },
-      {
-       "id": "m07-l08-p02-b05",
-       "type": "table",
-       "headers": [
-        "التمشيط",
-        "القيم"
-       ],
-       "rows": [
-        [
-         "Preorder",
-         "17, 10, -1, 5, 12, 28"
-        ],
-        [
-         "Inorder",
-         "-1, 5, 10, 12, 17, 28"
-        ]
-       ],
-       "columnDirs": [
-        "ltr",
-        "ltr"
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m07-l08-p02-b06",
-       "type": "heading",
-       "level": 3,
-       "text": "أسئلة كتابة إضافية",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b07",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 3 — \u2066MaxOfBST\u2069",
-       "prompt": "اكتب عملية خارجية باسم \u2066MaxOfBST\u2069 تتلقّى جذر شجرة بحث ثنائية غير فارغة من نمط صحيح، وتُعيد أكبر قيمة فيها. استغلّ ترتيب القيم في شجرة البحث: لا حاجة لزيارة كل الخلايا.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b08",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int MaxOfBST(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b09",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 4 — \u2066ExistsInBST\u2069 بدون تراجعية",
-       "prompt": "اكتب العملية \u2066ExistsInBST\u2069 من جديد بدون تراجعية: بحلقة \u2066while\u2069 تنزل من الجذر، وفي كل دورة تنتقل إلى الابن الأيسر أو إلى الابن الأيمن. العملية تُعيد \u2066true\u2069 إذا وجدت القيمة \u2066Value\u2069، وخلاف ذلك \u2066false\u2069.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b10",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool ExistsInBST(BinNode<int> bt, int Value)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b11",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 5 — \u2066CountInRange\u2069",
-       "prompt": "اكتب عملية خارجية تراجعية باسم \u2066CountInRange\u2069 تتلقّى جذر شجرة بحث ثنائية من نمط صحيح وعددين صحيحين \u2066Low\u2069 و \u2066High\u2069 (معطى أنّ \u2066Low <= High\u2069). العملية تُعيد عدد القيم \u2066x\u2069 في الشجرة التي تحقّق \u2066Low <= x <= High\u2069. لا تدخل إلى شجرة فرعية إذا كان واضحًا من ترتيب شجرة البحث أنّه لا توجد فيها قيم مناسبة. مثال: لشجرة فيها القيم \u2066[10,30,40,50,60,70,80]\u2069 و \u2066Low = 35\u2069 و \u2066High = 65\u2069 تُعيد العملية 3.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b12",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static int CountInRange(BinNode<int> bt, int Low, int High)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p02-b13",
-       "type": "list",
-       "variant": "checklist",
-       "title": "افحص حلّك قبل أن ترى الحل",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "هل توقيع العملية صحيح (ما تستقبله وما تعيده)؟"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "هل تفحص "
-          },
-          {
-           "text": "null",
-           "dir": "ltr"
-          },
-          {
-           "text": " قبل أن تستدعي "
-          },
-          {
-           "text": "GetValue",
-           "dir": "ltr"
-          },
-          {
-           "text": " أو "
-          },
-          {
-           "text": "GetLeft",
-           "dir": "ltr"
-          },
-          {
-           "text": " أو "
-          },
-          {
-           "text": "GetRight",
-           "dir": "ltr"
-          },
-          {
-           "text": " على خلية؟"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "هل تستغلّ ترتيب شجرة البحث فتختار جهة واحدة حين يكفي ذلك؟"
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "في العملية التراجعية: هل يوجد شرط توقّف، وهل كل استدعاء تراجعي يعمل على شجرة أصغر؟"
-          }
-         ]
-        }
-       ],
        "origin": "teacher-enrichment"
       }
      ]
     },
     {
      "id": "899271d-m07-l08-p03",
-     "title": "حلول أسئلة الكتابة",
+     "title": "أسئلة كتابة محلولة",
      "order": 3,
      "source": {
       "kind": "book",
@@ -6718,579 +8215,56 @@ const m07: ContentModule = {
       "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
      },
      "keywords": [
-      "حلول",
+      "كتابة عملية",
+      "أسئلة محلولة",
       "MaxOfBST",
-      "ExistsInBST",
-      "CountInRange"
+      "PrintDescending",
+      "CountInRange",
+      "IsBST"
      ],
      "blocks": [
       {
        "id": "m07-l08-p03-b01",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 1 من الكتاب",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة كتابة محلولة، مرتّبة من الأسهل إلى الأصعب. اكتب كل عملية في دفترك أو في محرّر الكود "
+        },
+        {
+         "text": "قبل",
+         "style": "strong"
+        },
+        {
+         "text": " أن تقرأ الحل، ثم قارن حلّك بالحل وبقائمة «ما يُفحص في الحل». في كل الأسئلة شجرة البحث من نمط صحيح: "
+        },
+        {
+         "text": "BinNode<int>",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p03-b02",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "شجرة سؤال 1: أين الخلل؟",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           3,
-           [
-            -1,
-            -6,
-            null
-           ],
-           [
-            5,
-            8,
-            [
-             -1,
-             7,
-             null
-            ]
-           ]
-          ],
-          "hi": [
-           "RL",
-           "RR"
-          ]
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066MaxOfBST\u2069",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p03-b03",
-       "type": "text",
-       "spans": [
-        {
-         "text": "الشجرة "
-        },
-        {
-         "text": "ليست",
-         "style": "strong"
-        },
-        {
-         "text": " شجرة بحث ثنائية. يكفي سبب واحد، وهنا سببان: القيمة "
-        },
-        {
-         "text": "8",
-         "dir": "ltr"
-        },
-        {
-         "text": " ابن "
-        },
-        {
-         "text": "أيسر",
-         "style": "strong"
-        },
-        {
-         "text": " للخلية "
-        },
-        {
-         "text": "5",
-         "dir": "ltr"
-        },
-        {
-         "text": " وهي أكبر منها؛ والقيمة "
-        },
-        {
-         "text": "-1",
-         "dir": "ltr"
-        },
-        {
-         "text": " (في اليمين) تقع في الشجرة الفرعية اليمنى للجذر "
-        },
-        {
-         "text": "3",
-         "dir": "ltr"
-        },
-        {
-         "text": " وهي أصغر منه."
-        }
-       ],
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية باسم \u2066MaxOfBST\u2069 تتلقّى جذر شجرة بحث ثنائية غير فارغة، وتُعيد أكبر قيمة فيها. استغلّ ترتيب القيم في شجرة البحث: لا حاجة لزيارة كل الخلايا.",
+       "steps": [],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p03-b04",
-       "type": "table",
-       "caption": "حل البند 3",
-       "headers": [
-        "التمشيط",
-        "الناتج"
-       ],
-       "rows": [
-        [
-         "Preorder",
-         "3 -1 -6 5 8 -1 7"
-        ],
-        [
-         "Inorder",
-         "-6 -1 3 8 5 7 -1"
-        ],
-        [
-         "Postorder",
-         "-6 -1 8 7 -1 5 3"
-        ]
-       ],
-       "columnDirs": [
-        "ltr",
-        "ltr"
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b05",
-       "type": "text",
-       "spans": [
-        {
-         "text": "لاحظ أنّ ناتج "
-        },
-        {
-         "text": "Inorder",
-         "dir": "ltr"
-        },
-        {
-         "text": " غير مرتّب ترتيبًا تصاعديًا، وهذا وحده يكفي لنعرف أنّ الشجرة ليست شجرة بحث."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b06",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "أي سطر هو ناتج تمشيط \u2066Inorder\u2069 لشجرة سؤال 1؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[3,-1,-6,5,8,-1,7]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[-6,-1,3,8,5,7,-1]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[-6,-1,8,7,-1,5,3]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[-6,-1,-1,3,5,7,8]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "\u2066Inorder\u2069: اليسار ثم الأب ثم اليمين. يسار الجذر يعطي \u2066-6\u2069 ثم \u2066-1\u2069، ثم الجذر \u20663\u2069، ثم يمينه: \u20668\u2069 ثم \u20665\u2069 ثم \u20667\u2069 ثم \u2066-1\u2069. الخيار الأخير هو القيم مرتّبة، وكان سيكون الناتج لو كانت الشجرة شجرة بحث."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b07",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 17 من الكتاب",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b08",
-       "type": "guided",
-       "guidedType": "reveal",
-       "version": 1,
-       "title": "نبني الشجرة خطوة خطوة",
-       "prompt": [
-        {
-         "text": "Preorder",
-         "dir": "ltr"
-        },
-        {
-         "text": ": "
-        },
-        {
-         "text": "17, 10, -1, 5, 12, 28",
-         "dir": "ltr"
-        },
-        {
-         "text": " و "
-        },
-        {
-         "text": "Inorder",
-         "dir": "ltr"
-        },
-        {
-         "text": ": "
-        },
-        {
-         "text": "-1, 5, 10, 12, 17, 28",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
-        }
-       ],
-       "steps": [
-        {
-         "id": "s1",
-         "text": [
-          {
-           "text": "أول قيمة في "
-          },
-          {
-           "text": "Preorder",
-           "dir": "ltr"
-          },
-          {
-           "text": " هي الجذر: "
-          },
-          {
-           "text": "17",
-           "dir": "ltr"
-          },
-          {
-           "text": "."
-          }
-         ]
-        },
-        {
-         "id": "s2",
-         "text": [
-          {
-           "text": "في "
-          },
-          {
-           "text": "Inorder",
-           "dir": "ltr"
-          },
-          {
-           "text": " القيم التي قبل "
-          },
-          {
-           "text": "17",
-           "dir": "ltr"
-          },
-          {
-           "text": " هي "
-          },
-          {
-           "text": "-1, 5, 10, 12",
-           "dir": "ltr"
-          },
-          {
-           "text": " (الشجرة الفرعية اليسرى)، والتي بعدها "
-          },
-          {
-           "text": "28",
-           "dir": "ltr"
-          },
-          {
-           "text": " (اليمنى)."
-          }
-         ]
-        },
-        {
-         "id": "s3",
-         "text": [
-          {
-           "text": "من قيم اليسار أول ما يظهر في "
-          },
-          {
-           "text": "Preorder",
-           "dir": "ltr"
-          },
-          {
-           "text": " هو "
-          },
-          {
-           "text": "10",
-           "dir": "ltr"
-          },
-          {
-           "text": ": هو الابن الأيسر للجذر. في "
-          },
-          {
-           "text": "Inorder",
-           "dir": "ltr"
-          },
-          {
-           "text": " قبله "
-          },
-          {
-           "text": "-1, 5",
-           "dir": "ltr"
-          },
-          {
-           "text": " وبعده "
-          },
-          {
-           "text": "12",
-           "dir": "ltr"
-          },
-          {
-           "text": "."
-          }
-         ]
-        },
-        {
-         "id": "s4",
-         "text": [
-          {
-           "text": "من القيمتين "
-          },
-          {
-           "text": "-1, 5",
-           "dir": "ltr"
-          },
-          {
-           "text": " تظهر "
-          },
-          {
-           "text": "-1",
-           "dir": "ltr"
-          },
-          {
-           "text": " أولًا في "
-          },
-          {
-           "text": "Preorder",
-           "dir": "ltr"
-          },
-          {
-           "text": "، فهي الأب. في "
-          },
-          {
-           "text": "Inorder",
-           "dir": "ltr"
-          },
-          {
-           "text": " لا شيء قبلها، و "
-          },
-          {
-           "text": "5",
-           "dir": "ltr"
-          },
-          {
-           "text": " بعدها: إذن "
-          },
-          {
-           "text": "5",
-           "dir": "ltr"
-          },
-          {
-           "text": " ابنها الأيمن."
-          }
-         ]
-        },
-        {
-         "id": "s5",
-         "text": [
-          {
-           "text": "12",
-           "dir": "ltr"
-          },
-          {
-           "text": " وحدها: الابن الأيمن للخلية "
-          },
-          {
-           "text": "10",
-           "dir": "ltr"
-          },
-          {
-           "text": ". و "
-          },
-          {
-           "text": "28",
-           "dir": "ltr"
-          },
-          {
-           "text": " وحدها: الابن الأيمن للجذر."
-          }
-         ]
-        }
-       ],
-       "result": [
-        {
-         "text": "الجذر "
-        },
-        {
-         "text": "17",
-         "dir": "ltr"
-        },
-        {
-         "text": "؛ ابنه الأيسر "
-        },
-        {
-         "text": "10",
-         "dir": "ltr"
-        },
-        {
-         "text": " وله الابن الأيسر "
-        },
-        {
-         "text": "-1",
-         "dir": "ltr"
-        },
-        {
-         "text": " (وابنها الأيمن "
-        },
-        {
-         "text": "5",
-         "dir": "ltr"
-        },
-        {
-         "text": ") والابن الأيمن "
-        },
-        {
-         "text": "12",
-         "dir": "ltr"
-        },
-        {
-         "text": "؛ والابن الأيمن للجذر "
-        },
-        {
-         "text": "28",
-         "dir": "ltr"
-        },
-        {
-         "text": "."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b09",
-       "type": "interactive-diagram",
-       "interactionType": "ds-figure",
-       "version": 1,
-       "title": "الشجرة المطلوبة في سؤال 17",
-       "capabilities": {
-        "fullscreen": true
-       },
-       "config": {
-        "panels": [
-         {
-          "kind": "tree",
-          "tree": [
-           17,
-           [
-            10,
-            [
-             -1,
-             null,
-             5
-            ],
-            12
-           ],
-           28
-          ],
-          "facts": true
-         }
-        ]
-       },
-       "fallback": {
-        "text": "رسم: شجرة ثنائية."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b10",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "تأكّد من رسمك: ما ناتج تمشيط \u2066Postorder\u2069 للشجرة التي بنيتها؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u2066[-1,5,10,12,17,28]\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066[5,-1,12,10,28,17]\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u2066[-1,5,12,10,28,17]\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "\u2066[28,12,5,-1,10,17]\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "\u2066Postorder\u2069: اليسار ثم اليمين ثم الأب. تحت \u206610\u2069: أولًا \u20665\u2069 ثم أبوها \u2066-1\u2069، ثم \u206612\u2069، ثم \u206610\u2069 نفسها. بعدها \u206628\u2069، وأخيرًا الجذر \u206617\u2069."
-        }
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b11",
-       "type": "text",
-       "spans": [
-        {
-         "text": "البند 2:",
-         "style": "strong"
-        },
-        {
-         "text": " نعم، يمكن. في "
-        },
-        {
-         "text": "Postorder",
-         "dir": "ltr"
-        },
-        {
-         "text": " يُطبع الأب "
-        },
-        {
-         "text": "بعد",
-         "style": "strong"
-        },
-        {
-         "text": " ابنيه، فالجذر هو "
-        },
-        {
-         "text": "آخر",
-         "style": "strong"
-        },
-        {
-         "text": " قيمة (لا أولها). بعد أن نعرف الجذر نبحث عنه في "
-        },
-        {
-         "text": "Inorder",
-         "dir": "ltr"
-        },
-        {
-         "text": " ونقسّم القيم إلى يسار ويمين كما فعلنا، ونكرّر العمل لكل شجرة فرعية."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b12",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 3 — \u2066MaxOfBST\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b13",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7298,7 +8272,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b14",
+       "id": "m07-l08-p03-b05",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -7307,7 +8281,7 @@ const m07: ContentModule = {
          "id": "i1",
          "text": [
           {
-           "text": "كل قيمة أكبر من خلية تقع في يمينها، فأكبر قيمة موجودة في أقصى اليمين."
+           "text": "الحلقة تنزل إلى اليمين ما دام هناك ابن أيمن."
           }
          ]
         },
@@ -7340,27 +8314,29 @@ const m07: ContentModule = {
            "text": " لأن المعطى أنّ الشجرة غير فارغة."
           }
          ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "النجاعة "
-          },
-          {
-           "text": "O(h)",
-           "dir": "ltr"
-          },
-          {
-           "text": ": مسار واحد إلى اليمين."
-          }
-         ]
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b15",
+       "id": "m07-l08-p03-b06",
+       "type": "text",
+       "spans": [
+        {
+         "text": "كل قيمة أكبر من خلية تقع في يمينها، فأكبر قيمة موجودة في أقصى اليمين. العملية تنزل في مسار واحد، فنجاعتها "
+        },
+        {
+         "text": "O(h)",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b07",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -7398,11 +8374,12 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b16",
+       "id": "m07-l08-p03-b08",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066MaxOfBST\u2069",
+       "title": "تتبّع الحل",
+       "description": "الخلية \u206680\u2069 لا ابن أيمن لها، فنتوقّف عندها مع أنّ لها ابنًا أيسر.",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -7429,27 +8406,183 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b17",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "ما القيمة التي تعيدها \u2066MaxOfBST(bt)\u2069 للشجرة المرسومة أعلاه؟",
-        "answer": "80",
-        "feedback": {
-         "explanation": "ننزل يمينًا: \u206650\u2069 ثم \u206670\u2069 ثم \u206680\u2069. الخلية \u206680\u2069 لا ابن أيمن لها فنتوقّف عندها، مع أنّ لها ابنًا أيسر (\u206675\u2069)."
+       "id": "m07-l08-p03-b09",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · سهل — \u2066PrintDescending\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b10",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية تراجعية باسم \u2066PrintDescending\u2069 تتلقّى جذر شجرة بحث ثنائية، وتطبع قيمها مرتّبة ترتيبًا تنازليًا (من الأكبر إلى الأصغر)، وبين كل قيمتين فراغ. مثال: لشجرة فيها القيم \u2066[10,30,40,50,70]\u2069 تطبع العملية \u206670 50 40 30 10\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void PrintDescending(BinNode<int> bt)\n{\n    if (bt == null)\n        return;\n    PrintDescending(bt.GetRight());\n    Console.Write(bt.GetValue() + \" \");\n    PrintDescending(bt.GetLeft());\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b12",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "شرط التوقّف: شجرة فارغة لا تطبع شيئًا."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "الترتيب: الشجرة الفرعية "
+          },
+          {
+           "text": "اليمنى",
+           "style": "strong"
+          },
+          {
+           "text": " أولًا، ثم قيمة الأب، ثم الشجرة الفرعية اليسرى."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "أمر الطباعة بين الاستدعاءين التراجعيين، لا قبلهما ولا بعدهما."
+          }
+         ]
         }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b13",
+       "type": "text",
+       "spans": [
+        {
+         "text": "هذا تمشيط "
+        },
+        {
+         "text": "Inorder",
+         "dir": "ltr"
+        },
+        {
+         "text": " بالمقلوب: "
+        },
+        {
+         "text": "InOrder",
+         "dir": "ltr"
+        },
+        {
+         "text": " تطبع الأصغر (اليسار) ثم الأب ثم الأكبر (اليمين)، فتخرج القيم تصاعديًا. إذا بدّلنا الجهتين خرجت القيم تنازليًا."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b14",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void PrintDescending(BinNode<int> bt)\n{\n    if (bt == null)\n        return;\n    PrintDescending(bt.GetRight());\n    Console.Write(bt.GetValue() + \" \");\n    PrintDescending(bt.GetLeft());\n}",
+        "given": "شجرة البحث التي بُنيت من القيم `[50,30,70,10,40]` بهذا الترتيب، والاستدعاء `PrintDescending(bt)`.",
+        "out": "70 50 40 30 10 ",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"10","l":null,"r":null},{"id":2,"k":"bin","v":"40","l":null,"r":null},{"id":3,"k":"bin","v":"30","l":1,"r":2},{"id":4,"k":"bin","v":"70","l":null,"r":null},{"id":5,"k":"bin","v":"50","l":3,"r":4}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = الخلية التي قيمتها `70`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = `null`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":4}]]},{"name":"PrintDescending","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `PrintDescending`.","o":0},
+{"l":5,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":6,"n":"نطبع: `70 ` (بلا سطر جديد).","o":3},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = `null`.","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":4}]]},{"name":"PrintDescending","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":3},
+{"l":4,"n":"نخرج من العملية `PrintDescending`.","o":3},
+{"l":7,"n":"","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":8,"n":"تنتهي العملية `PrintDescending` ونعود إلى من استدعاها.","o":3},
+{"l":5,"n":"","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":6,"n":"نطبع: `50 ` (بلا سطر جديد).","o":6},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = الخلية التي قيمتها `30`.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":6},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = الخلية التي قيمتها `40`.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":6},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = `null`.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":2}]]},{"name":"PrintDescending","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":6},
+{"l":4,"n":"نخرج من العملية `PrintDescending`.","o":6},
+{"l":5,"n":"","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":6,"n":"نطبع: `40 ` (بلا سطر جديد).","o":9},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = `null`.","o":9,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":2}]]},{"name":"PrintDescending","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":9},
+{"l":4,"n":"نخرج من العملية `PrintDescending`.","o":9},
+{"l":7,"n":"","o":9,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":8,"n":"تنتهي العملية `PrintDescending` ونعود إلى من استدعاها.","o":9},
+{"l":5,"n":"","o":9,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"نطبع: `30 ` (بلا سطر جديد).","o":12},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = الخلية التي قيمتها `10`.","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":12},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = `null`.","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":1}]]},{"name":"PrintDescending","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":12},
+{"l":4,"n":"نخرج من العملية `PrintDescending`.","o":12},
+{"l":5,"n":"","o":12,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":6,"n":"نطبع: `10 ` (بلا سطر جديد).","o":15},
+{"l":1,"n":"تبدأ العملية `PrintDescending` مع `bt` = `null`.","o":15,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":1}]]},{"name":"PrintDescending","vars":[["bt",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `bt == null` صحيح: ننفّذ ما بعد `if`.","o":15},
+{"l":4,"n":"نخرج من العملية `PrintDescending`.","o":15},
+{"l":7,"n":"","o":15,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":1}]]}]},
+{"l":8,"n":"تنتهي العملية `PrintDescending` ونعود إلى من استدعاها.","o":15},
+{"l":7,"n":"","o":15,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":3}]]}]},
+{"l":8,"n":"تنتهي العملية `PrintDescending` ونعود إلى من استدعاها.","o":15},
+{"l":7,"n":"","o":15,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"PrintDescending","vars":[["bt",{"t":"ref","id":5}]]}]},
+{"l":8,"n":"تنتهي العملية `PrintDescending` ونعود إلى من استدعاها.","o":15},
+{"l":0,"n":"انتهى التنفيذ.","o":15,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (49 خطوة)؛ ناتج البرنامج: 70 50 40 30 10."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b18",
+       "id": "m07-l08-p03-b15",
        "type": "heading",
        "level": 3,
-       "text": "حل سؤال 4 — \u2066ExistsInBST\u2069 بدون تراجعية",
+       "text": "سؤال 3 · متوسط — \u2066ExistsInBST\u2069 بدون تراجعية",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b19",
+       "id": "m07-l08-p03-b16",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066ExistsInBST\u2069 من جديد بدون تراجعية: بحلقة \u2066while\u2069 تنزل من الجذر، وفي كل دورة تنتقل إلى الابن الأيسر أو إلى الابن الأيمن. العملية تُعيد \u2066true\u2069 إذا وجدت القيمة \u2066Value\u2069، وخلاف ذلك \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b17",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7457,7 +8590,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b20",
+       "id": "m07-l08-p03-b18",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -7510,21 +8643,18 @@ const m07: ContentModule = {
          "id": "i3",
          "text": [
           {
-           "text": "تغيير "
-          },
-          {
-           "text": "bt",
+           "text": "return true",
            "dir": "ltr"
           },
           {
-           "text": " داخل العملية لا يغيّر الشجرة: "
+           "text": " داخل الحلقة عند إيجاد القيمة، و "
           },
           {
-           "text": "bt",
+           "text": "return false",
            "dir": "ltr"
           },
           {
-           "text": " مؤشّر محلّي ينتقل من خلية إلى أخرى."
+           "text": " بعدها."
           }
          ]
         }
@@ -7532,11 +8662,35 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b21",
+       "id": "m07-l08-p03-b19",
+       "type": "text",
+       "spans": [
+        {
+         "text": "تغيير "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " داخل العملية لا يغيّر الشجرة: "
+        },
+        {
+         "text": "bt",
+         "dir": "ltr"
+        },
+        {
+         "text": " مؤشّر محلّي ينتقل من خلية إلى أخرى. الحلقة تفعل ما تفعله التراجعية تمامًا: نزول في مسار واحد."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b20",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066ExistsInBST\u2069 بالحلقة",
+       "title": "تتبّع الحل",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -7583,27 +8737,23 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
+       "id": "m07-l08-p03-b21",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متوسط — \u2066CountInRange\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
        "id": "m07-l08-p03-b22",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "للشجرة نفسها: ماذا تعيد \u2066ExistsInBST(bt, 35)\u2069؟ اكتب true أو false.",
-        "answer": "false",
-        "feedback": {
-         "explanation": "\u206635\u2069 أصغر من \u206650\u2069 (يسار)، أكبر من \u206630\u2069 (يمين)، أصغر من \u206640\u2069 (يسار)، والابن الأيسر للخلية \u206640\u2069 هو \u2066null\u2069. تنتهي الحلقة وتُعاد \u2066false\u2069."
-        }
-       },
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية تراجعية باسم \u2066CountInRange\u2069 تتلقّى جذر شجرة بحث ثنائية وعددين صحيحين \u2066Low\u2069 و \u2066High\u2069 (معطى أنّ \u2066Low <= High\u2069). العملية تُعيد عدد القيم \u2066x\u2069 في الشجرة التي تحقّق \u2066Low <= x <= High\u2069. لا تدخل إلى شجرة فرعية إذا كان واضحًا من ترتيب شجرة البحث أنّه لا توجد فيها قيم مناسبة. مثال: لشجرة فيها القيم \u2066[10,30,40,50,60,70,80]\u2069 و \u2066Low = 35\u2069 و \u2066High = 65\u2069 تُعيد العملية 3.",
+       "steps": [],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p03-b23",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 5 — \u2066CountInRange\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m07-l08-p03-b24",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -7611,7 +8761,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p03-b25",
+       "id": "m07-l08-p03-b24",
        "type": "list",
        "variant": "checklist",
        "title": "ما يُفحص في الحل",
@@ -7658,9 +8808,61 @@ const m07: ContentModule = {
          "id": "i4",
          "text": [
           {
-           "text": "خلاف ذلك الخلية داخل المجال: 1 + ما في اليسار + ما في اليمين."
+           "text": "خلاف ذلك الخلية داخل المجال: نعدّها ونضيف ما في اليسار وما في اليمين."
           }
          ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b25",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في التتبّع التالي لا تزور العملية الخلية "
+        },
+        {
+         "text": "10",
+         "dir": "ltr"
+        },
+        {
+         "text": " ولا الخلية "
+        },
+        {
+         "text": "80",
+         "dir": "ltr"
+        },
+        {
+         "text": ": عند "
+        },
+        {
+         "text": "30",
+         "dir": "ltr"
+        },
+        {
+         "text": " (أصغر من "
+        },
+        {
+         "text": "Low",
+         "dir": "ltr"
+        },
+        {
+         "text": ") تنتقل إلى اليمين فقط، وعند "
+        },
+        {
+         "text": "70",
+         "dir": "ltr"
+        },
+        {
+         "text": " (أكبر من "
+        },
+        {
+         "text": "High",
+         "dir": "ltr"
+        },
+        {
+         "text": ") تنتقل إلى اليسار فقط."
         }
        ],
        "origin": "teacher-enrichment"
@@ -7670,8 +8872,7 @@ const m07: ContentModule = {
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066CountInRange(bt, 35, 65)\u2069",
-       "description": "أي خلايا لا تزورها العملية أبدًا؟",
+       "title": "تتبّع الحل",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
@@ -7728,46 +8929,242 @@ const m07: ContentModule = {
       },
       {
        "id": "m07-l08-p03-b27",
-       "type": "practice",
-       "question": {
-        "kind": "shortInput",
-        "prompt": "للشجرة نفسها: ما القيمة التي تعيدها \u2066CountInRange(bt, 10, 45)\u2069؟",
-        "answer": "3",
-        "feedback": {
-         "explanation": "القيم التي في المجال: \u206610\u2069 و \u206630\u2069 و \u206640\u2069. الجذر \u206650\u2069 أكبر من \u206645\u2069، فلا تدخل العملية إلى شجرته الفرعية اليمنى أبدًا."
-        }
-       },
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066IsBST\u2069 بتمشيط \u2066Inorder\u2069 — سؤال الكتاب",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m07-l08-p03-b28",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "في الاستدعاء \u2066CountInRange(bt, 35, 65)\u2069 على الشجرة نفسها، أي خلية لا تزورها العملية؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "الخلية \u206640\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "الخلية \u206660\u2069"
-         },
-         {
-          "id": "o3",
-          "text": "الخلية \u206610\u2069",
-          "correct": true
-         },
-         {
-          "id": "o4",
-          "text": "الخلية \u206630\u2069"
-         }
-        ],
-        "feedback": {
-         "explanation": "عند الخلية \u206630\u2069 (أصغر من \u2066Low = 35\u2069) تنتقل العملية إلى اليمين فقط، فلا تزور \u206610\u2069. وبالطريقة نفسها عند \u206670\u2069 (أكبر من \u2066High = 65\u2069) تنتقل إلى اليسار فقط ولا تزور \u206680\u2069."
+       "type": "example",
+       "mode": "practice",
+       "title": "سؤال من الكتاب، ص 262",
+       "prompt": "اكتب عملية خارجية تتلقّى جذر شجرة ثنائية من نمط صحيح وتُعيد \u2066true\u2069 إذا كانت شجرة بحث ثنائية. خلاف ذلك تُعيد \u2066false\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b29",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في درس «هل الشجرة شجرة بحث؟» حللنا هذا السؤال بحساب أكبر قيمة في اليسار وأصغر قيمة في اليمين. هنا "
+        },
+        {
+         "text": "حل ثانٍ",
+         "style": "strong"
+        },
+        {
+         "text": " يستغلّ ما تعلّمناه: الشجرة شجرة بحث إذا خرجت قيمها في تمشيط "
+        },
+        {
+         "text": "Inorder",
+         "dir": "ltr"
+        },
+        {
+         "text": " مرتّبة ترتيبًا تصاعديًا. نستعين بعملية الكتاب "
+        },
+        {
+         "text": "Inorder",
+         "dir": "ltr"
+        },
+        {
+         "text": " (ص 280) التي تنسخ القيم إلى مصفوفة، وبالعملية "
+        },
+        {
+         "text": "Size",
+         "dir": "ltr"
+        },
+        {
+         "text": " التي تُعيد عدد خلايا الشجرة."
         }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b30",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool IsBST(BinNode<int> bt)\n{\n    if (bt == null)\n        return true;\n    int[] arr = new int[Size(bt)];\n    Inorder(bt, arr, 0); // ننسخ القيم إلى المصفوفة بترتيب التمشيط الداخلي\n    for (int i = 1; i < arr.Length; i++)\n        if (arr[i - 1] > arr[i])\n            return false; // قيمة أصغر من التي قبلها: الترتيب ليس تصاعديًا\n    return true;\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b31",
+       "type": "list",
+       "variant": "checklist",
+       "title": "ما يُفحص في الحل",
+       "items": [
+        {
+         "id": "i1",
+         "text": [
+          {
+           "text": "الشجرة الفارغة شجرة بحث: نعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": " قبل إنشاء المصفوفة."
+          }
+         ]
+        },
+        {
+         "id": "i2",
+         "text": [
+          {
+           "text": "حجم المصفوفة عدد خلايا الشجرة، والعملية "
+          },
+          {
+           "text": "Inorder",
+           "dir": "ltr"
+          },
+          {
+           "text": " تملؤها بترتيب التمشيط الداخلي."
+          }
+         ]
+        },
+        {
+         "id": "i3",
+         "text": [
+          {
+           "text": "نقارن كل قيمة بالتي "
+          },
+          {
+           "text": "قبلها",
+           "style": "strong"
+          },
+          {
+           "text": "، فتبدأ الحلقة من "
+          },
+          {
+           "text": "i = 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "i4",
+         "text": [
+          {
+           "text": "عند أول قيمة أصغر من التي قبلها نعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "؛ إذا انتهت الحلقة نعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b32",
+       "type": "text",
+       "spans": [
+        {
+         "text": "العملية تمرّ على كل خلية مرة واحدة ثم على المصفوفة مرة واحدة: نجاعتها "
+        },
+        {
+         "text": "O(n)",
+         "dir": "ltr"
+        },
+        {
+         "text": ". الحل الأول يحسب أكبر وأصغر قيمة من جديد عند كل خلية، فهو أبطأ. قيمتان متساويتان متجاورتان تُقبلان هنا، كما تقبلهما "
+        },
+        {
+         "text": "InsertIntoBST",
+         "dir": "ltr"
+        },
+        {
+         "text": "."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b33",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الشجرة \u2066bt\u2069 في التتبّع (مثال الكتاب)",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "tree",
+          "tree": [
+           3,
+           [
+            2,
+            1,
+            4
+           ],
+           5
+          ],
+          "hi": [
+           "LR"
+          ]
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: شجرة ثنائية."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p03-b34",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع الحل",
+       "description": "راقب المصفوفة \u2066arr\u2069: أين ينكسر الترتيب التصاعدي؟",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool IsBST(BinNode<int> bt)\n{\n    if (bt == null)\n        return true;\n    int[] arr = new int[Size(bt)];\n    Inorder(bt, arr, 0); // ننسخ القيم إلى المصفوفة بترتيب التمشيط الداخلي\n    for (int i = 1; i < arr.Length; i++)\n        if (arr[i - 1] > arr[i])\n            return false; // قيمة أصغر من التي قبلها: الترتيب ليس تصاعديًا\n    return true;\n}",
+        "given": "الشجرة `bt` المرسومة أعلاه (جذرها `3`)، والاستدعاء `IsBST(bt)`.",
+        "out": "False\n",
+        "steps": [
+{"l":1,"n":"تبدأ العملية `IsBST` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"IsBST","vars":[["bt",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"bin","v":"1","l":null,"r":null},{"id":2,"k":"bin","v":"4","l":null,"r":null},{"id":3,"k":"bin","v":"2","l":1,"r":2},{"id":4,"k":"bin","v":"5","l":null,"r":null},{"id":5,"k":"bin","v":"3","l":3,"r":4}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"`arr = {0, 0, 0, 0, 0}`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"IsBST","vars":[["bt",{"t":"ref","id":5}],["arr",{"t":"arr","items":["0","0","0","0","0"]}]]}]},
+{"l":6,"n":"","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"IsBST","vars":[["bt",{"t":"ref","id":5}],["arr",{"t":"arr","items":["1","2","4","3","5"]}]]}]},
+{"l":7,"n":"`i = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"IsBST","vars":[["bt",{"t":"ref","id":5}],["arr",{"t":"arr","items":["1","2","4","3","5"]}],["i",{"t":"v","s":"1"}]]}]},
+{"l":7,"n":"الشرط `i < arr.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `arr[i - 1] > arr[i]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`i` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"IsBST","vars":[["bt",{"t":"ref","id":5}],["arr",{"t":"arr","items":["1","2","4","3","5"]}],["i",{"t":"v","s":"2"}]]}]},
+{"l":7,"n":"الشرط `i < arr.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `arr[i - 1] > arr[i]` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":7,"n":"`i` تزيد بواحد وتصبح `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]},{"name":"IsBST","vars":[["bt",{"t":"ref","id":5}],["arr",{"t":"arr","items":["1","2","4","3","5"]}],["i",{"t":"v","s":"3"}]]}]},
+{"l":7,"n":"الشرط `i < arr.Length` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"الشرط `arr[i - 1] > arr[i]` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"العملية `IsBST` تُعيد `false`.","o":0},
+{"l":0,"n":"نطبع: `False`. انتهى التنفيذ.","o":6,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":5}]]}]}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (15 خطوة)؛ ناتج البرنامج: False."
        },
        "origin": "teacher-enrichment"
       }
@@ -7775,8 +9172,760 @@ const m07: ContentModule = {
     },
     {
      "id": "899271d-m07-l08-p04",
-     "title": "تدريبات الوحدة",
+     "title": "وظيفة: أسئلة كتابة",
      "order": 4,
+     "source": {
+      "kind": "book",
+      "sourceId": "899271d",
+      "pdfPageStart": 257,
+      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+     },
+     "keywords": [
+      "وظيفة",
+      "كتابة عملية",
+      "Range",
+      "LevelOf",
+      "DeleteMin",
+      "HasDuplicates",
+      "KthSmallest"
+     ],
+     "blocks": [
+      {
+       "id": "m07-l08-p04-b01",
+       "type": "text",
+       "spans": [
+        {
+         "text": "خمسة أسئلة كتابة للحل في البيت، مرتّبة من الأسهل إلى الأصعب. اكتب كل عملية في دفترك أو في محرّر الكود، ثم اضغط «الحل» وقارن: في النافذة كود الحل وما يُفحص فيه وتتبّعه. في كل الأسئلة شجرة البحث من نمط صحيح، وقد بُنيت بقاعدة الوحدة: الأصغر إلى اليسار، وغير ذلك إلى اليمين."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · سهل — \u2066Range\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b03",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية باسم \u2066Range\u2069 تتلقّى جذر شجرة بحث ثنائية غير فارغة، وتُعيد الفرق بين أكبر قيمة وأصغر قيمة فيها. لا تزر كل الخلايا. مثال: لشجرة فيها القيم \u2066[10,30,40,50,80]\u2069 تُعيد العملية 70.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b04",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int Range(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b05",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 1 — \u2066Range\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "أصغر قيمة في أقصى اليسار: المؤشّر "
+          },
+          {
+           "text": "Small",
+           "dir": "ltr"
+          },
+          {
+           "text": " ينزل يسارًا ما دام هناك ابن أيسر."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "أكبر قيمة في أقصى اليمين: المؤشّر "
+          },
+          {
+           "text": "Big",
+           "dir": "ltr"
+          },
+          {
+           "text": " ينزل يمينًا ما دام هناك ابن أيمن."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "نعيد الفرق بين القيمتين. زرنا مسارين فقط، فالنجاعة "
+          },
+          {
+           "text": "O(h)",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int Range(BinNode<int> bt)\n{\n    BinNode<int> Small = bt;\n    while (Small.GetLeft() != null)\n        Small = Small.GetLeft();\n    BinNode<int> Big = bt;\n    while (Big.GetRight() != null)\n        Big = Big.GetRight();\n    return Big.GetValue() - Small.GetValue();\n}",
+        "checklist": [
+         "مؤشّران مساعدان يبدآن من الجذر، دون تغيير `bt` بين الحلقتين.",
+         "شرط كل حلقة يفحص الابن (`GetLeft() != null` أو `GetRight() != null`) لا الخلية نفسها.",
+         "الطرح بالترتيب الصحيح: الأكبر ناقص الأصغر."
+        ],
+        "trace": {
+         "code": "public static int Range(BinNode<int> bt)\n{\n    BinNode<int> Small = bt;\n    while (Small.GetLeft() != null)\n        Small = Small.GetLeft();\n    BinNode<int> Big = bt;\n    while (Big.GetRight() != null)\n        Big = Big.GetRight();\n    return Big.GetValue() - Small.GetValue();\n}",
+         "given": "شجرة بحث جذرها `50`، أصغر قيمة فيها `10` وأكبر قيمة `80` (وللخلية `80` ابن أيسر `75`)، والاستدعاء `Range(bt)`.",
+         "out": "70\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `Range` مع `bt` = الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}]]}],"h":[{"id":1,"k":"bin","v":"10","l":null,"r":null},{"id":2,"k":"bin","v":"40","l":null,"r":null},{"id":3,"k":"bin","v":"30","l":1,"r":2},{"id":4,"k":"bin","v":"60","l":null,"r":null},{"id":5,"k":"bin","v":"75","l":null,"r":null},{"id":6,"k":"bin","v":"80","l":5,"r":null},{"id":7,"k":"bin","v":"70","l":4,"r":6},{"id":8,"k":"bin","v":"50","l":3,"r":7}]},
+{"l":3,"n":"`Small` يشير الآن إلى الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}],["Small",{"t":"ref","id":8}]]}]},
+{"l":4,"n":"الشرط `Small.GetLeft() != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`Small` يشير الآن إلى الخلية التي قيمتها `30`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}],["Small",{"t":"ref","id":3}]]}]},
+{"l":4,"n":"الشرط `Small.GetLeft() != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":5,"n":"`Small` يشير الآن إلى الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}],["Small",{"t":"ref","id":1}]]}]},
+{"l":4,"n":"الشرط `Small.GetLeft() != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":6,"n":"`Big` يشير الآن إلى الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}],["Small",{"t":"ref","id":1}],["Big",{"t":"ref","id":8}]]}]},
+{"l":7,"n":"الشرط `Big.GetRight() != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"`Big` يشير الآن إلى الخلية التي قيمتها `70`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}],["Small",{"t":"ref","id":1}],["Big",{"t":"ref","id":7}]]}]},
+{"l":7,"n":"الشرط `Big.GetRight() != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":8,"n":"`Big` يشير الآن إلى الخلية التي قيمتها `80`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"Range","vars":[["bt",{"t":"ref","id":8}],["Small",{"t":"ref","id":1}],["Big",{"t":"ref","id":6}]]}]},
+{"l":7,"n":"الشرط `Big.GetRight() != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":9,"n":"العملية `Range` تُعيد `70`.","o":0},
+{"l":0,"n":"نطبع: `70`. انتهى التنفيذ.","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: أصغر قيمة في أقصى اليسار: المؤشّر Small ينزل يسارًا ما دام هناك ابن أيسر. أكبر قيمة في أقصى اليمين: المؤشّر Big ينزل يمينًا ما دام هناك ابن أيمن. نعيد الفرق بين القيمتين. زرنا مسارين فقط، فالنجاعة O(h)."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b06",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "بنينا شجرة بحث بالعملية \u2066ToBST\u2069 من القيم \u2066[20,5,35,12,28]\u2069 بهذا الترتيب. ماذا تُعيد \u2066Range(bt)\u2069؟",
+        "answer": "30",
+        "feedback": {
+         "explanation": "أصغر قيمة \u20665\u2069 وأكبر قيمة \u206635\u2069، والفرق بينهما 30."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b07",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متوسط — \u2066LevelOf\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b08",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية باسم \u2066LevelOf\u2069 تتلقّى جذر شجرة بحث ثنائية وعددًا صحيحًا \u2066Value\u2069. العملية تُعيد رقم المستوى الذي تقع فيه القيمة \u2066Value\u2069 (الجذر في المستوى 0)، وتُعيد \u2066-1\u2069 إذا لم تكن القيمة في الشجرة. استغلّ ترتيب شجرة البحث. (سؤال 24 من الكتاب، ص 303، يحسب المستوى في شجرة ثنائية عادية بالبحث في الجهتين؛ في شجرة البحث يكفي مسار واحد.)",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b09",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int LevelOf(BinNode<int> bt, int Value)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b10",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066LevelOf\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "ننزل من الجذر كما في البحث: يسارًا إذا كانت قيمة الخلية أكبر من "
+          },
+          {
+           "text": "Value",
+           "dir": "ltr"
+          },
+          {
+           "text": "، وإلا يمينًا."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "العدّاد "
+          },
+          {
+           "text": "Level",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ من 0 (مستوى الجذر) ويزيد بواحد مع كل نزول."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إذا وجدنا القيمة نعيد العدّاد. إذا وصلنا إلى "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": " فالقيمة غير موجودة ونعيد "
+          },
+          {
+           "text": "-1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int LevelOf(BinNode<int> bt, int Value)\n{\n    int Level = 0;\n    while (bt != null)\n    {\n        if (bt.GetValue() == Value)\n            return Level;\n        if (bt.GetValue() > Value)\n            bt = bt.GetLeft();\n        else\n            bt = bt.GetRight();\n        Level++;\n    }\n    return -1;\n}",
+        "checklist": [
+         "العدّاد يبدأ من 0، لا من 1.",
+         "`Level++` بعد الانتقال إلى الابن، في كل دورة لم نجد فيها القيمة.",
+         "`return -1` بعد الحلقة."
+        ],
+        "trace": {
+         "code": "public static int LevelOf(BinNode<int> bt, int Value)\n{\n    int Level = 0;\n    while (bt != null)\n    {\n        if (bt.GetValue() == Value)\n            return Level;\n        if (bt.GetValue() > Value)\n            bt = bt.GetLeft();\n        else\n            bt = bt.GetRight();\n        Level++;\n    }\n    return -1;\n}",
+         "given": "شجرة البحث التي بُنيت من القيم `[50,30,70,10,40,60,80]` بهذا الترتيب، والاستدعاءان `LevelOf(bt, 60)` ثم `LevelOf(bt, 35)`.",
+         "out": "2\n-1\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `LevelOf` مع `bt` = الخلية التي قيمتها `50`، `Value = 60`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":7}],["Value",{"t":"v","s":"60"}]]}],"h":[{"id":1,"k":"bin","v":"10","l":null,"r":null},{"id":2,"k":"bin","v":"40","l":null,"r":null},{"id":3,"k":"bin","v":"30","l":1,"r":2},{"id":4,"k":"bin","v":"60","l":null,"r":null},{"id":5,"k":"bin","v":"80","l":null,"r":null},{"id":6,"k":"bin","v":"70","l":4,"r":5},{"id":7,"k":"bin","v":"50","l":3,"r":6}]},
+{"l":3,"n":"`Level = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":7}],["Value",{"t":"v","s":"60"}],["Level",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` خطأ: ننتقل إلى `else`.","o":0},
+{"l":11,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `70`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":6}],["Value",{"t":"v","s":"60"}],["Level",{"t":"v","s":"0"}]]}]},
+{"l":12,"n":"`Level` تزيد بواحد وتصبح `1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":6}],["Value",{"t":"v","s":"60"}],["Level",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":9,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `60`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":4}],["Value",{"t":"v","s":"60"}],["Level",{"t":"v","s":"1"}]]}]},
+{"l":12,"n":"`Level` تزيد بواحد وتصبح `2`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":4}],["Value",{"t":"v","s":"60"}],["Level",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"العملية `LevelOf` تُعيد `2`.","o":0},
+{"l":1,"n":"تبدأ العملية `LevelOf` مع `bt` = الخلية التي قيمتها `50`، `Value = 35`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":7}],["Value",{"t":"v","s":"35"}]]}]},
+{"l":3,"n":"`Level = 0`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":7}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":2},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":2},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` صحيح: ننفّذ ما بعد `if`.","o":2},
+{"l":9,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `30`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":3}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"0"}]]}]},
+{"l":12,"n":"`Level` تزيد بواحد وتصبح `1`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":3}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":2},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":2},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` خطأ: ننتقل إلى `else`.","o":2},
+{"l":11,"n":"`bt` يشير الآن إلى الخلية التي قيمتها `40`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":2}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"1"}]]}]},
+{"l":12,"n":"`Level` تزيد بواحد وتصبح `2`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"ref","id":2}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"2"}]]}]},
+{"l":4,"n":"الشرط `bt != null` صحيح: ننفّذ جسم الحلقة.","o":2},
+{"l":6,"n":"الشرط `bt.GetValue() == Value` خطأ: نتخطّى ما بعد `if`.","o":2},
+{"l":8,"n":"الشرط `bt.GetValue() > Value` صحيح: ننفّذ ما بعد `if`.","o":2},
+{"l":9,"n":"`bt` يشير الآن إلى `null`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"null"}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"2"}]]}]},
+{"l":12,"n":"`Level` تزيد بواحد وتصبح `3`.","o":2,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"LevelOf","vars":[["bt",{"t":"null"}],["Value",{"t":"v","s":"35"}],["Level",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `bt != null` خطأ: نخرج من الحلقة.","o":2},
+{"l":14,"n":"العملية `LevelOf` تُعيد `-1`.","o":2},
+{"l":0,"n":"نطبع: `-1`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: ننزل من الجذر كما في البحث: يسارًا إذا كانت قيمة الخلية أكبر من Value، وإلا يمينًا. العدّاد Level يبدأ من 0 (مستوى الجذر) ويزيد بواحد مع كل نزول. إذا وجدنا القيمة نعيد العدّاد. إذا وصلنا إلى null فالقيمة غير موجودة ونعيد -1."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b11",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "بنينا شجرة بحث بالعملية \u2066ToBST\u2069 من القيم \u2066[1,2,3,4,5]\u2069 بهذا الترتيب. ماذا تُعيد \u2066LevelOf(bt, 4)\u2069؟",
+        "answer": "3",
+        "feedback": {
+         "explanation": "الشجرة سلسلة إلى اليمين: \u20661\u2069 في المستوى 0، \u20662\u2069 في المستوى 1، \u20663\u2069 في المستوى 2، و \u20664\u2069 في المستوى 3."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b12",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — \u2066DeleteMin\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b13",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية تراجعية باسم \u2066DeleteMin\u2069 تتلقّى جذر شجرة بحث ثنائية غير فارغة، وتحذف منها الخلية التي فيها أصغر قيمة. العملية تُعيد جذر الشجرة بعد الحذف (قد يتغيّر الجذر!). الاستدعاء يكون هكذا: \u2066bt = DeleteMin(bt);\u2069. لا تستعمل \u2066DeleteFromBST\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b14",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static BinNode<int> DeleteMin(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b15",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 3 — \u2066DeleteMin\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "خلية أصغر قيمة هي التي في أقصى اليسار: لا ابن أيسر لها. إذن هي ورقة أو لها ابن أيمن فقط."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "شرط التوقّف: إذا لم يكن للخلية الحالية ابن أيسر فهي المطلوبة، ونعيد ابنها الأيمن ليحلّ مكانها (أو "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": " إذا كانت ورقة)."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "خلاف ذلك نحذف، بشكل تراجعي، من الشجرة الفرعية اليسرى، ونربط ما يعود بالأمر "
+          },
+          {
+           "text": "SetLeft",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "نعيد "
+          },
+          {
+           "text": "bt",
+           "dir": "ltr"
+          },
+          {
+           "text": ". إذا كان الجذر نفسه أصغر قيمة، يعود ابنه الأيمن ويصير هو الجذر الجديد."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static BinNode<int> DeleteMin(BinNode<int> bt)\n{\n    if (bt.GetLeft() == null)\n        return bt.GetRight(); // هذه خلية أصغر قيمة: ابنها الأيمن (أو null) يحلّ مكانها\n    bt.SetLeft(DeleteMin(bt.GetLeft()));\n    return bt;\n}",
+        "checklist": [
+         "العملية تُعيد خلية (`BinNode<int>`)، لا قيمة.",
+         "في شرط التوقّف نعيد `bt.GetRight()` لا `null`: قد يكون لخلية أصغر قيمة ابن أيمن.",
+         "`bt.SetLeft(DeleteMin(bt.GetLeft()));` ثم `return bt;`."
+        ],
+        "trace": {
+         "code": "public static BinNode<int> DeleteMin(BinNode<int> bt)\n{\n    if (bt.GetLeft() == null)\n        return bt.GetRight(); // هذه خلية أصغر قيمة: ابنها الأيمن (أو null) يحلّ مكانها\n    bt.SetLeft(DeleteMin(bt.GetLeft()));\n    return bt;\n}",
+         "given": "شجرة بحث جذرها `50`؛ أصغر قيمة فيها `10` ولخليتها ابن أيمن `20`. الأمر `bt = DeleteMin(bt);` ثم طباعة الشجرة بتمشيط `Inorder`.",
+         "out": "20 30 40 50 60 70 80 ",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `DeleteMin` مع `bt` = الخلية التي قيمتها `50`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":8}]]}],"h":[{"id":1,"k":"bin","v":"20","l":null,"r":null},{"id":2,"k":"bin","v":"10","l":null,"r":1},{"id":3,"k":"bin","v":"40","l":null,"r":null},{"id":4,"k":"bin","v":"30","l":2,"r":3},{"id":5,"k":"bin","v":"60","l":null,"r":null},{"id":6,"k":"bin","v":"80","l":null,"r":null},{"id":7,"k":"bin","v":"70","l":5,"r":6},{"id":8,"k":"bin","v":"50","l":4,"r":7}]},
+{"l":3,"n":"الشرط `bt.GetLeft() == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `DeleteMin` مع `bt` = الخلية التي قيمتها `30`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt.GetLeft() == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `DeleteMin` مع `bt` = الخلية التي قيمتها `10`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":4}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `bt.GetLeft() == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"العملية `DeleteMin` تُعيد الخلية التي قيمتها `20`.","o":0},
+{"l":5,"n":"الابن الأيسر للخلية `bt` (قيمتها `30`) يصبح الخلية التي قيمتها `20`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"bin","v":"20","l":null,"r":null},{"id":3,"k":"bin","v":"40","l":null,"r":null},{"id":4,"k":"bin","v":"30","l":1,"r":3},{"id":5,"k":"bin","v":"60","l":null,"r":null},{"id":6,"k":"bin","v":"80","l":null,"r":null},{"id":7,"k":"bin","v":"70","l":5,"r":6},{"id":8,"k":"bin","v":"50","l":4,"r":7}]},
+{"l":6,"n":"العملية `DeleteMin` تُعيد الخلية التي قيمتها `30`.","o":0},
+{"l":5,"n":"الابن الأيسر للخلية `bt` (قيمتها `50`) يصبح الخلية التي قيمتها `30`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]},{"name":"DeleteMin","vars":[["bt",{"t":"ref","id":8}]]}]},
+{"l":6,"n":"العملية `DeleteMin` تُعيد الخلية التي قيمتها `50`.","o":0},
+{"l":0,"n":"نطبع: `20 ` (بلا سطر جديد). نطبع: `30 ` (بلا سطر جديد). نطبع: `40 ` (بلا سطر جديد). نطبع: `50 ` (بلا سطر جديد). نطبع: `60 ` (بلا سطر جديد). نطبع: `70 ` (بلا سطر جديد). نطبع: `80 ` (بلا سطر جديد). انتهى التنفيذ.","o":21,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":8}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: خلية أصغر قيمة هي التي في أقصى اليسار: لا ابن أيسر لها. إذن هي ورقة أو لها ابن أيمن فقط. شرط التوقّف: إذا لم يكن للخلية الحالية ابن أيسر فهي المطلوبة، ونعيد ابنها الأيمن ليحلّ مكانها (أو null إذا كانت ورقة). خلاف ذلك نحذف، بشكل تراجعي، من الشجرة الفرعية اليسرى، ونربط ما يعود بالأمر SetLeft. نعيد bt. إذا كان الجذر نفسه أصغر قيمة، يعود ابنه الأيمن ويصير هو الجذر الجديد."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b16",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 4 · متقدّم — \u2066HasDuplicates\u2069 — عن سؤال 17 من الكتاب",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b17",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "في سؤال 17 من الكتاب (البند 3، ص 295): شجرة ثنائية تكون مميّزة إذا كانت جميع قيمها لا تتكرّر مطلقًا. اكتب عملية خارجية تراجعية باسم \u2066HasDuplicates\u2069 تتلقّى جذر شجرة بحث ثنائية بُنيت بالعملية \u2066InsertIntoBST\u2069، وتُعيد \u2066true\u2069 إذا تكرّرت فيها قيمة واحدة على الأقل، وخلاف ذلك \u2066false\u2069. تذكّر: \u2066InsertIntoBST\u2069 تضع القيمة المساوية في اليمين. مثال: لشجرة بُنيت من القيم \u2066[6,3,9,1,4,3]\u2069 تُعيد العملية \u2066true\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b18",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool HasDuplicates(BinNode<int> bt)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b19",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 4 — \u2066HasDuplicates\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "أين تسكن نسخة ثانية من قيمة خلية؟ في شجرتها الفرعية "
+          },
+          {
+           "text": "اليمنى",
+           "style": "strong"
+          },
+          {
+           "text": " حتمًا، لأن القيمة المساوية تنزل يمينًا واليسار فيه قيم أصغر فقط."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "كل قيم الشجرة الفرعية اليمنى أكبر من قيمة الخلية أو تساويها. فإذا وُجدت هناك نسخة مساوية، فهي "
+          },
+          {
+           "text": "أصغر",
+           "style": "strong"
+          },
+          {
+           "text": " قيمة في اليمين."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إذن لكل خلية فحص واحد: هل أصغر قيمة في شجرتها الفرعية اليمنى تساوي قيمتها؟ العملية المساعدة "
+          },
+          {
+           "text": "MinOfRight",
+           "dir": "ltr"
+          },
+          {
+           "text": " تنزل يسارًا حتى النهاية."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "إذا لم نجد تكرارًا عند الخلية نفحص، بشكل تراجعي، الشجرتين الفرعيتين. الشجرة الفارغة لا تكرار فيها."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool HasDuplicates(BinNode<int> bt)\n{\n    if (bt == null)\n        return false;\n    if (bt.GetRight() != null && MinOfRight(bt.GetRight()) == bt.GetValue())\n        return true; // أصغر قيمة في اليمين تساوي قيمة الخلية\n    return HasDuplicates(bt.GetLeft()) || HasDuplicates(bt.GetRight());\n}\n// أصغر قيمة في شجرة بحث غير فارغة\npublic static int MinOfRight(BinNode<int> bt)\n{\n    while (bt.GetLeft() != null)\n        bt = bt.GetLeft();\n    return bt.GetValue();\n}",
+        "checklist": [
+         "شرط التوقّف: `bt == null` يعيد `false`.",
+         "فحص `bt.GetRight() != null` **قبل** استدعاء العملية المساعدة.",
+         "المقارنة مع أصغر قيمة في اليمين، لا مع قيمة الابن الأيمن وحده.",
+         "الربط بين الاستدعاءين التراجعيين بـ `||`: يكفي تكرار في جهة واحدة."
+        ],
+        "trace": {
+         "code": "public static bool HasDuplicates(BinNode<int> bt)\n{\n    if (bt == null)\n        return false;\n    if (bt.GetRight() != null && MinOfRight(bt.GetRight()) == bt.GetValue())\n        return true; // أصغر قيمة في اليمين تساوي قيمة الخلية\n    return HasDuplicates(bt.GetLeft()) || HasDuplicates(bt.GetRight());\n}\n// أصغر قيمة في شجرة بحث غير فارغة\npublic static int MinOfRight(BinNode<int> bt)\n{\n    while (bt.GetLeft() != null)\n        bt = bt.GetLeft();\n    return bt.GetValue();\n}",
+         "given": "شجرة البحث التي بُنيت من القيم `[6,3,9,1,4,3]` بهذا الترتيب: القيمة `3` الثانية هي الابن الأيسر للخلية `4`. الاستدعاء `HasDuplicates(bt)`.",
+         "out": "True\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `HasDuplicates` مع `bt` = الخلية التي قيمتها `6`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasDuplicates","vars":[["bt",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"bin","v":"1","l":null,"r":null},{"id":2,"k":"bin","v":"3","l":null,"r":null},{"id":3,"k":"bin","v":"4","l":2,"r":null},{"id":4,"k":"bin","v":"3","l":1,"r":3},{"id":5,"k":"bin","v":"9","l":null,"r":null},{"id":6,"k":"bin","v":"6","l":4,"r":5}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetRight() != null && MinOfRight(bt.GetRight()) == bt.GetValue()` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `HasDuplicates` مع `bt` = الخلية التي قيمتها `3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasDuplicates","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasDuplicates","vars":[["bt",{"t":"ref","id":4}]]}]},
+{"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":5,"n":"الشرط `bt.GetRight() != null && MinOfRight(bt.GetRight()) == bt.GetValue()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":6,"n":"العملية `HasDuplicates` تُعيد `true`.","o":0},
+{"l":7,"n":"العملية `HasDuplicates` تُعيد `true`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]},{"name":"HasDuplicates","vars":[["bt",{"t":"ref","id":6}]]}]},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":6}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: أين تسكن نسخة ثانية من قيمة خلية؟ في شجرتها الفرعية اليمنى حتمًا، لأن القيمة المساوية تنزل يمينًا واليسار فيه قيم أصغر فقط. كل قيم الشجرة الفرعية اليمنى أكبر من قيمة الخلية أو تساويها. فإذا وُجدت هناك نسخة مساوية، فهي أصغر قيمة في اليمين. إذن لكل خلية فحص واحد: هل أصغر قيمة في شجرتها الفرعية اليمنى تساوي قيمتها؟ العملية المساعدة MinOfRight تنزل يسارًا حتى النهاية. إذا لم نجد تكرارًا عند الخلية نفحص، بشكل تراجعي، الشجرتين الفرعيتين. الشجرة الفارغة لا تكرار فيها."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b20",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "بنينا شجرة بحث بالعملية \u2066ToBST\u2069 من القيم \u2066[8,4,12,2,6,10]\u2069 بهذا الترتيب. ماذا تُعيد \u2066HasDuplicates(bt)\u2069؟ اكتب true أو false.",
+        "answer": "false",
+        "feedback": {
+         "explanation": "القيم الست كلها مختلفة. عند كل خلية لها شجرة فرعية يمنى، أصغر قيمة هناك أكبر من قيمة الخلية."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b21",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 5 · متقدّم — \u2066KthSmallest\u2069",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b22",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب عملية خارجية تراجعية باسم \u2066KthSmallest\u2069 تتلقّى جذر شجرة بحث ثنائية قيمها لا تتكرّر وعددًا صحيحًا \u2066k\u2069. العملية تُعيد القيمة التي ترتيبها \u2066k\u2069 من الأصغر: للعدد \u2066k = 1\u2069 تُعيد أصغر قيمة، وللعدد \u2066k = 2\u2069 القيمة التي بعدها، وهكذا. معطى أنّ \u2066k\u2069 بين 1 وعدد خلايا الشجرة. يمكنك أن تستعين بعملية \u2066Size\u2069 تُعيد عدد خلايا شجرة. مثال: لشجرة فيها القيم \u2066[10,30,40,50,60,70,80]\u2069 و \u2066k = 3\u2069 تُعيد العملية 40.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b23",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static int KthSmallest(BinNode<int> bt, int k)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b24",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 5 — \u2066KthSmallest\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "عدد خلايا الشجرة الفرعية اليسرى، "
+          },
+          {
+           "text": "LeftSize",
+           "dir": "ltr"
+          },
+          {
+           "text": "، هو عدد القيم "
+          },
+          {
+           "text": "الأصغر",
+           "style": "strong"
+          },
+          {
+           "text": " من قيمة الخلية الحالية. إذن ترتيب قيمة الخلية هو "
+          },
+          {
+           "text": "LeftSize + 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "إذا كان "
+          },
+          {
+           "text": "k",
+           "dir": "ltr"
+          },
+          {
+           "text": " لا يزيد على "
+          },
+          {
+           "text": "LeftSize",
+           "dir": "ltr"
+          },
+          {
+           "text": "، فالقيمة المطلوبة واحدة من القيم الأصغر، أي في اليسار، وترتيبها هناك "
+          },
+          {
+           "text": "k",
+           "dir": "ltr"
+          },
+          {
+           "text": " نفسه."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "إذا كان "
+          },
+          {
+           "text": "k",
+           "dir": "ltr"
+          },
+          {
+           "text": " يساوي "
+          },
+          {
+           "text": "LeftSize + 1",
+           "dir": "ltr"
+          },
+          {
+           "text": " فالقيمة المطلوبة هي قيمة الخلية الحالية."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "خلاف ذلك هي في اليمين. تخطّينا "
+          },
+          {
+           "text": "LeftSize + 1",
+           "dir": "ltr"
+          },
+          {
+           "text": " قيم أصغر منها، فترتيبها في الشجرة الفرعية اليمنى هو "
+          },
+          {
+           "text": "k - LeftSize - 1",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static int KthSmallest(BinNode<int> bt, int k)\n{\n    int LeftSize = Size(bt.GetLeft()); // عدد القيم الأصغر من قيمة الخلية\n    if (k <= LeftSize)\n        return KthSmallest(bt.GetLeft(), k);\n    if (k == LeftSize + 1)\n        return bt.GetValue();\n    return KthSmallest(bt.GetRight(), k - LeftSize - 1);\n}\npublic static int Size(BinNode<int> bt)\n{\n    if (bt == null) return 0;\n    return 1 + Size(bt.GetLeft()) + Size(bt.GetRight());\n}",
+        "checklist": [
+         "حساب عدد خلايا الشجرة الفرعية **اليسرى** فقط.",
+         "ثلاث حالات: في اليسار، الخلية نفسها، في اليمين.",
+         "عند النزول إلى اليمين نطرح من `k` عدد القيم التي تخطّيناها: `LeftSize + 1`.",
+         "عند النزول إلى اليسار يبقى `k` كما هو."
+        ],
+        "trace": {
+         "code": "public static int KthSmallest(BinNode<int> bt, int k)\n{\n    int LeftSize = Size(bt.GetLeft()); // عدد القيم الأصغر من قيمة الخلية\n    if (k <= LeftSize)\n        return KthSmallest(bt.GetLeft(), k);\n    if (k == LeftSize + 1)\n        return bt.GetValue();\n    return KthSmallest(bt.GetRight(), k - LeftSize - 1);\n}\npublic static int Size(BinNode<int> bt)\n{\n    if (bt == null) return 0;\n    return 1 + Size(bt.GetLeft()) + Size(bt.GetRight());\n}",
+         "given": "شجرة البحث التي بُنيت من القيم `[50,30,70,10,40,60,80]` بهذا الترتيب، والاستدعاء `KthSmallest(bt, 3)`.",
+         "out": "40\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `KthSmallest` مع `bt` = الخلية التي قيمتها `50`، `k = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}]]}],"h":[{"id":1,"k":"bin","v":"10","l":null,"r":null},{"id":2,"k":"bin","v":"40","l":null,"r":null},{"id":3,"k":"bin","v":"30","l":1,"r":2},{"id":4,"k":"bin","v":"60","l":null,"r":null},{"id":5,"k":"bin","v":"80","l":null,"r":null},{"id":6,"k":"bin","v":"70","l":4,"r":5},{"id":7,"k":"bin","v":"50","l":3,"r":6}]},
+{"l":3,"n":"`LeftSize = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]}]},
+{"l":4,"n":"الشرط `k <= LeftSize` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `KthSmallest` مع `bt` = الخلية التي قيمتها `30`، `k = 3`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"3"}]]}]},
+{"l":3,"n":"`LeftSize = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"1"}]]}]},
+{"l":4,"n":"الشرط `k <= LeftSize` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"الشرط `k == LeftSize + 1` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `KthSmallest` مع `bt` = الخلية التي قيمتها `40`، `k = 1`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"1"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":2}],["k",{"t":"v","s":"1"}]]}]},
+{"l":3,"n":"`LeftSize = 0`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"1"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":2}],["k",{"t":"v","s":"1"}],["LeftSize",{"t":"v","s":"0"}]]}]},
+{"l":4,"n":"الشرط `k <= LeftSize` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":6,"n":"الشرط `k == LeftSize + 1` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":7,"n":"العملية `KthSmallest` تُعيد `40`.","o":0},
+{"l":8,"n":"العملية `KthSmallest` تُعيد `40`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":3}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"1"}]]}]},
+{"l":5,"n":"العملية `KthSmallest` تُعيد `40`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]},{"name":"KthSmallest","vars":[["bt",{"t":"ref","id":7}],["k",{"t":"v","s":"3"}],["LeftSize",{"t":"v","s":"3"}]]}]},
+{"l":0,"n":"نطبع: `40`. انتهى التنفيذ.","o":3,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":7}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: عدد خلايا الشجرة الفرعية اليسرى، LeftSize، هو عدد القيم الأصغر من قيمة الخلية الحالية. إذن ترتيب قيمة الخلية هو LeftSize + 1. إذا كان k لا يزيد على LeftSize، فالقيمة المطلوبة واحدة من القيم الأصغر، أي في اليسار، وترتيبها هناك k نفسه. إذا كان k يساوي LeftSize + 1 فالقيمة المطلوبة هي قيمة الخلية الحالية. خلاف ذلك هي في اليمين. تخطّينا LeftSize + 1 قيم أصغر منها، فترتيبها في الشجرة الفرعية اليمنى هو k - LeftSize - 1."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m07-l08-p04-b25",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "للشجرة نفسها (القيم \u2066[10,30,40,50,60,70,80]\u2069): ماذا تُعيد \u2066KthSmallest(bt, 6)\u2069؟",
+        "answer": "70",
+        "feedback": {
+         "explanation": "عند الجذر \u206650\u2069: \u2066LeftSize = 3\u2069 و \u2066k = 6\u2069 أكبر من 4، فننزل يمينًا مع \u2066k = 2\u2069. عند \u206670\u2069: \u2066LeftSize = 1\u2069 و \u2066k = 2\u2069 يساوي \u2066LeftSize + 1\u2069، فتُعاد \u206670\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      }
+     ]
+    },
+    {
+     "id": "899271d-m07-l08-p05",
+     "title": "تدريبات الوحدة",
+     "order": 5,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
@@ -7790,7 +9939,7 @@ const m07: ContentModule = {
      ],
      "blocks": [
       {
-       "id": "m07-l08-p04-b01",
+       "id": "m07-l08-p05-b01",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7822,7 +9971,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b02",
+       "id": "m07-l08-p05-b02",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7869,7 +10018,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b03",
+       "id": "m07-l08-p05-b03",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7901,7 +10050,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b04",
+       "id": "m07-l08-p05-b04",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7915,7 +10064,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b05",
+       "id": "m07-l08-p05-b05",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7928,7 +10077,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b06",
+       "id": "m07-l08-p05-b06",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -7960,7 +10109,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b07",
+       "id": "m07-l08-p05-b07",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -7973,7 +10122,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b08",
+       "id": "m07-l08-p05-b08",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -8007,7 +10156,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b09",
+       "id": "m07-l08-p05-b09",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -8039,7 +10188,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b10",
+       "id": "m07-l08-p05-b10",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -8091,7 +10240,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b11",
+       "id": "m07-l08-p05-b11",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -8128,7 +10277,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b12",
+       "id": "m07-l08-p05-b12",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -8192,7 +10341,7 @@ const m07: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m07-l08-p04-b13",
+       "id": "m07-l08-p05-b13",
        "type": "practice",
        "reveal": true,
        "question": {
