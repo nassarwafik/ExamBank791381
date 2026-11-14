@@ -9,6 +9,7 @@
 const fs = require("fs");
 const path = require("path");
 const { loadDefaultTemplate: load794589Template, TEMPLATE_VERSION: V794589, buildUpgradedSnapshot: buildUpgraded794589 } = require("../project-794589-template");
+const { loadExamFormTemplate } = require("./exam-form");
 
 // Track metadata is owned here (the source of truth for track ids/titles/icons), independent of any
 // class snapshot, so the UI and reports can label tracks without hard-coding "book"/"packetTracer".
@@ -22,6 +23,8 @@ const DEFINITIONS = {
     ],
     legacyStorage: true,
     loadTemplate: () => load794589Template(),
+    // Phase F1 — this project ships an exam form («استمارة امتحان المشروع»): data file exam-form-template.json.
+    examForm: true,
     // 794589 keeps its original version-aware snapshot upgrade (a progress-free active class on an
     // older template is upgraded to the current version, audited, never reset). New projects declare
     // no policy (no migration needed).
@@ -109,6 +112,14 @@ function getSnapshotUpgradePolicy(projectCode) {
   return def && def.snapshotUpgrade ? def.snapshotUpgrade : null;
 }
 
+// Phase F1 — the bundled exam-form template of a project (validated, frozen), or null when the project ships none.
+// A project that declares a form but whose data file is missing or invalid throws: it is never treated as "no form".
+function getExamFormTemplate(projectCode) {
+  const def = DEFINITIONS[String(projectCode || "")];
+  if (!def) throw new Error("Unknown project code: " + projectCode);
+  return def.examForm ? loadExamFormTemplate(def.projectCode) : null;
+}
+
 // Storage namespace. 794589 => exact legacy paths (production data preserved). Others => isolated,
 // project-scoped paths so no two projects ever touch the same blob.
 function getStorageNamespace(projectCode) {
@@ -136,5 +147,6 @@ module.exports = {
   getProjectDefinition,
   getProjectMeta,
   getSnapshotUpgradePolicy,
+  getExamFormTemplate,
   getStorageNamespace
 };
