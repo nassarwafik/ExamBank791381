@@ -8,6 +8,7 @@
 //   2. STUDENT (a class with m02 and m05 published), unit 5: an NFA for «تنتهي بـ ab» — a wrong machine gets the separating word,
 //      the right one is recorded ONCE in the student's study document (the real route and the real generated indexes).
 //   3. axe-core (WCAG 2.1 A/AA), overflow and touch targets at 390 (touch) and 1440, light and «داكن», on a designer.
+//   4. AUTO-A3b — TEACHER, unit 7: the complement «لا تحوي ab» built as a complete DFA → «✓ آلتك صحيحة» from the real server.
 //
 // Tools are measuring instruments, not project dependencies: PLAYWRIGHT_CORE_DIR (or the global `playwright`), AXE_CORE_DIR,
 // CHROMIUM_PATH. SHOT_DIR (optional) receives screenshots. Exit 1 when a check fails, 2 when a tool or the build is missing.
@@ -179,6 +180,22 @@ for (const v of [{ width: 390, height: 844, touch: true }, { width: 1440, height
     }
     await ctx.close();
   }
+}
+
+console.log("4. teacher: the unit-7 complement exercise (AUTO-A3b)");
+{
+  const { ctx, page } = await session("teacher", { width: 1280, height: 900 });
+  await opens(page, "899271-m07-l03-p02");
+  const d = await ready(page, "لا تحوي التسلسل ab");
+  for (let i = 0; i < 2; i++) await d.getByRole("button", { name: /إضافة حالة/ }).click();
+  await d.getByRole("checkbox", { name: "قبول" }).nth(0).check();
+  await d.getByRole("checkbox", { name: "قبول" }).nth(1).check();
+  for (const [from, sym, to] of [["q0", "a", "q1"], ["q0", "b", "q0"], ["q1", "a", "q1"], ["q1", "b", "q2"], ["q2", "a", "q2"], ["q2", "b", "q2"]]) await d.getByRole("combobox", { name: "من " + from + " بالرمز " + sym + " إلى" }).selectOption(to);
+  await d.getByRole("button", { name: "تحقّق من الآلة" }).click();
+  await d.locator(".learning-autodesign-verdict.is-right").waitFor({ timeout: 10000 });
+  check((await d.locator(".learning-autodesign-verdict").textContent()).includes("آلتك صحيحة"), "the complement machine is judged right by the real server");
+  await shot(page, "a3b-unit7-1280");
+  await ctx.close();
 }
 
 await browser.close(); server.close();

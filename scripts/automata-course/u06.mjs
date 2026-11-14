@@ -1,5 +1,5 @@
 // Unit 6 — اللغات المنتظمة وغير المنتظمة، وبرهان عدم الانتظام (اللقاء 3، الشرائح 3–5 و 37–53).
-import { VIS, P, H, DEF, NOTE, REM, OL, EX, CLAR, SIM, MC, TF, CLASSIFY, ORDER, WORDS, GUIDED, dfa } from "./dsl.mjs";
+import { VIS, P, H, DEF, NOTE, REM, OL, EX, CLAR, SIM, MC, TF, CLASSIFY, ORDER, WORDS, GUIDED, dfa, DESIGN } from "./dsl.mjs";
 
 const anbn = max => w => { const m = /^(a*)(b*)$/.exec(w); return !!m && m[1].length === m[2].length && m[1].length <= max; };
 // a^n b^n for 0 ≤ n ≤ 3 — a finite language: a DFA must spend states on every count it remembers
@@ -117,6 +117,26 @@ export default {
             MC("في أي حالة يكون الأوتومات أعلاه بعد قراءة aaab؟", ["*p2", "q3", "p1", "t"], "q0 -a→ q1 -a→ q2 -a→ q3 -b→ p2: بقي b اثنان لإكمال aaabbb.", { prove: { type: "finalState", word: "aaab", expect: "p2" } }),
             MC("لماذا لا يمكن تمديد الأوتومات أعلاه ليقبل aⁿbⁿ لكل n؟", ["*لأنه يحتاج حالة لكل عدد ممكن من a، أي عددًا غير منتهٍ من الحالات", "لأن الأبجدية فيها رمزان", "لأن فيه حالة مصيدة", "لأن q0 حالة قبول"], "هذا جوهر البرهان: الأوتومات المنتهي لا يتذكّر عددًا غير محدود."),
             ORDER("رتّب أول خطوات البرهان بالتناقض:", ["نفرض أن اللغة منتظمة ويوجد أوتومات حتمي A يقبلها", "نختار مجموعة غير منتهية W من البادئات", "توجد كلمتان مختلفتان في W تصلان إلى الحالة نفسها", "نُلحق بهما لاحقة واحدة: واحدة في اللغة والأخرى ليست فيها", "نصل إلى تناقض"], "هذا ترتيب القالب."),
+            DESIGN({
+              title: "صمّم الآلة: عدد ab يساوي عدد ba",
+              intro: "اللغة L فوق `{a, b}`: كل الكلمات التي عدد مرات ظهور التسلسل `ab` فيها يساوي عدد مرات ظهور التسلسل `ba`. تبدو كأنها تحتاج عدًّا — لكنها منتظمة! صمّم لها أوتومات منتهيًا حتميًا كاملًا.",
+              machine: "DFA", alphabet: ["a", "b"], maxStates: 6, complete: true,
+              accept: ["", "a", "aba", "abba", "bab"], reject: ["ab", "ba", "aab", "abb"],
+              reference: dfa({ states: ["s", "a1", "a2", "b1", "b2"], alphabet: ["a", "b"], start: "s", accept: ["s", "a1", "b1"], t: ["s a a1", "s b b1", "a1 a a1", "a1 b a2", "a2 b a2", "a2 a a1", "b1 b b1", "b1 a b2", "b2 a b2", "b2 b b1"] }),
+              lang: w => { const occ = sub => { let n = 0; for (let i = 0; i + 2 <= w.length; i++) if (w.startsWith(sub, i)) n++; return n; }; return occ("ab") === occ("ba"); }, langMax: 9,
+              hints: ["جرّب كلمات قصيرة: متى يكون عدد ab مساويًا لعدد ba؟ قارن الرمز الأول بالرمز الأخير.", "كل انتقال من a إلى b يضيف ab، وكل انتقال من b إلى a يضيف ba — فهما يتناوبان."],
+              explanation: "عدد ab يساوي عدد ba بالضبط عندما تكون الكلمة فارغة أو يكون رمزها الأول هو رمزها الأخير، لأن التغيّرات بين a و b تتناوب. يكفي أن تتذكّر الآلة الرمز الأول والرمز الأخير: حالة البداية (قبول) وأربع حالات: (بدأت بـ a / بـ b) × (آخر رمز مثل الأول أم لا). اللغة منتظمة رغم أنها تبدو كعدّ.",
+            }),
+            DESIGN({
+              title: "صمّم الآلة: aⁿbⁿ حتى n = 2",
+              intro: "اللغة المنتهية `L = {ab, aabb}` (أي aⁿbⁿ لـ n = 1 أو 2 فقط) فوق `{a, b}`. صمّم لها أوتومات منتهيًا حتميًا كاملًا.",
+              machine: "DFA", alphabet: ["a", "b"], maxStates: 8, complete: true,
+              accept: ["ab", "aabb"], reject: ["", "a", "aab", "abab", "aaabbb"],
+              reference: dfa({ states: ["p0", "p1", "p2", "p3", "p4", "p5", "T"], alphabet: ["a", "b"], start: "p0", accept: ["p3", "p5"], t: ["p0 a p1", "p0 b T", "p1 a p2", "p1 b p3", "p2 a T", "p2 b p4", "p3 a,b T", "p4 a T", "p4 b p5", "p5 a,b T", "T a,b T"] }),
+              lang: w => w === "ab" || w === "aabb", langMax: 8,
+              hints: ["كل لغة منتهية منتظمة: حالة لكل بادئة لكلمة من اللغة.", "البادئات: ε، a، aa، ab، aab، aabb — ثم حالة مصيدة لكل ما عداها."],
+              explanation: "حالة لكل بادئة من بادئات ab و aabb: ε، a، aa، ab (قبول)، aab، aabb (قبول)، وحالة مصيدة: 7 حالات. أما aⁿbⁿ لكل n فتحتاج حالة لكل عدد — ولذلك هي غير منتظمة.",
+            }),
           ],
         },
       ],
