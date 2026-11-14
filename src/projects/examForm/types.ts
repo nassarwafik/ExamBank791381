@@ -31,6 +31,9 @@ export type ExamFormQuestion = {
 
 export type ExamFormSection = { sectionId: string; title: string; order: number; questions: ExamFormQuestion[] };
 
+/** Phase F4 — one image the student attached to a question. The server writes these references; the page never does. */
+export type ExamFormImageRef = { id: string; width: number; height: number; bytes: number; addedAt?: string };
+
 /** One stored answer. Which fields it carries depends on the question's kind. */
 export type ExamFormAnswer = {
   text?: string;
@@ -43,6 +46,7 @@ export type ExamFormAnswer = {
   values?: Record<string, number>;
   checked?: string[];
   accepted?: boolean;
+  images?: ExamFormImageRef[];
 };
 
 export type ExamFormAnswers = Record<string, ExamFormAnswer>;

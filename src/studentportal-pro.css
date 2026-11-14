@@ -296,6 +296,21 @@
 .eb-sp-form-table td[data-label]::before{ content:attr(data-label); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
 .eb-sp-form-steps{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--eb-space-2); }
 .eb-sp-form-steps .eb-button{ min-height:44px; }
+/* Phase F4-UI — the images of a question: thumbnails, the attach button (its file input is visually hidden, so the box is
+   the containing block and the page never scrolls sideways), and one image enlarged to the question's width. */
+.eb-sp-form-images{ position:relative; display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-sp-form-images-count,.eb-sp-form-images-state{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+.eb-sp-form-images-list{ margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:var(--eb-space-2); min-width:0; }
+.eb-sp-form-image{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--eb-space-1); min-width:0; max-inline-size:100%; padding:var(--eb-space-2); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
+.eb-sp-form-image .eb-button{ min-height:44px; }
+.eb-sp-form-image-view{ display:block; max-inline-size:100%; padding:0; background:none; border:0; border-radius:var(--eb-r-sm); cursor:zoom-in; }
+.eb-sp-form-image-view img{ display:block; inline-size:auto; block-size:7rem; max-inline-size:100%; object-fit:contain; border-radius:var(--eb-r-sm); }
+.eb-sp-form-image-view.is-large{ cursor:zoom-out; }
+.eb-sp-form-image-view.is-large img{ block-size:auto; }
+.eb-sp-form-image-wait{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); min-block-size:7rem; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.eb-sp-form-images-add{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-sp-form-images-add .eb-button{ min-height:44px; }
+.eb-sp-form-images-hint{ font-size:var(--eb-fs-12); }
 .eb-sp-form-missing p{ margin:0; }
 .eb-sp-form-missing ul{ margin:var(--eb-space-2) 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 @media (min-width: 768px){

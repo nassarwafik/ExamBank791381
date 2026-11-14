@@ -1,6 +1,7 @@
 // Phase F2-UI — the student's project exam form («استمارة امتحان المشروع»): one section at a time, every answer saved as
 // the student goes (no time limit), resumed where they stopped, submitted once. After the submit, or while the teacher
 // keeps the form closed, the page is a read-only record of the answers.
+// Phase F4-UI — where the teacher switched image answers on for the class, image questions take images (ExamFormImages).
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProgressBar from "../../ui/ProgressBar";
 import StatusBadge from "../../ui/StatusBadge";
@@ -8,6 +9,7 @@ import { IconChevronBack } from "../../icons";
 import { useConfirm } from "../../ui/useConfirm";
 import SaveStatus from "../../student/exam/SaveStatus";
 import QuestionInput from "./QuestionInput";
+import type { ExamFormImageTools } from "./ExamFormImages";
 import { useExamFormDraft } from "./useExamFormDraft";
 import type { ExamFormSection, ExamFormView } from "./types";
 
@@ -93,6 +95,15 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
   const status = statusOf(view);
   const reason = lockReason(view);
   const last = index === sections.length - 1;
+  // Image questions take images only where the server says the class has them on; otherwise they stay a notice.
+  const imageTools: ExamFormImageTools | undefined = draft.imagesOn
+    ? { token, projectCode, add: draft.addImage, remove: draft.removeImage,
+      confirmRemove: () => confirm({ title: "حذف الصورة", message: "ستُحذف هذه الصورة من إجابتك. يمكنك إرفاق صورة أخرى بعدها.", confirmLabel: "حذف الصورة", tone: "danger" }) }
+    : undefined;
+  const deferredNote = view.progress.deferred === 0 ? ""
+    : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات. إرفاقها سيتاح قريبًا، وهي لا تمنع التسليم الآن."
+      : (view.progress.deferred === 1 ? "سؤال واحد يحتاج ملفًا" : view.progress.deferred === 2 ? "سؤالان يحتاجان ملفات" : view.progress.deferred + " أسئلة تحتاج ملفات")
+        + ". إرفاق الملفات سيتاح قريبًا، وهذا لا يمنع التسليم الآن.";
   const missingSections = sections.map((s, i) => ({ index: i, title: s.title, count: s.questions.filter(q => missing.has(q.questionId)).length })).filter(s => s.count > 0);
 
   async function submit() {
@@ -130,9 +141,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
       {submitted && <p className="platform-notice assignment-inline-message" role="status">تم تسليم الاستمارة.</p>}
       {draft.notice && !reason && <p className="platform-notice assignment-inline-message" role="status">{draft.notice}</p>}
       {draft.error && <p className="platform-error assignment-inline-message" role="alert">{draft.error}</p>}
-      {view.progress.deferred > 0 && !draft.locked && (
-        <p className="eb-muted eb-sp-form-note">{view.progress.deferred} سؤالًا تحتاج صورًا أو ملفات. إرفاقها سيتاح قريبًا، وهي لا تمنع التسليم الآن.</p>
-      )}
+      {deferredNote && !draft.locked && <p className="eb-muted eb-sp-form-note">{deferredNote}</p>}
 
       <nav className="eb-sp-form-sections" aria-label="أقسام الاستمارة" ref={sectionsRef}>
         {sections.map((s, i) => {
@@ -158,7 +167,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
               <div className="eb-sp-form-question-body">
                 {question.help && <p className="eb-muted eb-sp-form-help">{question.help}</p>}
                 <QuestionInput question={question} answer={draft.answers[question.questionId]} disabled={draft.locked}
-                  onChange={answer => draft.setAnswer(question.questionId, answer)} />
+                  onChange={answer => draft.setAnswer(question.questionId, answer)} images={imageTools} />
                 {flagged && <p className="eb-sp-form-missing-mark">هذا السؤال إلزامي ولم يكتمل بعد.</p>}
               </div>
             </fieldset>

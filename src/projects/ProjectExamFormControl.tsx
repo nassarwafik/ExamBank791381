@@ -1,11 +1,14 @@
 // Phase F2-UI — the teacher's control for the project exam form of one class: its state and the one action that opens or
 // closes it. Shown only for a project that ships a form. Following the answers and marking them is a later phase (F3).
+// Phase F4-UI — image answers. A class opened for the first time from here has them on (the owner's decision); a class
+// opened before keeps them off until its teacher switches them on with «تفعيل أسئلة الصور». The switch never goes back
+// off (the server refuses it), and it is offered only on an open form: the same action would reopen a closed one.
 import { useEffect, useRef, useState } from "react";
 import { trackerGet, trackerPost } from "./api";
 import StatusBadge from "../ui/StatusBadge";
 import { useConfirm } from "../ui/useConfirm";
 
-type ExamFormState = { hasForm?: boolean; state?: "none" | "open" | "closed"; summary?: { sections?: number; questions?: number } };
+type ExamFormState = { hasForm?: boolean; state?: "none" | "open" | "closed"; imageAnswers?: boolean; summary?: { sections?: number; questions?: number } };
 type Props = {
   token: string; projectCode: string; classId: string;
   /** An archived class, or a teacher without the manage capability: the state is shown, the action is not. */
@@ -44,23 +47,41 @@ export default function ProjectExamFormControl({ token, projectCode, classId, re
   const state = form.state === "open" || form.state === "closed" ? form.state : "none";
   const badge = BADGE[state];
   const opening = state !== "open";
+  const imagesOn = form.imageAnswers === true;
 
   async function toggle() {
     const ok = await confirm(opening
       ? { title: "فتح استمارة الامتحان للصف", confirmLabel: "فتح الاستمارة",
         message: state === "none"
-          ? "ستظهر الاستمارة لكل طلاب الصف داخل مشروعهم، ويعبّئونها متى شاؤوا بلا وقت محدد. تُثبَّت أسئلتها لهذا الصف عند أول فتح."
+          ? "ستظهر الاستمارة لكل طلاب الصف داخل مشروعهم، ويعبّئونها متى شاؤوا بلا وقت محدد. تُثبَّت أسئلتها لهذا الصف عند أول فتح. أسئلة الصور مفعّلة: يرفق الطالب فيها صورًا من مشروعه."
           : "سيتابع الطلاب التعبئة والتسليم من جديد. الأسئلة والإجابات المحفوظة تبقى كما هي." }
       : { title: "إغلاق استمارة الامتحان", confirmLabel: "إغلاق الاستمارة", tone: "danger",
         message: "لن يستطيع الطلاب الحفظ أو التسليم حتى تفتحها من جديد. إجاباتهم المحفوظة تبقى كما هي." });
     if (!ok) return;
     setBusy(true); setNotice(""); setError("");
     try {
-      const r = await trackerPost<{ examForm?: ExamFormState }>(token, projectCode, { action: opening ? "examForm.open" : "examForm.close", classId });
+      // The first open of a class switches its image answers on; a reopen leaves the class as it is.
+      const r = await trackerPost<{ examForm?: ExamFormState }>(token, projectCode, { action: opening ? "examForm.open" : "examForm.close", classId, ...(state === "none" ? { imageAnswers: true } : {}) });
       if (r.examForm && r.examForm.hasForm === true) setForm(r.examForm);
       setNotice(opening ? "فُتحت الاستمارة لطلاب الصف." : "أُغلقت الاستمارة.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذر تغيير حالة الاستمارة.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enableImages() {
+    const ok = await confirm({ title: "تفعيل أسئلة الصور", confirmLabel: "تفعيل",
+      message: "سيرفق طلاب الصف صورًا من مشروعهم في أسئلة الصور، والإلزامي منها يصبح شرطًا للتسليم. الاستمارات التي سُلّمت تبقى مسلَّمة. لا يمكن إلغاء التفعيل بعد ذلك." });
+    if (!ok) return;
+    setBusy(true); setNotice(""); setError("");
+    try {
+      const r = await trackerPost<{ examForm?: ExamFormState }>(token, projectCode, { action: "examForm.open", classId, imageAnswers: true });
+      if (r.examForm && r.examForm.hasForm === true) setForm(r.examForm);
+      setNotice("فُعّلت أسئلة الصور لطلاب الصف.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذر تفعيل أسئلة الصور.");
     } finally {
       setBusy(false);
     }
@@ -74,7 +95,15 @@ export default function ProjectExamFormControl({ token, projectCode, classId, re
           {form.summary && form.summary.sections && form.summary.questions ? <><span dir="ltr">{form.summary.sections}</span> قسمًا و<span dir="ltr">{form.summary.questions}</span> سؤالًا. </> : null}
           يجيب كل طالب عن مشروعه هو، بلا وقت محدد، ويسلّم مرة واحدة.
         </p>
+        {state !== "none" && (
+          <p className="eb-muted" data-testid="project-exam-form-images">
+            {imagesOn ? "أسئلة الصور مفعّلة: يرفق الطلاب صورًا من مشروعهم." : "أسئلة الصور غير مفعّلة لهذا الصف: لا يُطلب من الطلاب إرفاق صور."}
+          </p>
+        )}
       </div>
+      {!readOnly && state === "open" && !imagesOn && (
+        <button type="button" className="eb-button" disabled={busy} onClick={() => void enableImages()}>تفعيل أسئلة الصور</button>
+      )}
       {!readOnly && (
         <button type="button" className={"eb-button" + (opening ? " is-primary" : "")} disabled={busy} onClick={() => void toggle()}>
           {opening ? "فتح الاستمارة للصف" : "إغلاق الاستمارة"}
