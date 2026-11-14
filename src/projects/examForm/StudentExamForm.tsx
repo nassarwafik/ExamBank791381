@@ -94,7 +94,10 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
 
   async function submit() {
     setSubmitError("");
-    if (missing.size && draft.saveKind === "saved") { setShowMissing(true); return; }
+    // Edits not saved yet go first, so the missing list is the server's own, of the answers as they are now: a form that
+    // cannot be submitted lists what is missing instead of asking for a confirmation.
+    const fresh = await draft.saveNow();
+    if (fresh && fresh.progress.missing.length) { setShowMissing(true); return; }
     if (!(await confirm({ title: "تسليم الاستمارة", message: "بعد التسليم لا يمكنك تعديل إجاباتك إلا إذا أعادها المعلم إليك.", confirmLabel: "تسليم" }))) return;
     const outcome = await draft.submit();
     if (outcome.ok) { setShowMissing(false); setSubmitted(true); return; }

@@ -260,6 +260,23 @@ describe("F2-UI submitting", () => {
     expect(s.doc()?.status).toBe("draft");
   });
 
+  it("an edit made just before «تسليم» is counted: the missing list is of the answers as they are now, with no confirmation", async () => {
+    const s = server();
+    await s.teacher("examForm.open");
+    const all = Object.fromEntries(ANSWERABLE.map(q => [q.questionId, fullAnswer(q)]));
+    await s.save(all, 0);                                                       // complete
+    render(<StudentExamForm token="st" projectCode={CODE} onClose={() => {}} saveDelayMs={60000} />);   // the pause never elapses
+    await screen.findByRole("heading", { name: /بطاقة المشروع/ });
+    fireEvent.change(within(questionBox("S01Q01")).getByRole("textbox"), { target: { value: "" } });   // now one required answer is empty
+    goTo(/المرفقات والتسليم/);
+    fireEvent.click(screen.getByRole("button", { name: "تسليم الاستمارة" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("أكمل الأسئلة الإلزامية قبل التسليم (1)");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(s.doc()?.status).toBe("draft");
+    expect(s.doc()?.answers.S01Q01).toBeUndefined();
+  });
+
   it("a complete form asks once, is submitted, and becomes a read-only record", async () => {
     const s = server();
     await s.teacher("examForm.open");

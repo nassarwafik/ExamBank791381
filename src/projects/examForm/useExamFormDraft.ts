@@ -38,6 +38,8 @@ export type ExamFormDraft = {
   notice: string;
   error: string;
   submitting: boolean;
+  /** Sends the edits not saved yet and answers with the server's latest view (null when the form is not available). */
+  saveNow: () => Promise<ExamFormView | null>;
   submit: () => Promise<SubmitOutcome>;
   reload: () => Promise<void>;
 };
@@ -68,10 +70,12 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
   const running = useRef<Promise<void> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const disposed = useRef(false);
+  const latest = useRef<ExamFormView | null>(null);                     // the last view the server sent
 
   // The server's view becomes the page's; edits still pending here stay on top of its answers.
   const adopt = useCallback((next: ExamFormView) => {
     base.current = next.revision;
+    latest.current = next;
     locked.current = isLocked(next);
     if (locked.current) dirty.current = new Map();
     const merged: ExamFormAnswers = { ...next.answers };
@@ -164,6 +168,8 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
     timer.current = setTimeout(() => { timer.current = null; void flush(); }, saveDelayMs);
   }, [flush, saveDelayMs]);
 
+  const saveNow = useCallback(async () => { await flush(); return latest.current; }, [flush]);
+
   const submit = useCallback(async (): Promise<SubmitOutcome> => {
     setSubmitting(true);
     try {
@@ -214,6 +220,6 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
     view, unavailable, loading, loadError, answers, locked: isLocked(view), setAnswer,
     saveKind: deriveSaveState({ localRevision, savedRevision, saving, retrying, errorExhausted, online }),
     lastSavedAt, retrySave: () => { setErrorExhausted(false); void flush(); },
-    notice, error, submitting, submit, reload
+    notice, error, submitting, saveNow, submit, reload
   };
 }
