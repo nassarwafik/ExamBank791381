@@ -80,8 +80,16 @@ const HEADER = (what) => `// Learning Materials — «${COURSE.title}» (course 
 // "teacher-enrichment".
 `;
 
-/** JSON for a generated source file: the invisible isolates are written as escapes, so a reviewer sees them. */
-const json = (v, indent) => JSON.stringify(v, null, indent).replaceAll(LRI, "\\u2066").replaceAll(PDI, "\\u2069");
+/**
+ * JSON for a generated source file: the invisible isolates are written as escapes, so a reviewer sees them; and the recorded steps
+ * of a trace are written one step per line (a step is a snapshot of nested frames and objects: indented, a trace would be pages).
+ */
+function json(v, indent) {
+  const steps = [];
+  const text = JSON.stringify(v, (key, value) => (key === "steps" && Array.isArray(value) && value.length && "l" in value[0] ? "__STEPS_" + (steps.push(value) - 1) + "__" : value), indent);
+  return text.replace(/"__STEPS_(\d+)__"/g, (_, i) => "[\n" + steps[Number(i)].map(st => JSON.stringify(st)).join(",\n") + "\n]")
+    .replaceAll(LRI, "\\u2066").replaceAll(PDI, "\\u2069");
+}
 
 /** The files the course consists of: path → text. */
 export function render() {
