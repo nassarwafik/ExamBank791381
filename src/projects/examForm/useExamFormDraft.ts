@@ -84,10 +84,10 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
   }, []);
 
   const reload = useCallback(async () => {
-    setLoadError("");
     try {
       const next = await fetchExamForm(token, projectCode);
       if (disposed.current) return;
+      setLoadError("");
       if (next) adopt(next);
       else { locked.current = true; dirty.current = new Map(); setView(null); setUnavailable(true); }
     } catch (e) {
@@ -183,7 +183,9 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
 
   useEffect(() => {
     disposed.current = false;
-    void reload();
+    // The first load starts after this effect returns (a microtask), like every later reload: it is never a synchronous
+    // state change of the effect itself.
+    queueMicrotask(() => { if (!disposed.current) void reload(); });
     return () => {
       disposed.current = true;
       if (timer.current) clearTimeout(timer.current);

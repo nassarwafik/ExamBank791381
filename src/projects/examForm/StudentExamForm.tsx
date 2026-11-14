@@ -1,7 +1,7 @@
 // Phase F2-UI — the student's project exam form («استمارة امتحان المشروع»): one section at a time, every answer saved as
 // the student goes (no time limit), resumed where they stopped, submitted once. After the submit, or while the teacher
 // keeps the form closed, the page is a read-only record of the answers.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ProgressBar from "../../ui/ProgressBar";
 import StatusBadge from "../../ui/StatusBadge";
 import { IconChevronBack } from "../../icons";
@@ -44,15 +44,29 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
   const { view } = draft;
   const sections = useMemo(() => (view ? view.form.sections : []), [view]);
   const missing = useMemo(() => new Set(view ? view.progress.missing : []), [view]);
-  const [current, setCurrent] = useState(-1);
+  const [current, setCurrent] = useState<number | null>(null);
   const [showMissing, setShowMissing] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  // The first time the form arrives, open it where the student stopped.
+  // The first time the form arrives, open it where the student stopped. State adjusted during render (once), so the first
+  // section never flashes by; later saves do not move the page.
+  if (view && current === null) setCurrent(resumeIndex(view.form.sections, new Set(view.progress.missing)));
+
+  // Moving to another section brings its title (and its chip in the section row) into view and takes the focus there,
+  // so «القسم التالي» at the bottom of a long section continues from the top of the next one.
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const sectionsRef = useRef<HTMLElement | null>(null);
+  const moved = useRef(false);
+  function go(next: number) { moved.current = true; setCurrent(next); }
   useEffect(() => {
-    if (view && current < 0) setCurrent(resumeIndex(view.form.sections, new Set(view.progress.missing)));
-  }, [view, current]);
+    if (!moved.current) return;
+    moved.current = false;
+    const heading = headingRef.current;
+    if (heading) { if (typeof heading.scrollIntoView === "function") heading.scrollIntoView({ block: "start" }); heading.focus({ preventScroll: true }); }
+    const chip = sectionsRef.current ? sectionsRef.current.querySelector<HTMLElement>('[aria-current="step"]') : null;
+    if (chip && typeof chip.scrollIntoView === "function") chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [current]);
 
   const back = (
     <button type="button" className="eb-button is-quiet eb-sp-form-back" onClick={onClose}>
@@ -71,7 +85,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
     );
   }
 
-  const index = current < 0 ? 0 : current;
+  const index = current ?? 0;
   const section = sections[index];
   const status = statusOf(view);
   const reason = lockReason(view);
@@ -104,11 +118,11 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
         <p className="eb-muted eb-sp-form-note">{view.progress.deferred} سؤالًا تحتاج صورًا أو ملفات. إرفاقها سيتاح قريبًا، وهي لا تمنع التسليم الآن.</p>
       )}
 
-      <nav className="eb-sp-form-sections" aria-label="أقسام الاستمارة">
+      <nav className="eb-sp-form-sections" aria-label="أقسام الاستمارة" ref={sectionsRef}>
         {sections.map((s, i) => {
           const left = s.questions.filter(q => missing.has(q.questionId)).length;
           return (
-            <button key={s.sectionId} type="button" className="eb-chip-button" aria-current={i === index ? "step" : undefined} onClick={() => setCurrent(i)}>
+            <button key={s.sectionId} type="button" className="eb-chip-button" aria-current={i === index ? "step" : undefined} onClick={() => go(i)}>
               <span dir="ltr">{s.order}</span> {s.title}{left === 0 ? " · مكتمل" : ""}
             </button>
           );
@@ -116,7 +130,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
       </nav>
 
       <div className="eb-sp-form-section">
-        <h3 className="eb-sp-form-section-title"><span dir="ltr">{section.order}</span>. {section.title}</h3>
+        <h3 className="eb-sp-form-section-title" ref={headingRef} tabIndex={-1}><span dir="ltr">{section.order}</span>. {section.title}</h3>
         {section.questions.map((question, qi) => {
           const flagged = showMissing && missing.has(question.questionId);
           return (
@@ -135,8 +149,8 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
       </div>
 
       <div className="eb-sp-form-steps">
-        <button type="button" className="eb-button" disabled={index === 0} onClick={() => setCurrent(index - 1)}>القسم السابق</button>
-        {!last && <button type="button" className="eb-button is-primary" onClick={() => setCurrent(index + 1)}>القسم التالي</button>}
+        <button type="button" className="eb-button" disabled={index === 0} onClick={() => go(index - 1)}>القسم السابق</button>
+        {!last && <button type="button" className="eb-button is-primary" onClick={() => go(index + 1)}>القسم التالي</button>}
         {last && !draft.locked && <button type="button" className="eb-button is-primary" disabled={draft.submitting} onClick={() => void submit()}>{draft.submitting ? "جارٍ التسليم..." : "تسليم الاستمارة"}</button>}
       </div>
 
@@ -145,7 +159,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
           <p>أكمل الأسئلة الإلزامية قبل التسليم ({missing.size}):</p>
           <ul>
             {missingSections.map(s => (
-              <li key={s.index}><button type="button" className="eb-button is-small" onClick={() => setCurrent(s.index)}>{s.title} ({s.count})</button></li>
+              <li key={s.index}><button type="button" className="eb-button is-small" onClick={() => go(s.index)}>{s.title} ({s.count})</button></li>
             ))}
           </ul>
         </div>

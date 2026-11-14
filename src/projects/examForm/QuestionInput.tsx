@@ -36,7 +36,7 @@ function TableInput({ question, answer, disabled, onChange }: Props) {
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {columns.map(c => (
-                <td key={c.id}>
+                <td key={c.id} data-label={c.title}>
                   <input type="text" className="eb-sp-form-cell" dir="auto" maxLength={300} disabled={disabled} value={row[c.id] || ""}
                     aria-label={c.title + " — الصف " + (rowIndex + 1)} onChange={e => setCell(rowIndex, c.id, e.target.value)} />
                 </td>
