@@ -187,7 +187,10 @@ const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
 // change (a body bundled again, the visuals packed into one chunk, the table of contents carrying page bodies).
 // readerFirstLoad 40 → 41 KB by the owner (AUTO-A2, 2026-11-13): main stood at 40,942 / 40,960 B and every new activity / course adds
 // its registry lines to the Reader's first load (docs/enterprise-automata-course-a2.md §7).
-export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 41, manifest: 15, visualGroup: 9, visualsTotal: 75 });
+// readerFirstLoad 41 → 42 KB by the owner (DS-A4, 2026-11-14, «رفع الحد موافق عليه»): after the data-structures course (four activity
+// registry entries) and the result-line fix, main stood at 41,916 / 41,984 B — 68 bytes of room, so the next Reader change of any
+// phase would have failed for its size alone (docs/enterprise-data-structures-course.md §10).
+export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 42, manifest: 15, visualGroup: 9, visualsTotal: 75 });
 // 899371 enrichment P11 (docs/enterprise-899371-enrichment-plan.md §7.3) — the scene engine's own lazy chunk, gzip KB (measured 4.0).
 export const SCENE_ENGINE_GZIP_BUDGET_KB = 8;
 // The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`, and for the summary
