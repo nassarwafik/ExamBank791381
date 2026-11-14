@@ -635,7 +635,7 @@ export default {
             CS(BUILD(10)),
             NOTE("لاحظ", "رأس السلسلة لم يتغيّر منذ لحظة إنشائه. وذلك لأنّ السلسلة تُعرف بالمؤشّر على بدايتها، أي على رأسها."),
             TRACE({ title: "بناء السلسلة `[1,2,3,4]` بالحلقة", code: inMain(BUILD(4).trim()), description: "الحلقة هنا حتى 4 بدل 10 ليبقى التتبّع قصيرًا. راقب `Last`: يتقدّم دائمًا إلى آخر خلية، و `Head` ثابت." }),
-            LAB("chain", { values: [13, 15], name: "Head", title: "جرّب: ابنِ سلسلة", description: "اضغط «p = Head» ثم «p = p.GetNext()» لتصل إلى آخر خلية، ثم اكتب قيمة واضغط «أدخِل بعد p». المؤشّر `p` يقوم هنا بدور `Last`." }),
+            LAB("chain", { values: [13, 15], name: "Head", title: "جرّب: ابنِ سلسلة", description: "اضغط `p = Head` ثم `p = p.GetNext()` لتصل إلى آخر خلية، ثم اكتب قيمة واضغط «أدخِل بعد p». المؤشّر `p` يقوم هنا بدور `Last`." }),
             XCS("Node Head = new Node(5, new Node(8, new Node(2)));\nConsole.Write(Head.GetNext().GetNext().GetValue());"),
             proved(MC("ماذا يطبع المقطع أعلاه؟", ["5", "8", "*2", "خطأ في التشغيل"], "السلسلة هي `[5,8,2]`. `Head.GetNext()` هي الخلية 8، و `Head.GetNext().GetNext()` هي الخلية 2."),
               { code: inMain("Node Head = new Node(5, new Node(8, new Node(2)));\nConsole.Write(Head.GetNext().GetNext().GetValue());"), out: "2" }),

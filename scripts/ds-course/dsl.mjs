@@ -74,7 +74,7 @@ export const XOUT = text => enr({ type: "code", language: "text", dir: "ltr", co
 /** A class table of the book: rows [signature, description] (+ the efficiency when given). */
 export const API = (name, rows, opts = {}) => {
   const eff = rows.some(r => r.length > 2);
-  return TABLE(eff ? ["العملية", "الوصف", "النجاعة"] : ["العملية", "الوصف"], rows.map(r => (eff ? [r[0], r[1], r[2] ?? ""] : [r[0], r[1]])), { caption: opts.caption ?? "واجهة الفئة " + name, ltr: eff ? [0, 2] : [0] });
+  return TABLE(eff ? ["العملية", "الوصف", "النجاعة"] : ["العملية", "الوصف"], rows.map(r => (eff ? [r[0], r[1], r[2] ?? ""] : [r[0], r[1]])), { caption: opts.caption ?? "واجهة الفئة `" + name.replaceAll("`", "") + "`", ltr: eff ? [0, 2] : [0] });
 };
 
 // ── programs ──────────────────────────────────────────────────────────────────────────────────────────────────────────

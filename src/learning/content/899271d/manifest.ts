@@ -16,10 +16,1038 @@ const manifest: LearningCourseManifest = {
   "direction": "rtl",
   "modules": [
     {
+      "id": "899271d-m00",
+      "title": "المقدّمة: ما مبنى المعطيات؟",
+      "shortTitle": "المقدّمة",
+      "order": 1,
+      "lessons": [
+        {
+          "id": "899271d-m00-l01",
+          "title": "ما مبنى المعطيات؟",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m00-l01-p01",
+              "title": "مبنى المعطيات ومهمّة المبرمج",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 5,
+                "sourceNote": "المقدّمة · ص 5"
+              },
+              "keywords": [
+                "مبنى معطيات",
+                "مبنى معلومات",
+                "مصفوفة",
+                "شجرة",
+                "راصّة",
+                "دور"
+              ]
+            },
+            {
+              "id": "899271d-m00-l01-p02",
+              "title": "مبنى محدَّد ومبنى مجرَّد",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 5,
+                "pdfPageEnd": 6,
+                "sourceNote": "المقدّمة · ص 5–6"
+              },
+              "keywords": [
+                "CDT",
+                "ADT",
+                "مبنى مجرّد",
+                "واجهة الاستعمال"
+              ]
+            },
+            {
+              "id": "899271d-m00-l01-p03",
+              "title": "خريطة المادة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 6,
+                "sourceNote": "المقدّمة · ص 6"
+              },
+              "keywords": [
+                "خريطة",
+                "فصول الكتاب"
+              ]
+            },
+            {
+              "id": "899271d-m00-l01-p04",
+              "title": "تدريبات الوحدة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 5,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع المقدّمة"
+              },
+              "keywords": [
+                "تدريبات",
+                "مقدّمة"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271d-m01",
+      "title": "العمليات التراجعية",
+      "shortTitle": "التراجعية",
+      "order": 2,
+      "lessons": [
+        {
+          "id": "899271d-m01-l01",
+          "title": "ما التراجعية؟",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m01-l01-p01",
+              "title": "عملية تستدعي نفسها",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 8,
+                "pdfPageEnd": 10,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 8–10"
+              },
+              "keywords": [
+                "تراجعية",
+                "استدعاء ذاتي",
+                "شرط التوقّف",
+                "متوالية"
+              ]
+            },
+            {
+              "id": "899271d-m01-l01-p02",
+              "title": "المضروب والراصّة المخفية",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 10,
+                "pdfPageEnd": 11,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 10–11"
+              },
+              "keywords": [
+                "مضروب",
+                "Factorial",
+                "راصّة مخفية",
+                "LIFO",
+                "أوامر مؤجّلة"
+              ]
+            },
+            {
+              "id": "899271d-m01-l01-p03",
+              "title": "فيبوناتشي وشروط صحة العملية التراجعية",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 11,
+                "pdfPageEnd": 13,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 11–13"
+              },
+              "keywords": [
+                "فيبوناتشي",
+                "شروط الصحة",
+                "تراجعية لانهائية",
+                "خطوات الكتابة"
+              ]
+            },
+            {
+              "id": "899271d-m01-l01-p04",
+              "title": "أمثلة من الرياضيات",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 13,
+                "pdfPageEnd": 15,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 13–15"
+              },
+              "keywords": [
+                "Add",
+                "Pow",
+                "Gcd",
+                "أقليدس",
+                "أكبر قاسم مشترك"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m01-l02",
+          "title": "أنواع العمليات التراجعية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m01-l02-p01",
+              "title": "أنواع العمليات التراجعية",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 16,
+                "pdfPageEnd": 17,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 16–17"
+              },
+              "keywords": [
+                "Linear",
+                "Tail",
+                "Non-Tail",
+                "Binary",
+                "Mutual",
+                "تراجعية متبادلة"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m01-l03",
+          "title": "التراجعية على منازل عدد",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271d-m01-l03-p01",
+              "title": "المباني التراجعية ومجموع المنازل",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 18,
+                "pdfPageEnd": 20,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 18–20"
+              },
+              "keywords": [
+                "مبنى تراجعي",
+                "SumOfDigits",
+                "NumOfDigits",
+                "NumOfOddDigits",
+                "منزلة الآحاد"
+              ]
+            },
+            {
+              "id": "899271d-m01-l03-p02",
+              "title": "البحث والفحص في المنازل",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 21,
+                "pdfPageEnd": 24,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 21–24"
+              },
+              "keywords": [
+                "Exists",
+                "Count",
+                "Check",
+                "||",
+                "&&",
+                "Tail",
+                "Non-Tail"
+              ]
+            },
+            {
+              "id": "899271d-m01-l03-p03",
+              "title": "أكبر منزلة، وتتبّع عملية تطبع",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 24,
+                "pdfPageEnd": 27,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 24–27"
+              },
+              "keywords": [
+                "MaxDigit",
+                "Tr",
+                "جدول تتبّع",
+                "Write",
+                "WriteLine"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m01-l04",
+          "title": "المصفوفات و«قسّم تسد»",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271d-m01-l04-p01",
+              "title": "المصفوفات وطريقة «قسّم تسد»",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 35,
+                "pdfPageEnd": 37,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 35–37"
+              },
+              "keywords": [
+                "مصفوفة",
+                "قسّم تسد",
+                "Divide and Conquer",
+                "Sum",
+                "Binary Recursion"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m01-l05",
+          "title": "التراجعية والنصوص",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271d-m01-l05-p01",
+              "title": "العمليات التراجعية والنصوص",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 41,
+                "pdfPageEnd": 45,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 41–45"
+              },
+              "keywords": [
+                "نص",
+                "Substring",
+                "Contains",
+                "IsPal",
+                "Reverse",
+                "بالندروم"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m01-l06",
+          "title": "أسئلة تتبّع وكتابة",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271d-m01-l06-p01",
+              "title": "أسئلة تتبّع من تمارين الكتاب",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 47,
+                "pdfPageEnd": 53,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 47–53"
+              },
+              "keywords": [
+                "تتبّع",
+                "تمارين الكتاب",
+                "شجرة متابعة"
+              ]
+            },
+            {
+              "id": "899271d-m01-l06-p02",
+              "title": "أسئلة كتابة: اكتب العملية",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 46,
+                "sourceNote": "الفصل الأول «العمليات التراجعية» · ص 46"
+              },
+              "keywords": [
+                "كتابة عملية",
+                "صيغة تراجعية",
+                "Iterative",
+                "Mult"
+              ]
+            },
+            {
+              "id": "899271d-m01-l06-p03",
+              "title": "حلول أسئلة الكتابة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 7,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الأول «العمليات التراجعية»"
+              },
+              "keywords": [
+                "حلول",
+                "F1",
+                "F2",
+                "F3",
+                "Mult"
+              ]
+            },
+            {
+              "id": "899271d-m01-l06-p04",
+              "title": "تدريبات الوحدة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 7,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الأول «العمليات التراجعية»"
+              },
+              "keywords": [
+                "تدريبات",
+                "تراجعية"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271d-m02",
+      "title": "تحليل نجاعة الألغوريثمات",
+      "shortTitle": "النجاعة",
+      "order": 3,
+      "lessons": [
+        {
+          "id": "899271d-m02-l01",
+          "title": "ما النجاعة وكيف نعدّ العمليات؟",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m02-l01-p01",
+              "title": "لماذا نحلّل النجاعة؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 62,
+                "pdfPageEnd": 63,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 62–63"
+              },
+              "keywords": [
+                "نجاعة",
+                "Time Complexity",
+                "Space Complexity",
+                "العمليات الأساسية",
+                "دالّة زمن التشغيل",
+                "التحليل التقاربي"
+              ]
+            },
+            {
+              "id": "899271d-m02-l01-p02",
+              "title": "عدّ العمليات ودرجة النجاعة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 63,
+                "pdfPageEnd": 65,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 63–65"
+              },
+              "keywords": [
+                "T(n)",
+                "O(n)",
+                "درجة النجاعة",
+                "نجاعة خطية",
+                "Print",
+                "حذف الثوابت"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m02-l02",
+          "title": "النجاعة الخطية والثابتة والتربيعية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m02-l02-p01",
+              "title": "أسوأ حالة والنجاعة الثابتة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 65,
+                "pdfPageEnd": 68,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 65–68"
+              },
+              "keywords": [
+                "LinearSearch",
+                "الحالة الأسوأ",
+                "Worst Case",
+                "Best Case",
+                "O(1)",
+                "نجاعة ثابتة"
+              ]
+            },
+            {
+              "id": "899271d-m02-l02-p02",
+              "title": "النجاعة التربيعية: حلقات متداخلة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 68,
+                "pdfPageEnd": 70,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 68–70"
+              },
+              "keywords": [
+                "O(n²)",
+                "نجاعة تربيعية",
+                "حلقات متداخلة",
+                "مصفوفة ثنائية",
+                "متوالية حسابية"
+              ]
+            },
+            {
+              "id": "899271d-m02-l02-p03",
+              "title": "ترتيب الفقاعات \u2066Bubble Sort\u2069",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 70,
+                "pdfPageEnd": 71,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 70–71"
+              },
+              "keywords": [
+                "Bubble_Sort",
+                "ترتيب الفقاعات",
+                "O(n²)",
+                "التحليل السريع"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m02-l03",
+          "title": "النجاعة اللوغاريثمية والترتيب بالدمج",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271d-m02-l03-p01",
+              "title": "النجاعة اللوغاريثمية: التنصيف والبحث الثنائي",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 71,
+                "pdfPageEnd": 72,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 71–72"
+              },
+              "keywords": [
+                "O(log n)",
+                "نجاعة لوغاريثمية",
+                "تنصيف",
+                "البحث الثنائي",
+                "Binary Search"
+              ]
+            },
+            {
+              "id": "899271d-m02-l03-p02",
+              "title": "الترتيب بالدمج \u2066Merge Sort\u2069",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 73,
+                "pdfPageEnd": 76,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 73–76"
+              },
+              "keywords": [
+                "MergeSort",
+                "Merge",
+                "ترتيب الدمج",
+                "قسّم تسُد",
+                "Divide and Conquer"
+              ]
+            },
+            {
+              "id": "899271d-m02-l03-p03",
+              "title": "طريقة التعويض",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 74,
+                "pdfPageEnd": 77,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 74–77"
+              },
+              "keywords": [
+                "علاقة تراجعية",
+                "Recurrence",
+                "طريقة التعويض",
+                "O(n log n)",
+                "خطية لوغاريثمية"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m02-l04",
+          "title": "مقارنة درجات النجاعة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271d-m02-l04-p01",
+              "title": "مقارنة درجات النجاعة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 78,
+                "pdfPageEnd": 81,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 78–81"
+              },
+              "keywords": [
+                "مقارنة",
+                "وتيرة النموّ",
+                "O(2ⁿ)",
+                "O(n!)",
+                "بولينومية",
+                "تباديل",
+                "PrintPermut"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m02-l05",
+          "title": "تحسين النجاعة",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271d-m02-l05-p01",
+              "title": "أفكار لتحسين النجاعة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 82,
+                "pdfPageEnd": 83,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 82–83"
+              },
+              "keywords": [
+                "تحسين النجاعة",
+                "طريقة جاوس",
+                "قواسم",
+                "O(√n)",
+                "SumGauss"
+              ]
+            },
+            {
+              "id": "899271d-m02-l05-p02",
+              "title": "فيبوناتشي: حلّ تكراري أم تراجعي؟",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 83,
+                "pdfPageEnd": 87,
+                "sourceNote": "الفصل الثاني «تحليل نجاعة الألغوريثمات» · ص 83–87"
+              },
+              "keywords": [
+                "فيبوناتشي",
+                "Fib_Iterative",
+                "Fib_Recursive",
+                "نجاعة أسّية",
+                "النسبة الذهبية",
+                "شجرة الاستدعاءات"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m02-l06",
+          "title": "قوالب سريعة",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271d-m02-l06-p01",
+              "title": "قوالب سريعة لتحديد درجة النجاعة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 61,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+              },
+              "keywords": [
+                "قوالب",
+                "التحليل السريع",
+                "حلقة",
+                "حلقات متداخلة",
+                "تنصيف"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m02-l07",
+          "title": "أسئلة تتبّع وتدريبات",
+          "order": 7,
+          "pages": [
+            {
+              "id": "899271d-m02-l07-p01",
+              "title": "أسئلة تتبّع وعدّ",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 61,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+              },
+              "keywords": [
+                "تتبّع",
+                "عدّ",
+                "درجة النجاعة"
+              ]
+            },
+            {
+              "id": "899271d-m02-l07-p02",
+              "title": "تدريبات الوحدة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 61,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثاني «تحليل نجاعة الألغوريثمات»"
+              },
+              "keywords": [
+                "تدريبات",
+                "نجاعة",
+                "درجة النجاعة"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271d-m03",
+      "title": "سلاسل الخلايا المترابطة (Node)",
+      "shortTitle": "سلاسل الخلايا",
+      "order": 4,
+      "lessons": [
+        {
+          "id": "899271d-m03-l01",
+          "title": "الخلية والسلسلة",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m03-l01-p01",
+              "title": "الخلية والسلسلة: الفئة \u2066Node\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 107,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 107"
+              },
+              "keywords": [
+                "خلية",
+                "Node",
+                "سلسلة خلايا مترابطة",
+                "Next",
+                "رأس السلسلة",
+                "null"
+              ]
+            },
+            {
+              "id": "899271d-m03-l01-p02",
+              "title": "بناء سلسلة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 110,
+                "pdfPageEnd": 111,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 110–111"
+              },
+              "keywords": [
+                "بناء سلسلة",
+                "SetNext",
+                "new Node",
+                "Last",
+                "مؤشّر مساعد"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m03-l02",
+          "title": "تمشيط السلسلة",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m03-l02-p01",
+              "title": "قالب التمشيط: طباعة، طول، مجموع، بحث",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 112,
+                "pdfPageEnd": 114,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 112–114"
+              },
+              "keywords": [
+                "تمشيط",
+                "قالب التمشيط",
+                "Pos",
+                "طول السلسلة",
+                "مجموع القيم",
+                "بحث"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m03-l03",
+          "title": "السلسلة والعمليات",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271d-m03-l03-p01",
+              "title": "عمليات تتلقّى سلسلة: \u2066GetMaxValue\u2069 و \u2066GetPos\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 115,
+                "pdfPageEnd": 116,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 115–116"
+              },
+              "keywords": [
+                "عملية خارجية",
+                "GetMaxValue",
+                "GetPos",
+                "النجاعة",
+                "O(n)"
+              ]
+            },
+            {
+              "id": "899271d-m03-l03-p02",
+              "title": "عمليات تبني سلسلة: \u2066ToNode\u2069",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 116,
+                "pdfPageEnd": 117,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 116–117"
+              },
+              "keywords": [
+                "ToNode",
+                "بناء سلسلة من مصفوفة",
+                "Print",
+                "GenerateRandomChain"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m03-l04",
+          "title": "حذف خلايا من السلسلة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271d-m03-l04-p01",
+              "title": "حذف خلية من السلسلة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 119,
+                "pdfPageEnd": 120,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 119–120"
+              },
+              "keywords": [
+                "حذف خلية",
+                "Previous",
+                "DeleteNode",
+                "Garbage Collection"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m03-l05",
+          "title": "الفئة العامة \u2066Node<T>\u2069",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271d-m03-l05-p01",
+              "title": "الفئة العامة \u2066Node<T>\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 126,
+                "pdfPageEnd": 127,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 126–127"
+              },
+              "keywords": [
+                "Node<T>",
+                "فئة عامة",
+                "Generic",
+                "Node<Point>",
+                "GetFarMostPoint"
+              ]
+            },
+            {
+              "id": "899271d-m03-l05-p02",
+              "title": "آخر خلية والإضافة في النهاية: \u2066GetLastPos\u2069 و \u2066Append\u2069",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 127,
+                "pdfPageEnd": 129,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 127–129"
+              },
+              "keywords": [
+                "GetLastPos",
+                "Append",
+                "GetPrevious",
+                "Node<int>"
+              ]
+            },
+            {
+              "id": "899271d-m03-l05-p03",
+              "title": "إدخال خلية بعد خلية: \u2066AddAfter\u2069",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 129,
+                "pdfPageEnd": 131,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 129–131"
+              },
+              "keywords": [
+                "AddAfter",
+                "إدخال خلية",
+                "MathExpression",
+                "سلسلة كائنات"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m03-l06",
+          "title": "المبنى التراجعي للسلسلة",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271d-m03-l06-p01",
+              "title": "المبنى التراجعي لسلسلة الخلايا",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 132,
+                "pdfPageEnd": 133,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 132–133"
+              },
+              "keywords": [
+                "تراجعية",
+                "شرط التوقّف",
+                "GetLength",
+                "GetSum",
+                "GetPos"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m03-l07",
+          "title": "أسئلة تتبّع وكتابة",
+          "order": 7,
+          "pages": [
+            {
+              "id": "899271d-m03-l07-p01",
+              "title": "أسئلة تتبّع من الكتاب",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 139,
+                "pdfPageEnd": 142,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 139–142"
+              },
+              "keywords": [
+                "تتبّع",
+                "What",
+                "What1",
+                "What2",
+                "تمارين الكتاب"
+              ]
+            },
+            {
+              "id": "899271d-m03-l07-p02",
+              "title": "أسئلة كتابة من الكتاب",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 141,
+                "pdfPageEnd": 148,
+                "sourceNote": "الفصل الثالث «سلاسل الخلايا المترابطة» · ص 141–148"
+              },
+              "keywords": [
+                "كتابة عملية",
+                "BeginsWith",
+                "تقاطع",
+                "اتحاد",
+                "مثلّثة"
+              ]
+            },
+            {
+              "id": "899271d-m03-l07-p03",
+              "title": "حلول أسئلة الكتابة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 105,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
+              },
+              "keywords": [
+                "حلول",
+                "BeginsWith",
+                "Intersection",
+                "Union",
+                "IsTripled"
+              ]
+            },
+            {
+              "id": "899271d-m03-l07-p04",
+              "title": "تدريبات الوحدة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 105,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الثالث «سلاسل الخلايا المترابطة»"
+              },
+              "keywords": [
+                "تدريبات",
+                "سلسلة خلايا",
+                "Node"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "899271d-m04",
       "title": "الراصّة (Stack)",
       "shortTitle": "الراصّة",
-      "order": 1,
+      "order": 5,
       "lessons": [
         {
           "id": "899271d-m04-l01",
@@ -297,14 +1325,1099 @@ const manifest: LearningCourseManifest = {
           ]
         }
       ]
+    },
+    {
+      "id": "899271d-m05",
+      "title": "الدور (Queue)",
+      "shortTitle": "الدور",
+      "order": 6,
+      "lessons": [
+        {
+          "id": "899271d-m05-l01",
+          "title": "ما الدور؟",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m05-l01-p01",
+              "title": "الدور ومبدأ FIFO",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 196,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 196"
+              },
+              "keywords": [
+                "دور",
+                "قائمة انتظار",
+                "Queue",
+                "FIFO",
+                "رأس الدور",
+                "Insert",
+                "Remove"
+              ]
+            },
+            {
+              "id": "899271d-m05-l01-p02",
+              "title": "واجهة الفئة \u2066Queue<T>\u2069",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 196,
+                "pdfPageEnd": 197,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 196–197"
+              },
+              "keywords": [
+                "Queue<T>",
+                "Insert",
+                "Remove",
+                "Head",
+                "IsEmpty",
+                "ToString"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m05-l02",
+          "title": "عمليات على الدور",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m05-l02-p01",
+              "title": "بناء دور، طوله ونسخه",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 197,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 197"
+              },
+              "keywords": [
+                "ToQueue",
+                "GetSize",
+                "CopyQueue",
+                "طول الدور",
+                "قالب التمشيط"
+              ]
+            },
+            {
+              "id": "899271d-m05-l02-p02",
+              "title": "مجموع القيم والبحث عن قيمة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 200,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 200"
+              },
+              "keywords": [
+                "GetSumOfValues",
+                "Exists",
+                "CopyQueue"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m05-l03",
+          "title": "كيف تُكتب الفئة \u2066Queue<T>\u2069؟",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271d-m05-l03-p01",
+              "title": "الدور بسلسلة خلايا: \u2066First\u2069 و \u2066Last\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 200,
+                "pdfPageEnd": 202,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 200–202"
+              },
+              "keywords": [
+                "Queue<T>",
+                "Node<T>",
+                "First",
+                "Last",
+                "تنفيذ الدور"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m05-l04",
+          "title": "الدور والراصّة معًا",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271d-m05-l04-p01",
+              "title": "قلب الدور براصّة: \u2066ReverseQueue\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 202,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 202"
+              },
+              "keywords": [
+                "ReverseQueue",
+                "قلب الدور",
+                "راصّة مساعدة",
+                "FIFO",
+                "LIFO"
+              ]
+            },
+            {
+              "id": "899271d-m05-l04-p02",
+              "title": "تتبّع من تمارين الكتاب: دور وراصّة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 212,
+                "pdfPageEnd": 214,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 212–214"
+              },
+              "keywords": [
+                "تتبّع",
+                "What",
+                "Check",
+                "تمارين الكتاب"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m05-l05",
+          "title": "دور من الكائنات",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271d-m05-l05-p01",
+              "title": "دور مستندات للطباعة: \u2066RemoveMin\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 203,
+                "pdfPageEnd": 205,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 203–205"
+              },
+              "keywords": [
+                "Document",
+                "RemoveMin",
+                "Queue<Document>",
+                "CopyQueue",
+                "مقارنة مؤشّرات"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m05-l06",
+          "title": "أسئلة تتبّع وكتابة",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271d-m05-l06-p01",
+              "title": "أسئلة تتبّع (1)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 195,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+              },
+              "keywords": [
+                "تتبّع",
+                "دور"
+              ]
+            },
+            {
+              "id": "899271d-m05-l06-p02",
+              "title": "أسئلة تتبّع (2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 195,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+              },
+              "keywords": [
+                "تتبّع",
+                "دور مساعد",
+                "دمج",
+                "حذف دائري"
+              ]
+            },
+            {
+              "id": "899271d-m05-l06-p03",
+              "title": "أسئلة كتابة: اكتب العملية",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 220,
+                "pdfPageEnd": 225,
+                "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 220–225"
+              },
+              "keywords": [
+                "كتابة عملية",
+                "SumOdd",
+                "IsSorted",
+                "Passed",
+                "IsSymmetric",
+                "IsCircular"
+              ]
+            },
+            {
+              "id": "899271d-m05-l06-p04",
+              "title": "حلول أسئلة الكتابة (1): ورقة المعلّم",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 195,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+              },
+              "keywords": [
+                "حلول",
+                "SumOdd",
+                "IsSorted",
+                "Passed"
+              ]
+            },
+            {
+              "id": "899271d-m05-l06-p05",
+              "title": "حلول أسئلة الكتابة (2): تمارين الكتاب",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 195,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+              },
+              "keywords": [
+                "حلول",
+                "IsSymmetric",
+                "Check",
+                "IsCircular",
+                "نجاعة"
+              ]
+            },
+            {
+              "id": "899271d-m05-l06-p06",
+              "title": "تدريبات الوحدة",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 195,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل الخامس «قائمة الانتظار – الدور»"
+              },
+              "keywords": [
+                "تدريبات",
+                "دور"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271d-m06",
+      "title": "الأشجار الثنائية (BinNode)",
+      "shortTitle": "الأشجار الثنائية",
+      "order": 7,
+      "lessons": [
+        {
+          "id": "899271d-m06-l01",
+          "title": "مصطلحات الشجرة",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m06-l01-p01",
+              "title": "الشجرة الثنائية ومصطلحاتها",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "شجرة ثنائية",
+                "جذر",
+                "ورقة",
+                "أب",
+                "ابن",
+                "مستوى",
+                "ارتفاع",
+                "شجرة فرعية"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m06-l02",
+          "title": "الخلية الثنائية \u2066BinNode<T>\u2069",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m06-l02-p01",
+              "title": "الخلية الثنائية وواجهة الفئة \u2066BinNode<T>\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 246,
+                "pdfPageEnd": 247,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 246–247"
+              },
+              "keywords": [
+                "BinNode<T>",
+                "Left",
+                "Right",
+                "Value",
+                "HasLeft",
+                "HasRight"
+              ]
+            },
+            {
+              "id": "899271d-m06-l02-p02",
+              "title": "بناء شجرة خطوة بخطوة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 247,
+                "pdfPageEnd": 249,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 247–249"
+              },
+              "keywords": [
+                "بناء شجرة",
+                "SetLeft",
+                "SetRight",
+                "عملية بنائية"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m06-l03",
+          "title": "المبنى التراجعي للشجرة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271d-m06-l03-p01",
+              "title": "المبنى التراجعي: مجموع القيم وعدد الخلايا",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 250,
+                "pdfPageEnd": 252,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 250–252"
+              },
+              "keywords": [
+                "تراجعية",
+                "شجرة فرعية",
+                "SumOfTreeValues",
+                "NumOfTreeNodes",
+                "شرط التوقّف"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m06-l04",
+          "title": "طرق تمشيط الشجرة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271d-m06-l04-p01",
+              "title": "ثلاث طرق للتمشيط بحسب العمق",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 253,
+                "pdfPageEnd": 254,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 253–254"
+              },
+              "keywords": [
+                "تمشيط",
+                "Preorder",
+                "Inorder",
+                "Postorder",
+                "DFS",
+                "BFS"
+              ]
+            },
+            {
+              "id": "899271d-m06-l04-p02",
+              "title": "طباعة قيم الشجرة بالطرق الثلاث",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 254,
+                "pdfPageEnd": 255,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 254–255"
+              },
+              "keywords": [
+                "PreOrder",
+                "InOrder",
+                "PostOrder",
+                "طباعة",
+                "نجاعة خطية"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m06-l05",
+          "title": "شجرة التعابير الحسابية",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271d-m06-l05-p01",
+              "title": "شجرة التعابير الحسابية",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 255,
+                "pdfPageEnd": 256,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 255–256"
+              },
+              "keywords": [
+                "Expression Tree",
+                "EvalExpressionTree",
+                "BinNode<char>",
+                "IsLeaf"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m06-l06",
+          "title": "التمشيط بحسب المستوى وارتفاع الشجرة",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271d-m06-l06-p01",
+              "title": "التمشيط بحسب المستوى",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 266,
+                "pdfPageEnd": 268,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 266–268"
+              },
+              "keywords": [
+                "Breadth First",
+                "LevelsOrder",
+                "Queue<BinNode<int>>",
+                "مستوى",
+                "LevelsOrderList"
+              ]
+            },
+            {
+              "id": "899271d-m06-l06-p02",
+              "title": "ارتفاع الشجرة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 269,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 269"
+              },
+              "keywords": [
+                "ارتفاع",
+                "Height",
+                "Math.Max"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m06-l07",
+          "title": "أسئلة تتبّع وكتابة",
+          "order": 7,
+          "pages": [
+            {
+              "id": "899271d-m06-l07-p01",
+              "title": "أسئلة تتبّع (1): سؤال 5 من الكتاب",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 284,
+                "pdfPageEnd": 285,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 284–285"
+              },
+              "keywords": [
+                "تتبّع",
+                "What1",
+                "What2",
+                "What3",
+                "بحث في شجرة"
+              ]
+            },
+            {
+              "id": "899271d-m06-l07-p02",
+              "title": "أسئلة تتبّع (2): سؤالا 7 و24 من الكتاب",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 287,
+                "pdfPageEnd": 303,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 287–303"
+              },
+              "keywords": [
+                "تتبّع",
+                "راصّة",
+                "مستوى خلية"
+              ]
+            },
+            {
+              "id": "899271d-m06-l07-p03",
+              "title": "أسئلة كتابة: اكتب العملية",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 282,
+                "pdfPageEnd": 302,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 282–302"
+              },
+              "keywords": [
+                "كتابة عملية",
+                "أوراق",
+                "HasPathSum",
+                "CountIsJud",
+                "مرآة"
+              ]
+            },
+            {
+              "id": "899271d-m06-l07-p04",
+              "title": "حلول أسئلة الكتابة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "حلول",
+                "SumOfLeaves",
+                "CountIsJud",
+                "HasPathSum",
+                "Mirror"
+              ]
+            },
+            {
+              "id": "899271d-m06-l07-p05",
+              "title": "تدريبات الوحدة",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "تدريبات",
+                "شجرة ثنائية"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271d-m07",
+      "title": "شجرة البحث الثنائية",
+      "shortTitle": "شجرة البحث",
+      "order": 8,
+      "lessons": [
+        {
+          "id": "899271d-m07-l01",
+          "title": "ما شجرة البحث الثنائية؟",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m07-l01-p01",
+              "title": "شجرة البحث الثنائية وشرطها",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 257,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 257"
+              },
+              "keywords": [
+                "شجرة بحث ثنائية",
+                "BST",
+                "Binary Search Tree",
+                "الشجرة الفرعية اليسرى",
+                "الشجرة الفرعية اليمنى"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l02",
+          "title": "بناء الشجرة والإدخال",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m07-l02-p01",
+              "title": "بناء شجرة بحث: \u2066ToBST\u2069 و \u2066InsertIntoBST\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 258,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 258"
+              },
+              "keywords": [
+                "ToBST",
+                "InsertIntoBST",
+                "إدخال قيمة",
+                "بناء شجرة بحث"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l03",
+          "title": "التمشيط الداخلي يعطي ترتيبًا تصاعديًا",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271d-m07-l03-p01",
+              "title": "تمشيط \u2066Inorder\u2069 لشجرة بحث",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 259,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 259"
+              },
+              "keywords": [
+                "Inorder",
+                "تمشيط داخلي",
+                "ترتيب تصاعدي",
+                "InOrder"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l04",
+          "title": "البحث ونجاعته",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271d-m07-l04-p01",
+              "title": "البحث عن قيمة: \u2066ExistsInBST\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 260,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 260"
+              },
+              "keywords": [
+                "ExistsInBST",
+                "بحث",
+                "شرط التوقّف",
+                "مسار البحث"
+              ]
+            },
+            {
+              "id": "899271d-m07-l04-p02",
+              "title": "نجاعة البحث: شكل الشجرة يحسم",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 260,
+                "pdfPageEnd": 262,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 260–262"
+              },
+              "keywords": [
+                "نجاعة",
+                "O(h)",
+                "O(n)",
+                "O(log n)",
+                "سلسلة",
+                "شجرة ممتلئة",
+                "شجرة كاملة"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l05",
+          "title": "هل الشجرة شجرة بحث؟",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271d-m07-l05-p01",
+              "title": "فحص: هل الشجرة شجرة بحث ثنائية؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 262,
+                "pdfPageEnd": 263,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 262–263"
+              },
+              "keywords": [
+                "IsBST",
+                "فحص شجرة بحث",
+                "أكبر قيمة",
+                "أصغر قيمة"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l06",
+          "title": "حذف خلية",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271d-m07-l06-p01",
+              "title": "حذف خلية: الحالات الثلاث",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 270,
+                "pdfPageEnd": 271,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 270–271"
+              },
+              "keywords": [
+                "حذف",
+                "ورقة",
+                "ابن واحد",
+                "ابنان",
+                "أصغر قيمة في اليمين"
+              ]
+            },
+            {
+              "id": "899271d-m07-l06-p02",
+              "title": "العملية \u2066DeleteFromBST\u2069 بلغة \u2066C#\u2069",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 257,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "DeleteFromBST",
+                "MinOfBST",
+                "حذف",
+                "الجذر يتغيّر"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l07",
+          "title": "إعادة بناء الشجرة",
+          "order": 7,
+          "pages": [
+            {
+              "id": "899271d-m07-l07-p01",
+              "title": "إعادة بناء شجرة من \u2066Inorder\u2069 و \u2066Preorder\u2069",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 274,
+                "pdfPageEnd": 277,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 274–277"
+              },
+              "keywords": [
+                "إعادة بناء الشجرة",
+                "Reconstruction",
+                "Preorder",
+                "Inorder",
+                "Postorder"
+              ]
+            },
+            {
+              "id": "899271d-m07-l07-p02",
+              "title": "العملية \u2066BuildTree\u2069 بلغة \u2066C#\u2069",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 277,
+                "pdfPageEnd": 280,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 277–280"
+              },
+              "keywords": [
+                "BuildTree",
+                "Find",
+                "AreEqual",
+                "PreA",
+                "InA"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m07-l08",
+          "title": "أسئلة تتبّع وكتابة",
+          "order": 8,
+          "pages": [
+            {
+              "id": "899271d-m07-l08-p01",
+              "title": "أسئلة تتبّع",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 298,
+                "pdfPageEnd": 299,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 298–299"
+              },
+              "keywords": [
+                "تتبّع",
+                "شجرة بحث",
+                "What",
+                "What1"
+              ]
+            },
+            {
+              "id": "899271d-m07-l08-p02",
+              "title": "أسئلة كتابة: اكتب العملية",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 281,
+                "pdfPageEnd": 295,
+                "sourceNote": "الفصل السادس «الأشجار الثنائية» · ص 281–295"
+              },
+              "keywords": [
+                "كتابة عملية",
+                "MaxOfBST",
+                "CountInRange",
+                "أسئلة الكتاب"
+              ]
+            },
+            {
+              "id": "899271d-m07-l08-p03",
+              "title": "حلول أسئلة الكتابة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 257,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "حلول",
+                "MaxOfBST",
+                "ExistsInBST",
+                "CountInRange"
+              ]
+            },
+            {
+              "id": "899271d-m07-l08-p04",
+              "title": "تدريبات الوحدة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 257,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "تدريبات",
+                "شجرة البحث الثنائية"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271d-m08",
+      "title": "مراجعة شاملة: المباني تعمل معًا",
+      "shortTitle": "مراجعة شاملة",
+      "order": 9,
+      "lessons": [
+        {
+          "id": "899271d-m08-l01",
+          "title": "المباني في نظرة واحدة",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271d-m08-l01-p01",
+              "title": "كل المباني في صفحة واحدة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "تلخيص",
+                "مقارنة المباني",
+                "واجهات الفئات"
+              ]
+            },
+            {
+              "id": "899271d-m08-l01-p02",
+              "title": "أيّ مبنى أختار؟",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "اختيار المبنى",
+                "LIFO",
+                "FIFO"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271d-m08-l02",
+          "title": "أسئلة تجمع أكثر من مبنى",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271d-m08-l02-p01",
+              "title": "أسئلة تتبّع: مبنيان معًا",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "تتبّع",
+                "سلسلة وراصّة",
+                "راصّة ودور",
+                "شجرة وراصّة"
+              ]
+            },
+            {
+              "id": "899271d-m08-l02-p02",
+              "title": "أسئلة كتابة: مبنيان معًا",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "كتابة عملية",
+                "Merge",
+                "IsPalindrome"
+              ]
+            },
+            {
+              "id": "899271d-m08-l02-p03",
+              "title": "حلول أسئلة الكتابة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "حلول",
+                "Merge",
+                "IsPalindrome"
+              ]
+            },
+            {
+              "id": "899271d-m08-l02-p04",
+              "title": "تدريبات الوحدة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271d",
+                "pdfPageStart": 243,
+                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
+              },
+              "keywords": [
+                "تدريبات",
+                "مراجعة"
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "batches": [
     {
+      "id": "intro",
+      "label": "المقدّمة",
+      "moduleIds": [
+        "899271d-m00"
+      ]
+    },
+    {
+      "id": "b1",
+      "label": "التراجعية والنجاعة",
+      "moduleIds": [
+        "899271d-m01",
+        "899271d-m02"
+      ]
+    },
+    {
+      "id": "b2",
+      "label": "سلاسل الخلايا المترابطة",
+      "moduleIds": [
+        "899271d-m03"
+      ]
+    },
+    {
       "id": "b3",
       "label": "الراصّة والدور",
       "moduleIds": [
-        "899271d-m04"
+        "899271d-m04",
+        "899271d-m05"
+      ]
+    },
+    {
+      "id": "b4",
+      "label": "الأشجار الثنائية",
+      "moduleIds": [
+        "899271d-m06",
+        "899271d-m07"
+      ]
+    },
+    {
+      "id": "summary",
+      "label": "مراجعة شاملة",
+      "moduleIds": [
+        "899271d-m08"
       ]
     }
   ]

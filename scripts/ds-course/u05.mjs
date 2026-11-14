@@ -84,7 +84,6 @@ public static Document RemoveMin(Queue<Document> Q)
     // **** Return the found document with minimal number of pages ****
     return MinDoc;
 }`;
-const BY_POINTER = "MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****".replace(") //", " //").replace("Doc //", "Doc) //").slice(0, -0 || undefined);
 const COPY_QUEUE_DOC = `
 public static Queue<Document> CopyQueue(Queue<Document> Q1)
 {

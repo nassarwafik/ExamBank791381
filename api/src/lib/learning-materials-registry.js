@@ -179,7 +179,15 @@ const COURSES = [
     title: "مبنى المعطيات",
     subject: "علم الحاسوب",
     modules: [
-      { moduleId: "899271d-m04", title: "الراصّة (Stack)", order: 1 }
+      { moduleId: "899271d-m00", title: "المقدّمة: ما مبنى المعطيات؟", order: 1 },
+      { moduleId: "899271d-m01", title: "العمليات التراجعية", order: 2 },
+      { moduleId: "899271d-m02", title: "تحليل نجاعة الألغوريثمات", order: 3 },
+      { moduleId: "899271d-m03", title: "سلاسل الخلايا المترابطة (Node)", order: 4 },
+      { moduleId: "899271d-m04", title: "الراصّة (Stack)", order: 5 },
+      { moduleId: "899271d-m05", title: "الدور (Queue)", order: 6 },
+      { moduleId: "899271d-m06", title: "الأشجار الثنائية (BinNode)", order: 7 },
+      { moduleId: "899271d-m07", title: "شجرة البحث الثنائية", order: 8 },
+      { moduleId: "899271d-m08", title: "مراجعة شاملة: المباني تعمل معًا", order: 9 }
     ]
   },
   // END 899271d

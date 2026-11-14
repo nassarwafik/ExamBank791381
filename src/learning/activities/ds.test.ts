@@ -6,7 +6,6 @@ import {
   treeHeight, treeLeaves, treeSize, DS_LIMITS, type Bst, type DsFrame, type DsObj,
 } from "./ds";
 
-const v = (s: string) => ({ t: "v", s });
 const ref = (id: number) => ({ t: "ref", id });
 const TRACE = {
   code: "Stack<int> s = new Stack<int>();\ns.Push(5);\nConsole.WriteLine(s);",
