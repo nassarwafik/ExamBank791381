@@ -19,6 +19,7 @@ const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
 const svc = require("../lib/project-tracker/service");
 const examForms = require("../lib/project-tracker/exam-form-service");   // Phase F2
+const examReview = require("../lib/project-tracker/exam-form-review-service");   // Phase F3
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
@@ -268,9 +269,28 @@ async function handler(request, deps = {}, obs = null) {
         // Phase P-9 — a read never writes: the snapshot as the next write will see it (lazy create / upgrade in memory only).
         // Phase P7 — `view`: each progress document as a pending conversion / reset will store it (in memory too).
         // Phase F2 — the state of this class's exam form (none / open / closed) and the size of the form. Reads only.
-        if (resource === "exam-form") {
+        // Phase F3 — `exam-form-questions`: the questions the teacher can hide before the first open (prompts, no key).
+        if (resource === "exam-form" || resource === "exam-form-questions") {
           try {
+            if (resource === "exam-form-questions") return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, ...(await examForms.classFormQuestions(container, projectCode, classId)) } };
             return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, examForm: await examForms.classFormState(container, projectCode, classId) } };
+          } catch (e) {
+            if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
+            throw e;
+          }
+        }
+
+        // Phase F3 — the class's forms (every student's state) and one student's form with the review. Reads only. The
+        // student view carries the form's answer keys: it is a teacher read behind this route's capability and tenancy.
+        if (resource === "exam-form-students" || resource === "exam-form-student") {
+          try {
+            if (resource === "exam-form-students") {
+              const classStudents = await svc.listClassStudentsForReadViews(container, classId);
+              return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, ...(await examReview.classFormStudents(container, projectCode, classId, classStudents)) } };
+            }
+            const studentId = String(url.searchParams.get("studentId") || "").trim();
+            if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
+            return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, ...(await examReview.teacherStudentForm(container, projectCode, classId, studentId)) } };
           } catch (e) {
             if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
             throw e;
@@ -364,19 +384,46 @@ async function handler(request, deps = {}, obs = null) {
         const open = action === "examform.open";
         try {
           const r = open
-            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now })
+            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now, hiddenQuestionIds: body.hiddenQuestionIds })
             : await examForms.closeClassForm(container, projectCode, classId, { actor: auth.user?.sub, now });
           if (r.changed) {
             await rec(container, {
               actor: auth.user?.sub, action: open ? "project.exam_form.open" : "project.exam_form.close",
               targetType: "project-tracker", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "",
-              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first } : {}) }
+              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first, hiddenQuestions: Array.isArray(r.doc.hiddenQuestionIds) ? r.doc.hiddenQuestionIds.length : 0 } : {}) }
             });
           }
           return { status: 200, jsonBody: { ok: true, projectCode, classId, changed: r.changed, examForm: await examForms.classFormState(container, projectCode, classId) } };
         } catch (e) {
           if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: "حدث تعارض مؤقت أثناء الحفظ. حاول مرة أخرى." } };
           if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
+          throw e;
+        }
+      }
+
+      // Phase F3 — the teacher's review of one student's form: rate sections, return it for correction, approve it (the mark
+      // is computed then) or take an approval back. Return / approve / unapprove are audited; saving ratings is not (it is
+      // the teacher's working draft until the approval).
+      if (action === "examform.review" || action === "examform.return" || action === "examform.approve" || action === "examform.unapprove") {
+        const studentId = String(body.studentId || "").trim();
+        if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
+        const input = { expectedRevision: body.expectedRevision, actor: auth.user?.sub, now };
+        try {
+          const r = action === "examform.review" ? await examReview.saveReview(container, projectCode, classId, studentId, { ...input, ratings: body.ratings, generalNote: body.generalNote })
+            : action === "examform.return" ? await examReview.returnForm(container, projectCode, classId, studentId, { ...input, note: body.note })
+              : action === "examform.approve" ? await examReview.approveForm(container, projectCode, classId, studentId, input)
+                : await examReview.unapproveForm(container, projectCode, classId, studentId, input);
+          if (r.changed && action !== "examform.review") {
+            await rec(container, {
+              actor: auth.user?.sub, action: "project.exam_form." + action.slice("examform.".length),
+              targetType: "project-student", targetId: projectCode + "/" + classId + "/" + studentId, targetLabel: r.student.displayName || "",
+              details: { projectCode, classId, formVersion: r.body.form.formVersion, ...(action === "examform.approve" ? { mark: r.body.result.mark } : {}) }
+            });
+          }
+          return { status: 200, jsonBody: { ok: true, projectCode, classId, changed: r.changed, ...r.body } };
+        } catch (e) {
+          if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: "حدث تعارض مؤقت أثناء الحفظ. حاول مرة أخرى." } };
+          if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}), ...(Array.isArray(e.missing) ? { missing: e.missing } : {}) } };
           throw e;
         }
       }

@@ -7,17 +7,22 @@ import type { ExamFormSummary } from "./types";
 type Props = { summary: ExamFormSummary; readOnly: boolean; onOpen: () => void };
 
 export default function StudentExamFormCard({ summary, readOnly, onOpen }: Props) {
-  const submitted = summary.status === "submitted";
+  const approved = summary.status === "approved", returned = summary.status === "returned";
+  const submitted = summary.status === "submitted" || approved;
   const viewOnly = submitted || summary.state !== "open" || readOnly;
-  const badge = submitted ? { tone: "success" as const, text: "سُلّمت" }
-    : summary.state !== "open" ? { tone: "neutral" as const, text: "مغلقة" }
-      : summary.started ? { tone: "info" as const, text: "قيد التعبئة" } : { tone: "warn" as const, text: "لم تبدأ" };
-  const action = viewOnly ? "عرض الاستمارة" : summary.started ? "أكمل من حيث توقفت" : "ابدأ الاستمارة";
+  const badge = approved ? { tone: "success" as const, text: "اعتُمدت" }
+    : submitted ? { tone: "success" as const, text: "سُلّمت" }
+      : summary.state !== "open" ? { tone: "neutral" as const, text: "مغلقة" }
+        : returned ? { tone: "warn" as const, text: "أُعيدت للتعديل" }
+          : summary.started ? { tone: "info" as const, text: "قيد التعبئة" } : { tone: "warn" as const, text: "لم تبدأ" };
+  const action = viewOnly ? "عرض الاستمارة" : returned ? "عدّل وأعد التسليم" : summary.started ? "أكمل من حيث توقفت" : "ابدأ الاستمارة";
   return (
     <div className="eb-sp-form-card" data-testid="exam-form-card">
       <div className="eb-sp-form-card-text">
         <p className="eb-sp-form-card-title"><strong>{summary.title}</strong> <StatusBadge tone={badge.tone}>{badge.text}</StatusBadge></p>
-        <p className="eb-muted">أجبت عن <span dir="ltr">{summary.answered}</span> من <span dir="ltr">{summary.total}</span> سؤالًا. لا وقت محدد: إجاباتك تُحفظ وتكمل متى شئت.</p>
+        {approved && typeof summary.mark === "number"
+          ? <p className="eb-muted">علامة الاستمارة: <strong dir="ltr">{summary.mark} / {summary.outOf ?? 100}</strong></p>
+          : <p className="eb-muted">أجبت عن <span dir="ltr">{summary.answered}</span> من <span dir="ltr">{summary.total}</span> سؤالًا. لا وقت محدد: إجاباتك تُحفظ وتكمل متى شئت.</p>}
       </div>
       <button type="button" className={"eb-button" + (viewOnly ? "" : " is-primary")} onClick={onOpen}>{action}</button>
     </div>

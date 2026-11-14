@@ -167,11 +167,16 @@ function emptyDocument({ projectCode, classId, studentId, formVersion, now }) {
   return { schemaVersion: 1, projectCode, classId, studentId, formVersion, status: "draft", answers: {}, revision: 0, startedAt: now, updatedAt: now, submittedAt: null };
 }
 
-// The checks shared by both writes: the document is this form's, still a draft, and the page that sends the write has seen
-// the latest saved state (another device or tab may have saved since).
+// Phase F3 — the student may write while the form is a draft or was RETURNED by the teacher for correction. A submitted form
+// waits for the teacher; an approved one is final for the student.
+const STUDENT_WRITABLE = new Set(["draft", "returned"]);
+
+// The checks shared by both writes: the document is this form's, the student may still write it, and the page that sends the
+// write has seen the latest saved state (another device or tab may have saved since).
 function assertWritableDraft(doc, template, baseRevision) {
   if (doc.formVersion !== template.formVersion) fail("تغيّرت نسخة الاستمارة. حدّث الصفحة.", 409, "FORM_VERSION_CHANGED");
-  if (doc.status !== "draft") fail("سلّمت الاستمارة، ولا يمكن تعديلها إلا إذا أعادها المعلم.", 409, "FORM_SUBMITTED");
+  if (doc.status === "approved") fail("اعتمد المعلم الاستمارة، ولا يمكن تعديلها.", 409, "FORM_APPROVED");
+  if (!STUDENT_WRITABLE.has(doc.status)) fail("سلّمت الاستمارة، ولا يمكن تعديلها إلا إذا أعادها المعلم.", 409, "FORM_SUBMITTED");
   if (!Number.isInteger(baseRevision) || baseRevision !== doc.revision) fail("حُفظت إجاباتك من جهاز أو نافذة أخرى. حدّث الصفحة.", 409, "DRAFT_STALE");
 }
 
@@ -217,6 +222,7 @@ function applySubmit(current, template, { baseRevision, now }) {
     err.httpStatus = 400; err.code = "FORM_INCOMPLETE"; err.missing = progress.missing;
     throw err;
   }
+  if (doc.status === "returned") doc.resubmittedAt = now;                        // Phase F3: a corrected form goes back to the teacher
   doc.status = "submitted";
   doc.submittedAt = now;
   doc.updatedAt = now;
@@ -224,4 +230,4 @@ function applySubmit(current, template, { baseRevision, now }) {
   return { doc };
 }
 
-module.exports = { DEFERRED_KINDS, MAX_PATCH_QUESTIONS, normalizeAnswer, isAnswered, formProgress, emptyDocument, applyDraft, applySubmit };
+module.exports = { DEFERRED_KINDS, MAX_PATCH_QUESTIONS, STUDENT_WRITABLE, normalizeAnswer, isAnswered, formProgress, emptyDocument, applyDraft, applySubmit };

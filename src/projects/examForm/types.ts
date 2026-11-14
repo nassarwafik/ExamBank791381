@@ -56,14 +56,31 @@ export type ExamFormView = {
   form: { projectCode: string; formVersion: number; title: string; sections: ExamFormSection[] };
   answers: ExamFormAnswers;
   revision: number;
-  status: "draft" | "submitted";
+  status: ExamFormStatus;
   submittedAt: string;
   updatedAt: string;
   progress: ExamFormProgress;
   deferredKinds: string[];
   readOnly?: boolean;
   changed?: boolean;
+  /** Phase F3 — a returned form: why the teacher sent it back. */
+  returnNote?: string;
+  /** Phase F3 — after the teacher's approval only: the mark and the ratings (never an answer key). */
+  result?: ExamFormResult;
+};
+
+/** draft → submitted → (returned → submitted)* → approved. The student may write a draft and a returned form. */
+export type ExamFormStatus = "draft" | "submitted" | "returned" | "approved";
+
+export type ExamFormResult = {
+  mark: number;
+  outOf: number;
+  approvedAt: string;
+  generalNote: string;
+  sections: { sectionId: string; level: number; topLevel: number; weight: number; points: number; levelLabel: string; note: string }[];
+  /** For each auto-marked question: right, wrong, or not answered (null). */
+  auto: Record<string, boolean | null>;
 };
 
 /** The few facts the project page shows on its form card (additive field of the student tracker response). */
-export type ExamFormSummary = { title: string; state: "open" | "closed"; status: "draft" | "submitted"; started: boolean; answered: number; total: number };
+export type ExamFormSummary = { title: string; state: "open" | "closed"; status: ExamFormStatus; started: boolean; answered: number; total: number; mark?: number; outOf?: number };
