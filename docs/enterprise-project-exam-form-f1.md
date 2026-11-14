@@ -117,7 +117,8 @@ to compare the book with the Packet Tracer file and correct what differs.
 | Phase | Content |
 |---|---|
 | **F1** (this) | Template, validation, student projection. |
-| F2 | The student's form: text, table and closed questions; draft autosave with a revision guard and resume; submit. No images. |
+| F2 | The student's form, server side: the class's form, text, table and closed questions, draft save with a revision guard and resume, submit. No images. (`docs/enterprise-project-exam-form-f2.md`) |
+| F2-UI | The student's page for the form, and the teacher's control that opens it. Split out of F2 so the write path is reviewed on its own. |
 | F3 | Teacher tools: open the form for a class (the questions are frozen into the class at that moment), follow progress, rate sections, return for correction, approve. |
 | F4 | Student images through the existing image sanitizer; served by the API only, to the student who owns them and the teacher. |
 | F5 | Files (`.pkt`, the book), PDF export, the 883589 and 899373 question banks. |

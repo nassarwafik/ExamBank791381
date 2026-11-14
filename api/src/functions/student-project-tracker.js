@@ -6,16 +6,14 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
-const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
-const { getSupportedClassProgramCodes } = require("../lib/project-tracker/class-programs");
+const { getContainer } = require("../lib/platform-storage");
 // Shared with the student dashboard's Strength calculation: the ONE loader that turns class programCodes into
 // per-project authoritative summaries (core.buildStudentSummary). Project math is never duplicated here.
 const { loadStudentProjectsAcross } = require("../lib/project-tracker/student-projects");
 // Tadris+ P11-C — a student who is also in a class of another teacher follows the projects of every class of theirs: a project code is
 // served by the FIRST class that runs it (the home class first — lib/student-classes.js), so the home class's project is never
 // replaced. The class of a self-report is the class that serves its project, derived here; a body class id is still ignored.
-const { sharedClassEntries } = require("../lib/class-membership");
-const { studentClasses } = require("../lib/student-classes");
+const { resolveStudentProjectClasses } = require("../lib/project-tracker/student-project-classes");
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
@@ -42,7 +40,6 @@ function selfReportInput(body, codes) {
   return { projectCode, stageIds, mark: body.mark };
 }
 
-const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
@@ -57,21 +54,9 @@ async function handler(request, deps = {}, obs = null) {
 
       const studentId = sess.user.sub;
       const student = sess.student;
-      // The student's classes in serving order (P11-C, lib/student-classes.js): the OPEN classes — the home class first, then the
-      // classes the owner added the student to — and LAST an archived home class, whose projects stay a readable record (as before)
-      // wherever no open class runs the same project.
-      const classList = [];
-      if (sharedClassEntries(student).length) {
-        const classes = await studentClasses(student, name => downloadJsonOrNull(container, name));
-        for (const c of classes.open) classList.push({ classId: c.classId, classroom: c.classroom });
-        if (classes.home.classroom && classes.home.archived) classList.push({ classId: classes.home.classId, classroom: classes.home.classroom });
-      } else {
-        const homeId = student.classId;
-        const homeClassroom = homeId ? await downloadJsonOrNull(container, CLASS_PREFIX + homeId + ".json") : null;
-        if (homeClassroom) classList.push({ classId: homeId, classroom: homeClassroom });
-      }
-      const servedBy = new Map();                                   // project code → the class that serves it
-      for (const c of classList) for (const code of getSupportedClassProgramCodes(c.classroom)) if (!servedBy.has(code)) servedBy.set(code, c);
+      // The student's classes in serving order and the class that serves each project (P11-C): the one resolution shared with the
+      // exam-form route (lib/project-tracker/student-project-classes.js).
+      const { classList, servedBy } = await resolveStudentProjectClasses(container, student);
       const codes = [...servedBy.keys()];
       if (!classList.length || !codes.length) {
         if (request.method === "POST") return { status: 400, jsonBody: { ok: false, error: "المشروع غير متاح لصفك." } };

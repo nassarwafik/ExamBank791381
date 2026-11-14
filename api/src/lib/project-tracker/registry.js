@@ -120,6 +120,17 @@ function getExamFormTemplate(projectCode) {
   return def.examForm ? loadExamFormTemplate(def.projectCode) : null;
 }
 
+// Phase F2 — exam-form documents are new, so EVERY project (794589 included) keeps them under its own project-scoped prefix:
+// the class's form (state + the questions frozen when it was opened) and one answers document per student.
+function examFormNames(code) {
+  const base = "platform/project-exam-forms/" + code + "/";
+  return {
+    examFormClassName: classId => base + "classes/" + classId + ".json",
+    examFormAnswersPrefix: classId => base + "answers/" + classId + "/",
+    examFormAnswersName: (classId, studentId) => base + "answers/" + classId + "/" + studentId + ".json"
+  };
+}
+
 // Storage namespace. 794589 => exact legacy paths (production data preserved). Others => isolated,
 // project-scoped paths so no two projects ever touch the same blob.
 function getStorageNamespace(projectCode) {
@@ -130,14 +141,16 @@ function getStorageNamespace(projectCode) {
       projectCode: code,
       configName: classId => "platform/project-trackers/classes/" + classId + ".json",
       progressPrefix: classId => "platform/project-progress/" + classId + "/",
-      progressName: (classId, studentId) => "platform/project-progress/" + classId + "/" + studentId + ".json"
+      progressName: (classId, studentId) => "platform/project-progress/" + classId + "/" + studentId + ".json",
+      ...examFormNames(code)
     };
   }
   return {
     projectCode: code,
     configName: classId => "platform/project-trackers/" + code + "/classes/" + classId + ".json",
     progressPrefix: classId => "platform/project-progress/" + code + "/" + classId + "/",
-    progressName: (classId, studentId) => "platform/project-progress/" + code + "/" + classId + "/" + studentId + ".json"
+    progressName: (classId, studentId) => "platform/project-progress/" + code + "/" + classId + "/" + studentId + ".json",
+    ...examFormNames(code)
   };
 }
 
