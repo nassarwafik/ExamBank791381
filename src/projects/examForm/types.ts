@@ -46,6 +46,7 @@ export type ExamFormAnswer = {
   values?: Record<string, number>;
   checked?: string[];
   accepted?: boolean;
+  /** Phase F4 — references to the images the student attached to this question (served by the API only). */
   images?: ExamFormImageRef[];
 };
 

@@ -104,6 +104,9 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
     : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات. إرفاقها سيتاح قريبًا، وهي لا تمنع التسليم الآن."
       : (view.progress.deferred === 1 ? "سؤال واحد يحتاج ملفًا" : view.progress.deferred === 2 ? "سؤالان يحتاجان ملفات" : view.progress.deferred + " أسئلة تحتاج ملفات")
         + ". إرفاق الملفات سيتاح قريبًا، وهذا لا يمنع التسليم الآن.";
+  // Phase F3-UI — after the teacher's approval: this section's level and note, and right / wrong per auto-marked question.
+  const sectionResult = view.result ? view.result.sections.find(r => r.sectionId === section.sectionId) : undefined;
+  const verdicts = view.result ? view.result.auto : null;
   const missingSections = sections.map((s, i) => ({ index: i, title: s.title, count: s.questions.filter(q => missing.has(q.questionId)).length })).filter(s => s.count > 0);
 
   async function submit() {
@@ -126,7 +129,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
         <StatusBadge tone={status.tone}>{status.text}</StatusBadge>
         {!draft.locked && <SaveStatus kind={draft.saveKind} lastSavedAt={draft.lastSavedAt} onRetry={draft.retrySave} />}
       </header>
-      <ProgressBar size="sm" showValue={false} label={"أجبت عن " + view.progress.answered + " من " + view.progress.total} value={share(view.progress.answered, view.progress.total)} tone={view.status === "submitted" ? "success" : "primary"} />
+      <ProgressBar size="sm" showValue={false} label={"أجبت عن " + view.progress.answered + " من " + view.progress.total} value={share(view.progress.answered, view.progress.total)} tone={view.status === "submitted" || view.status === "approved" ? "success" : "primary"} />
       {reason && <p className="platform-notice assignment-inline-message" data-testid="exam-form-locked">{reason}</p>}
       {view.status === "returned" && (
         <p className="platform-notice assignment-inline-message" data-testid="exam-form-returned">
@@ -134,9 +137,27 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
         </p>
       )}
       {view.result && (
-        <p className="platform-notice assignment-inline-message" data-testid="exam-form-mark">
-          علامة الاستمارة: <strong dir="ltr">{view.result.mark} / {view.result.outOf}</strong>
-        </p>
+        <div className="eb-sp-form-result" data-testid="exam-form-result">
+          <p className="eb-sp-form-result-mark" data-testid="exam-form-mark">
+            علامة الاستمارة: <strong dir="ltr">{view.result.mark} / {view.result.outOf}</strong>
+          </p>
+          {view.result.generalNote && <p className="eb-sp-form-result-general">ملاحظة معلمك: <span dir="auto">{view.result.generalNote}</span></p>}
+          <ul className="eb-sp-form-result-list" aria-label="تقدير الأقسام">
+            {view.result.sections.map(r => {
+              const at = sections.findIndex(s => s.sectionId === r.sectionId);
+              return (
+                <li key={r.sectionId} className="eb-sp-form-result-row" data-section={r.sectionId}>
+                  <span className="eb-sp-form-result-title">
+                    {at >= 0 ? <button type="button" className="eb-button is-small is-quiet" onClick={() => go(at)}>{sections[at].title}</button> : r.sectionId}
+                  </span>
+                  <span className="eb-sp-form-result-level">{r.levelLabel} <span className="eb-muted" dir="ltr">({r.level}/{r.topLevel})</span></span>
+                  <span className="eb-sp-form-result-points"><span dir="ltr">{r.points}</span> من <span dir="ltr">{r.weight}</span></span>
+                  {r.note && <span className="eb-sp-form-result-note">ملاحظة: <span dir="auto">{r.note}</span></span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
       {submitted && <p className="platform-notice assignment-inline-message" role="status">تم تسليم الاستمارة.</p>}
       {draft.notice && !reason && <p className="platform-notice assignment-inline-message" role="status">{draft.notice}</p>}
@@ -156,6 +177,12 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
 
       <div className="eb-sp-form-section">
         <h3 className="eb-sp-form-section-title" ref={headingRef} tabIndex={-1}><span dir="ltr">{section.order}</span>. {section.title}</h3>
+        {sectionResult && (
+          <p className="eb-sp-form-section-result" data-testid="exam-form-section-result">
+            تقدير هذا القسم: <strong>{sectionResult.levelLabel}</strong> <span className="eb-muted" dir="ltr">({sectionResult.level}/{sectionResult.topLevel})</span>
+            {sectionResult.note && <> — <span dir="auto">{sectionResult.note}</span></>}
+          </p>
+        )}
         {section.questions.map((question, qi) => {
           const flagged = showMissing && missing.has(question.questionId);
           return (
@@ -169,6 +196,13 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
                 <QuestionInput question={question} answer={draft.answers[question.questionId]} disabled={draft.locked}
                   onChange={answer => draft.setAnswer(question.questionId, answer)} images={imageTools} />
                 {flagged && <p className="eb-sp-form-missing-mark">هذا السؤال إلزامي ولم يكتمل بعد.</p>}
+                {verdicts && question.questionId in verdicts && (
+                  <p className="eb-sp-form-verdict" data-verdict={verdicts[question.questionId] === null ? "none" : verdicts[question.questionId] ? "right" : "wrong"}>
+                    <StatusBadge tone={verdicts[question.questionId] === null ? "neutral" : verdicts[question.questionId] ? "success" : "danger"}>
+                      {verdicts[question.questionId] === null ? "لم تُجب" : verdicts[question.questionId] ? "إجابة صحيحة" : "إجابة خاطئة"}
+                    </StatusBadge>
+                  </p>
+                )}
               </div>
             </fieldset>
           );

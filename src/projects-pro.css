@@ -382,6 +382,30 @@
 .eb-project-exam-form-title{ color:var(--eb-text-heading); }
 .eb-project-exam-form .eb-button{ min-height:44px; }
 .eb-project-exam-form .assignment-inline-message{ flex:1 1 100%; margin:0; }
+/* Phase F3-UI — the teacher's follow-up of the exam form: the question picker, the class list and one student's review. Class selectors only. */
+.eb-project-exam-form-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-project-exam-form-panel{ flex:1 1 100%; min-width:0; display:flex; flex-direction:column; gap:var(--eb-space-3); padding-block-start:var(--eb-space-3); border-block-start:1px solid var(--eb-line); }
+.eb-project-form-picker{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-project-form-picker p{ margin:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-project-form-picker-section{ padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.eb-project-form-picker-section > summary{ min-height:44px; display:flex; align-items:center; gap:var(--eb-space-1); cursor:pointer; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
+.eb-project-form-picker-list{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; }
+.eb-project-form-list{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-project-form-counts,.eb-project-form-facts{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-project-form-rows{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; min-width:0; }
+.eb-project-form-row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); min-width:0; padding-block:var(--eb-space-2); border-block-start:1px solid var(--eb-line); }
+.eb-project-form-row-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; flex:1 1 16rem; }
+.eb-project-form-row-text p{ margin:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-project-form-row-name{ color:var(--eb-text-heading); }
+.eb-project-form-unsaved{ color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.eb-project-form-verdict{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-project-form-key{ color:var(--eb-text-secondary); min-width:0; overflow-wrap:anywhere; }
+.eb-project-form-rating{ display:flex; flex-direction:column; gap:var(--eb-space-2); margin:0; min-inline-size:0; padding:var(--eb-space-3); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+.eb-project-form-rating > legend{ padding:0 var(--eb-space-1); color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
+.eb-project-form-levels{ display:flex; flex-direction:column; min-width:0; }
+.eb-project-form-rating > .eb-button{ align-self:flex-start; }
+.eb-project-form-return{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.eb-project-form-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 
 /* ---------- UX-R10 — the projects pages in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R10) ----------
    Presentation only. Every rule is scoped to the hub (.eb-projects-hub) or the workspace (.eb-project-workspace), so the shared

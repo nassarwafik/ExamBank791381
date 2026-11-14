@@ -115,7 +115,11 @@ describe("F4-UI the teacher's switch for image answers", () => {
     mount(true);
     await waitFor(() => expect(imagesLine()?.textContent).toContain("أسئلة الصور غير مفعّلة لهذا الصف"));
     await settle();
-    expect(within(screen.getByTestId("project-exam-form")).queryByRole("button")).toBeNull();
+    // Following the forms stays (F3-UI); nothing that changes the class is offered.
+    const control = within(screen.getByTestId("project-exam-form"));
+    expect(control.queryByRole("button", { name: "تفعيل أسئلة الصور" })).toBeNull();
+    expect(control.queryByRole("button", { name: /فتح الاستمارة|إغلاق الاستمارة/ })).toBeNull();
+    expect(control.getAllByRole("button").map(b => b.textContent)).toEqual(["متابعة الاستمارات"]);
     expect(s.posts).toEqual([]);
   });
 
