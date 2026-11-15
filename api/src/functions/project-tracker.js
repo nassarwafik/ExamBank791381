@@ -394,6 +394,11 @@ async function handler(request, deps = {}, obs = null) {
       // close keeps every saved answer and only stops student writes. Both are audited.
       if (action === "examform.open" || action === "examform.close") {
         const open = action === "examform.open";
+        // Owner decision (2026-11-15): files are not uploaded to the site. A request to switch file answers on for a class —
+        // from a page cached while that switch existed, or from a direct call — is refused outright and writes nothing.
+        if (open && body.fileAnswers !== undefined) {
+          return { status: 409, jsonBody: { ok: false, error: "رفع الملفات غير متاح في الموقع: تُسلَّم الملفات للمعلم مباشرة.", code: "FILES_NOT_OFFERED" } };
+        }
         try {
           const r = open
             ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now, hiddenQuestionIds: body.hiddenQuestionIds, imageAnswers: body.imageAnswers })   // imageAnswers: Phase F4

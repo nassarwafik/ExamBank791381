@@ -17,7 +17,7 @@ from its name to the reflection, sources and attachments, with no time limit, sa
 |---|---|
 | How many questions? | All **92** (16 sections); the teacher can hide a question before opening the form (F3). |
 | Does the form's mark enter the project score? | **No, not yet.** It is shown beside the project score; merging is decided after one class has used it. |
-| The P2 decision was "no attachment". Are student images allowed here? | **Yes, images** (F4). Files (`.pkt`, the book): **not uploaded to the site** — owner decision of 2026-11-15, which replaces «files wait for F5». A file question stays on the student's page as a reminder to hand the file to the teacher. |
+| The P2 decision was "no attachment". Are student images allowed here? | **Yes, images** (F4). Files (`.pkt`, the book): **not uploaded to the site** — owner decision of 2026-11-15, which replaces «files wait for F5». A file question stays on the student's page as a reminder to hand the file to the teacher (`docs/enterprise-project-exam-form-no-file-uploads.md`). |
 | When does the student see the auto-marked results and the teacher's notes? | **After the teacher approves**, not on submit. |
 | May the student edit after submitting? | **Only when the teacher returns the form.** |
 | Which project first? | **794589 only.** 883589 got its own question bank in F1b (`docs/enterprise-project-exam-form-883589.md`); 899373 got its own in F1c (`docs/enterprise-project-exam-form-899373.md`). |
