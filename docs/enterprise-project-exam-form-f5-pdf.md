@@ -119,6 +119,27 @@ SHA-256, `git status` unchanged afterwards. **33 KILLED, 0 survived, 0 timeouts.
 | What a copy carries (the student's copy only the section on screen; without the review of an approved form; without a name; unsaved ratings printed; the login code printed; working ratings not said to be unapproved; no mark for an approved form; the file's id printed) | 8 |
 | Printing (the iframe left after printing; a frame that cannot print left behind; a browser that cannot print silent; a refusal to print ignored) | 4 |
 
+**Real browser (local, not a committed gate).** The production build next to the real API in process (the harness of the
+browser gates), Chromium, the teacher at 1440 × 900 and the student at 390 × 844 (touch). A whole 794589 form — 92
+questions answered, 14 images attached, rated and approved (94.5) — printed from each page; the document the page made was
+rendered to PDF by the same engine. 20 checks passed.
+
+| | The teacher's copy | The student's copy |
+|---|---|---|
+| The file | a real PDF, 19 A4 pages, 476 KB | a real PDF, 18 A4 pages, 473 KB |
+| Images | 14 of 14 in the document | 14 of 14 |
+| Text | the student's name, the mark 94.5, 12 right and 1 wrong verdicts; the commands readable left-to-right | the mark, a section's note, the general note; 16 sections and 92 questions — the whole form, not the section on screen |
+| Never there | an answer key (the right option of the wrong choice is nowhere); the student's login code | an answer key |
+| Layout | the document fits the A4 width; the review page does not scroll sideways | the form page does not scroll sideways; the button is 44 px tall on touch |
+
+The pages were also read by eye (rendered to images): the heading, the tables inside the page's width, the commands, the
+images with their captions, the rating boxes. Two things were changed after the first look — a table's cells now break
+long words instead of leaving the page, and a question's only image takes the page's width instead of half of it — and
+the run above is on the build with both.
+
+**Visual regression (local run of the UX-R19b gate).** Base `e90b3b60` build against this branch's build, phone viewport,
+light and dark: 79 captures compared in each theme, 0 changed, GATE PASS. Tablet and desktop run in CI.
+
 ## Known limits
 
 - The PDF is made by the browser's print dialog: its exact pages, margins and file name depend on the browser and on what
