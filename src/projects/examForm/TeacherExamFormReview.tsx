@@ -11,6 +11,8 @@ import { useConfirm } from "../../ui/useConfirm";
 import { SAVE_STATE_LABELS } from "../../teacher/saveLabels";
 import QuestionInput from "./QuestionInput";
 import { ExamFormImageList, type ExamFormImageReader } from "./ExamFormImages";
+import ExamFormPrintButton from "./ExamFormPrintButton";
+import { printDate, type PrintRating } from "./examFormPrint";
 import { STATUS_BADGE, entryText, type SectionRating, type TeacherFormView, type TeacherQuestion, type TeacherSection } from "./teacherTypes";
 
 type Props = {
@@ -256,6 +258,32 @@ export default function TeacherExamFormReview({ token, projectCode, classId, stu
     if (r) { adopt(r); setNotice("أُلغي الاعتماد. الاستمارة «سُلّمت» من جديد."); }
   });
 
+  // Phase F5 (PDF) — the teacher's copy: the answers, right / wrong per auto-marked question, the STORED ratings and notes
+  // and the mark of an approved form. Never a key (the print module does not read one). Unsaved ratings are saved first.
+  function printCopy() {
+    if (unsaved) return "احفظ التقديرات أولًا لتظهر في ملف الطباعة.";
+    const stored = view!.review.ratings;
+    const ratings: Record<string, PrintRating> = {};
+    for (const s of sections) {
+      const r = stored[s.sectionId];
+      if (!r || !Number.isInteger(r.level) || !levels[r.level]) continue;
+      ratings[s.sectionId] = { level: r.level, topLevel: top, label: levels[r.level].label, note: r.note || "", weight: s.weight, points: Math.round((s.weight * r.level * 100) / top) / 100 };
+    }
+    const meta: [string, string][] = [
+      ["الإجابات", view!.progress.answered + " من " + view!.progress.total],
+      ["الأسئلة الآلية", view!.auto.correct + " صحيحة من " + view!.auto.total]
+    ];
+    if (view!.submittedAt && view!.status !== "draft") meta.push(["تاريخ التسليم", printDate(view!.submittedAt)]);
+    if (view!.result && view!.approvedAt) meta.push(["تاريخ الاعتماد", printDate(view!.approvedAt)]);
+    return {
+      audience: "teacher" as const, formTitle: view!.form.title, projectCode: view!.form.projectCode, studentName: name, statusText: badge.text, meta,
+      sections, answers: view!.answers, verdicts: view!.auto.byQuestion, ratings,
+      ratingsNote: view!.result ? "" : (Object.keys(ratings).length ? "تقديرات المعلم المحفوظة — لم تُعتمد بعد، ولا يراها الطالب." : ""),
+      generalNote: view!.review.generalNote || "",
+      ...(view!.result ? { mark: { mark: view!.result.mark, outOf: view!.result.outOf } } : {})
+    };
+  }
+
   const why = locked ? "العرض فقط: لا يمكن تغيير التقديرات في هذا الصف."
     : view.status === "approved" ? "الاستمارة معتمدة. ألغِ الاعتماد لتعديل التقديرات."
       : view.status === "returned" ? "الاستمارة عند الطالب للتعديل. تُقدَّر بعد أن يسلّمها من جديد."
@@ -268,6 +296,7 @@ export default function TeacherExamFormReview({ token, projectCode, classId, stu
         <h3 id="eb-project-form-review-title" className="eb-subheading">استمارة {name}</h3>
         <StatusBadge tone={badge.tone}>{badge.text}</StatusBadge>
         {unsaved && <span className="eb-project-form-unsaved" role="status">{SAVE_STATE_LABELS.dirty}</span>}
+        <ExamFormPrintButton prepare={printCopy} readImage={readImage} />
       </header>
       <p className="eb-project-form-facts">
         أجاب عن <span dir="ltr">{view.progress.answered}</span> من <span dir="ltr">{view.progress.total}</span> ·

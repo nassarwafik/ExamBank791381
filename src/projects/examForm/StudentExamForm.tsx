@@ -2,6 +2,7 @@
 // the student goes (no time limit), resumed where they stopped, submitted once. After the submit, or while the teacher
 // keeps the form closed, the page is a read-only record of the answers.
 // Phase F4-UI — where the teacher switched image answers on for the class, image questions take images (ExamFormImages).
+// Phase F5 (PDF) — «طباعة / حفظ PDF»: the student's own copy of the form as it is on the page (ExamFormPrintButton).
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProgressBar from "../../ui/ProgressBar";
 import StatusBadge from "../../ui/StatusBadge";
@@ -10,6 +11,8 @@ import { useConfirm } from "../../ui/useConfirm";
 import SaveStatus from "../../student/exam/SaveStatus";
 import QuestionInput from "./QuestionInput";
 import type { ExamFormImageTools } from "./ExamFormImages";
+import ExamFormPrintButton from "./ExamFormPrintButton";
+import { printDate, type PrintRating } from "./examFormPrint";
 import { useExamFormDraft } from "./useExamFormDraft";
 import type { ExamFormSection, ExamFormView } from "./types";
 
@@ -22,6 +25,10 @@ type Props = {
 };
 
 const share = (answered: number, total: number) => (total > 0 ? (answered * 100) / total : 0);
+// The signed-in student's display name, for the heading of their printed copy (the app keeps it for the session).
+function sessionName(): string {
+  try { return sessionStorage.getItem("examBankSessionDisplayName") || ""; } catch { return ""; }
+}
 
 function statusOf(view: ExamFormView): { tone: "success" | "neutral" | "info" | "warn"; text: string } {
   if (view.status === "approved") return { tone: "success", text: "اعتُمدت" };
@@ -104,6 +111,22 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
     : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات، وهي لا تمنع التسليم الآن. الملفات تُسلَّم لمعلمك مباشرة ولا تُرفع إلى الموقع."
       : (view.progress.deferred === 1 ? "سؤال واحد يحتاج ملفًا" : view.progress.deferred === 2 ? "سؤالان يحتاجان ملفات" : view.progress.deferred + " أسئلة تحتاج ملفات")
         + ". تُسلَّم الملفات لمعلمك مباشرة ولا تُرفع إلى الموقع، وهذا لا يمنع التسليم.";
+  // Phase F5 (PDF) — the student's own copy: the answers as they are on the page, and the teacher's review only where the
+  // server sent it (an approved form). Nothing here adds to what the page already holds.
+  function printCopy() {
+    const result = view!.result;
+    const ratings: Record<string, PrintRating> | undefined = result
+      ? Object.fromEntries(result.sections.map(r => [r.sectionId, { level: r.level, topLevel: r.topLevel, label: r.levelLabel, note: r.note, weight: r.weight, points: r.points }]))
+      : undefined;
+    const meta: [string, string][] = [["الإجابات", view!.progress.answered + " من " + view!.progress.total]];
+    if (view!.submittedAt && view!.status !== "draft") meta.push(["تاريخ التسليم", printDate(view!.submittedAt)]);
+    if (result && result.approvedAt) meta.push(["تاريخ الاعتماد", printDate(result.approvedAt)]);
+    return {
+      audience: "student" as const, formTitle: view!.form.title, projectCode: view!.form.projectCode, studentName: sessionName(), statusText: status.text, meta,
+      sections: view!.form.sections, answers: draft.answers,
+      ...(result ? { verdicts: result.auto, ratings, generalNote: result.generalNote, mark: { mark: result.mark, outOf: result.outOf } } : {})
+    };
+  }
   // Phase F3-UI — after the teacher's approval: this section's level and note, and right / wrong per auto-marked question.
   const sectionResult = view.result ? view.result.sections.find(r => r.sectionId === section.sectionId) : undefined;
   const verdicts = view.result ? view.result.auto : null;
@@ -128,6 +151,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
         <h2 id="eb-sp-form-title" className="eb-subheading">{view.form.title}</h2>
         <StatusBadge tone={status.tone}>{status.text}</StatusBadge>
         {!draft.locked && <SaveStatus kind={draft.saveKind} lastSavedAt={draft.lastSavedAt} onRetry={draft.retrySave} />}
+        <ExamFormPrintButton prepare={printCopy} readImage={draft.readImage} />
       </header>
       <ProgressBar size="sm" showValue={false} label={"أجبت عن " + view.progress.answered + " من " + view.progress.total} value={share(view.progress.answered, view.progress.total)} tone={view.status === "submitted" || view.status === "approved" ? "success" : "primary"} />
       {reason && <p className="platform-notice assignment-inline-message" data-testid="exam-form-locked">{reason}</p>}
