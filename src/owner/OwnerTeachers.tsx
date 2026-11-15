@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { IconKey, IconPlus, IconWarning } from "../icons";
+import { IconKey, IconPlus, IconWarning, IconReports } from "../icons";
 import ActionMenu from "../ui/ActionMenu";
 import { ownerApi, ownerTeachersApi, ownerAccessApi, ownerSchoolsApi, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset, type AccessCapability } from "./ownerApi";
 import DiffView from "../ui/DiffView";
@@ -48,7 +48,7 @@ const FILTERS: { id: Filter; label: string; test: (t: ManagedTeacher) => boolean
 ];
 const searchable = (t: ManagedTeacher) => [t.displayName, t.fullName, t.username, t.email].join(" ").toLowerCase();
 
-export default function OwnerTeachers({ token, onSignedOut, onOpen, startCreate = null, onCreateStarted }: { token: string; onSignedOut: () => void; onOpen?: (accountId: string) => void; startCreate?: "permanent" | "trial" | null; onCreateStarted?: () => void }) {
+export default function OwnerTeachers({ token, onSignedOut, onOpen, onDashboard, startCreate = null, onCreateStarted }: { token: string; onSignedOut: () => void; onOpen?: (accountId: string) => void; onDashboard?: (accountId: string) => void; startCreate?: "permanent" | "trial" | null; onCreateStarted?: () => void }) {
   const [teachers, setTeachers] = useState<ManagedTeacher[] | null>(null);
   const [legacy, setLegacy] = useState<LegacyImportState | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -218,7 +218,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen, startCreate 
       {teachers === null && !error && <p className="eb-owner-hint" role="status">جارٍ تحميل المعلمين…</p>}
       {teachers && teachers.length === 0 && <p className="eb-owner-hint">لا يوجد معلمون مُدارون بعد. أضف أول معلم، ثم أرسل له رابط الدعوة.</p>}
       {teachers && teachers.length > 0 && (
-        <TeacherTable teachers={teachers} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter}
+        <TeacherTable teachers={teachers} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter} withDashboard={Boolean(onDashboard)}
           row={t => (
             <tbody key={t.accountId} className="eb-owner-teacher-group" aria-label={t.displayName}>
               <tr className="eb-owner-teacher-row">
@@ -237,6 +237,13 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen, startCreate 
                   {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : <span className="eb-owner-muted">لم يدخل بعد</span>}
                   {t.invitation && <small className="eb-owner-muted">رابط {t.invitation.purpose === "reset" ? "إعادة التعيين" : "الدعوة"} صالح حتى <bdi>{formatDate(t.invitation.expiresAt)}</bdi></small>}
                 </td>
+                {onDashboard && (
+                  <td className="eb-owner-teacher-dash">
+                    <button type="button" className="eb-owner-secondary eb-owner-dash-open" aria-label={"لوحة بيانات " + t.displayName} onClick={() => onDashboard(t.accountId)}>
+                      <IconReports size={16} aria-hidden="true" />لوحة البيانات
+                    </button>
+                  </td>
+                )}
                 <td className="eb-owner-teacher-menu">
                   <ActionMenu label={"إجراءات " + t.displayName} disabled={busy}>
                     {onOpen && <button type="button" className="eb-menu-item" onClick={() => onOpen(t.accountId)}>صفحة المعلم</button>}
@@ -253,7 +260,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen, startCreate 
               </tr>
               {(choosing === t.accountId || (trialFor === t.accountId && t.trial) || (confirming && confirming.teacher.accountId === t.accountId)) && (
                 <tr className="eb-owner-teacher-panel">
-                  <td colSpan={6}>
+                  <td colSpan={onDashboard ? 7 : 6}>
                     {choosing === t.accountId && (
                       <AccessChooser teacher={t} presets={presets} labels={capabilityLabels} enforcing={accessMode === "enforce"} busy={busy} onCancel={() => setChoosing(null)} onSave={preset => run({ kind: "access", teacher: t, preset })} />
                     )}
@@ -285,7 +292,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen, startCreate 
 }
 
 /** UX-O1 — the toolbar (search + status filters with counts) and the table frame; each teacher's row group comes from `row`. */
-function TeacherTable({ teachers, query, filter, onQuery, onFilter, row }: { teachers: ManagedTeacher[]; query: string; filter: Filter; onQuery: (q: string) => void; onFilter: (f: Filter) => void; row: (t: ManagedTeacher) => ReactNode }) {
+function TeacherTable({ teachers, query, filter, onQuery, onFilter, row, withDashboard = false }: { teachers: ManagedTeacher[]; query: string; filter: Filter; onQuery: (q: string) => void; onFilter: (f: Filter) => void; row: (t: ManagedTeacher) => ReactNode; withDashboard?: boolean }) {
   const counts = useMemo(() => Object.fromEntries(FILTERS.map(f => [f.id, teachers.filter(f.test).length])) as Record<Filter, number>, [teachers]);
   const q = query.trim().toLowerCase();
   const active = FILTERS.find(f => f.id === filter) || FILTERS[0];
@@ -310,7 +317,7 @@ function TeacherTable({ teachers, query, filter, onQuery, onFilter, row }: { tea
         <table className="eb-table eb-owner-teacher-table">
           <caption className="eb-visually-hidden">المعلمون</caption>
           <thead>
-            <tr><th scope="col">المعلم</th><th scope="col">الحالة</th><th scope="col">الصلاحيات</th><th scope="col">المدرسة</th><th scope="col">آخر دخول</th><th scope="col"><span className="eb-visually-hidden">الإجراءات</span></th></tr>
+            <tr><th scope="col">المعلم</th><th scope="col">الحالة</th><th scope="col">الصلاحيات</th><th scope="col">المدرسة</th><th scope="col">آخر دخول</th>{withDashboard && <th scope="col"><span className="eb-visually-hidden">لوحة البيانات</span></th>}<th scope="col"><span className="eb-visually-hidden">الإجراءات</span></th></tr>
           </thead>
           {visible.map(row)}
           {visible.length === 0 && (

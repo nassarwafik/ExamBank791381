@@ -388,3 +388,40 @@ export const ownerLegacyApi = {
   undo: (token: string, migrationId: string, reason: string) =>
     call<{ ok: true; ledger: LegacyLedger }>("/api/owner-legacy-classes/undo", { method: "POST", token, body: { migrationId, reason } })
 };
+
+// Owner teacher dashboard — «لوحة البيانات» of one teacher (GET /api/owner-teacher-dashboard, read only; every view is recorded in
+// the owner's audit log). The figures are the teacher's own «لوحة المتابعة» (the same server function and scope).
+export type DashboardTrend = "improving" | "declining" | "stable";
+export type DashboardStudent = {
+  userId: string; displayName: string; identityNumber: string; classId: string; className: string; average: number | null; assigned: number; completed: number;
+  missing: number; completionRate: number; trendDelta: number; trend: DashboardTrend; lastLoginAt: string; severity: "high" | "medium" | "low"; reasons: string[];
+};
+export type OwnerTeacherDashboard = {
+  ok: true; generatedAt: string;
+  teacher: { accountId: string; username: string; displayName: string; status: string };
+  scope: { mode?: "global" | "class" | "student"; classId: string; className: string; studentId?: string; studentName?: string; from: string; to: string };
+  classes: Array<{ classId: string; name: string; grade: string; schoolYear: string; active: boolean; studentCount: number }>;
+  kpis: {
+    activeClasses: number; activeStudents: number; publishedAssignments: number; submissions: number; expectedSubmissions: number; missingSubmissions: number;
+    pendingReview: number; lateSubmissions: number; completionRate: number; average: number | null; highest: number | null; lowest: number | null;
+    performanceChange: number; followUpStudents: number; neverLogged: number;
+  };
+  submissionStatus: { submitted: number; missing: number; pendingReview: number; late: number };
+  gradeDistribution: Array<{ label: string; count: number }>;
+  assignmentTrend: Array<{ assignmentId: string; classId: string; className: string; title: string; dueAt: string; date: string; students: number; submitted: number; missing: number; pendingReview: number; completionRate: number; average: number | null; highest: number | null; lowest: number | null }>;
+  classComparison: Array<{ classId: string; name: string; grade: string; students: number; assignments: number; expected: number; submitted: number; missing: number; pendingReview: number; completionRate: number; average: number | null }>;
+  topicAnalytics: Array<{ topic: string; average: number | null; gradedQuestions: number }>;
+  followUp: DashboardStudent[];
+  topImprovers: DashboardStudent[];
+  insights: Array<{ tone: "success" | "warning" | "info"; title: string; text: string }>;
+  students: Array<{ userId: string; displayName: string }>;
+  studentDetail: (Omit<DashboardStudent, "severity" | "identityNumber"> & { needsFollowUp?: boolean; scoreTrend: Array<{ assignmentId: string; title: string; date: string; percentage: number }>; topicAnalytics: Array<{ topic: string; average: number | null; gradedQuestions: number }> }) | null;
+};
+export type DashboardQuery = { classId?: string; studentId?: string; from?: string; to?: string };
+export const ownerDashboardApi = {
+  get: (token: string, accountId: string, q: DashboardQuery = {}) => {
+    const params = new URLSearchParams({ accountId });
+    for (const k of ["classId", "studentId", "from", "to"] as const) if (q[k]) params.set(k, String(q[k]));
+    return call<OwnerTeacherDashboard>("/api/owner-teacher-dashboard?" + params.toString(), { token });
+  }
+};
