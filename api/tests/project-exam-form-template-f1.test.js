@@ -84,11 +84,13 @@ describe("F1 — the bundled 794589 exam form", () => {
 });
 
 describe("F1 — the registry", () => {
-  // Phase F1b — 883589 ships its own form now (api/tests/project-exam-form-883589-f1b.test.js); 899373 is the project with none.
+  // Phase F1b — 883589 ships its own form (api/tests/project-exam-form-883589-f1b.test.js). Phase F1c — so does 899373
+  // (api/tests/project-exam-form-899373-f1c.test.js): every bundled project ships one now. What the routes answer for a
+  // project WITHOUT a form is still tested, over a registry that has one (api/tests/fixtures/formless-project.js).
   it("returns a form only for the projects that ship one", () => {
-    expect(getSupportedProjects().filter(code => getExamFormTemplate(code) !== null).sort()).toEqual([CODE, "883589"]);
+    expect(getSupportedProjects().filter(code => getExamFormTemplate(code) !== null).sort()).toEqual([CODE, "883589", "899373"]);
     expect(getExamFormTemplate("883589").projectCode).toBe("883589");
-    expect(getExamFormTemplate("899373")).toBeNull();
+    expect(getExamFormTemplate("899373").projectCode).toBe("899373");
   });
   it("refuses an unknown project instead of answering «no form»", () => {
     expect(() => getExamFormTemplate("000000")).toThrow(/Unknown project code/);
@@ -97,7 +99,7 @@ describe("F1 — the registry", () => {
   it("the loader takes a six-digit code only (never a path)", () => {
     expect(() => loadExamFormTemplate("../project-794589")).toThrow(/Unknown project code/);
     expect(() => loadExamFormTemplate("794589/..")).toThrow(/Unknown project code/);
-    expect(() => loadExamFormTemplate("899373")).toThrow(/not found/);
+    expect(() => loadExamFormTemplate("000000")).toThrow(/not found/);            // a well-formed code with no data file
   });
 });
 

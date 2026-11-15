@@ -12,6 +12,7 @@ const nodeRequire = createRequire(import.meta.url);
 const { handler: tracker } = nodeRequire("../../api/src/functions/project-tracker.js");
 const { getStorageNamespace } = nodeRequire("../../api/src/lib/project-tracker/registry.js");
 const { createMemoryContainer } = nodeRequire("../../api/tests/fixtures/memory-container.js");
+const { routesWithFormlessProject } = nodeRequire("../../api/tests/fixtures/formless-project.js");
 
 type Body = Record<string, unknown>;
 const NOW = "2026-11-14T00:00:00.000Z";
@@ -22,15 +23,17 @@ function server() {
   const audits: Body[] = [];
   const deps = { container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async (_c: unknown, ev: Body) => { audits.push(ev); }, requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }) };
   const posts: Body[] = [];
+  // The route the page talks to. One test swaps it for the route as it answers for a project without a form.
+  const route = { current: tracker as (req: unknown, deps: unknown) => Promise<{ status: number; jsonBody: Body }> };
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = init?.method || "GET";
     const body = init?.body ? JSON.parse(String(init.body)) as Body : undefined;
     if (method === "POST") posts.push(body!);
-    const r = await tracker({ method, url: "https://x" + url, json: async () => body ?? {} }, deps);
+    const r = await route.current({ method, url: "https://x" + url, json: async () => body ?? {} }, deps);
     return { ok: r.status < 400, status: r.status, json: async () => r.jsonBody, text: async () => JSON.stringify(r.jsonBody), headers: new Headers() } as unknown as Response;
   }) as unknown as typeof fetch;
   const classForm = (code = "794589", cid = "c1") => { const name = getStorageNamespace(code).examFormClassName(cid); return ctx.has(name) ? ctx.getJson(name) as { state: string; template: { sections: unknown[] } } : null; };
-  return { ctx, audits, posts, classForm };
+  return { ctx, audits, posts, classForm, route };
 }
 const mount = (props: Partial<{ projectCode: string; classId: string; readOnly: boolean }> = {}) =>
   render(<ProjectExamFormControl token="t" projectCode="794589" classId="c1" {...props} />);
@@ -94,7 +97,9 @@ describe("F2-UI the teacher's exam-form control", () => {
 
   it("is not shown for a project that ships no form, nor when the state cannot be read", async () => {
     const s = server();
-    const { unmount } = mount({ projectCode: "899373", classId: "c8" });   // 899373 ships no form (883589 has one since F1b)
+    // Every bundled project ships a form since F1c: the page is served by the route as it answers for a project that has none.
+    s.route.current = routesWithFormlessProject("899373").tracker;
+    const { unmount } = mount({ projectCode: "899373", classId: "c8" });
     await waitFor(() => expect((globalThis.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1));
     expect(screen.queryByTestId("project-exam-form")).toBeNull();
     unmount();

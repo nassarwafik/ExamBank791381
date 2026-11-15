@@ -5,6 +5,7 @@ import { getExamFormTemplate, getStorageNamespace } from "../src/lib/project-tra
 import { normalizeAnswer, isAnswered, formProgress, applyDraft, applySubmit, DEFERRED_KINDS } from "../src/lib/project-tracker/exam-form-answers.js";
 import { saveStudentDraft } from "../src/lib/project-tracker/exam-form-service.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { routesWithFormlessProject } from "./fixtures/formless-project.js";
 
 // Phase F2 — the student's project exam form: the teacher opens it for a class (questions frozen), each student saves a
 // draft as they go, resumes later, and submits once. No time limit, no images or files yet, no marking
@@ -61,7 +62,9 @@ function setup(extra = {}, hooks = {}) {
   const state = async (classId = "c1") => (await tracker({ method: "GET", url: "https://x/api/project-tracker?" + new URLSearchParams({ projectCode: CODE, classId, resource: "exam-form" }), json: async () => ({}) }, teacherDeps));
   const doc = (sid = "s1", cid = "c1") => ctx.has(NS.examFormAnswersName(cid, sid)) ? ctx.getJson(NS.examFormAnswersName(cid, sid)) : null;
   const classForm = (cid = "c1") => ctx.has(NS.examFormClassName(cid)) ? ctx.getJson(NS.examFormClassName(cid)) : null;
-  return { ctx, audits, get, post, save, submit, teacher, state, doc, classForm };
+  // The same teacher request sent to another copy of the route (the «project without a form» fixture).
+  const teacherOn = (route, body, code) => route({ method: "POST", url: "https://x/api/project-tracker", json: async () => ({ projectCode: code, classId: "c1", ...body }) }, teacherDeps);
+  return { ctx, audits, get, post, save, submit, teacher, teacherOn, state, doc, classForm };
 }
 async function opened(extra, hooks) {
   const t = setup(extra, hooks);
@@ -114,7 +117,8 @@ describe("F2 teacher opens and closes the form for a class", () => {
   it("refuses: closing a form that was never opened, a project with no form, an archived class, an unknown class", async () => {
     const t = setup({ "platform/classes/c7.json": room("c7", { status: "archived", active: false }) });
     expect((await t.teacher({ action: "examForm.close" })).status).toBe(404);
-    const noForm = await t.teacher({ action: "examForm.open", classId: "c8" }, "899373");
+    // Every bundled project ships a form since F1c: the route is asked as it answers for a project that has none.
+    const noForm = await t.teacherOn(routesWithFormlessProject("899373").tracker, { action: "examForm.open", classId: "c8" }, "899373");
     expect(noForm.status).toBe(400);
     expect(noForm.jsonBody.code).toBe("NO_FORM");
     expect((await t.teacher({ action: "examForm.open", classId: "c7" })).status).toBe(403);

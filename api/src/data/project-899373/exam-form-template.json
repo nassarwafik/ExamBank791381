@@ -1,0 +1,1664 @@
+{
+ "projectCode": "899373",
+ "formVersion": 1,
+ "title": "استمارة امتحان المشروع",
+ "rubric": {
+  "levels": [
+   {
+    "value": 0,
+    "label": "لم يُجب"
+   },
+   {
+    "value": 1,
+    "label": "إجابات ناقصة، أو منقولة من الكتاب بلا شرح"
+   },
+   {
+    "value": 2,
+    "label": "صحيحة جزئيًا، أو بلا صور أو مخرجات تثبتها"
+   },
+   {
+    "value": 3,
+    "label": "صحيحة ومثبتة بصور أو مخرجات من المشروع (ملف Access: الجداول، العلاقات، الاستعلامات، التقارير)"
+   },
+   {
+    "value": 4,
+    "label": "صحيحة ومثبتة، مع شرح واضح للسبب ولما يحدث لو تغيّر التصميم أو الشرط"
+   }
+  ]
+ },
+ "sections": [
+  {
+   "sectionId": "S01",
+   "title": "بطاقة المشروع",
+   "order": 1,
+   "weight": 3,
+   "bookRef": "صفحة الغلاف",
+   "questions": [
+    {
+     "questionId": "S01Q01",
+     "prompt": "ما اسم مشروعك كما هو مكتوب على صفحة الغلاف؟",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S01Q02",
+     "prompt": "صف موضوع مشروعك بجملة واحدة: أي مكان أو عمل تخدمه قاعدة البيانات؟",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S01Q03",
+     "prompt": "أرفق صورة صفحة الغلاف من كتابك.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 1
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S02",
+   "title": "المقدمة وموضوع المشروع",
+   "order": 2,
+   "weight": 4,
+   "bookRef": "الفهرست · مقدمة عن موضوع المشروع",
+   "questions": [
+    {
+     "questionId": "S02Q01",
+     "prompt": "اشرح بكلماتك أنت: ما المشكلة التي تحلها قاعدة بياناتك، ولمن؟",
+     "help": "لا تنسخ المقدمة من الكتاب؛ اكتب كما تشرح لزميل.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S02Q02",
+     "prompt": "من يستعمل قاعدة البيانات، وماذا يحتاج كل واحد منها؟",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "user",
+       "title": "المستخدم"
+      },
+      {
+       "id": "need",
+       "title": "ماذا يحتاج"
+      }
+     ],
+     "minRows": 2,
+     "maxRows": 6
+    },
+    {
+     "questionId": "S02Q03",
+     "prompt": "اكتب ثلاث عمليات يومية تتم بقاعدة بياناتك، وأي جدول أو استعلام يخدم كل عملية.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "operation",
+       "title": "العملية"
+      },
+      {
+       "id": "object",
+       "title": "الجدول أو الاستعلام"
+      }
+     ],
+     "minRows": 3,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S02Q04",
+     "prompt": "لماذا قاعدة بيانات وليس جدولًا واحدًا في Excel أو دفترًا ورقيًا؟ أعط سببًا واحدًا من مشروعك.",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    }
+   ]
+  },
+  {
+   "sectionId": "S03",
+   "title": "الجداول وحقولها",
+   "order": 3,
+   "weight": 9,
+   "bookRef": "قاعدة بيانات المشروع والجداول · شرح جداول قاعدة البيانات وحقولها",
+   "questions": [
+    {
+     "questionId": "S03Q01",
+     "prompt": "اكتب جداول قاعدة بياناتك: اسم الجدول، الهدف منه، مفتاحه الأساسي، عدد حقوله.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "tableName",
+       "title": "اسم الجدول"
+      },
+      {
+       "id": "purpose",
+       "title": "الهدف"
+      },
+      {
+       "id": "primaryKey",
+       "title": "المفتاح الأساسي"
+      },
+      {
+       "id": "fieldCount",
+       "title": "عدد الحقول"
+      }
+     ],
+     "minRows": 4,
+     "maxRows": 10
+    },
+    {
+     "questionId": "S03Q02",
+     "prompt": "اختر جدولًا واحدًا واكتب كل حقوله: اسم الحقل، نوع البيانات، شرح الحقل.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "field",
+       "title": "اسم الحقل"
+      },
+      {
+       "id": "dataType",
+       "title": "نوع البيانات"
+      },
+      {
+       "id": "meaning",
+       "title": "الشرح"
+      }
+     ],
+     "minRows": 4,
+     "maxRows": 15
+    },
+    {
+     "questionId": "S03Q03",
+     "prompt": "طابق كل نوع بيانات في Access بالقيمة التي تناسبه.",
+     "kind": "matching",
+     "grading": "auto",
+     "required": true,
+     "left": [
+      {
+       "id": "l1",
+       "text": "ترقيم تلقائي (AutoNumber)"
+      },
+      {
+       "id": "l2",
+       "text": "نص قصير (Short Text)"
+      },
+      {
+       "id": "l3",
+       "text": "رقم (Number)"
+      },
+      {
+       "id": "l4",
+       "text": "عملة (Currency)"
+      },
+      {
+       "id": "l5",
+       "text": "تاريخ/وقت (Date/Time)"
+      },
+      {
+       "id": "l6",
+       "text": "نعم/لا (Yes/No)"
+      }
+     ],
+     "right": [
+      {
+       "id": "r1",
+       "text": "سعر مثل 59.90"
+      },
+      {
+       "id": "r2",
+       "text": "هل دُفع المبلغ؟"
+      },
+      {
+       "id": "r3",
+       "text": "رقم تعريفي يتولد وحده مع كل سجل جديد"
+      },
+      {
+       "id": "r4",
+       "text": "تاريخ الميلاد"
+      },
+      {
+       "id": "r5",
+       "text": "اسم شخص"
+      },
+      {
+       "id": "r6",
+       "text": "مدة بالدقائق مثل 45"
+      }
+     ],
+     "answer": {
+      "pairs": {
+       "l1": "r3",
+       "l2": "r5",
+       "l3": "r6",
+       "l4": "r1",
+       "l5": "r4",
+       "l6": "r2"
+      }
+     }
+    },
+    {
+     "questionId": "S03Q04",
+     "prompt": "لماذا يُحفظ رقم الهاتف ورقم الهوية نصًا وليس رقمًا؟",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S03Q05",
+     "prompt": "هل أسماء الجداول والحقول في كتابك هي نفسها في ملف Access وفي كود SQL وفي الفئات؟ اكتب كل اختلاف وجدته وأي اسم ستعتمد.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S03Q06",
+     "prompt": "لماذا قسمت المعلومات إلى هذه الجداول ولم تضعها كلها في جدول واحد؟ أعط مثالًا من مشروعك على معلومة كانت ستتكرر.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S03Q07",
+     "prompt": "أرفق صورة جدول واحد في طريقة عرض التصميم (Design View) تظهر فيها أسماء الحقول وأنواعها.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 2
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S04",
+   "title": "المفاتيح والعلاقات بين الجداول",
+   "order": 4,
+   "weight": 9,
+   "bookRef": "شرح جداول قاعدة البيانات وحقولها: المفاتيح · العلاقات في Access",
+   "questions": [
+    {
+     "questionId": "S04Q01",
+     "prompt": "اكتب العلاقات بين جداولك: الجدول الرئيسي، الجدول التابع، الحقل الذي يربطهما، نوع العلاقة.",
+     "help": "نوع العلاقة مثل: واحد إلى متعدد.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "parent",
+       "title": "الجدول الرئيسي"
+      },
+      {
+       "id": "child",
+       "title": "الجدول التابع"
+      },
+      {
+       "id": "field",
+       "title": "حقل الربط"
+      },
+      {
+       "id": "type",
+       "title": "نوع العلاقة"
+      }
+     ],
+     "minRows": 3,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S04Q02",
+     "prompt": "اختر مفتاحًا أجنبيًا (Foreign Key) من مشروعك: في أي جدول هو، وإلى أي حقل في أي جدول يشير؟",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S04Q03",
+     "prompt": "فعّلت «فرض التكامل المرجعي» (Enforce Referential Integrity) على علاقة. ماذا يمنع Access بعدها؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "إضافة سجل جديد إلى الجدول الرئيسي"
+      },
+      {
+       "id": "o2",
+       "text": "إضافة سجل في الجدول التابع يشير إلى سجل غير موجود في الجدول الرئيسي"
+      },
+      {
+       "id": "o3",
+       "text": "فتح الجدولين في الوقت نفسه"
+      },
+      {
+       "id": "o4",
+       "text": "تغيير اسم الجدول التابع"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o2"
+     }
+    },
+    {
+     "questionId": "S04Q04",
+     "prompt": "ماذا يحدث عندما تحاول حذف سجل من الجدول الرئيسي وله سجلات مرتبطة في الجدول التابع؟ اشرح الحالتين: مع «تتالي حذف السجلات المرتبطة» وبدونه.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S04Q05",
+     "prompt": "في إحدى علاقاتك: أي جدول هو طرف «المتعدد»، ولماذا؟ أعط مثالًا بسجلات حقيقية من معطياتك.",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S04Q06",
+     "prompt": "أرفق صورة نافذة العلاقات (Relationships) في Access تظهر الجداول والخطوط بينها.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 2
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S05",
+   "title": "معطيات الجداول",
+   "order": 5,
+   "weight": 6,
+   "bookRef": "إدخال البيانات في الجداول",
+   "questions": [
+    {
+     "questionId": "S05Q01",
+     "prompt": "لكل جدول من جداولك: كم سجلًا أدخلت، واكتب سجلًا واحدًا كمثال.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "tableName",
+       "title": "الجدول"
+      },
+      {
+       "id": "count",
+       "title": "عدد السجلات"
+      },
+      {
+       "id": "example",
+       "title": "سجل كمثال"
+      }
+     ],
+     "minRows": 4,
+     "maxRows": 10
+    },
+    {
+     "questionId": "S05Q02",
+     "prompt": "كيف تأكدت أن المعطيات منطقية ومتوافقة بين الجداول؟ مثال: كل قيمة في حقل الربط موجودة فعلًا في الجدول الرئيسي.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S05Q03",
+     "prompt": "التكامل المرجعي مفعّل. كتبت في الجدول التابع رقمًا في حقل الربط غير موجود في الجدول الرئيسي. ماذا يحدث؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "يُحفظ السجل ويُضاف سجل جديد تلقائيًا إلى الجدول الرئيسي"
+      },
+      {
+       "id": "o2",
+       "text": "يُحفظ السجل ويبقى حقل الربط فارغًا"
+      },
+      {
+       "id": "o3",
+       "text": "يُحذف الجدول التابع"
+      },
+      {
+       "id": "o4",
+       "text": "يرفض Access حفظ السجل ويعرض رسالة"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o4"
+     }
+    },
+    {
+     "questionId": "S05Q04",
+     "prompt": "أرفق صورة جدول أو أكثر في طريقة عرض ورقة البيانات (Datasheet View) تظهر فيها المعطيات.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 4
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S06",
+   "title": "التحقق من صحة المعلومات وقواعد التحقق",
+   "order": 6,
+   "weight": 9,
+   "bookRef": "التحقق من صحة المعلومات وقواعد التحقق",
+   "questions": [
+    {
+     "questionId": "S06Q01",
+     "prompt": "اكتب ثلاث قواعد تحقق من كتابك: الحقل، القاعدة، رسالة الخطأ أو التوضيح.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "field",
+       "title": "الحقل"
+      },
+      {
+       "id": "rule",
+       "title": "القاعدة"
+      },
+      {
+       "id": "message",
+       "title": "رسالة الخطأ أو التوضيح"
+      }
+     ],
+     "minRows": 3,
+     "maxRows": 10
+    },
+    {
+     "questionId": "S06Q02",
+     "prompt": "طابق كل قيد بما يضمنه.",
+     "kind": "matching",
+     "grading": "auto",
+     "required": true,
+     "left": [
+      {
+       "id": "l1",
+       "text": "PRIMARY KEY"
+      },
+      {
+       "id": "l2",
+       "text": "NOT NULL"
+      },
+      {
+       "id": "l3",
+       "text": "UNIQUE"
+      },
+      {
+       "id": "l4",
+       "text": "DEFAULT"
+      },
+      {
+       "id": "l5",
+       "text": "CHECK"
+      },
+      {
+       "id": "l6",
+       "text": "FOREIGN KEY"
+      }
+     ],
+     "right": [
+      {
+       "id": "r1",
+       "text": "قيمة تُكتب وحدها إن لم يُدخل المستخدم شيئًا"
+      },
+      {
+       "id": "r2",
+       "text": "القيمة يجب أن تشير إلى سجل موجود في جدول آخر"
+      },
+      {
+       "id": "r3",
+       "text": "يعرّف كل سجل: القيمة لا تتكرر ولا تكون فارغة"
+      },
+      {
+       "id": "r4",
+       "text": "شرط يجب أن تحققه القيمة، مثل أن تكون أكبر من صفر"
+      },
+      {
+       "id": "r5",
+       "text": "الحقل لا يُترك فارغًا"
+      },
+      {
+       "id": "r6",
+       "text": "القيمة لا تتكرر في سجلين، ويمكن أن تبقى فارغة"
+      }
+     ],
+     "answer": {
+      "pairs": {
+       "l1": "r3",
+       "l2": "r5",
+       "l3": "r6",
+       "l4": "r1",
+       "l5": "r4",
+       "l6": "r2"
+      }
+     }
+    },
+    {
+     "questionId": "S06Q03",
+     "prompt": "قاعدة التحقق في حقل السعر تمنع أن يكون السعر صفرًا أو أقل. كتب المستخدم سعرًا سالبًا. ماذا يحدث؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "يُرفض الإدخال وتظهر رسالة الخطأ"
+      },
+      {
+       "id": "o2",
+       "text": "يُحفظ السعر صفرًا"
+      },
+      {
+       "id": "o3",
+       "text": "يُحفظ السعر السالب ويظهر تحذير فقط"
+      },
+      {
+       "id": "o4",
+       "text": "يُحذف السجل كله"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o1"
+     }
+    },
+    {
+     "questionId": "S06Q04",
+     "prompt": "حقل «الحالة» يجب أن يقبل قيمًا محددة فقط (مثل: مؤكد، ملغي، مكتمل). أي قيد يفرض ذلك؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "UNIQUE"
+      },
+      {
+       "id": "o2",
+       "text": "DEFAULT 'Confirmed'"
+      },
+      {
+       "id": "o3",
+       "text": "NOT NULL"
+      },
+      {
+       "id": "o4",
+       "text": "CHECK (status IN ('Confirmed', 'Cancelled', 'Completed'))"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o4"
+     }
+    },
+    {
+     "questionId": "S06Q05",
+     "prompt": "اذكر قيمة خاطئة تمنعها قواعدك، وقيمة خاطئة لا تمنعها. كيف يمكن منع الثانية؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S06Q06",
+     "prompt": "أرفق صورة قاعدة تحقق في Access (Validation Rule في طريقة عرض التصميم)، أو صورة الرسالة التي تظهر عند إدخال قيمة خاطئة.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 2
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S07",
+   "title": "SQL Server Code",
+   "order": 7,
+   "weight": 7,
+   "bookRef": "إنشاء الجداول باستخدام SQL Server",
+   "questions": [
+    {
+     "questionId": "S07Q01",
+     "prompt": "الصق كود CREATE TABLE لأحد جداولك كما في كتابك.",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S07Q02",
+     "prompt": "ماذا يفعل IDENTITY(1,1) في تعريف حقل المعرّف؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "يمنع حذف السجل"
+      },
+      {
+       "id": "o2",
+       "text": "يجعل الحقل نصًا من خانة واحدة"
+      },
+      {
+       "id": "o3",
+       "text": "يولّد الرقم وحده: يبدأ من 1 ويزيد 1 مع كل سجل جديد"
+      },
+      {
+       "id": "o4",
+       "text": "يسمح بتكرار القيمة مرة واحدة"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o3"
+     }
+    },
+    {
+     "questionId": "S07Q03",
+     "prompt": "اشرح الكود الذي لصقته سطرًا سطرًا: ماذا يعني كل نوع وكل قيد؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S07Q04",
+     "prompt": "اختر ثلاثة حقول: اكتب نوع كل حقل في Access والنوع المقابل له في كود SQL.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "field",
+       "title": "الحقل"
+      },
+      {
+       "id": "inAccess",
+       "title": "النوع في Access"
+      },
+      {
+       "id": "inSql",
+       "title": "النوع في SQL"
+      }
+     ],
+     "minRows": 3,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S07Q05",
+     "prompt": "أين كتبت في الكود العلاقة بين جدولين (FOREIGN KEY ... REFERENCES)؟ اكتب السطر.",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    }
+   ]
+  },
+  {
+   "sectionId": "S08",
+   "title": "الفئات البرمجية (Classes)",
+   "order": 8,
+   "weight": 7,
+   "bookRef": "الفئات البرمجية (Classes)",
+   "questions": [
+    {
+     "questionId": "S08Q01",
+     "prompt": "الصق فئة (class) واحدة من كتابك تقابل أحد جداولك.",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S08Q02",
+     "prompt": "طابق كل نوع في SQL بالنوع المقابل له في الفئة (C#).",
+     "kind": "matching",
+     "grading": "auto",
+     "required": true,
+     "left": [
+      {
+       "id": "l1",
+       "text": "INT"
+      },
+      {
+       "id": "l2",
+       "text": "VARCHAR(50)"
+      },
+      {
+       "id": "l3",
+       "text": "DECIMAL(10,2)"
+      },
+      {
+       "id": "l4",
+       "text": "DATETIME"
+      },
+      {
+       "id": "l5",
+       "text": "BIT"
+      }
+     ],
+     "right": [
+      {
+       "id": "r1",
+       "text": "DateTime"
+      },
+      {
+       "id": "r2",
+       "text": "bool"
+      },
+      {
+       "id": "r3",
+       "text": "int"
+      },
+      {
+       "id": "r4",
+       "text": "string"
+      },
+      {
+       "id": "r5",
+       "text": "decimal"
+      }
+     ],
+     "answer": {
+      "pairs": {
+       "l1": "r3",
+       "l2": "r4",
+       "l3": "r5",
+       "l4": "r1",
+       "l5": "r2"
+      }
+     }
+    },
+    {
+     "questionId": "S08Q03",
+     "prompt": "للفئة التي لصقتها: اكتب كل حقل في الجدول والخاصية (Property) التي تقابله ونوعها.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "field",
+       "title": "الحقل في الجدول"
+      },
+      {
+       "id": "property",
+       "title": "الخاصية في الفئة"
+      },
+      {
+       "id": "type",
+       "title": "النوع"
+      }
+     ],
+     "minRows": 3,
+     "maxRows": 15
+    },
+    {
+     "questionId": "S08Q04",
+     "prompt": "ماذا تعني { get; set; } بعد اسم الخاصية؟",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S08Q05",
+     "prompt": "ما العلاقة بين الفئة والجدول؟ ماذا يمثل كائن (object) واحد من الفئة، وماذا يحدث للفئة إن أضفت حقلًا جديدًا إلى الجدول؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    }
+   ]
+  },
+  {
+   "sectionId": "S09",
+   "title": "المخططات: ERD و DSD و DFD",
+   "order": 9,
+   "weight": 8,
+   "bookRef": "مخطط الكيانات والعلاقات (ERD) · مخطط DSD · مخطط تدفق البيانات (DFD)",
+   "questions": [
+    {
+     "questionId": "S09Q01",
+     "prompt": "طابق كل مخطط بما يعرضه.",
+     "kind": "matching",
+     "grading": "auto",
+     "required": true,
+     "left": [
+      {
+       "id": "l1",
+       "text": "ERD"
+      },
+      {
+       "id": "l2",
+       "text": "DSD"
+      },
+      {
+       "id": "l3",
+       "text": "DFD"
+      }
+     ],
+     "right": [
+      {
+       "id": "r1",
+       "text": "حركة البيانات: من يرسل ماذا إلى أي عملية، وأين تُحفظ"
+      },
+      {
+       "id": "r2",
+       "text": "الكيانات وصفاتها والعلاقات بينها"
+      },
+      {
+       "id": "r3",
+       "text": "مبنى الجداول: الحقول وأنواعها والمفاتيح"
+      }
+     ],
+     "answer": {
+      "pairs": {
+       "l1": "r2",
+       "l2": "r3",
+       "l3": "r1"
+      }
+     }
+    },
+    {
+     "questionId": "S09Q02",
+     "prompt": "اختر كيانًا (Entity) واحدًا من مخطط ERD في كتابك واكتب صفاته (Attributes).",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S09Q03",
+     "prompt": "في مخطط ERD: الزبون الواحد له عدة مواعيد، والموعد الواحد لزبون واحد. ما نوع العلاقة بين الزبون والموعد؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "واحد إلى واحد"
+      },
+      {
+       "id": "o2",
+       "text": "واحد إلى متعدد"
+      },
+      {
+       "id": "o3",
+       "text": "متعدد إلى متعدد"
+      },
+      {
+       "id": "o4",
+       "text": "لا علاقة بينهما"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o2"
+     }
+    },
+    {
+     "questionId": "S09Q04",
+     "prompt": "اشرح مخطط DFD لعملية إضافة سجل في مشروعك: من يرسل البيانات، ما العملية التي تعالجها، وفي أي مخزن (جدول) تُحفظ؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S09Q05",
+     "prompt": "هل العلاقات في مخطط ERD هي نفسها العلاقات في نافذة Relationships في Access؟ اكتب أي اختلاف وجدته.",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S09Q06",
+     "prompt": "أرفق صورة مخطط ERD وصورة مخطط DFD من كتابك (ويمكن إضافة DSD).",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 2,
+      "max": 4
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S10",
+   "title": "استعلامات الإضافة والحذف والتعديل",
+   "order": 10,
+   "weight": 8,
+   "bookRef": "استعمالات SQL: إضافة وتعديل وحذف",
+   "questions": [
+    {
+     "questionId": "S10Q01",
+     "prompt": "طابق كل نوع استعلام في Access بأمر SQL الذي ينفذه.",
+     "kind": "matching",
+     "grading": "auto",
+     "required": true,
+     "left": [
+      {
+       "id": "l1",
+       "text": "استعلام إلحاق (Append)"
+      },
+      {
+       "id": "l2",
+       "text": "استعلام تحديث (Update)"
+      },
+      {
+       "id": "l3",
+       "text": "استعلام حذف (Delete)"
+      },
+      {
+       "id": "l4",
+       "text": "استعلام تحديد (Select)"
+      }
+     ],
+     "right": [
+      {
+       "id": "r1",
+       "text": "DELETE FROM"
+      },
+      {
+       "id": "r2",
+       "text": "SELECT ... FROM"
+      },
+      {
+       "id": "r3",
+       "text": "INSERT INTO"
+      },
+      {
+       "id": "r4",
+       "text": "UPDATE ... SET"
+      }
+     ],
+     "answer": {
+      "pairs": {
+       "l1": "r3",
+       "l2": "r4",
+       "l3": "r1",
+       "l4": "r2"
+      }
+     }
+    },
+    {
+     "questionId": "S10Q02",
+     "prompt": "اكتب استعلام الإضافة (INSERT) من مشروعك، وتحته سطرًا يشرح ما يضيفه.",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S10Q03",
+     "prompt": "اكتب استعلام التعديل (UPDATE) واستعلام الحذف (DELETE) من مشروعك، مع شرط WHERE لكل منهما.",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S10Q04",
+     "prompt": "ماذا يحدث عند تشغيل UPDATE أو DELETE بلا شرط WHERE؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "يظهر خطأ ولا يتغير شيء"
+      },
+      {
+       "id": "o2",
+       "text": "يُطبَّق على كل سجلات الجدول"
+      },
+      {
+       "id": "o3",
+       "text": "يُطبَّق على السجل الأول فقط"
+      },
+      {
+       "id": "o4",
+       "text": "يُطبَّق على آخر سجل أُضيف"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o2"
+     }
+    },
+    {
+     "questionId": "S10Q05",
+     "prompt": "قبل تشغيل استعلام حذف: كيف تعرف أي السجلات سيحذفها دون أن تحذفها فعلًا؟",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S10Q06",
+     "prompt": "أرفق صورتين للجدول نفسه: قبل تشغيل استعلام إضافة أو تعديل أو حذف، وبعده.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 2,
+      "max": 3
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S11",
+   "title": "استعلامات البحث والحساب والبارامتر",
+   "order": 11,
+   "weight": 10,
+   "bookRef": "استعمالات SQL: القراءة والبحث · استعلامات من Access",
+   "questions": [
+    {
+     "questionId": "S11Q01",
+     "prompt": "اكتب استعلام البحث من مشروعك (SELECT مع شرط)، وتحته: أي سؤال يجيب عنه؟",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S11Q02",
+     "prompt": "اكتب الاستعلام الحسابي من مشروعك، وتحته: ماذا يحسب، ومن أي حقول؟",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S11Q03",
+     "prompt": "اكتب استعلام البارامتر من مشروعك، وتحته: ماذا يُطلب من المستخدم عند التشغيل؟",
+     "kind": "cli",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 4000
+    },
+    {
+     "questionId": "S11Q04",
+     "prompt": "أي معيار (Criteria) يجعل الاستعلام يسأل المستخدم عند التشغيل؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "\"حيفا\""
+      },
+      {
+       "id": "o2",
+       "text": "Like \"ح*\""
+      },
+      {
+       "id": "o3",
+       "text": "[أدخل اسم المدينة]"
+      },
+      {
+       "id": "o4",
+       "text": "Between 30 And 50"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o3"
+     }
+    },
+    {
+     "questionId": "S11Q05",
+     "prompt": "ماذا يعرض هذا الاستعلام؟ SELECT City, COUNT(*) FROM Customers GROUP BY City",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "سطرًا واحدًا فيه عدد كل الزبائن"
+      },
+      {
+       "id": "o2",
+       "text": "سطرًا لكل مدينة ومعه عدد زبائنها"
+      },
+      {
+       "id": "o3",
+       "text": "كل الزبائن مرتبين حسب المدينة"
+      },
+      {
+       "id": "o4",
+       "text": "أسماء المدن التي فيها زبون واحد فقط"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o2"
+     }
+    },
+    {
+     "questionId": "S11Q06",
+     "prompt": "أي من هذه دوال تجميع تحسب قيمة واحدة من عدة سجلات؟",
+     "kind": "multiChoice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "SUM"
+      },
+      {
+       "id": "o2",
+       "text": "WHERE"
+      },
+      {
+       "id": "o3",
+       "text": "COUNT"
+      },
+      {
+       "id": "o4",
+       "text": "ORDER BY"
+      },
+      {
+       "id": "o5",
+       "text": "AVG"
+      }
+     ],
+     "answer": {
+      "correctOptionIds": [
+       "o1",
+       "o3",
+       "o5"
+      ]
+     }
+    },
+    {
+     "questionId": "S11Q07",
+     "prompt": "رتّب أجزاء جملة الاستعلام بالترتيب الذي تُكتب به.",
+     "kind": "ordering",
+     "grading": "auto",
+     "required": true,
+     "items": [
+      {
+       "id": "i1",
+       "text": "WHERE"
+      },
+      {
+       "id": "i2",
+       "text": "ORDER BY"
+      },
+      {
+       "id": "i3",
+       "text": "SELECT"
+      },
+      {
+       "id": "i4",
+       "text": "FROM"
+      }
+     ],
+     "answer": {
+      "order": [
+       "i3",
+       "i4",
+       "i1",
+       "i2"
+      ]
+     }
+    },
+    {
+     "questionId": "S11Q08",
+     "prompt": "اختر استعلامًا يأخذ معلوماته من جدولين: لماذا يحتاج الجدولين، وما الحقل الذي يربط بينهما في الاستعلام؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S11Q09",
+     "prompt": "أرفق صورة استعلام في طريقة عرض التصميم وصورة نتيجته (ولاستعلام البارامتر: نافذة إدخال القيمة أيضًا).",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 2,
+      "max": 4
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S12",
+   "title": "النماذج والتقارير في Access",
+   "order": 12,
+   "weight": 8,
+   "bookRef": "صور من Access: نماذج · تقارير",
+   "questions": [
+    {
+     "questionId": "S12Q01",
+     "prompt": "اكتب نماذجك (Forms): اسم النموذج، الجدول الذي يعتمد عليه، وماذا يفعل المستخدم به.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "form",
+       "title": "النموذج"
+      },
+      {
+       "id": "source",
+       "title": "الجدول"
+      },
+      {
+       "id": "use",
+       "title": "ماذا يفعل به المستخدم"
+      }
+     ],
+     "minRows": 1,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S12Q02",
+     "prompt": "لماذا يُدخل المستخدم المعطيات من نموذج وليس من الجدول مباشرة؟ أعط سببًا واحدًا.",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S12Q03",
+     "prompt": "اكتب تقاريرك (Reports): اسم التقرير، مصدره (جدول أو استعلام)، وماذا يعرض.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "report",
+       "title": "التقرير"
+      },
+      {
+       "id": "source",
+       "title": "المصدر"
+      },
+      {
+       "id": "shows",
+       "title": "ماذا يعرض"
+      }
+     ],
+     "minRows": 1,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S12Q04",
+     "prompt": "تريد تقريرًا يعرض مواعيد يوم يختاره المستخدم عند فتح التقرير. ما أنسب مصدر له؟",
+     "kind": "choice",
+     "grading": "auto",
+     "required": true,
+     "options": [
+      {
+       "id": "o1",
+       "text": "الجدول كله"
+      },
+      {
+       "id": "o2",
+       "text": "استعلام تحديث"
+      },
+      {
+       "id": "o3",
+       "text": "استعلام حذف"
+      },
+      {
+       "id": "o4",
+       "text": "استعلام بارامتر"
+      }
+     ],
+     "answer": {
+      "correctOptionId": "o4"
+     }
+    },
+    {
+     "questionId": "S12Q05",
+     "prompt": "ما الفرق بين الجدول والاستعلام والنموذج والتقرير؟ اكتب جملة واحدة عن دور كل واحد في مشروعك.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S12Q06",
+     "prompt": "أرفق صورة نموذج واحد مفتوح وفيه سجل.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 2
+     }
+    },
+    {
+     "questionId": "S12Q07",
+     "prompt": "أرفق صورة تقرير واحد في معاينة الطباعة (Print Preview).",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 3
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S13",
+   "title": "تدقيق الكتاب مقابل ملف Access",
+   "order": 13,
+   "weight": 5,
+   "bookRef": "الكتاب كله وملف Access",
+   "questions": [
+    {
+     "questionId": "S13Q01",
+     "prompt": "أشّر ما تحققت منه بنفسك بين كتابك وملف Access.",
+     "kind": "checklist",
+     "grading": "none",
+     "required": true,
+     "items": [
+      {
+       "id": "c1",
+       "text": "أسماء الجداول والحقول في الكتاب تطابق ملف Access"
+      },
+      {
+       "id": "c2",
+       "text": "أنواع الحقول والقيود في كود SQL تطابق جداول التحقق في الكتاب"
+      },
+      {
+       "id": "c3",
+       "text": "كل فئة تحتوي حقول جدولها"
+      },
+      {
+       "id": "c4",
+       "text": "العلاقات في مخطط ERD تطابق نافذة العلاقات في Access"
+      },
+      {
+       "id": "c5",
+       "text": "كل استعلام في الكتاب يعمل عند نسخه كما هو"
+      },
+      {
+       "id": "c6",
+       "text": "كل نموذج وكل تقرير يُفتح ويعرض معطيات"
+      },
+      {
+       "id": "c7",
+       "text": "صور الكتاب مأخوذة من النسخة النهائية للملف"
+      },
+      {
+       "id": "c8",
+       "text": "الفهرست يطابق العناوين وأرقام الصفحات"
+      }
+     ]
+    },
+    {
+     "questionId": "S13Q02",
+     "prompt": "اذكر اختلافين وجدتهما بين كتابك وملف Access (أو بين قسمين في الكتاب)، وأين وجدت كلًا منهما، وكيف صححته.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "difference",
+       "title": "الاختلاف"
+      },
+      {
+       "id": "where",
+       "title": "أين"
+      },
+      {
+       "id": "fix",
+       "title": "التصحيح"
+      }
+     ],
+     "minRows": 2,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S13Q03",
+     "prompt": "اكتب فحصين أجريتهما على قاعدة البيانات: ماذا فحصت، ماذا توقعت، وماذا حدث.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "test",
+       "title": "ماذا فحصت"
+      },
+      {
+       "id": "expected",
+       "title": "المتوقع"
+      },
+      {
+       "id": "actual",
+       "title": "ما حدث"
+      }
+     ],
+     "minRows": 2,
+     "maxRows": 8
+    },
+    {
+     "questionId": "S13Q04",
+     "prompt": "كم جدولًا واستعلامًا ونموذجًا وتقريرًا في ملفك النهائي؟ اكتب الأعداد الأربعة.",
+     "kind": "shortText",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 300
+    },
+    {
+     "questionId": "S13Q05",
+     "prompt": "أرفق صورة جزء التنقل (Navigation Pane) تظهر فيها كل الجداول والاستعلامات والنماذج والتقارير.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 2
+     }
+    }
+   ]
+  },
+  {
+   "sectionId": "S14",
+   "title": "المردود والمصادر والأمانة الأكاديمية",
+   "order": 14,
+   "weight": 4,
+   "bookRef": "مردود · المصادر",
+   "questions": [
+    {
+     "questionId": "S14Q01",
+     "prompt": "ما أهم ثلاثة أشياء تعلمتها من المشروع؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S14Q02",
+     "prompt": "ما أصعب جزء واجهته، وكيف تجاوزته؟ أعط مثالًا محددًا: الخطأ، الرسالة التي ظهرت، الحل.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S14Q03",
+     "prompt": "قيّم إتقانك لكل موضوع من 1 (ضعيف) إلى 5 (متمكن).",
+     "kind": "scale",
+     "grading": "none",
+     "required": true,
+     "items": [
+      {
+       "id": "t1",
+       "text": "تصميم الجداول واختيار أنواع الحقول"
+      },
+      {
+       "id": "t2",
+       "text": "المفاتيح والعلاقات"
+      },
+      {
+       "id": "t3",
+       "text": "قواعد التحقق"
+      },
+      {
+       "id": "t4",
+       "text": "كود SQL والاستعلامات"
+      },
+      {
+       "id": "t5",
+       "text": "الفئات (Classes)"
+      },
+      {
+       "id": "t6",
+       "text": "المخططات"
+      },
+      {
+       "id": "t7",
+       "text": "النماذج والتقارير في Access"
+      }
+     ],
+     "min": 1,
+     "max": 5
+    },
+    {
+     "questionId": "S14Q04",
+     "prompt": "املأ قائمة المصادر: العنوان، الرابط، فيمَ استعملته.",
+     "kind": "table",
+     "grading": "teacher",
+     "required": true,
+     "columns": [
+      {
+       "id": "title",
+       "title": "العنوان"
+      },
+      {
+       "id": "link",
+       "title": "الرابط"
+      },
+      {
+       "id": "usedFor",
+       "title": "فيمَ استعملته"
+      }
+     ],
+     "minRows": 1,
+     "maxRows": 15
+    },
+    {
+     "questionId": "S14Q05",
+     "prompt": "هل استعملت الذكاء الاصطناعي؟ في أي أجزاء (نص، كود، مخططات)، وما الذي غيّرته وفحصته بنفسك؟",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S14Q06",
+     "prompt": "اختر فقرة في كتابك أخذتها من مصدر أو من أداة مساعدة، وأعد كتابتها بكلماتك مع مثال من مشروعك.",
+     "kind": "paragraph",
+     "grading": "teacher",
+     "required": true,
+     "maxLength": 2000
+    },
+    {
+     "questionId": "S14Q07",
+     "prompt": "أقرّ بأن هذا العمل عملي وأن كل المصادر والأدوات التي استعملتها مذكورة.",
+     "kind": "declaration",
+     "grading": "none",
+     "required": true
+    }
+   ]
+  },
+  {
+   "sectionId": "S15",
+   "title": "التسليم",
+   "order": 15,
+   "weight": 3,
+   "bookRef": "الكتاب النهائي وملف Access النهائي",
+   "questions": [
+    {
+     "questionId": "S15Q01",
+     "prompt": "أرفق صورة نافذة Access كاملة يظهر فيها اسم ملفك في شريط العنوان.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": true,
+     "images": {
+      "min": 1,
+      "max": 2
+     }
+    },
+    {
+     "questionId": "S15Q02",
+     "prompt": "صور إضافية من مشروعك تريد أن يراها المعلم.",
+     "kind": "image",
+     "grading": "teacher",
+     "required": false,
+     "images": {
+      "min": 0,
+      "max": 5
+     }
+    },
+    {
+     "questionId": "S15Q03",
+     "prompt": "أشّر ما سلّمته لمعلمك مباشرة. الملفات لا تُرفع إلى الموقع.",
+     "kind": "checklist",
+     "grading": "none",
+     "required": true,
+     "items": [
+      {
+       "id": "h1",
+       "text": "ملف Access النهائي"
+      },
+      {
+       "id": "h2",
+       "text": "كتاب المشروع النهائي"
+      }
+     ]
+    },
+    {
+     "questionId": "S15Q04",
+     "prompt": "راجعت كل الأقسام، وفتحت ملف Access من جديد وتأكدت أن الجداول والاستعلامات والنماذج والتقارير تعمل، وأنا جاهز للتسليم.",
+     "kind": "declaration",
+     "grading": "none",
+     "required": true
+    }
+   ]
+  }
+ ]
+}

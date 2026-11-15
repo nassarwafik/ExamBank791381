@@ -167,9 +167,11 @@ describe("F1b — the bundled 883589 exam form", () => {
 });
 
 describe("F1b — the registry", () => {
-  it("returns a form for 794589 and 883589 and for no other project", () => {
-    expect(getSupportedProjects().filter(code => getExamFormTemplate(code) !== null).sort()).toEqual([OTHER, CODE]);
-    expect(getExamFormTemplate("899373")).toBeNull();
+  // Phase F1c — 899373 ships a form too (api/tests/project-exam-form-899373-f1c.test.js).
+  it("returns a form for 794589 and 883589, each its own", () => {
+    expect(getSupportedProjects().filter(code => getExamFormTemplate(code) !== null).sort()).toEqual([OTHER, CODE, "899373"]);
+    expect(getExamFormTemplate(CODE).projectCode).toBe(CODE);
+    expect(getExamFormTemplate(OTHER).projectCode).toBe(OTHER);
     expect(() => getExamFormTemplate("000000")).toThrow(/Unknown project code/);
   });
 });
