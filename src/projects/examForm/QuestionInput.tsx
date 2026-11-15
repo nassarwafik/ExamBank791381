@@ -18,7 +18,8 @@ type Props = {
 
 const DEFERRED_TEXT: Record<string, string> = {
   image: "هذا السؤال يحتاج صورة. إرفاق الصور سيتاح قريبًا، وهذا السؤال لا يمنع التسليم الآن.",
-  file: "هذا السؤال يحتاج ملفًا. إرفاق الملفات سيتاح قريبًا، وهذا السؤال لا يمنع التسليم الآن."
+  // Owner decision (2026-11-15): files are not uploaded to the site. The question stays as a reminder of what to hand in.
+  file: "هذا السؤال يحتاج ملفًا. سلّم الملف لمعلمك مباشرة: الملفات لا تُرفع إلى الموقع، وهذا السؤال لا يمنع التسليم."
 };
 const entries = (list: ExamFormEntry[] | undefined) => list || [];
 const emptyRow = (question: ExamFormQuestion) => Object.fromEntries((question.columns || []).map(c => [c.id, ""]));

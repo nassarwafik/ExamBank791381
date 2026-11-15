@@ -17,7 +17,7 @@ from its name to the reflection, sources and attachments, with no time limit, sa
 |---|---|
 | How many questions? | All **92** (16 sections); the teacher can hide a question before opening the form (F3). |
 | Does the form's mark enter the project score? | **No, not yet.** It is shown beside the project score; merging is decided after one class has used it. |
-| The P2 decision was "no attachment". Are student images allowed here? | **Yes, images** (F4). Files (`.pkt`, the book) wait for F5. |
+| The P2 decision was "no attachment". Are student images allowed here? | **Yes, images** (F4). Files (`.pkt`, the book): **not uploaded to the site** — owner decision of 2026-11-15, which replaces «files wait for F5». A file question stays on the student's page as a reminder to hand the file to the teacher. |
 | When does the student see the auto-marked results and the teacher's notes? | **After the teacher approves**, not on submit. |
 | May the student edit after submitting? | **Only when the teacher returns the form.** |
 | Which project first? | **794589 only.** 883589 got its own question bank in F1b (`docs/enterprise-project-exam-form-883589.md`); 899373 gets one in F5. |
@@ -125,7 +125,7 @@ to compare the book with the Packet Tracer file and correct what differs.
 | F4-UI | The student's image input and the teacher's switch: `docs/enterprise-project-exam-form-f4-ui.md` (on at a class's first open; a button for a class opened before). The teacher's review (F3-UI) shows the student's images. |
 | F1b | The 883589 question bank, as data (`docs/enterprise-project-exam-form-883589.md`). |
 | F5 | Files (`.pkt`, the book), PDF export, the 899373 question bank. Files, server side: `docs/enterprise-project-exam-form-f5-files.md` (a class's file answers are off until its teacher switches them on; a file is only ever a download). |
-| F5-UI | The student's upload control, the teacher's switch, the download link in the teacher's review. |
+| F5-UI | ~~The student's upload control, the teacher's switch, the download link in the teacher's review.~~ **Not built** — owner decision of 2026-11-15: files are not uploaded to the site. The student's page tells the student to hand the file to the teacher (`StudentExamForm.fileNotice.f5.test.tsx`). The server side of F5 (files) stays merged and switched off for every class; no screen sends its switch. Whether it is removed is the owner's open decision. |
 
 Sequencing the later phases must handle: image and file questions are `required` in the template, so until F4 / F5 enable
 those inputs the completeness check must not block a submit on them.

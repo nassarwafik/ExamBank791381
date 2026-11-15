@@ -1,5 +1,13 @@
 # Phase F5 (files) — Project exam form: the student's files, server side
 
+> **Owner decision, 2026-11-15 — files are not uploaded to the site.** Taken after this phase merged. The screens of this
+> phase (F5-UI: the student's upload control, the teacher's switch, the download link) are **not built**. What is described
+> below stays in the code, switched off for every class: no screen sends `fileAnswers`, so no student can attach a file
+> and file questions stay deferred and never block a submit. The student's page now tells the student to hand the file to
+> the teacher. A teacher's direct API call could still switch file answers on for a class (and its required file
+> questions would then block the submit with no input on the page); whether this server side is refused outright or
+> removed is the owner's open decision.
+
 ## Problem
 
 Both bundled forms end by asking for the project itself: 794589 asks «أرفق ملف Packet Tracer النهائي» (`.pkt`) and «أرفق كتاب

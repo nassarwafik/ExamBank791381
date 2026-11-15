@@ -101,9 +101,9 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
       confirmRemove: () => confirm({ title: "حذف الصورة", message: "ستُحذف هذه الصورة من إجابتك. يمكنك إرفاق صورة أخرى بعدها.", confirmLabel: "حذف الصورة", tone: "danger" }) }
     : undefined;
   const deferredNote = view.progress.deferred === 0 ? ""
-    : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات. إرفاقها سيتاح قريبًا، وهي لا تمنع التسليم الآن."
+    : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات، وهي لا تمنع التسليم الآن. الملفات تُسلَّم لمعلمك مباشرة ولا تُرفع إلى الموقع."
       : (view.progress.deferred === 1 ? "سؤال واحد يحتاج ملفًا" : view.progress.deferred === 2 ? "سؤالان يحتاجان ملفات" : view.progress.deferred + " أسئلة تحتاج ملفات")
-        + ". إرفاق الملفات سيتاح قريبًا، وهذا لا يمنع التسليم الآن.";
+        + ". تُسلَّم الملفات لمعلمك مباشرة ولا تُرفع إلى الموقع، وهذا لا يمنع التسليم.";
   // Phase F3-UI — after the teacher's approval: this section's level and note, and right / wrong per auto-marked question.
   const sectionResult = view.result ? view.result.sections.find(r => r.sectionId === section.sectionId) : undefined;
   const verdicts = view.result ? view.result.auto : null;
