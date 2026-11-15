@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor, within } from "@testing-library/react";
+// the canvases are not drawn in tests (no canvas here); OwnerDashboardCharts.test.tsx checks what each chart receives
+vi.mock("react-chartjs-2", () => ({ Line: () => <div />, Bar: () => <div />, Doughnut: () => <div /> }));
 import OwnerTeacherDashboard from "./OwnerTeacherDashboard";
 import { rangeFrom, pct } from "./ownerDashboardFormat";
 import { isOwnerLocation, ownerViewFromHash, ownerTeacherFromHash, ownerDashboardFromHash, ownerTeacherDashboardHash } from "./ownerRoute";
@@ -104,6 +106,31 @@ describe("the full-screen page", () => {
     fireEvent.click(screen.getByRole("button", { name: "→ المعلمون" }));
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onBack).toHaveBeenCalledTimes(2);
+  });
+  it("a follow-up name opens that student's detail (within their class); «→ العودة إلى الصف» leaves it", async () => {
+    const lina = { userId: "s1", displayName: "ليان", identityNumber: "", classId: "c1", className: "العاشر أ", average: 48, assigned: 7, completed: 4, missing: 3, completionRate: 57.1, trendDelta: -9, trend: "declining", lastLoginAt: "", severity: "high", reasons: ["معدل منخفض", "3 واجبات غير مسلّمة"] };
+    respond = url => {
+      const q = query(url);
+      if (q.studentId === "s1") return { status: 200, body: answer({ scope: { mode: "student", classId: "c1", className: "العاشر أ", studentId: "s1", studentName: "ليان", from: "", to: "" }, followUp: [], studentDetail: { ...lina, scoreTrend: [], topicAnalytics: [] } }) };
+      return { status: 200, body: answer({ followUp: [lina] }) };
+    };
+    mount();
+    expect(await screen.findByRole("heading", { level: 2, name: /طلاب يحتاجون متابعة/ })).toBeTruthy();
+    expect(screen.getByText(/معدل منخفض، 3 واجبات غير مسلّمة/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "تفاصيل ليان" }));
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(query(calls[1])).toEqual({ accountId: SARA, classId: "c1", studentId: "s1" });
+    expect(await screen.findByRole("heading", { level: 2, name: "الطالب: ليان" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "→ العودة إلى الصف" }));
+    await waitFor(() => expect(calls).toHaveLength(3));
+    expect(query(calls[2])).toEqual({ accountId: SARA, classId: "c1" });
+  });
+  it("«طباعة» prints the page", async () => {
+    const print = vi.fn();
+    vi.stubGlobal("print", print);
+    mount();
+    fireEvent.click(await screen.findByRole("button", { name: /طباعة/ }));
+    expect(print).toHaveBeenCalled();
   });
   it("formats the figures", () => {
     expect([pct(null), pct(85.03), pct(78.46), pct(100)]).toEqual(["—", "85%", "78.5%", "100%"]);
