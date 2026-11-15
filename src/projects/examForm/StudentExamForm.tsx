@@ -80,6 +80,21 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
     if (chip && typeof chip.scrollIntoView === "function") chip.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [current]);
 
+  // What is left — «the next unanswered question» goes to its section and brings the question itself into view, with the
+  // focus in its first field, so a student who comes back later does not walk through every section to find what remains.
+  const jump = useRef("");                 // the question to bring into view after the next render
+  const lastJump = useRef("");             // where the last jump landed: the next one continues after it
+  const [jumpSeq, setJumpSeq] = useState(0);
+  useEffect(() => {
+    const id = jump.current;
+    if (!id) return;
+    jump.current = "";
+    const box = document.querySelector<HTMLElement>('[data-question="' + id + '"]');
+    if (!box) return;
+    if (typeof box.scrollIntoView === "function") box.scrollIntoView({ block: "start" });
+    (box.querySelector<HTMLElement>('input:not([type="file"]), textarea, select, button') || box).focus({ preventScroll: true });
+  }, [jumpSeq, current]);
+
   const back = (
     <button type="button" className="eb-button is-quiet eb-sp-form-back" onClick={onClose}>
       <IconChevronBack size={16} aria-hidden="true" />العودة إلى المشروع
@@ -136,6 +151,22 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
   const verdicts = view.result ? view.result.auto : null;
   const missingSections = sections.map((s, i) => ({ index: i, title: s.title, count: s.questions.filter(q => missing.has(q.questionId)).length })).filter(s => s.count > 0);
 
+  // The required questions still to answer are the server's list (`progress.missing`), as of the last save.
+  const everyQuestion = sections.flatMap((s, si) => s.questions.map(q => ({ id: q.questionId, section: si })));
+  function nextUnanswered() {
+    const at = everyQuestion.findIndex(q => q.id === lastJump.current);
+    // Continue after the last jump while the student is still in its section; otherwise from the top of this section.
+    const start = at >= 0 && everyQuestion[at].section === index ? at : everyQuestion.findIndex(q => q.section === index) - 1;
+    const target = [...everyQuestion.slice(start + 1), ...everyQuestion.slice(0, start + 1)].find(q => missing.has(q.id));
+    if (!target) return;
+    lastJump.current = target.id;
+    jump.current = target.id;
+    setCurrent(target.section);
+    setJumpSeq(n => n + 1);
+  }
+  const questionsLeft = missing.size === 1 ? "سؤال إلزامي واحد" : missing.size === 2 ? "سؤالان إلزاميان" : missing.size <= 10 ? missing.size + " أسئلة إلزامية" : missing.size + " سؤالًا إلزاميًا";
+  const sectionsLeft = missingSections.length === 1 ? "قسم واحد" : missingSections.length === 2 ? "قسمين" : missingSections.length <= 10 ? missingSections.length + " أقسام" : missingSections.length + " قسمًا";
+
   async function submit() {
     setSubmitError("");
     // Edits not saved yet go first, so the missing list is the server's own, of the answers as they are now: a form that
@@ -191,13 +222,26 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
       {draft.notice && !reason && <p className="platform-notice assignment-inline-message" role="status">{draft.notice}</p>}
       {draft.error && <p className="platform-error assignment-inline-message" role="alert">{draft.error}</p>}
       {deferredNote && !draft.locked && <p className="eb-muted eb-sp-form-note">{deferredNote}</p>}
+      {!draft.locked && (
+        <div className="eb-sp-form-remaining" data-testid="exam-form-remaining">
+          {missing.size > 0
+            ? <>
+              <p>بقي {questionsLeft} في {sectionsLeft}.</p>
+              <button type="button" className="eb-button is-small" onClick={nextUnanswered}>انتقل إلى السؤال التالي غير المُجاب</button>
+            </>
+            : <>
+              <p>أجبت عن كل الأسئلة الإلزامية.</p>
+              {!last && <button type="button" className="eb-button is-small" onClick={() => go(sections.length - 1)}>انتقل إلى التسليم</button>}
+            </>}
+        </div>
+      )}
 
       <nav className="eb-sp-form-sections" aria-label="أقسام الاستمارة" ref={sectionsRef}>
         {sections.map((s, i) => {
           const left = s.questions.filter(q => missing.has(q.questionId)).length;
           return (
             <button key={s.sectionId} type="button" className="eb-chip-button" aria-current={i === index ? "step" : undefined} onClick={() => go(i)}>
-              <span dir="ltr">{s.order}</span> {s.title}{left === 0 ? " · مكتمل" : ""}
+              <span dir="ltr">{s.order}</span> {s.title}{left === 0 ? " · مكتمل" : draft.locked ? "" : " · بقي " + left}
             </button>
           );
         })}
@@ -213,11 +257,15 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
         )}
         {section.questions.map((question, qi) => {
           const flagged = showMissing && missing.has(question.questionId);
+          // Always visible on a form the student can still write: which required questions wait for an answer.
+          const todo = !draft.locked && missing.has(question.questionId);
           return (
-            <fieldset key={question.questionId} className={"eb-sp-form-question" + (flagged ? " is-missing" : "")} data-question={question.questionId}>
+            <fieldset key={question.questionId} className={"eb-sp-form-question" + (flagged ? " is-missing" : "")} data-question={question.questionId}
+              data-unanswered={todo ? "true" : undefined} tabIndex={-1}>
               <legend>
                 <span className="eb-sp-form-number" dir="ltr">{section.order}.{qi + 1}</span> {question.prompt}
                 {!question.required && <span className="eb-muted"> (اختياري)</span>}
+                {todo && <span className="eb-sp-form-todo"> لم يُجب بعد</span>}
               </legend>
               <div className="eb-sp-form-question-body">
                 {question.help && <p className="eb-muted eb-sp-form-help">{question.help}</p>}
