@@ -91,6 +91,33 @@ one. The keys pinned by F1 and F1b did not change.
 
 Fail-first is not applicable: an owner's product change, no defect fixed.
 
+Mutation campaign: 13 mutants, one exact replacement each, run alone against the phase test file and the F1, F1b, F2 and
+file-notice suites; each file restored byte-for-byte by SHA-256, `git status` unchanged afterwards. **13 KILLED, 0
+survived, 0 timeouts.**
+
+| Group | Mutants |
+|---|---|
+| The data (794589's checklist not required; 883589's not required; 794589's first item changed; 883589's prompt without «not uploaded»; 883589 left at version 1; 794589's checklist marked by the teacher) | 6 |
+| The frozen form (a reopen swaps an opened class's questions for the bundled form; the student reads the bundled form; a student write is checked against the bundled form; the teacher's state reports the bundled form, or the bundled version; the teacher's list and review use the bundled form; a write no longer checks the document's version) | 7 |
+
+The seven code mutants are the guarantees this phase relies on without changing them: before this phase only C7 had a
+test that named a version mismatch, and no test opened a class on an older version than the bundled one.
+
+**Reconciliation.** `main` moved twice during the phase: #641 (the image notice, before the work started) and #644 (the
+student sees what is left to answer, `5c0565ea`). The branch took both with normal merge commits, no conflict; the project
+and exam-form suites passed on the merged tree (70 files, 891 tests) and the full validation below ran on it. The mutation
+campaign ran before #644, which touches none of the mutated files or their tests.
+
+**Full validation** on the reconciled head: `npm test` 1555 files, 18729 tests passed; lint exit 0 (145 warnings, as
+`main`); typecheck clean; build and bundle guard passed; `git diff --check` clean.
+
+**Real browser (local, not a committed gate).** The production build next to the real API in process, Chromium, a whole
+794589 class opened under version 2 — answered, 14 images, rated and approved — printed from the teacher's review and the
+student's page (the F5 PDF harness): 21 checks passed. The student's copy has 16 sections and 91 questions and prints the
+hand-in checklist with no «file» line; teacher copy 19 A4 pages, student copy 18; no answer key, no login code. The
+harness's first run on this head reported one failure: it still expected 92 questions, written into the harness itself.
+It now reads the count from the form and checks the hand-in checklist; nothing in the product changed between the two runs.
+
 ## Known limits
 
 - Classes already opened keep the file reminder; only classes opened afterwards get the checklist. Moving an opened class
