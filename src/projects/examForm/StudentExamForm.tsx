@@ -100,8 +100,12 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
     ? { read: draft.readImage, add: draft.addImage, remove: draft.removeImage,
       confirmRemove: () => confirm({ title: "حذف الصورة", message: "ستُحذف هذه الصورة من إجابتك. يمكنك إرفاق صورة أخرى بعدها.", confirmLabel: "حذف الصورة", tone: "danger" }) }
     : undefined;
+  // What a class with image answers off is told depends on whether its form has file questions at all (899373 has none).
+  const hasFileQuestions = sections.some(s => s.questions.some(q => q.kind === "file"));
   const deferredNote = view.progress.deferred === 0 ? ""
-    : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات، وهي لا تمنع التسليم الآن. الملفات تُسلَّم لمعلمك مباشرة ولا تُرفع إلى الموقع."
+    : !draft.imagesOn ? view.progress.deferred + (hasFileQuestions
+      ? " سؤالًا تحتاج صورًا أو ملفات، وهي لا تمنع التسليم الآن. أسئلة الصور غير مفعّلة لصفك، والملفات تُسلَّم لمعلمك مباشرة ولا تُرفع إلى الموقع."
+      : " سؤالًا تحتاج صورًا، وهي لا تمنع التسليم الآن. أسئلة الصور غير مفعّلة لصفك.")
       : (view.progress.deferred === 1 ? "سؤال واحد يحتاج ملفًا" : view.progress.deferred === 2 ? "سؤالان يحتاجان ملفات" : view.progress.deferred + " أسئلة تحتاج ملفات")
         + ". تُسلَّم الملفات لمعلمك مباشرة ولا تُرفع إلى الموقع، وهذا لا يمنع التسليم.";
   // Phase F3-UI — after the teacher's approval: this section's level and note, and right / wrong per auto-marked question.

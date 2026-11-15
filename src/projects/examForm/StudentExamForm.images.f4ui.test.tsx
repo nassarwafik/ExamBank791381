@@ -122,13 +122,16 @@ describe("F4-UI — a class with image answers off", () => {
     openForm();
     const q = await goTo(ONE);
     await settle();
-    expect(q.textContent).toContain("إرفاق الصور سيتاح قريبًا");
+    expect(q.textContent).toContain("أسئلة الصور غير مفعّلة لصفك");
+    expect(q.textContent).toContain("لا يمنع التسليم");
     expect(q.querySelectorAll("input, button").length).toBe(0);
     expect(q.querySelector('[data-testid="exam-form-images"]')).toBeNull();
-    expect(screen.getByText(/سؤالًا تحتاج صورًا أو ملفات/)).toBeTruthy();
+    expect(screen.getByText(/سؤالًا تحتاج صورًا أو ملفات/).textContent).toContain("أسئلة الصور غير مفعّلة لصفك");
     const host = await goTo(HOST);
     await settle();
-    expect(host.textContent).toContain("إرفاق الصورة المطلوبة هنا سيتاح قريبًا");
+    expect(host.textContent).toContain("إرفاق الصورة المطلوبة هنا غير مفعّل لصفك");
+    // Nothing on the page promises a feature «soon»: image answers exist and are the teacher's to switch on.
+    expect(document.body.textContent).not.toContain("قريبًا");
     expect(host.querySelector('input[type="file"]')).toBeNull();
     expect(s.sent.every(r => r.method === "GET" && !r.url.includes("image="))).toBe(true);
   });
