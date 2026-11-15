@@ -124,7 +124,8 @@ to compare the book with the Packet Tracer file and correct what differs.
 | F4 | Student images through the existing image sanitizer; served by the API only, to the student who owns them and the teacher. Server side: `docs/enterprise-project-exam-form-f4.md` (a class's image answers are off until its teacher switches them on). |
 | F4-UI | The student's image input and the teacher's switch: `docs/enterprise-project-exam-form-f4-ui.md` (on at a class's first open; a button for a class opened before). The teacher's review (F3-UI) shows the student's images. |
 | F1b | The 883589 question bank, as data (`docs/enterprise-project-exam-form-883589.md`). |
-| F5 | Files (`.pkt`, the book), PDF export, the 899373 question bank. |
+| F5 | Files (`.pkt`, the book), PDF export, the 899373 question bank. Files, server side: `docs/enterprise-project-exam-form-f5-files.md` (a class's file answers are off until its teacher switches them on; a file is only ever a download). |
+| F5-UI | The student's upload control, the teacher's switch, the download link in the teacher's review. |
 
 Sequencing the later phases must handle: image and file questions are `required` in the template, so until F4 / F5 enable
 those inputs the completeness check must not block a submit on them.

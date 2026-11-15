@@ -14,6 +14,7 @@ const crypto = require("crypto");
 const { downloadJsonOrNull, mutateJsonWithRetry, uploadBinary, downloadBinaryOrNull, deleteBlob } = require("../platform-storage");
 const { decodeImageDataUrl, normalizeEvidenceImage, EVIDENCE_MAX_UPLOAD_BYTES } = require("../profile-image");
 const images = require("./exam-form-images");
+const files = require("./exam-form-files");                                       // Phase F5 (files)
 const { getStorageNamespace, getExamFormTemplate } = require("./registry");
 const { validateExamFormTemplate, toStudentView, summarizeExamForm } = require("./exam-form");
 const { applyDraft, applySubmit, formProgress, deferredKindsOf } = require("./exam-form-answers");
@@ -40,7 +41,8 @@ function trustedTemplate(classForm, projectCode) {
 
 // Phase F4 — the rules of ONE class's form that the answer code needs: whether its teacher switched image answers on. A
 // class form that never did (every form opened before F4) keeps image questions deferred, exactly as before.
-const rulesOf = classForm => ({ imageAnswers: !!(classForm && classForm.imageAnswers === true) });
+// Phase F5 (files) — and whether file answers are on. The two switches are independent.
+const rulesOf = classForm => ({ imageAnswers: !!(classForm && classForm.imageAnswers === true), fileAnswers: !!(classForm && classForm.fileAnswers === true) });
 
 async function loadClassForm(container, projectCode, classId) {
   return downloadJsonOrNull(container, getStorageNamespace(projectCode).examFormClassName(classId));
@@ -56,7 +58,8 @@ async function classFormState(container, projectCode, classId) {
     hasForm: true, state: stored.state === "open" ? "open" : "closed", formVersion: stored.formVersion,
     openedAt: stored.openedAt || "", closedAt: stored.closedAt || "", summary: summarizeExamForm(trustedTemplate(stored, projectCode)),
     hiddenQuestionIds: Array.isArray(stored.hiddenQuestionIds) ? stored.hiddenQuestionIds : [],
-    ...(stored.imageAnswers === true ? { imageAnswers: true } : {})                 // Phase F4 (absent while off)
+    ...(stored.imageAnswers === true ? { imageAnswers: true } : {}),                // Phase F4 (absent while off)
+    ...(stored.fileAnswers === true ? { fileAnswers: true } : {})                   // Phase F5 (absent while off)
   };
 }
 
@@ -101,10 +104,12 @@ async function classFormQuestions(container, projectCode, classId) {
  * Phase F4 — `imageAnswers: true` switches the class's image questions on (students attach images, and a required image
  * question then counts for a submit). It may be switched on at the first open or by a later open, and never off again:
  * a class whose students attached images cannot lose the input. Any other value leaves the class as it is.
+ * Phase F5 (files) — `fileAnswers: true` does the same for the class's file questions, with the same rules.
  */
-async function openClassForm(container, projectCode, classId, { actor, now, hiddenQuestionIds, imageAnswers }) {
+async function openClassForm(container, projectCode, classId, { actor, now, hiddenQuestionIds, imageAnswers, fileAnswers }) {
   if (imageAnswers !== undefined && typeof imageAnswers !== "boolean") fail("طلب غير صحيح.", 400, "BAD_IMAGE_ANSWERS");
-  let imagesSwitchedOn = false;
+  if (fileAnswers !== undefined && typeof fileAnswers !== "boolean") fail("طلب غير صحيح.", 400, "BAD_FILE_ANSWERS");
+  let imagesSwitchedOn = false, filesSwitchedOn = false;
   const bundled = getExamFormTemplate(projectCode);
   if (!bundled) fail("هذا المشروع لا يملك استمارة امتحان.", 400, "NO_FORM");
   const frozen = withoutHidden(bundled, hiddenQuestionIds, projectCode);
@@ -115,25 +120,30 @@ async function openClassForm(container, projectCode, classId, { actor, now, hidd
       trustedTemplate(current, projectCode);
       if (frozen.hidden.length) fail("ثُبّتت أسئلة الاستمارة عند أول فتح، ولا يمكن إخفاء سؤال بعده.", 409, "FORM_FROZEN");
       if (imageAnswers === false && current.imageAnswers === true) fail("فُعّلت أسئلة الصور لهذا الصف، ولا يمكن إيقافها.", 409, "IMAGES_FROZEN");
+      if (fileAnswers === false && current.fileAnswers === true) fail("فُعّلت أسئلة الملفات لهذا الصف، ولا يمكن إيقافها.", 409, "FILES_FROZEN");
       const reopen = current.state !== "open";
       imagesSwitchedOn = imageAnswers === true && current.imageAnswers !== true;
-      changed = reopen || imagesSwitchedOn;
+      filesSwitchedOn = fileAnswers === true && current.fileAnswers !== true;
+      changed = reopen || imagesSwitchedOn || filesSwitchedOn;
       if (!changed) return current;
       return {
         ...current, state: "open", updatedAt: now,
         ...(reopen ? { reopenedAt: now, reopenedBy: actor || "" } : {}),
-        ...(imagesSwitchedOn ? { imageAnswers: true, imageAnswersAt: now, imageAnswersBy: actor || "" } : {})
+        ...(imagesSwitchedOn ? { imageAnswers: true, imageAnswersAt: now, imageAnswersBy: actor || "" } : {}),
+        ...(filesSwitchedOn ? { fileAnswers: true, fileAnswersAt: now, fileAnswersBy: actor || "" } : {})
       };
     }
     changed = true;
     imagesSwitchedOn = imageAnswers === true;
+    filesSwitchedOn = fileAnswers === true;
     return {
       schemaVersion: 1, projectCode, classId, state: "open", formVersion: bundled.formVersion,
       template: frozen.template, hiddenQuestionIds: frozen.hidden, openedAt: now, openedBy: actor || "", updatedAt: now,
-      ...(imagesSwitchedOn ? { imageAnswers: true, imageAnswersAt: now, imageAnswersBy: actor || "" } : {})
+      ...(imagesSwitchedOn ? { imageAnswers: true, imageAnswersAt: now, imageAnswersBy: actor || "" } : {}),
+      ...(filesSwitchedOn ? { fileAnswers: true, fileAnswersAt: now, fileAnswersBy: actor || "" } : {})
     };
   });
-  return { doc, first, changed, imagesSwitchedOn };
+  return { doc, first, changed, imagesSwitchedOn, filesSwitchedOn };
 }
 
 // Closes the form: students keep reading what they wrote and can no longer save or submit. Nothing is deleted.
@@ -279,4 +289,65 @@ async function readStudentImage(container, projectCode, classId, studentId, imag
   return blob ? { buffer: blob.buffer, contentType: "image/webp" } : null;
 }
 
-module.exports = { trustedTemplate, rulesOf, loadClassForm, classFormState, classFormQuestions, openClassForm, closeClassForm, readStudentForm, studentFormSummary, saveStudentDraft, submitStudentForm, addStudentImage, removeStudentImage, readStudentImage };
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase F5 (files) — the file a student attaches to a file question (docs/enterprise-project-exam-form-f5-files.md).
+//
+// A file cannot be re-encoded like an image, so it is never interpreted or rendered by the platform: it is bounded, its
+// name reduced to a label, its bytes checked against the kind the question asks for, stored as an opaque blob under the
+// student's own prefix, and only then referenced from the answer in one CAS round. ONE file per question: the new
+// reference replaces the old one in the same round, and the replaced blob is removed afterwards, best effort. When the
+// round refuses the file the blob just written is removed again, so no orphan is left behind.
+// ---------------------------------------------------------------------------------------------------------------------
+async function addStudentFile(container, projectCode, classId, studentId, { questionId, fileName, dataBase64, now }) {
+  // Everything that can be refused without reading the upload is refused first.
+  const membership = await svc.requireStudentInClass(container, studentId, classId);
+  if (!membership.ok) fail("لا يمكنك تعديل هذه الاستمارة.", 403, "NOT_MEMBER");
+  const ns = getStorageNamespace(projectCode);
+  const before = await loadClassForm(container, projectCode, classId);
+  if (!before) fail("الاستمارة غير متاحة لصفك.", 404, "FORM_NOT_OPENED");
+  if (before.state !== "open") fail("أغلق المعلم الاستمارة. إجاباتك المحفوظة باقية.", 409, "FORM_CLOSED");
+  const question = files.fileQuestion(trustedTemplate(before, projectCode), questionId, rulesOf(before));
+  const { name, ext } = files.describeFileName(question, fileName);
+  const buffer = files.decodeFileUpload(dataBase64);
+  files.assertFileContent(ext, buffer);
+
+  const file = { id: crypto.randomBytes(12).toString("hex"), name, ext, bytes: buffer.length };
+  const blobName = ns.examFormFileName(classId, studentId, file.id);
+  await uploadBinary(container, blobName, buffer, "application/octet-stream");
+  let replacedId = null;
+  try {
+    const r = await writeStudentForm(container, projectCode, classId, studentId, (current, template, rules) => {
+      const outcome = files.applySetFile(current, template, { questionId, file, identity: { projectCode, classId, studentId }, now, rules });
+      replacedId = outcome.replacedId;
+      return outcome;
+    });
+    if (replacedId) await bestEffortDelete(container, ns.examFormFileName(classId, studentId, replacedId));
+    return { ...r, file };
+  } catch (e) {
+    await bestEffortDelete(container, blobName);                                  // the round refused it: no orphan is left behind
+    throw e;
+  }
+}
+
+async function removeStudentFile(container, projectCode, classId, studentId, { questionId, fileId, now }) {
+  const r = await writeStudentForm(container, projectCode, classId, studentId, (current, template, rules) =>
+    files.applyRemoveFile(current, template, { questionId, fileId, now, rules }));
+  if (r.changed) await bestEffortDelete(container, getStorageNamespace(projectCode).examFormFileName(classId, studentId, fileId));
+  return r;
+}
+
+// One attached file, or null: only a file that THIS student's answers document references is ever served — to the student
+// who owns it (the student route) and to the teacher of the class (the teacher route, after its own tenancy and membership
+// checks). The id alone is never enough: the blob name is built from the class and the student too. The caller serves it
+// as a download only.
+async function readStudentFile(container, projectCode, classId, studentId, fileId) {
+  if (!files.isFileId(fileId)) return null;
+  const ns = getStorageNamespace(projectCode);
+  const doc = await downloadJsonOrNull(container, ns.examFormAnswersName(classId, studentId));
+  const file = files.referencedFile(doc, fileId);
+  if (!file) return null;
+  const blob = await downloadBinaryOrNull(container, ns.examFormFileName(classId, studentId, fileId));
+  return blob ? { buffer: blob.buffer, name: file.name, ext: file.ext, disposition: files.attachmentDisposition(file.name, file.ext) } : null;
+}
+
+module.exports = { addStudentFile, removeStudentFile, readStudentFile, trustedTemplate, rulesOf, loadClassForm, classFormState, classFormQuestions, openClassForm, closeClassForm, readStudentForm, studentFormSummary, saveStudentDraft, submitStudentForm, addStudentImage, removeStudentImage, readStudentImage };

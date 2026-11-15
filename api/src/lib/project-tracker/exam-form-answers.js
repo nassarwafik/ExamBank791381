@@ -12,8 +12,12 @@ const DEFERRED_KINDS = new Set(["image", "file"]);
 // Phase F4 — a class whose teacher switched image answers on (`rules.imageAnswers`, stored on the class form) answers its
 // image questions; files still wait for F5. Every function below takes the class's `rules`; without them (or for a class
 // that never switched images on) image questions stay deferred exactly as before.
-const DEFERRED_WITH_IMAGES = new Set(["file"]);
-const deferredKindsOf = rules => (rules && rules.imageAnswers === true ? DEFERRED_WITH_IMAGES : DEFERRED_KINDS);
+// Phase F5 (files) — the same for file questions: a class whose teacher switched file answers on (`rules.fileAnswers`)
+// answers them; anywhere else they stay deferred. The two switches are independent.
+const DEFERRED_SETS = { "": DEFERRED_KINDS, i: new Set(["file"]), f: new Set(["image"]), if: new Set() };
+const deferredKindsOf = rules => DEFERRED_SETS[(rules && rules.imageAnswers === true ? "i" : "") + (rules && rules.fileAnswers === true ? "f" : "")];
+// The file reference stored on an answer ({ id, name, ext, bytes, addedAt }), or null; written only by exam-form-files.js.
+const fileOf = answer => (answer && isObject(answer.file) && typeof answer.file.id === "string" && /^[a-f0-9]{24}$/.test(answer.file.id) ? answer.file : null);
 // A question that takes images: an image question, or a text / code / table question that asks for images beside its answer.
 const acceptsImages = question => isObject(question.images) && Number.isInteger(question.images.max) && question.images.max > 0;
 // The image references stored on an answer ([{ id, width, height, bytes, addedAt }]); written only by exam-form-images.js.
@@ -54,6 +58,8 @@ function normalizeAnswer(question, raw, rules) {
   if (deferredKindsOf(rules).has(question.kind)) fail(what + ": هذا النوع من الإجابات غير متاح بعد.", 400, "KIND_NOT_AVAILABLE");
   // Phase F4 — an image is never written through a draft: it is uploaded (sanitized, stored, then referenced by the server).
   if (question.kind === "image") fail(what + ": تُضاف الصور بزر إرفاق الصورة.", 400, "IMAGE_VIA_UPLOAD");
+  // Phase F5 — nor is a file: it is uploaded (checked, stored, then referenced by the server).
+  if (question.kind === "file") fail(what + ": يُرفق الملف بزر إرفاق الملف.", 400, "FILE_VIA_UPLOAD");
   if (raw === null || raw === undefined) return null;
   if (!isObject(raw)) fail(what + ": إجابة غير صحيحة.");
 
@@ -145,6 +151,8 @@ function isAnswered(question, answer, rules) {
   if (!answer) return false;
   const imagesOn = !!(rules && rules.imageAnswers === true);
   if (question.kind === "image") return imagesOn && imagesOf(answer).length >= Math.max(1, question.images.min);
+  // Phase F5 — with file answers on, a file question is answered when it holds its file.
+  if (question.kind === "file") return !!(rules && rules.fileAnswers === true) && !!fileOf(answer);
   if (imagesOn && acceptsImages(question) && imagesOf(answer).length < question.images.min) return false;
   switch (question.kind) {
     case "shortText": case "paragraph": case "cli": return typeof answer.text === "string" && !blank(answer.text);
@@ -256,4 +264,4 @@ function applySubmit(current, template, { baseRevision, now, rules }) {
   return { doc };
 }
 
-module.exports = { DEFERRED_KINDS, MAX_PATCH_QUESTIONS, STUDENT_WRITABLE, deferredKindsOf, acceptsImages, imagesOf, assertStudentWritable, normalizeAnswer, isAnswered, formProgress, emptyDocument, applyDraft, applySubmit };
+module.exports = { DEFERRED_KINDS, MAX_PATCH_QUESTIONS, STUDENT_WRITABLE, deferredKindsOf, acceptsImages, imagesOf, fileOf, assertStudentWritable, normalizeAnswer, isAnswered, formProgress, emptyDocument, applyDraft, applySubmit };

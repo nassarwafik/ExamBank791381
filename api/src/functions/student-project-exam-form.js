@@ -7,6 +7,10 @@
 //   POST /api/student-project-exam-form { projectCode, action: "addImage", questionId, dataUrl }      attach one image
 //   POST /api/student-project-exam-form { projectCode, action: "removeImage", questionId, imageId }   remove one
 //   GET  /api/student-project-exam-form?projectCode=…&image=<imageId>                                 the student's OWN image (image/webp)
+//   Phase F5 — files, only in a class whose teacher switched file answers on:
+//   POST /api/student-project-exam-form { projectCode, action: "addFile", questionId, fileName, dataBase64 }   attach (or replace) the file
+//   POST /api/student-project-exam-form { projectCode, action: "removeFile", questionId, fileId }              remove it
+//   GET  /api/student-project-exam-form?projectCode=…&file=<fileId>                                            the student's OWN file, as a download
 //
 // The student and the class come ONLY from the verified session: the class is the one that serves the project for this
 // student (lib/project-tracker/student-project-classes.js). A body classId / studentId is never read. The form exists for a
@@ -25,6 +29,10 @@ const NOT_AVAILABLE = "المشروع غير متاح لصفك.";
 const CONFLICT = "حدث تعارض مؤقت أثناء الحفظ. حاول مرة أخرى.";
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
+const ACTIONS = new Set(["saveDraft", "submit", "addImage", "removeImage", "addFile", "removeFile"]);
+// Phase F5 (files) — a stored file is opaque bytes: always a download, never a type the browser may render or guess.
+const FILE_HEADERS = file => ({ "content-type": "application/octet-stream", "content-disposition": file.disposition, "x-content-type-options": "nosniff", "cache-control": "private, no-store" });
+
 async function handler(request, deps = {}, obs = null) {
   try {
     const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
@@ -52,13 +60,21 @@ async function handler(request, deps = {}, obs = null) {
         if (!image) return { status: 404, jsonBody: { ok: false, error: "لا توجد صورة." } };
         return { status: 200, body: image.buffer, headers: { "content-type": image.contentType, "cache-control": "private, max-age=3600", "x-content-type-options": "nosniff", "content-disposition": "inline" } };
       }
+      // Phase F5 (files) — one of the student's OWN attached files, as a DOWNLOAD only (never inline, never a guessed type):
+      // served only when this student's answers reference it. Readable in an archived class too (its record).
+      const fileId = new URL(request.url).searchParams.get("file");
+      if (fileId !== null) {
+        const file = await forms.readStudentFile(container, projectCode, classId, studentId, String(fileId));
+        if (!file) return { status: 404, jsonBody: { ok: false, error: "لا يوجد ملف." } };
+        return { status: 200, body: file.buffer, headers: FILE_HEADERS(file) };
+      }
       const view = await forms.readStudentForm(container, projectCode, classId, studentId);
       return { status: 200, jsonBody: { ok: true, projectCode, ...view, ...(view.available && archived ? { readOnly: true } : {}) } };
     }
 
     if (archived) return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — لا يمكن تعديل الاستمارة." } };
     const action = String(body.action || "").trim();
-    if (action !== "saveDraft" && action !== "submit" && action !== "addImage" && action !== "removeImage") return { status: 400, jsonBody: { ok: false, error: "طلب غير صحيح." } };
+    if (!ACTIONS.has(action)) return { status: 400, jsonBody: { ok: false, error: "طلب غير صحيح." } };
     const baseRevision = body.baseRevision;
     try {
       if (action === "addImage") {
@@ -67,6 +83,14 @@ async function handler(request, deps = {}, obs = null) {
       }
       if (action === "removeImage") {
         const r = await forms.removeStudentImage(container, projectCode, classId, studentId, { questionId: body.questionId, imageId: body.imageId, now });
+        return { status: 200, jsonBody: { ok: true, projectCode, changed: r.changed, ...r.body } };
+      }
+      if (action === "addFile") {
+        const r = await forms.addStudentFile(container, projectCode, classId, studentId, { questionId: body.questionId, fileName: body.fileName, dataBase64: body.dataBase64, now });
+        return { status: 200, jsonBody: { ok: true, projectCode, changed: true, file: r.file, ...r.body } };
+      }
+      if (action === "removeFile") {
+        const r = await forms.removeStudentFile(container, projectCode, classId, studentId, { questionId: body.questionId, fileId: body.fileId, now });
         return { status: 200, jsonBody: { ok: true, projectCode, changed: r.changed, ...r.body } };
       }
       if (action === "saveDraft") {
