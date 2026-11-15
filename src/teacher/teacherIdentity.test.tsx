@@ -41,6 +41,10 @@ describe("display-name authority", () => {
     expect(resolveTeacherDisplayName(profile(), "x")).toBe("أ. سامر");
     expect(resolveTeacherDisplayName(null, "المعلم الأول")).toBe("المعلم الأول");
     expect(resolveTeacherDisplayName(null, "")).toBe("المعلم");
+    // A profile WITHOUT a name the teacher chose carries only the server's fallback («المعلم»): the session's name (the name the owner
+    // gave the account) wins over it, so the greeting and the top bar say «وفيق نصار», not «المعلم».
+    expect(resolveTeacherDisplayName(profile({ displayName: "المعلم", hasCustomName: false }), "وفيق نصار")).toBe("وفيق نصار");
+    expect(resolveTeacherDisplayName(profile({ displayName: "المعلم", hasCustomName: false }), "")).toBe("المعلم");
     expect(normalizeTeacherProfile({ teacherId: "b", displayName: "", avatarId: "a1", profilePhoto: { version: "2" } })).toMatchObject({ displayName: "المعلم", profilePhoto: { version: 2 } });
     const read = (rel: string) => readFileSync(path.join(process.cwd(), "src", rel), "utf8");
     for (const f of ["shell/TeacherAppShell.tsx", "teacher/TeacherIdentity.tsx", "teacher/TeacherProfileDialog.tsx", "App.tsx"]) expect(read(f), f).not.toMatch(/سامر|nassar|wafik/i);
