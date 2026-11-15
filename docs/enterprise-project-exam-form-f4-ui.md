@@ -53,6 +53,13 @@ until its images are attached, and is marked on the page like any other required
 Where the class has image answers **off**, the page is exactly what it was (F2-UI): the notices, no input, no image
 request. The existing F2-UI, F3 and F1b page suites pass unchanged.
 
+Wording corrected on 2026-11-15, once the screens were live: the notices of such a class said image answers were coming
+«soon» («سيتاح قريبًا»), which stopped being true the day the teacher's switch shipped. They now say what is the case —
+«أسئلة الصور غير مفعّلة لصفك» on an image question, on the image part of a code question and in the note above the
+sections — and the note mentions files only for a form that has file questions (899373 has none). Text only; pinned by
+`StudentExamForm.images.f4ui.test.tsx` and `StudentExamForm.899373.f1c.test.tsx`. Nothing on the form page says «soon»
+any more.
+
 ### One request at a time
 
 Attaching an image does not advance the form's `revision` (F4), so a save and an image request answered out of order

@@ -46,7 +46,7 @@ function server() {
     const r = (await route(url)({ method, url: "https://x" + url, json: async () => body ?? {} })) as { status: number; jsonBody: Body };
     return { ok: r.status < 400, status: r.status, json: async () => r.jsonBody, text: async () => JSON.stringify(r.jsonBody), headers: new Headers() } as unknown as Response;
   }) as unknown as typeof fetch;
-  const open = () => tracker({ method: "POST", url: "https://x/api/project-tracker", json: async () => ({ projectCode: CODE, classId: "c1", action: "examForm.open", imageAnswers: true }) }, teacherDeps);
+  const open = (extra: Body = { imageAnswers: true }) => tracker({ method: "POST", url: "https://x/api/project-tracker", json: async () => ({ projectCode: CODE, classId: "c1", action: "examForm.open", ...extra }) }, teacherDeps);
   const doc = () => (ctx.has(NS.examFormAnswersName("c1", "s1")) ? ctx.getJson(NS.examFormAnswersName("c1", "s1")) : null) as { status: string; revision: number; answers: Record<string, Body> } | null;
   const classForm = () => (ctx.has(NS.examFormClassName("c1")) ? ctx.getJson(NS.examFormClassName("c1")) : null) as { state: string; imageAnswers?: boolean; template: { sections: unknown[] } } | null;
   return { ctx, posts, open, doc, classForm };
@@ -105,6 +105,25 @@ describe("F1c — the 899373 form on the teacher's and the student's pages", () 
     // Nothing waits for a later phase in this form: no «deferred» note, and the progress counts every question.
     expect(document.querySelector(".eb-sp-form-note")).toBeNull();
     expect(screen.getByText(new RegExp("أجبت عن 0 من 84"))).toBeTruthy();
+  });
+
+  it("a class with image answers off is told so, with no word about files (the form has none)", async () => {
+    const s = server();
+    await s.open({});
+    render(<StudentExamForm token="st" projectCode={CODE} onClose={() => {}} saveDelayMs={5} />);
+    await screen.findByRole("navigation", { name: "أقسام الاستمارة" });
+    const images = QUESTIONS.filter(q => q.kind === "image");
+    const note = document.querySelector(".eb-sp-form-note")!.textContent || "";
+    expect(note).toContain(images.length + " سؤالًا تحتاج صورًا، وهي لا تمنع التسليم الآن");
+    expect(note).toContain("أسئلة الصور غير مفعّلة لصفك");
+    expect(note).not.toContain("ملف");
+    const first = images[0];
+    fireEvent.click(nav().getByRole("button", { name: new RegExp(escape(SECTIONS.find(x => x.questions.includes(first))!.title)) }));
+    await waitFor(() => expect(questionBox(first.questionId)).not.toBeNull());
+    expect(questionBox(first.questionId)!.textContent).toContain("أسئلة الصور غير مفعّلة لصفك");
+    expect(questionBox(first.questionId)!.querySelector("input")).toBeNull();
+    expect(document.body.textContent).not.toContain("قريبًا");
+    expect(screen.getByText(new RegExp("أجبت عن 0 من " + (QUESTIONS.length - images.length)))).toBeTruthy();
   });
 
   it("saves an answer as the student types, under the 899373 prefix", async () => {

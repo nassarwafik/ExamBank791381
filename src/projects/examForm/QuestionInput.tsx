@@ -17,7 +17,8 @@ type Props = {
 };
 
 const DEFERRED_TEXT: Record<string, string> = {
-  image: "هذا السؤال يحتاج صورة. إرفاق الصور سيتاح قريبًا، وهذا السؤال لا يمنع التسليم الآن.",
+  // Shown only where the class has image answers off (its teacher can switch them on from the project dashboard).
+  image: "هذا السؤال يحتاج صورة. أسئلة الصور غير مفعّلة لصفك، وهذا السؤال لا يمنع التسليم الآن.",
   // Owner decision (2026-11-15): files are not uploaded to the site. The question stays as a reminder of what to hand in.
   file: "هذا السؤال يحتاج ملفًا. سلّم الملف لمعلمك مباشرة: الملفات لا تُرفع إلى الموقع، وهذا السؤال لا يمنع التسليم."
 };
@@ -127,7 +128,7 @@ function AnswerInput(props: Props) {
         <>
           <textarea className="eb-sp-form-text eb-sp-form-cli" dir="ltr" rows={8} spellCheck={false} maxLength={question.maxLength} disabled={disabled} value={answer?.text || ""}
             aria-label="الأوامر أو المخرجات" onChange={e => onChange({ text: e.target.value })} />
-          {question.images && !props.images && !disabled && <p className="eb-sp-form-deferred">إرفاق الصورة المطلوبة هنا سيتاح قريبًا. اكتب الآن النص فقط.</p>}
+          {question.images && !props.images && !disabled && <p className="eb-sp-form-deferred">إرفاق الصورة المطلوبة هنا غير مفعّل لصفك. اكتب الآن النص فقط.</p>}
         </>
       );
     case "table":
