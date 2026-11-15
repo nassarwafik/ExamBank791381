@@ -4,9 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { getExamFormTemplate, getSupportedProjects } from "../src/lib/project-tracker/registry.js";
 import { KINDS, validateExamFormTemplate, toStudentView, summarizeExamForm, readExamFormTemplateFile, loadExamFormTemplate } from "../src/lib/project-tracker/exam-form.js";
+import { v1Template } from "./fixtures/exam-form-v1.js";
 
 // Phase F1 — the project exam form («استمارة امتحان المشروع»): the bundled 794589 template, the template validation and the
 // student projection. No route and no storage yet (docs/enterprise-project-exam-form-f1.md).
+//
+// Form version 2 (docs/enterprise-project-exam-form-hand-in-checklist.md) replaced the form's two file questions with one
+// hand-in checklist: 91 questions, none of kind `file`. The kind itself stays valid — a class that opened its form under
+// version 1 keeps its file questions — so the file-question rules are tested on the version 1 template (v1Template).
 
 const CODE = "794589";
 const clone = v => JSON.parse(JSON.stringify(v));
@@ -21,20 +26,36 @@ function keysDeep(value, into = new Set()) {
 }
 
 describe("F1 — the bundled 794589 exam form", () => {
-  it("is a valid template of 16 sections and 92 questions worth 100", () => {
+  it("is a valid template of 16 sections and 91 questions worth 100", () => {
     const template = getExamFormTemplate(CODE);
     expect(() => validateExamFormTemplate(template, { projectCode: CODE })).not.toThrow();
     expect(summarizeExamForm(template)).toEqual({
-      projectCode: CODE, formVersion: 1, sections: 16, questions: 92,
-      auto: 13, teacher: 75, unmarked: 4, withImages: 14, files: 2, totalWeight: 100
+      projectCode: CODE, formVersion: 2, sections: 16, questions: 91,
+      auto: 13, teacher: 73, unmarked: 5, withImages: 14, files: 0, totalWeight: 100
     });
+  });
+
+  it("version 2 differs from version 1 only by the hand-in checklist that replaced the two file questions", () => {
+    const now = getExamFormTemplate(CODE), before = v1Template(CODE);
+    expect(summarizeExamForm(before)).toMatchObject({ formVersion: 1, questions: 92, teacher: 75, unmarked: 4, files: 2 });
+    const idsOf = t => t.sections.flatMap(s => s.questions).map(q => q.questionId);
+    expect(idsOf(before).filter(id => !idsOf(now).includes(id))).toEqual(["S16Q02", "S16Q03"]);   // the two file questions
+    expect(idsOf(now).filter(id => !idsOf(before).includes(id))).toEqual(["S16Q05"]);             // a NEW id: no id changed its meaning
+    expect(question(now, "S16Q05")).toEqual({
+      questionId: "S16Q05", prompt: "أشّر ما سلّمته لمعلمك مباشرة. الملفات لا تُرفع إلى الموقع.", kind: "checklist", grading: "none", required: true,
+      items: [{ id: "h1", text: "ملف Packet Tracer النهائي" }, { id: "h2", text: "كتاب المشروع النهائي" }]
+    });
+    // Everything else is byte for byte what it was: the other 90 questions, the sections, their weights, the rubric.
+    const strip = t => ({ ...clone(t), formVersion: 0, sections: clone(t).sections.map(s => ({ ...s, questions: s.questions.filter(q => !["S16Q02", "S16Q03", "S16Q05"].includes(q.questionId)) })) });
+    expect(strip(now)).toEqual(strip(before));
+    expect(now.sections[15].questions.map(q => q.questionId)).toEqual(["S16Q01", "S16Q05", "S16Q04"]);
   });
 
   it("keeps the sections in book order with the agreed weight of each axis", () => {
     const template = getExamFormTemplate(CODE);
     expect(template.sections.map(s => s.sectionId)).toEqual(Array.from({ length: 16 }, (_, i) => "S" + String(i + 1).padStart(2, "0")));
     expect(template.sections.map(s => s.order)).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
-    expect(template.sections.map(s => s.questions.length)).toEqual([4, 5, 4, 9, 3, 8, 8, 7, 7, 7, 7, 6, 4, 5, 4, 4]);
+    expect(template.sections.map(s => s.questions.length)).toEqual([4, 5, 4, 9, 3, 8, 8, 7, 7, 7, 7, 6, 4, 5, 4, 3]);
     expect([sectionWeights(template, 1, 3), sectionWeights(template, 4, 5), sectionWeights(template, 6, 10), sectionWeights(template, 11, 12), sectionWeights(template, 13, 15), sectionWeights(template, 16, 16)])
       .toEqual([10, 15, 40, 15, 15, 5]);
   });
@@ -112,7 +133,7 @@ describe("F1 — a template file is validated when it is read", () => {
   it("a valid file is returned frozen", () => {
     withFile(valid(), file => {
       const template = readExamFormTemplateFile(file, CODE);
-      expect(summarizeExamForm(template).questions).toBe(92);
+      expect(summarizeExamForm(template).questions).toBe(91);
       expect(Object.isFrozen(template.sections[0].questions[0])).toBe(true);
     });
   });
@@ -148,7 +169,8 @@ describe("F1 — the student view never carries an answer key", () => {
     expect(q("S12Q03").items).toHaveLength(5);
     expect(q("S04Q01").columns.map(c => c.id)).toEqual(["branch", "department", "vlan", "network", "mask", "gateway"]);
     expect(q("S11Q07").images).toEqual({ min: 1, max: 2 });
-    expect(q("S16Q02").accept).toEqual([".pkt"]);
+    expect(q("S16Q05").items).toEqual([{ id: "h1", text: "ملف Packet Tracer النهائي" }, { id: "h2", text: "كتاب المشروع النهائي" }]);
+    expect(question(toStudentView(v1Template(CODE)), "S16Q02").accept).toEqual([".pkt"]);   // a file question of a version 1 class
     expect(q("S14Q04")).toMatchObject({ min: 1, max: 5 });
   });
 
@@ -231,8 +253,8 @@ describe("F1 — a malformed template is refused", () => {
     ["an image minimum above its maximum", t => { q(t, "S01Q04").images = { min: 3, max: 2 }; }],
     ["more than 6 images", t => { q(t, "S16Q01").images.max = 7; }],
     ["images on a choice question", t => { q(t, "S04Q04").images = { min: 0, max: 1 }; }],
-    ["a file type that is not allowed", t => { q(t, "S16Q02").accept = [".exe"]; }],
-    ["a file question with no type", t => { q(t, "S16Q02").accept = []; }],
+    ["a file type that is not allowed", t => { q(t, "S16Q02").accept = [".exe"]; }, "v1"],
+    ["a file question with no type", t => { q(t, "S16Q02").accept = []; }, "v1"],
     ["a text limit above the cap", t => { q(t, "S01Q01").maxLength = 501; }],
     ["a text limit of 0", t => { q(t, "S02Q01").maxLength = 0; }],
     ["a scale whose minimum is not below its maximum", t => { q(t, "S14Q04").min = 5; }],
@@ -241,10 +263,11 @@ describe("F1 — a malformed template is refused", () => {
   ];
   it("the unchanged copy is valid (control)", () => {
     expect(() => validateExamFormTemplate(valid(), { projectCode: CODE })).not.toThrow();
+    expect(() => validateExamFormTemplate(v1Template(CODE), { projectCode: CODE })).not.toThrow();   // the base of the file cases
   });
-  for (const [name, mutate] of cases) {
+  for (const [name, mutate, base] of cases) {
     it(name, () => {
-      const template = valid();
+      const template = base === "v1" ? v1Template(CODE) : valid();
       mutate(template);
       let error = null;
       try { validateExamFormTemplate(template, { projectCode: CODE }); } catch (e) { error = e; }
@@ -273,8 +296,9 @@ describe("F1 — every kind declares how it is marked", () => {
   it("only the four closed kinds can be marked automatically", () => {
     expect(Object.entries(KINDS).filter(([, g]) => g.includes("auto")).map(([k]) => k).sort()).toEqual(["choice", "matching", "multiChoice", "ordering"]);
   });
-  it("the bundled form uses every kind", () => {
-    const used = new Set(getExamFormTemplate(CODE).sections.flatMap(s => s.questions).map(q => q.kind));
-    expect([...used].sort()).toEqual(Object.keys(KINDS).sort());
+  it("the bundled form uses every kind but the file question; form version 1 used them all", () => {
+    const kindsOf = t => [...new Set(t.sections.flatMap(s => s.questions).map(q => q.kind))].sort();
+    expect(kindsOf(getExamFormTemplate(CODE))).toEqual(Object.keys(KINDS).filter(k => k !== "file").sort());
+    expect(kindsOf(v1Template(CODE))).toEqual(Object.keys(KINDS).sort());
   });
 });

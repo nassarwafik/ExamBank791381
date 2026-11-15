@@ -18,6 +18,7 @@ const { handler: studentForm } = nodeRequire("../../../api/src/functions/student
 const { handler: tracker } = nodeRequire("../../../api/src/functions/project-tracker.js");
 const { getExamFormTemplate, getStorageNamespace } = nodeRequire("../../../api/src/lib/project-tracker/registry.js");
 const { createMemoryContainer } = nodeRequire("../../../api/tests/fixtures/memory-container.js");
+const { v1Template } = nodeRequire("../../../api/tests/fixtures/exam-form-v1.js");
 const sharp = nodeRequire("../../../api/node_modules/sharp");
 
 type Body = Record<string, unknown>;
@@ -32,6 +33,9 @@ const QUESTIONS = SECTIONS.flatMap(s => s.questions);
 const Q = (id: string) => QUESTIONS.find(q => q.questionId === id)!;
 const byKind = (kind: string, more: (q: KeyedQuestion) => boolean = () => true) => QUESTIONS.find(q => q.kind === kind && more(q))!;
 const ANSWERABLE = QUESTIONS.filter(q => q.kind !== "image" && q.kind !== "file");
+// A class that opened its form under form version 1 still has file questions (the bundled form has none since version 2).
+const V1_SECTIONS = (v1Template(CODE) as { sections: Section[] }).sections;
+const V1_FILE_QUESTIONS = V1_SECTIONS.flatMap(s => s.questions).filter(q => q.kind === "file");
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 // The RIGHT answer of an auto-marked question; a complete, valid answer for any other answerable question.
@@ -66,7 +70,7 @@ describe("F5 PDF — the document", () => {
     expect(html).toContain("@page{size:A4;margin:14mm}");
     expect(html).toContain("<title>" + TEMPLATE.title + " — 794589 — وليد سالم</title>");
     expect(html.match(/<section>/g)).toHaveLength(16);
-    expect(html.match(/<div class="q">/g)).toHaveLength(92);
+    expect(html.match(/<div class="q">/g)).toHaveLength(91);
     for (const s of SECTIONS) expect(html).toContain(s.title);
     expect(html).toContain("نسخة الطالب · أُنشئ في 14 نوفمبر 2026، 10:00");
     expect(html).toContain("<dt>الإجابات</dt><dd>77 من 77</dd>");
@@ -98,9 +102,10 @@ describe("F5 PDF — the document", () => {
     const html = buildExamFormPrintHtml(input());
     expect(html.match(/<p class="none">لم يُجب\.<\/p>/g)!.length).toBe(ANSWERABLE.length);
     expect(html.match(/<p class="none">لم تُرفق صورة\.<\/p>/g)!.length).toBe(QUESTIONS.filter(q => q.kind === "image").length);
-    const fileQuestions = QUESTIONS.filter(q => q.kind === "file").length;
-    expect(fileQuestions).toBeGreaterThan(0);
-    expect(html.match(/<p class="none">يُسلَّم الملف للمعلم مباشرة: الملفات لا تُرفع إلى الموقع\.<\/p>/g)!.length).toBe(fileQuestions);
+    expect(html).not.toContain("يُسلَّم الملف للمعلم مباشرة");                         // the bundled form has no file question
+    const v1 = buildExamFormPrintHtml(input({ sections: V1_SECTIONS as unknown as PrintSection[] }));
+    expect(V1_FILE_QUESTIONS).toHaveLength(2);
+    expect(v1.match(/<p class="none">يُسلَّم الملف للمعلم مباشرة: الملفات لا تُرفع إلى الموقع\.<\/p>/g)!.length).toBe(2);
   });
 
   it("escapes every piece of text: an answer, a table cell, a name and a note can never inject markup", () => {
@@ -138,9 +143,9 @@ describe("F5 PDF — the document", () => {
   });
 
   it("a file question never prints a file: a reference left in an answer from the removed upload is not named", () => {
-    const q = byKind("file");
+    const q = V1_FILE_QUESTIONS[0];
     const left = { [q.questionId]: { file: { id: "f".repeat(24), name: "شبكة المشروع.pkt", ext: ".pkt", bytes: 188506 } } } as unknown as ExamFormAnswers;
-    const html = buildExamFormPrintHtml(input({ answers: left }));
+    const html = buildExamFormPrintHtml(input({ sections: V1_SECTIONS as unknown as PrintSection[], answers: left }));
     expect(html).not.toContain("شبكة المشروع.pkt");
     expect(html).not.toContain("f".repeat(24));
     expect(html).not.toContain("ملف مرفق");

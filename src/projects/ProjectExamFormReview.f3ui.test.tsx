@@ -102,7 +102,7 @@ describe("F3-UI hiding questions before the first open", () => {
     fireEvent.click(await screen.findByRole("button", { name: "اختيار الأسئلة" }));
     const picker = await screen.findByTestId("exam-form-picker");
     expect(picker.textContent).toContain("ستُطرح كل الأسئلة");
-    expect(within(picker).getAllByRole("checkbox")).toHaveLength(92);
+    expect(within(picker).getAllByRole("checkbox")).toHaveLength(91);
     expect(picker.textContent).not.toContain("correctOption");
     fireEvent.click(within(picker).getByRole("checkbox", { name: new RegExp(Q("S01Q02").prompt.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }));
     fireEvent.click(within(picker).getByRole("checkbox", { name: new RegExp(Q("S04Q04").prompt.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) }));
@@ -118,7 +118,7 @@ describe("F3-UI hiding questions before the first open", () => {
     expect(s.posts.find(p => p.action === "examForm.open")).toMatchObject({ hiddenQuestionIds: ["S01Q02", "S04Q04"] });
     const box = screen.getByTestId("project-exam-form");
     await waitFor(() => expect(box.textContent).toMatch(/عدد الأسئلة المخفية عن هذا الصف:\s*2/));
-    expect(box.textContent).toMatch(/90\s*سؤالًا/);
+    expect(box.textContent).toMatch(/89\s*سؤالًا/);
     expect(screen.queryByRole("button", { name: /اختيار الأسئلة/ })).toBeNull();   // frozen: no picker after the first open
     expect(screen.queryByTestId("exam-form-picker")).toBeNull();
   });
@@ -173,7 +173,7 @@ describe("F3-UI the class's forms", () => {
     const rows = [...list.querySelectorAll("[data-student]")] as HTMLElement[];
     expect(rows.map(r => r.dataset.student)).toEqual(["s1", "s2", "s3"]);     // submitted, then draft, then not started (not by name: «وليد» is last by name)
     expect(rows[0].textContent).toContain("سُلّمت — بانتظار تقديرك");
-    expect(rows[0].textContent).toMatch(/أجاب عن\s*77\s*من\s*77/);
+    expect(rows[0].textContent).toMatch(/أجاب عن\s*78\s*من\s*78/);
     expect(rows[0].textContent).toMatch(/قُدّر\s*0\s*من\s*16/);
     expect(within(rows[0]).getByRole("button", { name: "تقدير استمارة وليد" })).toBeTruthy();
     expect(within(rows[1]).getByRole("button", { name: "عرض استمارة بشرى" })).toBeTruthy();

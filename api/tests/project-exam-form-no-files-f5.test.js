@@ -1,19 +1,24 @@
 import { describe, it, expect } from "vitest";
 import { handler as studentForm } from "../src/functions/student-project-exam-form.js";
 import { handler as tracker } from "../src/functions/project-tracker.js";
-import { getExamFormTemplate, getStorageNamespace } from "../src/lib/project-tracker/registry.js";
+import { getStorageNamespace } from "../src/lib/project-tracker/registry.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { v1Template, seedV1ClassForm } from "./fixtures/exam-form-v1.js";
 
 // Owner decision (2026-11-15): files are not uploaded to the site. The file upload that two merged phases had added
 // (PR #638 server, PR #639 screens) is removed. What must hold now: the server refuses a request to switch file answers
 // on and writes nothing; the student route has no file action; a class form left with the old switch stored reads as any
 // other class (its file questions wait and never block a submit); nothing stored is deleted
 // (docs/enterprise-project-exam-form-no-file-uploads.md).
+//
+// Since form version 2 the bundled 794589 form has no file question (a hand-in checklist took their place), so a class
+// that still HAS file questions is a class that opened its form under version 1: those tests freeze the version 1
+// template into the class, exactly as its first open did (fixtures/exam-form-v1.js).
 
 const CODE = "794589";
 const NS = getStorageNamespace(CODE);
 const NOW = "2026-11-15T09:00:00.000Z";
-const QUESTIONS = getExamFormTemplate(CODE).sections.flatMap(s => s.questions);
+const QUESTIONS = v1Template(CODE).sections.flatMap(s => s.questions);
 const FILE_QUESTIONS = QUESTIONS.filter(q => q.kind === "file");
 const room = id => ({ classId: id, name: "صف " + id, grade: "12", schoolYear: "2026", active: true, status: "active", studentIds: [], programCodes: [CODE], createdAt: NOW, updatedAt: NOW });
 const user = (id, cid) => ({ userId: id, role: "student", active: true, archived: false, authVersion: 1, classId: cid, displayName: "طالب " + id, code: "C" + id });
@@ -81,7 +86,7 @@ describe("no file uploads — the teacher cannot switch file answers on", () => 
 describe("no file uploads — the student route has no file action", () => {
   it("refuses attach and remove, and a file read is not a download", async () => {
     const t = setup();
-    await t.teacher({ action: "examForm.open", imageAnswers: true });
+    seedV1ClassForm(t.ctx, CODE, "c1", { now: NOW, extra: { imageAnswers: true } });
     const q = FILE_QUESTIONS[0].questionId;
     for (const body of [
       { action: "addFile", questionId: q, name: "book.pdf", dataUrl: "data:application/pdf;base64,JVBERi0xLjQK" },
@@ -106,7 +111,7 @@ describe("no file uploads — the student route has no file action", () => {
 describe("no file uploads — a class left with the old switch stored", () => {
   it("reads as any other class: its file questions wait, never block, and what is stored stays", async () => {
     const t = setup();
-    await t.teacher({ action: "examForm.open", imageAnswers: true });
+    seedV1ClassForm(t.ctx, CODE, "c1", { now: NOW, extra: { imageAnswers: true } });
     // What the removed phases could have left behind: the switch on the class form, a file reference and its blob.
     const formName = NS.examFormClassName("c1");
     t.ctx.setJson(formName, { ...t.ctx.getJson(formName), fileAnswers: true, fileAnswersAt: NOW, fileAnswersBy: "teacher-1" });

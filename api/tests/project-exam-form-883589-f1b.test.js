@@ -7,10 +7,14 @@ import { getExamFormTemplate, getSupportedProjects, getStorageNamespace } from "
 import { validateExamFormTemplate, toStudentView, summarizeExamForm, loadExamFormTemplate } from "../src/lib/project-tracker/exam-form.js";
 import { DEFERRED_KINDS } from "../src/lib/project-tracker/exam-form-answers.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { v1Template } from "./fixtures/exam-form-v1.js";
 
 // Phase F1b — the 883589 project exam form («استمارة امتحان المشروع»): the second bundled template. Data and a registry flag
 // only; the validation, the student projection and the F2 routes are the ones 794589 already uses
 // (docs/enterprise-project-exam-form-883589.md).
+//
+// Form version 2 (docs/enterprise-project-exam-form-hand-in-checklist.md): the form's one file question (the book) became a
+// hand-in checklist. Still 95 questions; none of kind `file`.
 
 const CODE = "883589";
 const OTHER = "794589";
@@ -29,8 +33,8 @@ describe("F1b — the bundled 883589 exam form", () => {
     const template = getExamFormTemplate(CODE);
     expect(() => validateExamFormTemplate(template, { projectCode: CODE })).not.toThrow();
     expect(summarizeExamForm(template)).toEqual({
-      projectCode: CODE, formVersion: 1, sections: 16, questions: 95,
-      auto: 16, teacher: 75, unmarked: 4, withImages: 14, files: 1, totalWeight: 100
+      projectCode: CODE, formVersion: 2, sections: 16, questions: 95,
+      auto: 16, teacher: 74, unmarked: 5, withImages: 14, files: 0, totalWeight: 100
     });
     expect(template.title).toBe("استمارة امتحان المشروع");
   });
@@ -133,13 +137,29 @@ describe("F1b — the bundled 883589 exam form", () => {
     expect(new Set(choices.map(q => q.answer.correctOptionId)).size).toBeGreaterThan(1);
   });
 
-  it("asks for a justification on the two questions the teacher reads, and only accepts the book as a file", () => {
+  it("asks for a justification on the two questions the teacher reads, and has the student tick what was handed to the teacher", () => {
     const template = getExamFormTemplate(CODE);
     expect(all(template).filter(q => q.justification === true).map(q => q.questionId)).toEqual(["S04Q03", "S13Q02"]);
-    const files = all(template).filter(q => q.kind === "file");
-    expect(files.map(q => q.questionId)).toEqual(["S16Q03"]);
-    expect(files[0].accept).toEqual([".docx", ".pdf"]);
-    expect(all(template).filter(q => q.grading === "none").map(q => q.kind + ":" + q.questionId)).toEqual(["checklist:S14Q01", "scale:S15Q03", "declaration:S15Q07", "declaration:S16Q04"]);
+    expect(all(template).filter(q => q.kind === "file")).toEqual([]);                 // nothing is uploaded
+    expect(question(template, "S16Q05")).toEqual({
+      questionId: "S16Q05", prompt: "أشّر ما سلّمته لمعلمك مباشرة. الملفات لا تُرفع إلى الموقع.", kind: "checklist", grading: "none", required: true,
+      items: [{ id: "h1", text: "مشروع Visual Studio النهائي" }, { id: "h2", text: "كتاب المشروع النهائي" }]
+    });
+    expect(all(template).filter(q => q.grading === "none").map(q => q.kind + ":" + q.questionId)).toEqual(["checklist:S14Q01", "scale:S15Q03", "declaration:S15Q07", "checklist:S16Q05", "declaration:S16Q04"]);
+  });
+
+  it("version 2 differs from version 1 only by the hand-in checklist that replaced the book's file question", () => {
+    const now = getExamFormTemplate(CODE), before = v1Template(CODE);
+    expect(summarizeExamForm(before)).toMatchObject({ formVersion: 1, questions: 95, teacher: 75, unmarked: 4, files: 1 });
+    const file = question(before, "S16Q03");
+    expect(file).toMatchObject({ kind: "file", accept: [".docx", ".pdf"] });
+    const ids = t => all(t).map(q => q.questionId);
+    expect(ids(before).filter(id => !ids(now).includes(id))).toEqual(["S16Q03"]);
+    expect(ids(now).filter(id => !ids(before).includes(id))).toEqual(["S16Q05"]);      // a NEW id: no id changed its meaning
+    const copy = v => JSON.parse(JSON.stringify(v));
+    const strip = t => ({ ...copy(t), formVersion: 0, sections: copy(t).sections.map(s => ({ ...s, questions: s.questions.filter(q => !["S16Q03", "S16Q05"].includes(q.questionId)) })) });
+    expect(strip(now)).toEqual(strip(before));
+    expect(now.sections[15].questions.map(q => q.questionId)).toEqual(["S16Q01", "S16Q02", "S16Q05", "S16Q04"]);
   });
 
   it("is frozen and is its own file, not another project's form", () => {
@@ -215,7 +235,7 @@ describe("F1b — a class that runs 883589 gets the 883589 form through the exis
     const t = setup();
     const r = await t.open("c1", CODE);
     expect(r.status).toBe(200);
-    expect(r.jsonBody).toMatchObject({ ok: true, changed: true, examForm: { hasForm: true, state: "open", formVersion: 1, summary: { sections: 16, questions: 95, auto: 16 } } });
+    expect(r.jsonBody).toMatchObject({ ok: true, changed: true, examForm: { hasForm: true, state: "open", formVersion: 2, summary: { sections: 16, questions: 95, auto: 16 } } });
     expect(t.ctx.names("platform/project-exam-forms/")).toEqual([NS.examFormClassName("c1")]);
     const stored = t.ctx.getJson(NS.examFormClassName("c1"));
     expect(stored.projectCode).toBe(CODE);
@@ -224,7 +244,7 @@ describe("F1b — a class that runs 883589 gets the 883589 form through the exis
     expect(t.audits[0].details).toMatchObject({ projectCode: CODE, classId: "c1", firstOpen: true });
   });
 
-  it("the student of that class reads 95 questions with no key; images and the file wait and never block", async () => {
+  it("the student of that class reads 95 questions with no key; image questions wait and never block", async () => {
     const t = setup();
     await t.open("c1", CODE);
     const r = await t.get("s1", CODE);
@@ -236,8 +256,8 @@ describe("F1b — a class that runs 883589 gets the 883589 form through the exis
     const keys = keysDeep(b);
     for (const secret of ["answer", "correctOptionId", "correctOptionIds", "pairs", "rubric", "weight", "bookRef"]) expect(keys.has(secret), secret).toBe(false);
     const deferred = all(getExamFormTemplate(CODE)).filter(q => DEFERRED_KINDS.has(q.kind)).length;
-    expect(deferred).toBe(15);
-    expect(b.progress).toMatchObject({ total: 80, answered: 0, deferred: 15 });
+    expect(deferred).toBe(14);                                                        // the 14 image questions; no file question is left
+    expect(b.progress).toMatchObject({ total: 81, answered: 0, deferred: 14 });
   });
 
   it("a class that runs another project is refused this form, and gets its own", async () => {

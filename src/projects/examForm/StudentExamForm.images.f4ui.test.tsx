@@ -126,7 +126,9 @@ describe("F4-UI — a class with image answers off", () => {
     expect(q.textContent).toContain("لا يمنع التسليم");
     expect(q.querySelectorAll("input, button").length).toBe(0);
     expect(q.querySelector('[data-testid="exam-form-images"]')).toBeNull();
-    expect(screen.getByText(/سؤالًا تحتاج صورًا أو ملفات/).textContent).toContain("أسئلة الصور غير مفعّلة لصفك");
+    const waiting = screen.getByText(/سؤالًا تحتاج صورًا/).textContent || "";
+    expect(waiting).toContain("أسئلة الصور غير مفعّلة لصفك");
+    expect(waiting).not.toContain("ملفات");                                           // form version 2 has no file question
     const host = await goTo(HOST);
     await settle();
     expect(host.textContent).toContain("إرفاق الصورة المطلوبة هنا غير مفعّل لصفك");
@@ -148,7 +150,7 @@ describe("F4-UI — attaching an image", () => {
     expect(within(q).getByRole("button", { name: "إرفاق صورة" })).toBeTruthy();
     expect(fileInput(ONE)!.accept).toBe("image/jpeg,image/png,image/webp");
     expect(screen.getByText(new RegExp("أجبت عن 0 من " + WITH_IMAGES.length))).toBeTruthy();
-    expect(screen.getByText(/سؤالان يحتاجان ملفات/)).toBeTruthy();                   // only the two file questions still wait
+    expect(screen.queryByText(/يحتاج ملفًا|يحتاجان ملفات|تحتاج ملفات|تحتاج صورًا/)).toBeNull();   // images on, no file question: nothing waits
 
     pick(ONE, [await pngFile("cover.png", 2400, 1200)]);
     await waitFor(() => expect(s.doc()?.answers[ONE.questionId]?.images).toHaveLength(1));

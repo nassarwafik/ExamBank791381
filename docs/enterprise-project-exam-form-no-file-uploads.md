@@ -101,9 +101,9 @@ alone, `git status` unchanged afterwards:
 - A page cached from the #639 deployment still shows the file switch and the file input until it reloads; both now fail
   with the server's message.
 - Data left in storage by the short-lived feature is not surfaced anywhere (see above).
-- The file questions of 794589 and 883589 are still `required` in their templates and still of kind `file`; they are
-  deferred for every class, so they never block. Replacing them with a hand-in checklist, as in the 899373 form, would be
-  a new `formVersion` and is not part of this change. It was tried on 2026-11-15 and put back: 37 tests in 11 files (both
-  windows' suites, and the test that the bundled form uses every question kind) pin those two templates' questions and
-  counts, for a gain limited to classes opened afterwards — the page already tells the student to hand the file to the
-  teacher. It stays the owner's to ask for as a phase of its own.
+- The file questions of 794589 and 883589 were still `required` in their templates and still of kind `file` when this
+  change merged; they are deferred for every class, so they never block. Replacing them with a hand-in checklist, as in
+  the 899373 form, was tried inside this change on 2026-11-15 and put back: 37 tests in 11 files pinned those two
+  templates' questions and counts. The owner then asked for it as a phase of its own: **form version 2**
+  (`docs/enterprise-project-exam-form-hand-in-checklist.md`). Classes opened before it keep their file questions and
+  everything this document says about them.

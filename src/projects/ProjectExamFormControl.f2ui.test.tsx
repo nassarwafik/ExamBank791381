@@ -47,7 +47,7 @@ describe("F2-UI the teacher's exam-form control", () => {
     const box = await screen.findByTestId("project-exam-form");
     expect(box.textContent).toContain("استمارة امتحان المشروع");
     expect(box.textContent).toContain("لم تُفتح بعد");
-    expect(box.textContent).toMatch(/16\s*قسمًا و\s*92\s*سؤالًا/);
+    expect(box.textContent).toMatch(/16\s*قسمًا و\s*91\s*سؤالًا/);
     expect(within(box).getByRole("button", { name: "فتح الاستمارة للصف" })).toBeTruthy();
     expect(s.classForm()).toBeNull();
   });

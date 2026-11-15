@@ -104,6 +104,9 @@ template is deep-frozen; a caller that needs its own copy clones it. The loader 
 | 16 | المرفقات والتسليم | 4 | 0 | 1 | 5 |
 | | **Total** | **92** | **13** | **14** | **100** |
 
+This table is form version 1. Since form version 2 the last section has 3 questions, not 4 — its two file questions became
+one hand-in checklist — and the form has **91** questions (`docs/enterprise-project-exam-form-hand-in-checklist.md`).
+
 75 questions are teacher-reviewed, 13 auto-marked, 4 unmarked; 2 are file questions. Weights by axis: project and
 organisation (1–3) 10, planning and addressing (4–5) 15, implementation in Packet Tracer (6–10) 40, security and testing
 (11–12) 15, audit, reflection and sources (13–15) 15, attachments and submission (16) 5.
@@ -126,6 +129,7 @@ to compare the book with the Packet Tracer file and correct what differs.
 | F1b | The 883589 question bank, as data (`docs/enterprise-project-exam-form-883589.md`). |
 | F5 | PDF export. The 899373 question bank shipped as F1c (`docs/enterprise-project-exam-form-899373.md`). ~~Files (`.pkt`, the book).~~ **Removed.** The server side of file answers was merged as #638 (`b466aa41`) and taken out again by the owner's decision of 2026-11-15: files are not uploaded to the site. The server refuses a request to switch file answers on (`409 FILES_NOT_OFFERED`). The two records of that work (`enterprise-project-exam-form-f5-files.md`, `-f5-ui.md`) are in the history of those merges. |
 | F5-UI | ~~The student's file input, the teacher's switch, the download in the teacher's review.~~ **Removed.** Merged as #639 (`e90b3b60`) and taken out again by the owner's decision of 2026-11-15: files are not uploaded to the site. The student's page tells the student to hand the file to the teacher (`StudentExamForm.fileNotice.f5.test.tsx`). |
+| F6 | Form version 2 of 794589 and 883589: the file questions became the hand-in checklist the 899373 form already asks; classes already opened keep version 1 (`docs/enterprise-project-exam-form-hand-in-checklist.md`). |
 | F5 (PDF) | «طباعة / حفظ PDF» of one student's form, built in the page: the teacher's copy and the student's copy, images embedded, never an answer key; a file question prints that the file is handed to the teacher: `docs/enterprise-project-exam-form-f5-pdf.md`. |
 
 Sequencing the later phases must handle: image and file questions are `required` in the template, so until F4 / F5 enable

@@ -79,7 +79,7 @@ describe("F2 teacher opens and closes the form for a class", () => {
     const r = await t.state();
     expect(r.status).toBe(200);
     expect(r.jsonBody.examForm).toMatchObject({ hasForm: true, state: "none" });
-    expect(r.jsonBody.examForm.summary).toMatchObject({ sections: 16, questions: 92 });
+    expect(r.jsonBody.examForm.summary).toMatchObject({ sections: 16, questions: 91 });
     expect(t.classForm()).toBeNull();
   });
 
@@ -87,12 +87,12 @@ describe("F2 teacher opens and closes the form for a class", () => {
     const t = setup();
     const r = await t.teacher({ action: "examForm.open" });
     expect(r.status).toBe(200);
-    expect(r.jsonBody).toMatchObject({ ok: true, changed: true, examForm: { state: "open", formVersion: 1 } });
+    expect(r.jsonBody).toMatchObject({ ok: true, changed: true, examForm: { state: "open", formVersion: 2 } });
     const stored = t.classForm();
-    expect(stored).toMatchObject({ schemaVersion: 1, projectCode: CODE, classId: "c1", state: "open", formVersion: 1, openedBy: "teacher-1" });
+    expect(stored).toMatchObject({ schemaVersion: 1, projectCode: CODE, classId: "c1", state: "open", formVersion: 2, openedBy: "teacher-1" });
     expect(stored.template).toEqual(clone(TEMPLATE));
     expect(t.audits.map(a => a.action)).toEqual(["project.exam_form.open"]);
-    expect(t.audits[0].details).toMatchObject({ projectCode: CODE, classId: "c1", formVersion: 1, firstOpen: true });
+    expect(t.audits[0].details).toMatchObject({ projectCode: CODE, classId: "c1", formVersion: 2, firstOpen: true });
     const again = await t.teacher({ action: "examForm.open" });
     expect(again.jsonBody.changed).toBe(false);
     expect(t.audits).toHaveLength(1);
@@ -142,8 +142,8 @@ describe("F2 the student reads the form", () => {
     expect(r.status).toBe(200);
     const b = r.jsonBody;
     expect(b).toMatchObject({ ok: true, available: true, state: "open", status: "draft", revision: 0, answers: {}, deferredKinds: ["image", "file"] });
-    expect(b.form.sections.flatMap(s => s.questions)).toHaveLength(92);
-    expect(b.progress).toMatchObject({ total: 77, answered: 0, deferred: 15 });
+    expect(b.form.sections.flatMap(s => s.questions)).toHaveLength(91);
+    expect(b.progress).toMatchObject({ total: 78, answered: 0, deferred: 13 });       // 13 image questions wait; form version 2 has no file question
     expect(b.progress.missing.length).toBeGreaterThan(60);
     const keys = keysDeep(b);
     for (const secret of ["answer", "correctOptionId", "correctOptionIds", "template", "rubric", "weight"]) expect(keys.has(secret)).toBe(false);
@@ -182,7 +182,7 @@ describe("F2 the student saves a draft and resumes", () => {
     expect(r.status).toBe(200);
     expect(r.jsonBody).toMatchObject({ ok: true, changed: true, revision: 1, status: "draft" });
     const stored = t.doc();
-    expect(stored).toMatchObject({ schemaVersion: 1, projectCode: CODE, classId: "c1", studentId: "s1", formVersion: 1, status: "draft", revision: 1, submittedAt: null });
+    expect(stored).toMatchObject({ schemaVersion: 1, projectCode: CODE, classId: "c1", studentId: "s1", formVersion: 2, status: "draft", revision: 1, submittedAt: null });
     expect(stored.answers.S04Q03).toEqual({ optionIds: ["o1", "o3"] });       // the question's own order
     expect(stored.answers.S13Q01).toEqual({ checked: ["c1", "c4"] });
     expect(stored.answers.S06Q04).toEqual({ pairs: { l1: "r2", l2: "r4" } });
@@ -382,7 +382,7 @@ describe("F2 the student submits", () => {
   it("a complete form is submitted once, audited once, and is then read-only for the student", async () => {
     const t = await opened();
     const saved = await t.save(allAnswers(), 0);
-    expect(saved.jsonBody.progress).toMatchObject({ answered: 77, total: 77, missing: [] });
+    expect(saved.jsonBody.progress).toMatchObject({ answered: 78, total: 78, missing: [] });
     const stale = await t.submit(0);
     expect(stale.status).toBe(409);
     expect(stale.jsonBody.code).toBe("DRAFT_STALE");
@@ -393,7 +393,7 @@ describe("F2 the student submits", () => {
     expect(JSON.stringify(r.jsonBody)).not.toContain("correctOption");
     expect(t.doc()).toMatchObject({ status: "submitted", revision: 2 });
     expect(t.audits.map(a => a.action)).toEqual(["project.exam_form.submit"]);
-    expect(t.audits[0]).toMatchObject({ actor: "s1", targetId: CODE + "/c1/s1", details: { projectCode: CODE, classId: "c1", answered: 77, total: 77 } });
+    expect(t.audits[0]).toMatchObject({ actor: "s1", targetId: CODE + "/c1/s1", details: { projectCode: CODE, classId: "c1", answered: 78, total: 78 } });
 
     const again = await t.submit(2);
     expect(again.status).toBe(409);
@@ -419,7 +419,7 @@ describe("F2 the student submits", () => {
   it("a form of another version is refused (the page must reload)", async () => {
     const t = await opened();
     await t.save({ S01Q01: { text: "x" } }, 0);
-    const d = t.doc(); d.formVersion = 2;
+    const d = t.doc(); d.formVersion = d.formVersion + 1;
     t.ctx.setJson(NS.examFormAnswersName("c1", "s1"), d);
     const r = await t.save({ S01Q02: { text: "y" } }, 1);
     expect(r.status).toBe(409);
@@ -463,7 +463,7 @@ describe("F2 answers — the pure rules", () => {
     const optional = clone(TEMPLATE);
     optional.sections[0].questions[1].required = false;                         // S01Q02
     const p = formProgress(optional, { S01Q01: { text: "x" } });
-    expect(p).toMatchObject({ total: 77, answered: 1, deferred: 15 });
+    expect(p).toMatchObject({ total: 78, answered: 1, deferred: 13 });
     expect(p.missing).not.toContain("S01Q02");
     expect(p.missing).toContain("S01Q03");
     expect(formProgress(TEMPLATE, allAnswers()).missing).toEqual([]);

@@ -82,7 +82,7 @@ describe("F3 the teacher hides questions before the first open", () => {
     expect(r.status).toBe(200);
     expect(r.jsonBody).toMatchObject({ ok: true, frozen: false, hiddenQuestionIds: [] });
     expect(r.jsonBody.sections).toHaveLength(16);
-    expect(r.jsonBody.sections.flatMap(s => s.questions)).toHaveLength(92);
+    expect(r.jsonBody.sections.flatMap(s => s.questions)).toHaveLength(91);
     expect(r.jsonBody.sections[3].questions.find(q => q.questionId === "S04Q04")).toEqual({ questionId: "S04Q04", prompt: Q("S04Q04").prompt, kind: "choice", grading: "auto", required: Q("S04Q04").required === true });
     expect(keysDeep(r.jsonBody).has("answer")).toBe(false);
     expect(t.ctx.has(NS.examFormClassName("c1"))).toBe(false);          // a read never creates the class form
@@ -93,17 +93,17 @@ describe("F3 the teacher hides questions before the first open", () => {
     const r = await t.tPost({ action: "examForm.open", hiddenQuestionIds: ["S04Q04", "S01Q02", "S04Q04"] });
     expect(r.status).toBe(200);
     expect(r.jsonBody.examForm).toMatchObject({ state: "open", hiddenQuestionIds: ["S01Q02", "S04Q04"] });
-    expect(r.jsonBody.examForm.summary.questions).toBe(90);
+    expect(r.jsonBody.examForm.summary.questions).toBe(89);
     expect(t.audits[0]).toMatchObject({ action: "project.exam_form.open", details: { firstOpen: true, hiddenQuestions: 2 } });
     const stored = t.ctx.getJson(NS.examFormClassName("c1"));
     expect(stored.template.sections.flatMap(s => s.questions).map(q => q.questionId)).not.toContain("S04Q04");
     expect(stored.template.sections.map(s => s.weight).reduce((a, b) => a + b, 0)).toBe(100);
     const student = (await t.sGet()).jsonBody;
     const seen = student.form.sections.flatMap(s => s.questions).map(q => q.questionId);
-    expect(seen).toHaveLength(90);
+    expect(seen).toHaveLength(89);
     expect(seen).not.toContain("S04Q04");
     expect(seen).not.toContain("S01Q02");
-    expect(student.progress.total).toBe(75);
+    expect(student.progress.total).toBe(76);
     // an answer to a hidden question is refused like any unknown question
     expect((await t.sPost({ action: "saveDraft", baseRevision: 0, answers: { S04Q04: { optionId: "o1" } } })).status).toBe(400);
     // the student completes and submits without the hidden questions
@@ -126,7 +126,7 @@ describe("F3 the teacher hides questions before the first open", () => {
     const again = await t.tPost({ action: "examForm.open", hiddenQuestionIds: [] });
     expect(again.status).toBe(200);
     expect(again.jsonBody.examForm).toMatchObject({ state: "open", hiddenQuestionIds: ["S01Q02"] });
-    expect(again.jsonBody.examForm.summary.questions).toBe(91);
+    expect(again.jsonBody.examForm.summary.questions).toBe(90);
   });
 
   describe("a hidden list that is not allowed is refused and no form is created", () => {
@@ -150,11 +150,11 @@ describe("F3 the teacher hides questions before the first open", () => {
     }
   });
 
-  it("opening without a list keeps all 92 questions (as before this phase)", async () => {
+  it("opening without a list keeps all 91 questions (as before this phase)", async () => {
     const t = setup();
     const r = await t.tPost({ action: "examForm.open" });
     expect(r.jsonBody.examForm).toMatchObject({ state: "open", hiddenQuestionIds: [] });
-    expect(r.jsonBody.examForm.summary.questions).toBe(92);
+    expect(r.jsonBody.examForm.summary.questions).toBe(91);
     expect(t.audits[0].details).toMatchObject({ firstOpen: true, hiddenQuestions: 0 });
   });
 });
@@ -234,9 +234,9 @@ describe("F3 the teacher follows the class", () => {
     t.ctx.setJson(NS.examFormAnswersName("c1", "gone"), { ...t.doc("s1"), studentId: "gone" });
     const r = await t.tGet("exam-form-students");
     expect(r.status).toBe(200);
-    expect(r.jsonBody).toMatchObject({ ok: true, state: "open", formVersion: 1, counts: { not_started: 0, draft: 1, submitted: 1, returned: 0, approved: 0 } });
+    expect(r.jsonBody).toMatchObject({ ok: true, state: "open", formVersion: 2, counts: { not_started: 0, draft: 1, submitted: 1, returned: 0, approved: 0 } });
     expect(r.jsonBody.students.map(s => s.studentId).sort()).toEqual(["s1", "s2"]);
-    expect(r.jsonBody.students.find(s => s.studentId === "s1")).toMatchObject({ status: "submitted", answered: 77, total: 77, rated: 0, toRate: 16, mark: null });
+    expect(r.jsonBody.students.find(s => s.studentId === "s1")).toMatchObject({ status: "submitted", answered: 78, total: 78, rated: 0, toRate: 16, mark: null });
     expect(r.jsonBody.students.find(s => s.studentId === "s2")).toMatchObject({ status: "draft", answered: 1, mark: null });
     expect(keysDeep(r.jsonBody).has("answers")).toBe(false);
   });

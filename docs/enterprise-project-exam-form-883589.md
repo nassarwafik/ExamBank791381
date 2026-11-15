@@ -70,7 +70,8 @@ The form asks for screenshots of the project instead, and for the book as the on
 | | **Total** | **95** | **16** | **14** | **100** |
 
 75 questions are teacher-reviewed, 16 auto-marked, 4 unmarked (one checklist, one self-rating scale, two declarations); one
-is a file question (the book). Weights by axis: project card and introduction (1–2) 6, database design and data (3–5) 21,
+is a file question (the book). (That is form version 1. Since form version 2 the file question is a hand-in checklist: 74
+teacher-reviewed, 5 unmarked, no file question — `docs/enterprise-project-exam-form-hand-in-checklist.md`.) Weights by axis: project card and introduction (1–2) 6, database design and data (3–5) 21,
 validation, SQL and queries (6–8) 23, classes and web services (9–10) 15, diagrams, site and access (11–13) 22, audit,
 reflection and submission (14–16) 13. Each section's `bookRef` names the 883589 tracker stages it covers.
 
