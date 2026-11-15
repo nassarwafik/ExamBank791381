@@ -311,17 +311,6 @@
 .eb-sp-form-images-add{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .eb-sp-form-images-add .eb-button{ min-height:44px; }
 .eb-sp-form-images-hint{ font-size:var(--eb-fs-12); }
-/* Phase F5-UI — the file of a file question: its name and size, the download, and the attach / replace / remove buttons
-   (the file input is visually hidden, so the box is the containing block). Class selectors only. */
-.eb-sp-form-file{ position:relative; display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
-.eb-sp-form-file-state{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
-.eb-sp-form-file-line{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-2); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
-.eb-sp-form-file-name{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); flex:1 1 12rem; min-width:0; color:var(--eb-text); font-size:var(--eb-fs-14); overflow-wrap:anywhere; }
-.eb-sp-form-file-line .eb-button,.eb-sp-form-file-actions .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; }
-.eb-sp-form-file-line .eb-sp-form-missing-mark{ flex:1 1 100%; }
-.eb-sp-form-file-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
-.eb-sp-form-file-hint{ font-size:var(--eb-fs-12); }
-.eb-sp-form-file-label{ min-width:0; overflow-wrap:anywhere; }
 .eb-sp-form-missing p{ margin:0; }
 .eb-sp-form-missing ul{ margin:var(--eb-space-2) 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 /* Phase F3-UI — the result of an approved form: the mark, each section's level and the teacher's notes. Class selectors only. */

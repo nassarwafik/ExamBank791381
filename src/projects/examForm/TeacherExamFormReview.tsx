@@ -11,7 +11,6 @@ import { useConfirm } from "../../ui/useConfirm";
 import { SAVE_STATE_LABELS } from "../../teacher/saveLabels";
 import QuestionInput from "./QuestionInput";
 import { ExamFormImageList, type ExamFormImageReader } from "./ExamFormImages";
-import { ExamFormFileLine, type ExamFormFileReader } from "./ExamFormFile";
 import { STATUS_BADGE, entryText, type SectionRating, type TeacherFormView, type TeacherQuestion, type TeacherSection } from "./teacherTypes";
 
 type Props = {
@@ -65,7 +64,7 @@ function keyText(q: TeacherQuestion): string {
   return "";
 }
 
-function AnswerBlock({ question, view, readImage, readFile }: { question: TeacherQuestion; view: TeacherFormView; readImage: ExamFormImageReader; readFile: ExamFormFileReader }) {
+function AnswerBlock({ question, view, readImage }: { question: TeacherQuestion; view: TeacherFormView; readImage: ExamFormImageReader }) {
   const answer = view.answers[question.questionId];
   const verdict = question.grading === "auto" ? view.auto.byQuestion[question.questionId] : undefined;
   const key = question.grading === "auto" ? keyText(question) : "";
@@ -73,17 +72,8 @@ function AnswerBlock({ question, view, readImage, readFile }: { question: Teache
   // read with the teacher's session through the class's own route; a question with none is checked from the book.
   const attached = answer && Array.isArray(answer.images) ? answer.images : [];
   const images = attached.length;
-  // Phase F5-UI — the file a student attached to a file question: its name, its size and a download read with the teacher's
-  // session through the class's own route. The file is never shown in the page.
-  const file = answer && answer.file && typeof answer.file.id === "string" ? answer.file : undefined;
   return (
     <div className="eb-sp-form-question-body">
-      {file
-        ? <>
-          <p className="eb-sp-form-deferred" data-file={file.id}>أرفق الطالب ملفًا لهذا السؤال. نزّله وافتحه على جهازك كأي ملف يصلك من طالب.</p>
-          <ExamFormFileLine file={file} read={readFile} />
-        </>
-        : null}
       {images > 0
         ? <>
           <p className="eb-sp-form-deferred" data-images={images}>أرفق الطالب صورًا لهذا السؤال (العدد: <span dir="ltr">{images}</span>).</p>
@@ -91,7 +81,7 @@ function AnswerBlock({ question, view, readImage, readFile }: { question: Teache
         </>
         : null}
       {question.kind === "image" || question.kind === "file"
-        ? (images > 0 || file ? null : <p className="eb-sp-form-deferred">{question.kind === "image" ? "سؤال صورة" : "سؤال ملف"}: يُفحص من كتاب الطالب وملف مشروعه.</p>)
+        ? (images > 0 ? null : <p className="eb-sp-form-deferred">{question.kind === "image" ? "سؤال صورة" : "سؤال ملف"}: يُفحص من كتاب الطالب وملف مشروعه.</p>)
         : !answer
           ? <p className="eb-sp-form-deferred">لم يُجب الطالب عن هذا السؤال.</p>
           : <QuestionInput question={question} answer={answer} disabled onChange={noop} />}
@@ -129,9 +119,6 @@ export default function TeacherExamFormReview({ token, projectCode, classId, stu
   // Phase F4-UI — one of this student's attached images, through the class's own route (capability, tenancy, membership
   // and the reference are the server's checks). Stable, so a thumbnail is read once.
   const readImage = useCallback<ExamFormImageReader>(imageId => trackerGetBlob(token, projectCode, "exam-form-image", { classId, studentId, imageId }), [token, projectCode, classId, studentId]);
-
-  // Phase F5-UI — the file of one of this student's file questions, through the class's own route (the same checks).
-  const readFile = useCallback<ExamFormFileReader>(fileId => trackerGetBlob(token, projectCode, "exam-form-file", { classId, studentId, fileId }, "تعذر تنزيل الملف."), [token, projectCode, classId, studentId]);
 
   const load = useCallback(async () => {
     const mine = ++seq.current;
@@ -309,7 +296,7 @@ export default function TeacherExamFormReview({ token, projectCode, classId, stu
         {section.questions.map((question, qi) => (
           <fieldset key={question.questionId} className="eb-sp-form-question" data-question={question.questionId}>
             <legend><span className="eb-sp-form-number" dir="ltr">{section.order}.{qi + 1}</span> {question.prompt}</legend>
-            <AnswerBlock question={question} view={view} readImage={readImage} readFile={readFile} />
+            <AnswerBlock question={question} view={view} readImage={readImage} />
           </fieldset>
         ))}
 

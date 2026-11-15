@@ -1,7 +1,6 @@
 // Phase F2-UI — the student's three requests to the project exam form route. The request carries the project, the page's
 // last known revision and the answers only: the student and the class come from the session on the server.
 // Phase F4-UI — and the three image requests: attach one image, remove one, read one of the student's own images.
-// Phase F5-UI — and the three file requests: attach (or replace) the file of a file question, remove it, download it.
 import type { ExamFormAnswer, ExamFormView } from "./types";
 
 const ROUTE = "/api/student-project-exam-form";
@@ -84,31 +83,6 @@ export async function fetchExamFormImage(token: string, projectCode: string, ima
   let response: Response;
   try {
     response = await fetch(ROUTE + "?" + new URLSearchParams({ projectCode, image: imageId }), { method: "GET", headers: authHeaders(token) });
-  } catch {
-    throw new ExamFormRequestError(OFFLINE, 0);
-  }
-  if (!response.ok) throw new ExamFormRequestError(fallback, response.status);
-  return response.blob();
-}
-
-/** Phase F5-UI — attach the file of a file question (it replaces the question's earlier file). The server checks and stores it. */
-export async function addExamFormFile(token: string, projectCode: string, questionId: string, fileName: string, dataBase64: string): Promise<ExamFormView> {
-  const fallback = "تعذر رفع الملف.";
-  return viewOf(await request(token, ROUTE, { method: "POST", body: JSON.stringify({ projectCode, action: "addFile", questionId, fileName, dataBase64 }) }, fallback), fallback);
-}
-
-/** Phase F5-UI — remove the attached file. A repeat is harmless (the server answers with the form as it is). */
-export async function removeExamFormFile(token: string, projectCode: string, questionId: string, fileId: string): Promise<ExamFormView> {
-  const fallback = "تعذر حذف الملف.";
-  return viewOf(await request(token, ROUTE, { method: "POST", body: JSON.stringify({ projectCode, action: "removeFile", questionId, fileId }) }, fallback), fallback);
-}
-
-/** Phase F5-UI — the bytes of one of the student's own files. A file has no public address: it is read with the session. */
-export async function fetchExamFormFile(token: string, projectCode: string, fileId: string): Promise<Blob> {
-  const fallback = "تعذر تنزيل الملف.";
-  let response: Response;
-  try {
-    response = await fetch(ROUTE + "?" + new URLSearchParams({ projectCode, file: fileId }), { method: "GET", headers: authHeaders(token) });
   } catch {
     throw new ExamFormRequestError(OFFLINE, 0);
   }
