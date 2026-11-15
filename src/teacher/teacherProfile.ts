@@ -18,7 +18,10 @@ export function teacherHeaders(token: string): Record<string, string> {
 }
 
 export function resolveTeacherDisplayName(profile: TeacherProfile | null | undefined, sessionDisplayName: string | null | undefined): string {
-  return (profile && profile.displayName) || (sessionDisplayName || "").trim() || DEFAULT_TEACHER_NAME;
+  // A name the teacher chose wins; a profile without one carries only the server's fallback, so the session's name (the account's own
+  // name, e.g. the one the owner gave it) comes before it.
+  if (profile && profile.hasCustomName && profile.displayName) return profile.displayName;
+  return (sessionDisplayName || "").trim() || (profile && profile.displayName) || DEFAULT_TEACHER_NAME;
 }
 
 export function normalizeTeacherProfile(raw: unknown): TeacherProfile | null {

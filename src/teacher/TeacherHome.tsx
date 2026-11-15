@@ -6,6 +6,7 @@ import {
 } from "../icons";
 import { NAV_LABELS, type TeacherNavId } from "../shell/teacherNav";
 import { navAllowed, type TeacherAccessView } from "../shell/teacherAccess";
+import { DEFAULT_TEACHER_NAME } from "./teacherProfile";
 import "./teacherHome.css";
 
 // Teacher home — the welcome page a teacher lands on after signing in, and the page the top bar's «الرئيسية» opens. PRESENTATION
@@ -51,7 +52,8 @@ export default function TeacherHome({ displayName, schoolName = null, access = n
   const features = FEATURES.filter(f => navAllowed(f.id, access));
   const canDashboard = navAllowed("dashboard", access);
   const canBuild = navAllowed("builder", access);
-  const name = displayName.trim();
+  // the greeting names the teacher; the generic fallback «المعلم» is not a name, so it is left out («مساء الخير» alone)
+  const name = displayName.trim() === DEFAULT_TEACHER_NAME ? "" : displayName.trim();
   const [clock] = useState(() => now || new Date());
   return (
     <div className="eb-home">

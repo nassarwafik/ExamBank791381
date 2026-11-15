@@ -18,6 +18,10 @@ describe("TeacherHome — the welcome page", () => {
     expect(screen.getByText(/مدرسة الأمل/)).toBeTruthy();
     expect(container.querySelector(".eb-home-art")?.getAttribute("aria-hidden")).toBe("true");
   });
+  it("the generic fallback «المعلم» is not used as a name in the greeting", () => {
+    render(<TeacherHome displayName="المعلم" onNavigate={() => {}} now={new Date(2026, 0, 1, 19)} />);
+    expect(screen.getByText("مساء الخير")).toBeTruthy();
+  });
   it("an evening clock says «مساء الخير»", () => {
     render(<TeacherHome displayName="" onNavigate={() => {}} now={new Date(2026, 0, 1, 19)} />);
     expect(screen.getByText("مساء الخير")).toBeTruthy();
