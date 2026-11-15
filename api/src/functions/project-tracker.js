@@ -292,18 +292,6 @@ async function handler(request, deps = {}, obs = null) {
           return { status: 200, body: image.buffer, headers: { "content-type": image.contentType, "cache-control": "private, max-age=3600", "x-content-type-options": "nosniff", "content-disposition": "inline" } };
         }
 
-        // Phase F5 (files) — one file a student of THIS class attached to their form, for the teacher who reviews it. The
-        // same gate and the same two conditions as the image above (a member of the class; referenced by that student's
-        // answers). A file is opaque bytes: always a DOWNLOAD, never inline and never a type the browser may guess.
-        if (resource === "exam-form-file") {
-          const studentId = String(url.searchParams.get("studentId") || "").trim();
-          const fileId = String(url.searchParams.get("fileId") || "").trim();
-          const membership = studentId ? await svc.requireStudentInClass(container, studentId, classId) : { ok: false };
-          const file = membership.ok ? await examForms.readStudentFile(container, projectCode, classId, studentId, fileId) : null;
-          if (!file) return { status: 404, jsonBody: { ok: false, error: "لا يوجد ملف." } };
-          return { status: 200, body: file.buffer, headers: { "content-type": "application/octet-stream", "content-disposition": file.disposition, "x-content-type-options": "nosniff", "cache-control": "private, no-store" } };
-        }
-
         // Phase F3 — the class's forms (every student's state) and one student's form with the review. Reads only. The
         // student view carries the form's answer keys: it is a teacher read behind this route's capability and tenancy.
         if (resource === "exam-form-students" || resource === "exam-form-student") {
@@ -406,15 +394,20 @@ async function handler(request, deps = {}, obs = null) {
       // close keeps every saved answer and only stops student writes. Both are audited.
       if (action === "examform.open" || action === "examform.close") {
         const open = action === "examform.open";
+        // Owner decision (2026-11-15): files are not uploaded to the site. A request to switch file answers on for a class —
+        // from a page cached while that switch existed, or from a direct call — is refused outright and writes nothing.
+        if (open && body.fileAnswers !== undefined) {
+          return { status: 409, jsonBody: { ok: false, error: "رفع الملفات غير متاح في الموقع: تُسلَّم الملفات للمعلم مباشرة.", code: "FILES_NOT_OFFERED" } };
+        }
         try {
           const r = open
-            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now, hiddenQuestionIds: body.hiddenQuestionIds, imageAnswers: body.imageAnswers, fileAnswers: body.fileAnswers })   // imageAnswers: Phase F4 · fileAnswers: Phase F5
+            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now, hiddenQuestionIds: body.hiddenQuestionIds, imageAnswers: body.imageAnswers })   // imageAnswers: Phase F4
             : await examForms.closeClassForm(container, projectCode, classId, { actor: auth.user?.sub, now });
           if (r.changed) {
             await rec(container, {
               actor: auth.user?.sub, action: open ? "project.exam_form.open" : "project.exam_form.close",
               targetType: "project-tracker", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "",
-              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first, hiddenQuestions: Array.isArray(r.doc.hiddenQuestionIds) ? r.doc.hiddenQuestionIds.length : 0 } : {}), ...(open && r.imagesSwitchedOn ? { imageAnswers: true } : {}), ...(open && r.filesSwitchedOn ? { fileAnswers: true } : {}) }
+              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first, hiddenQuestions: Array.isArray(r.doc.hiddenQuestionIds) ? r.doc.hiddenQuestionIds.length : 0 } : {}), ...(open && r.imagesSwitchedOn ? { imageAnswers: true } : {}) }
             });
           }
           return { status: 200, jsonBody: { ok: true, projectCode, classId, changed: r.changed, examForm: await examForms.classFormState(container, projectCode, classId) } };

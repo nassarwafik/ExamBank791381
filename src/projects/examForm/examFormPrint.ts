@@ -11,7 +11,6 @@
 // teacher's view of the form. Every piece of text is HTML-escaped (an answer can never inject markup), and an image is
 // embedded only as an image data URL of a raster type.
 import type { ExamFormAnswer, ExamFormAnswers, ExamFormEntry, ExamFormQuestion } from "./types";
-import { fileSizeText } from "./fileRules";
 
 export type PrintAudience = "teacher" | "student";
 export type PrintSection = { sectionId: string; title: string; order: number; weight?: number; questions: ExamFormQuestion[] };
@@ -47,6 +46,7 @@ const entryText = (list: ExamFormEntry[] | undefined, id: string) => (list || []
 const blank = (s: unknown) => typeof s !== "string" || s.trim() === "";
 const NONE = '<p class="none">لم يُجب.</p>';
 const text = (s: string) => '<p class="text">' + esc(s) + "</p>";
+const FILE_HANDED_IN = '<p class="none">يُسلَّم الملف للمعلم مباشرة: الملفات لا تُرفع إلى الموقع.</p>';
 
 function imagesHtml(answer: ExamFormAnswer | undefined, images: Readonly<Record<string, string>>): string {
   const refs = answer && Array.isArray(answer.images) ? answer.images : [];
@@ -63,12 +63,9 @@ function imagesHtml(answer: ExamFormAnswer | undefined, images: Readonly<Record<
 function answerHtml(q: ExamFormQuestion, answer: ExamFormAnswer | undefined, images: Readonly<Record<string, string>>): string {
   const pictures = imagesHtml(answer, images);
   if (q.kind === "image") return pictures || '<p class="none">لم تُرفق صورة.</p>';
-  if (q.kind === "file") {
-    const file = answer && answer.file;
-    return file && typeof file.name === "string"
-      ? '<p class="text">' + esc("ملف مرفق: ") + '<bdi>' + esc(file.name) + "</bdi>" + esc(" (" + fileSizeText(file.bytes) + ") — يُنزَّل من الموقع، وليس ضمن هذا الملف.") + "</p>"
-      : '<p class="none">لم يُرفق ملف.</p>';
-  }
+  // Owner decision (2026-11-15): files are not uploaded to the site. A file question prints what the student's page says,
+  // and nothing an answer may still hold from the short time uploads existed.
+  if (q.kind === "file") return FILE_HANDED_IN;
   if (!answer) return NONE + pictures;
   let body = "";
   switch (q.kind) {

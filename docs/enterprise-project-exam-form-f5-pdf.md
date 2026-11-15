@@ -12,8 +12,8 @@ of what they submitted. F1 named a PDF export as part of F5; the owner asked for
 |---|---|
 | «طباعة / حفظ PDF» in the teacher's review of one student: the teacher's copy | A PDF of a whole class in one file |
 | «طباعة / حفظ PDF» on the student's own form page: the student's copy | A PDF made on the server |
-| The attached images inside the document | The attached files (`.pkt`, the book): named, never embedded |
-| | The 899373 form (another window) |
+| The attached images inside the document | Files: not uploaded to the site at all (the owner's decision of 2026-11-15, `docs/enterprise-project-exam-form-no-file-uploads.md`) |
+| The three bundled forms (794589, 883589, 899373) | |
 
 No route, no API code and no stored document changes: the export is built in the page from what the page already holds.
 
@@ -45,8 +45,8 @@ rating under it; a footer that says whose copy it is and when it was made.
 | scale | each item and its value |
 | declaration | «أوافق.» |
 | image(s) | embedded, two per row; a question's only image at the page's width |
-| file | «ملف مرفق: name (size) — يُنزَّل من الموقع، وليس ضمن هذا الملف.» |
-| nothing | «لم يُجب.» / «لم تُرفق صورة.» / «لم يُرفق ملف.» |
+| file question | «يُسلَّم الملف للمعلم مباشرة: الملفات لا تُرفع إلى الموقع.» — always, whatever the answer holds |
+| nothing | «لم يُجب.» / «لم تُرفق صورة.» |
 
 **Images.** An image has no public address. The button reads each attached image with the reader's own session (the
 student's `GET ?image=`, the teacher's `GET resource=exam-form-image`), one after another, turns it into a data URL and
@@ -77,6 +77,9 @@ export. The print waits for the pictures to decode, at most 3 seconds.
   choice and «إجابة خاطئة», never the right option. Tested from the teacher's own sections, and by a planted mutant.
 - **Nothing a student wrote is markup.** Every answer, table cell, name, note and label is HTML-escaped; a `<script>` or an
   `<img onerror>` typed into an answer prints as text.
+- **No file on paper.** Files are not uploaded (the owner's decision). A file question prints the line the student's page
+  shows; a file reference that an answer may still hold from the short time uploads existed is never read, so neither its
+  name nor its id is printed.
 - **An image is only an image.** A source is embedded only if it is a base64 data URL of WebP, PNG or JPEG, matched to its
   end; an address, an SVG or a data URL with anything after it prints as a placeholder. The document makes no request.
 - **Protected content never bypasses the API.** The images come from the reader's own authenticated reads; the document
@@ -87,13 +90,13 @@ export. The print waits for the pictures to decode, at most 3 seconds.
 
 ## Tests and proof
 
-`src/projects/examForm/examFormPrint.f5pdf.test.tsx` (18 tests):
+`src/projects/examForm/examFormPrint.f5pdf.test.tsx` (20 tests):
 
-- **the document** — right-to-left A4 with 16 sections and 92 questions; each kind of answer as text; the three «nothing»
-  lines; escaping of an answer, a table cell, commands, a justification, a name, a state, a note, the meta and a rating;
+- **the document** — right-to-left A4 with 16 sections and 92 questions; each kind of answer as text; the two «nothing»
+  lines and the hand-in line of a file question; escaping of an answer, a table cell, commands, a justification, a name, a state, a note, the meta and a rating;
   an image only as a raster data URL (an address, an SVG and a data URL with an attribute after it are placeholders); a
-  file named and never embedded, its id not printed; **no key from the teacher's sections**; the review only when given;
-  dates;
+  file reference left in an answer never printed; the 883589 and 899373 forms whole from their own templates (every
+  section, question and kind of answer, no key); **no key from the teacher's sections**; the review only when given; dates;
 - **images and print** — each image read once, in order; a failed read and a non-image left out; the iframe hidden,
   right-to-left, printed once and removed after `afterprint`; false and nothing left behind when the frame cannot print;
 - **the student's page** over the real handlers — the whole form, the name, the sanitized image embedded and read once more
@@ -148,6 +151,6 @@ light and dark: 79 captures compared in each theme, 0 changed, GATE PASS. Tablet
 - One student per export. A class is exported one form at a time.
 - A form with many large images takes a few seconds to prepare (each image is read again for the document) and makes a
   larger PDF; the button shows its progress.
-- The attached files are named, not included.
+- No file is part of the export: files are handed to the teacher, not uploaded.
 - Phones: the print dialog of a mobile browser offers «حفظ بصيغة PDF» on current Android and iOS; this was not run on a
   device.

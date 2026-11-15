@@ -94,11 +94,13 @@ describe("F5 PDF — the document", () => {
     expect(declaration).toBeTruthy();
   });
 
-  it("an unanswered question, an image question with no image and a file question with no file say so", () => {
+  it("an unanswered question and an image question with no image say so; a file question says the file is handed to the teacher", () => {
     const html = buildExamFormPrintHtml(input());
     expect(html.match(/<p class="none">لم يُجب\.<\/p>/g)!.length).toBe(ANSWERABLE.length);
     expect(html.match(/<p class="none">لم تُرفق صورة\.<\/p>/g)!.length).toBe(QUESTIONS.filter(q => q.kind === "image").length);
-    expect(html.match(/<p class="none">لم يُرفق ملف\.<\/p>/g)!.length).toBe(QUESTIONS.filter(q => q.kind === "file").length);
+    const fileQuestions = QUESTIONS.filter(q => q.kind === "file").length;
+    expect(fileQuestions).toBeGreaterThan(0);
+    expect(html.match(/<p class="none">يُسلَّم الملف للمعلم مباشرة: الملفات لا تُرفع إلى الموقع\.<\/p>/g)!.length).toBe(fileQuestions);
   });
 
   it("escapes every piece of text: an answer, a table cell, a name and a note can never inject markup", () => {
@@ -135,11 +137,26 @@ describe("F5 PDF — the document", () => {
     expect(referencedImageIds(SECTIONS as unknown as PrintSection[], answers)).toEqual(["a", "b", "c", "d"].map(c => c.repeat(24)));
   });
 
-  it("a file is named, never embedded", () => {
+  it("a file question never prints a file: a reference left in an answer from the removed upload is not named", () => {
     const q = byKind("file");
-    const html = buildExamFormPrintHtml(input({ answers: { [q.questionId]: { file: { id: "f".repeat(24), name: "شبكة <المشروع>.pkt", ext: ".pkt", bytes: 188506 } } } }));
-    expect(html).toContain("ملف مرفق: <bdi>شبكة &lt;المشروع&gt;.pkt</bdi> (184 كيلوبايت) — يُنزَّل من الموقع، وليس ضمن هذا الملف.");
+    const left = { [q.questionId]: { file: { id: "f".repeat(24), name: "شبكة المشروع.pkt", ext: ".pkt", bytes: 188506 } } } as unknown as ExamFormAnswers;
+    const html = buildExamFormPrintHtml(input({ answers: left }));
+    expect(html).not.toContain("شبكة المشروع.pkt");
     expect(html).not.toContain("f".repeat(24));
+    expect(html).not.toContain("ملف مرفق");
+    expect(html).toContain("يُسلَّم الملف للمعلم مباشرة: الملفات لا تُرفع إلى الموقع.");
+  });
+
+  it.each(["883589", "899373"])("the %s form prints whole from its own template: every section and question, every answer, never a key", code => {
+    const template = getExamFormTemplate(code) as { title: string; sections: Section[] };
+    const questions = template.sections.flatMap(s => s.questions);
+    const answers = Object.fromEntries(questions.filter(q => q.kind !== "image" && q.kind !== "file").map(q => [q.questionId, answerOf(q)])) as ExamFormAnswers;
+    const html = buildExamFormPrintHtml(input({ audience: "teacher", formTitle: template.title, projectCode: code, sections: template.sections as unknown as PrintSection[], answers }));
+    expect(html.match(/<section>/g)).toHaveLength(template.sections.length);
+    expect(html.match(/<div class="q">/g)).toHaveLength(questions.length);
+    expect(html).not.toContain("لم يُجب.");                                        // every kind of answer of this form is printed
+    for (const key of ["correctOptionId", "correctOptionIds", "الإجابة الصحيحة"]) expect(html).not.toContain(key);
+    expect((html.match(/يُسلَّم الملف للمعلم مباشرة/g) || []).length).toBe(questions.filter(q => q.kind === "file").length);
   });
 
   it("NEVER prints an answer key — not even from the teacher's sections, which carry the keys", () => {

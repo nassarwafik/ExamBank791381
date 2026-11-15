@@ -40,6 +40,8 @@ const DEFINITIONS = {
       { trackId: "access", title: "Access", icon: "🗄️" }
     ],
     loadTemplate: () => loadTemplateFile("899373"),
+    // Phase F1c — this project ships an exam form too: data file exam-form-template.json (docs/enterprise-project-exam-form-899373.md).
+    examForm: true,
     // Phase P7 — v1 (28 stages) converts to the condensed v2 set (11) with its progress.
     snapshotUpgrade: { currentVersion: 2, condenseFrom: 1 }
   },
@@ -132,10 +134,7 @@ function examFormNames(code) {
     examFormAnswersName: (classId, studentId) => base + "answers/" + classId + "/" + studentId + ".json",
     // Phase F4 — one immutable blob per attached image, under the student who owns it (never under the answers prefix,
     // which is listed as JSON documents).
-    examFormImageName: (classId, studentId, imageId) => base + "images/" + classId + "/" + studentId + "/" + imageId + ".webp",
-    // Phase F5 (files) — one immutable blob per attached file, under the student who owns it. Always `.bin`: the stored
-    // name never carries the uploaded extension, and the blob is only ever served as a download.
-    examFormFileName: (classId, studentId, fileId) => base + "files/" + classId + "/" + studentId + "/" + fileId + ".bin"
+    examFormImageName: (classId, studentId, imageId) => base + "images/" + classId + "/" + studentId + "/" + imageId + ".webp"
   };
 }
 
