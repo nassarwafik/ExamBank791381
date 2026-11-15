@@ -77,8 +77,8 @@ export. The print waits for the pictures to decode, at most 3 seconds.
   choice and «إجابة خاطئة», never the right option. Tested from the teacher's own sections, and by a planted mutant.
 - **Nothing a student wrote is markup.** Every answer, table cell, name, note and label is HTML-escaped; a `<script>` or an
   `<img onerror>` typed into an answer prints as text.
-- **No file on paper.** Files are not uploaded (the owner's decision). A file question prints the line the student's page
-  shows; a file reference that an answer may still hold from the short time uploads existed is never read, so neither its
+- **No file on paper.** Files are not uploaded (the owner's decision). A file question prints that the file is handed to the
+  teacher; a file reference that an answer may still hold from the short time uploads existed is never read, so neither its
   name nor its id is printed.
 - **An image is only an image.** A source is embedded only if it is a base64 data URL of WebP, PNG or JPEG, matched to its
   end; an address, an SVG or a data URL with anything after it prints as a placeholder. The document makes no request.
@@ -93,7 +93,8 @@ export. The print waits for the pictures to decode, at most 3 seconds.
 `src/projects/examForm/examFormPrint.f5pdf.test.tsx` (20 tests):
 
 - **the document** — right-to-left A4 with 16 sections and 92 questions; each kind of answer as text; the two «nothing»
-  lines and the hand-in line of a file question; escaping of an answer, a table cell, commands, a justification, a name, a state, a note, the meta and a rating;
+  lines and the hand-in line of a file question; escaping of an answer, a table cell, commands, a justification, a name,
+  a state, a note, the meta and a rating;
   an image only as a raster data URL (an address, an SVG and a data URL with an attribute after it are placeholders); a
   file reference left in an answer never printed; the 883589 and 899373 forms whole from their own templates (every
   section, question and kind of answer, no key); **no key from the teacher's sections**; the review only when given; dates;
@@ -110,16 +111,16 @@ Every existing exam-form suite passes unchanged.
 
 Fail-first is not applicable: new behaviour, no defect fixed.
 
-Mutation campaign: 33 mutants in `examFormPrint.ts`, `ExamFormPrintButton.tsx`, `StudentExamForm.tsx` and
+Mutation campaign, on the reconciled head: 34 mutants in `examFormPrint.ts`, `ExamFormPrintButton.tsx`, `StudentExamForm.tsx` and
 `TeacherExamFormReview.tsx`; one exact replacement each, the test file run alone, each file restored byte-for-byte by
-SHA-256, `git status` unchanged afterwards. **33 KILLED, 0 survived, 0 timeouts.**
+SHA-256, `git status` unchanged afterwards. **34 KILLED, 0 survived, 0 timeouts.**
 
 | Group | Mutants |
 |---|---|
 | Escaping (a text answer; a table cell; commands; a justification; the name in the heading; the title; a teacher's note; the general note; the meta) | 9 |
 | Images (any string embedded as an address; an SVG accepted; the check not anchored to the end; a non-image kept; one unreadable image fails the export; the document printed without its images) | 6 |
 | Keys and the review (the right option printed; a verdict for every question; right printed as wrong; unanswered printed as wrong; the teacher's copy without verdicts; without its key-free mark) | 6 |
-| What a copy carries (the student's copy only the section on screen; without the review of an approved form; without a name; unsaved ratings printed; the login code printed; working ratings not said to be unapproved; no mark for an approved form; the file's id printed) | 8 |
+| What a copy carries (the student's copy only the section on screen; without the review of an approved form; without a name; unsaved ratings printed; the login code printed; working ratings not said to be unapproved; no mark for an approved form; a file reference left in an answer printed by name; a file question printed as unanswered) | 9 |
 | Printing (the iframe left after printing; a frame that cannot print left behind; a browser that cannot print silent; a refusal to print ignored) | 4 |
 
 **Real browser (local, not a committed gate).** The production build next to the real API in process (the harness of the
@@ -129,7 +130,7 @@ rendered to PDF by the same engine. 20 checks passed.
 
 | | The teacher's copy | The student's copy |
 |---|---|---|
-| The file | a real PDF, 19 A4 pages, 476 KB | a real PDF, 18 A4 pages, 473 KB |
+| The file | a real PDF, 19 A4 pages, 477 KB | a real PDF, 18 A4 pages, 474 KB |
 | Images | 14 of 14 in the document | 14 of 14 |
 | Text | the student's name, the mark 94.5, 12 right and 1 wrong verdicts; the commands readable left-to-right | the mark, a section's note, the general note; 16 sections and 92 questions — the whole form, not the section on screen |
 | Never there | an answer key (the right option of the wrong choice is nowhere); the student's login code | an answer key |
@@ -140,8 +141,14 @@ images with their captions, the rating boxes. Two things were changed after the 
 long words instead of leaving the page, and a question's only image takes the page's width instead of half of it — and
 the run above is on the build with both.
 
-**Visual regression (local run of the UX-R19b gate).** Base `e90b3b60` build against this branch's build, phone viewport,
+**Visual regression (local run of the UX-R19b gate).** Base `0a12502e` build against this branch's build, phone viewport,
 light and dark: 79 captures compared in each theme, 0 changed, GATE PASS. Tablet and desktop run in CI.
+
+**Reconciliation.** `main` moved from `e90b3b60` to `0a12502e` while this phase was being validated (#640: no file uploads,
+the 899373 form). The branch was merged with it by a normal merge commit; the print was adapted to the decision (a file
+question prints the hand-in line; the «attached file» line and its test are gone), and the mutation campaign, the
+real-browser run and the visual gate above were all repeated on the reconciled head. Before the reconciliation the same
+checks had passed against `e90b3b60` (33 mutants, 20 browser checks, 79 captures per theme).
 
 ## Known limits
 
