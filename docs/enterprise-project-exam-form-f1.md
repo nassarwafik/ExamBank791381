@@ -126,6 +126,7 @@ to compare the book with the Packet Tracer file and correct what differs.
 | F1b | The 883589 question bank, as data (`docs/enterprise-project-exam-form-883589.md`). |
 | F5 | PDF export. The 899373 question bank shipped as F1c (`docs/enterprise-project-exam-form-899373.md`). ~~Files (`.pkt`, the book).~~ **Removed.** The server side of file answers was merged as #638 (`b466aa41`) and taken out again by the owner's decision of 2026-11-15: files are not uploaded to the site. The server refuses a request to switch file answers on (`409 FILES_NOT_OFFERED`). The two records of that work (`enterprise-project-exam-form-f5-files.md`, `-f5-ui.md`) are in the history of those merges. |
 | F5-UI | ~~The student's file input, the teacher's switch, the download in the teacher's review.~~ **Removed.** Merged as #639 (`e90b3b60`) and taken out again by the owner's decision of 2026-11-15: files are not uploaded to the site. The student's page tells the student to hand the file to the teacher (`StudentExamForm.fileNotice.f5.test.tsx`). |
+| F5 (PDF) | «طباعة / حفظ PDF» of one student's form, built in the page: the teacher's copy and the student's copy, images embedded, never an answer key; a file question prints that the file is handed to the teacher: `docs/enterprise-project-exam-form-f5-pdf.md`. |
 
 Sequencing the later phases must handle: image and file questions are `required` in the template, so until F4 / F5 enable
 those inputs the completeness check must not block a submit on them.
