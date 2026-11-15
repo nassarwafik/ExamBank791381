@@ -89,7 +89,7 @@ describe("P4-B1 the teacher's address", () => {
     teacherAction("سارة", "صفحة المعلم");   // UX-O1: «صفحة المعلم» is in the teacher's «⋯» menu
     expect(await screen.findByRole("heading", { name: "سارة" })).toBeTruthy();
     expect(window.location.hash).toBe(ownerTeacherHash(SARA));
-    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["البيانات", "الصفوف", "الامتحانات", "الصلاحيات", "السجل", "الأمان"]);   // Tadris+ P5-B2 added «الصفوف», P6-D «الامتحانات»
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["البيانات", "الصفوف", "الامتحانات", "المواد", "الصلاحيات", "السجل", "الأمان"]);   // Tadris+ P5-B2 added «الصفوف», P6-D «الامتحانات», then «المواد» (the course entitlement)
     fireEvent.click(screen.getByRole("button", { name: "→ كل المعلمين" }));
     expect(await screen.findByRole("heading", { name: "المعلمون" })).toBeTruthy();
     expect(window.location.hash).toBe("#/owner/teachers");
@@ -256,5 +256,35 @@ describe("P4-B1 capability editing rules", () => {
     expect([...withoutCapability(new Set(["a", "b", "c", "x"]), "a", caps)]).toEqual(["x"]);
     expect([...withoutCapability(new Set(["a", "b", "c"]), "c", caps)].sort()).toEqual(["a", "b"]);
     expect(grantsAndDenies(["a", "b"], new Set(["b", "z", "y"]))).toEqual({ grants: ["y", "z"], denies: ["a"] });
+  });
+});
+
+describe("«المواد» — the teacher's learning materials in their own tab", () => {
+  const CATALOG = { ok: true, courses: [
+    { courseId: "791381", title: "أسس علم الحاسوب", subject: "علم الحاسوب", modules: 30, status: "published", updatedAt: "", updatedBy: "" },
+    { courseId: "899371", title: "شبكات الاتصال", subject: "شبكات", modules: 12, status: "published", updatedAt: "", updatedBy: "" }
+  ] };
+  it("saves only the course choice: the current revision goes back unchanged, against the revision the page was opened on", async () => {
+    routes["GET /api/owner-access/catalog"] = () => ({ status: 200, body: CATALOG });
+    routes["POST /api/owner-access/assign"] = () => ({ status: 200, body: { ok: true, accountId: SARA, access: {}, capabilities: [] } });
+    await openPage();
+    tab("المواد");
+    fireEvent.click(screen.getByRole("radio", { name: /مواد محددة فقط/ }));
+    fireEvent.click(box("أسس علم الحاسوب · علم الحاسوب"));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ المواد" }));
+    await waitFor(() => expect(posted("/api/owner-access/assign")).toHaveLength(1));
+    expect(posted("/api/owner-access/assign")[0].body).toEqual({
+      accountId: SARA, baseRevisionId: R2, presetId: "learning-only", presetVersion: 1, grants: [], denies: [], reason: "المواد التعليمية", courses: ["791381"]
+    });
+    expect(await screen.findByText("حُفظت المواد التعليمية للمعلم (نسخة جديدة في السجل).")).toBeTruthy();
+  });
+  it("leaving the tab with an unsaved choice asks first", async () => {
+    routes["GET /api/owner-access/catalog"] = () => ({ status: 200, body: CATALOG });
+    await openPage();
+    tab("المواد");
+    fireEvent.click(screen.getByRole("radio", { name: /مواد محددة فقط/ }));
+    fireEvent.click(screen.getByRole("tab", { name: "البيانات" }));
+    expect(screen.getByText(/لديك تغييرات غير محفوظة في المواد/)).toBeTruthy();
+    expect(posted("/api/owner-access/assign")).toHaveLength(0);
   });
 });
