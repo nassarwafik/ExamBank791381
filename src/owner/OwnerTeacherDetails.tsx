@@ -21,16 +21,19 @@ import WidgetChoice from "./WidgetChoice";                 // Tadris+ P7-A2
 import GameChoice from "./GameChoice";                     // Tadris+ P7-B2
 import AppearanceChoice, { type AppearanceDraft } from "./AppearanceChoice";   // Tadris+ P8-A2
 import OwnerTeacherExams from "./OwnerTeacherExams";   // Tadris+ P6-D
+import OwnerTeacherCourses from "./OwnerTeacherCourses";   // «المواد»: the course entitlement in its own tab
 import {
   STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, trialBadgeClass, accessLabel, startingPresetId, withCapability, withoutCapability,
   grantsAndDenies, actorLabel, settleReserved
 } from "./teacherShared";
 
 /**
- * Tadris+ P4-B1 — one teacher's page in the Owner Console (#/owner/teachers/<accountId>), in six tabs (four since P4-B1, «الصفوف» since P5-B2, «الامتحانات» since P6-D):
+ * Tadris+ P4-B1 — one teacher's page in the Owner Console (#/owner/teachers/<accountId>), in seven tabs (four since P4-B1, «الصفوف» since P5-B2, «الامتحانات» since P6-D, «المواد»):
  *   «البيانات»   the teacher's details (the username is the sign-in name and stays fixed);
  *   «الصفوف»     the teacher's classes: the owner creates them and edits / archives / restores / graduates them (P5-B2, D18 revised);
  *   «الامتحانات» the teacher's own exam bank: which library exams they see and assign (P6-D);
+ *   «المواد»     the learning materials (courses) the teacher gets: the `courses` entitlement of the access revision, saved alone
+ *                (the rest of the revision is sent back unchanged) — OwnerTeacherCourses;
  *   «الصلاحيات» a preset, then individual capabilities on or off (turning one on also turns on what it needs; turning one off also
  *                turns off what needs it), the difference from what the server gives the teacher NOW, and what the teacher will be
  *                able to do; saved as a new immutable revision against the revision this page was opened on (a stale page → 409);
@@ -39,7 +42,7 @@ import {
  * Every change needs a recent second-factor check (asked inline, then retried). The server decides everything; a 401 signs out.
  */
 
-type TabId = "profile" | "classes" | "exams" | "access" | "history" | "security";
+type TabId = "profile" | "classes" | "exams" | "courses" | "access" | "history" | "security";
 type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null; widgets: DashboardWidget[] | null; games: EducationalGame[] | null; appearance: AppearancePart[] | null };
 type History = { currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean };
 type Loaded = { teacher: ManagedTeacher; others: ManagedTeacher[]; catalog: Catalog; history: History; effective: EffectiveAccess };
@@ -88,6 +91,8 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
   const reportDirty = useCallback((dirty: boolean) => { accessDirty.current = dirty; }, []);
   const [revertNonce, setRevertNonce] = useState(0);
   const [leaving, setLeaving] = useState<{ to: TabId } | { back: true } | null>(null);
+  const coursesDirty = useRef(false);
+  const reportCoursesDirty = useCallback((dirty: boolean) => { coursesDirty.current = dirty; }, []);
 
   useEffect(() => {
     let live = true;
@@ -118,12 +123,14 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
 
   const guarded = (go: { to: TabId } | { back: true }) => {
     if (tab === "access" && accessDirty.current && !("to" in go && go.to === "access")) { setLeaving(go); return; }
+    if (tab === "courses" && coursesDirty.current && !("to" in go && go.to === "courses")) { setLeaving(go); return; }
     setLeaving(null);
     if ("to" in go) setTab(go.to); else onBack();
   };
   const discardAndLeave = () => {
     const go = leaving;
     accessDirty.current = false;
+    coursesDirty.current = false;
     setLeaving(null);
     if (go && "to" in go) setTab(go.to); else if (go) onBack();
   };
@@ -144,6 +151,8 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
 
   const { teacher, others, catalog, history, effective } = state;
   const labels: Record<string, string> = Object.fromEntries(catalog.capabilities.map(c => [c.id, c.moduleLabel + " — " + c.label]));
+  const head = history.currentRevisionId ? history.entries.find(e => e.revisionId === history.currentRevisionId) : undefined;
+  const headBroken = Boolean(history.currentRevisionId) && (!head || !head.valid);
   const setTeacher = (t: ManagedTeacher) => setState(s => (s.kind === "ready" ? { ...s, teacher: t } : s));
 
   const tabs = [
@@ -156,6 +165,11 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
     ) },
     { id: "exams", label: "الامتحانات", content: (
       <OwnerTeacherExams token={token} accountId={accountId} teacherName={teacher.displayName} busy={busy} send={send} onSignedOut={onSignedOut} />
+    ) },
+    { id: "courses", label: "المواد", content: (
+      <OwnerTeacherCourses key={(history.currentRevisionId || "none") + ":courses"} teacherName={teacher.displayName} courses={catalog.courses}
+        head={head} headBroken={headBroken} effective={effective} busy={busy} onDirty={reportCoursesDirty} onOpenAccess={() => guarded({ to: "access" })}
+        onSave={draft => send(() => ownerAccessApi.assign(token, { accountId, ...draft, baseRevisionId: history.currentRevisionId }), () => { setNotice("حُفظت المواد التعليمية للمعلم (نسخة جديدة في السجل)."); reload(); }, true)} />
     ) },
     { id: "access", label: "الصلاحيات", content: (
       <AccessEditor key={(history.currentRevisionId || "none") + ":" + revertNonce} onDirty={reportDirty} onRevert={() => setRevertNonce(n => n + 1)} teacher={teacher} catalog={catalog} history={history} effective={effective} labels={labels} busy={busy}
@@ -204,7 +218,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
 
       {leaving && (
         <div className="eb-owner-confirm" role="group" aria-label={SAVE_STATE_LABELS.dirty}>
-          <p>لديك تغييرات غير محفوظة في الصلاحيات. إن تابعت فلن تُحفظ.</p>
+          <p>{tab === "courses" ? "لديك تغييرات غير محفوظة في المواد." : "لديك تغييرات غير محفوظة في الصلاحيات."} إن تابعت فلن تُحفظ.</p>
           <div className="eb-owner-actions">
             <button type="button" className="eb-owner-secondary" onClick={() => setLeaving(null)}>البقاء</button>
             <button type="button" className="eb-owner-secondary eb-owner-danger" onClick={discardAndLeave}>تجاهل التغييرات</button>
