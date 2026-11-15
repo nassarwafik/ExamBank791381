@@ -13,9 +13,9 @@ export function trackerGet<T>(token: string, projectCode: string, resource: stri
 }
 
 // GET helper for a protected file (a student's exam-form image): the bytes, read with the teacher's session.
-export function trackerGetBlob(token: string, projectCode: string, resource: string, params: Record<string, string> = {}): Promise<Blob> {
+export function trackerGetBlob(token: string, projectCode: string, resource: string, params: Record<string, string> = {}, fallback = "تعذر تحميل الصورة."): Promise<Blob> {
   const qs = new URLSearchParams({ projectCode, resource, ...params });
-  return teacherFetchBlob(token, "/api/project-tracker?" + qs.toString(), "تعذر تحميل الصورة.");
+  return teacherFetchBlob(token, "/api/project-tracker?" + qs.toString(), fallback);
 }
 
 // POST helper: body always carries projectCode.
