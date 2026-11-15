@@ -46,6 +46,37 @@ own, and offers «ابدأ الاستمارة» / «أكمل من حيث توق�
 | Submit | Pending edits are saved first; the submit goes out only when nothing is pending. |
 | Leaving the page with an unsent edit | One last save is sent; the browser's leave warning is armed while edits are unsaved. |
 
+### What is left (added 2026-11-15)
+
+The owner reported that a student who answered part of a form and came back later could not tell which questions were
+still unanswered without walking through every section: the page said «مكتمل» on a finished section, and marked the
+missing questions only after a submit attempt.
+
+The page now says it at all times, on a form the student can still write, for every bundled form (one page serves the
+three projects):
+
+| Where | What |
+|---|---|
+| The section row | Each section shows «بقي N» — its required questions still unanswered — or «مكتمل». |
+| A line above the sections | «بقي 12 سؤالًا إلزاميًا في 5 أقسام» with the button «انتقل إلى السؤال التالي غير المُجاب». When nothing is left: «أجبت عن كل الأسئلة الإلزامية» with «انتقل إلى التسليم». |
+| Each question | A required question still unanswered carries the tag «لم يُجب بعد» beside its text. |
+
+The button goes to the next unanswered required question: it opens that question's section, brings the question itself
+into view and puts the focus in its first field. Pressed again it continues after that question, across sections, and
+around to the first one; after the student opened a section by hand it starts from that section.
+
+The list is the **server's** (`progress.missing`), as of the last save: an answer leaves it a moment after it is typed,
+when its save lands. So what counts as «answered» is exactly what the submit will accept (a table with too few rows, or a
+required image question with too few images, still waits). Optional questions are never listed. Where the class has image
+answers off, its image questions wait for the teacher and are not counted as left. On a read-only form (submitted,
+approved, closed, archived) none of this is shown. The red marks after a refused submit are unchanged.
+
+No request was added and no API changed. Tests: `StudentExamForm.remaining.test.tsx` (8, real handlers, the three
+forms). Mutation: 11 mutants (the button's start, its wrap-around, the question brought into view, the focus, answered
+questions skipped, the section counts, the tags, the read-only form, the «all answered» line), 11 KILLED. Checked in real
+Chromium at 1280 and 390 px with a temporary harness that was not committed: no page error, no horizontal overflow, the
+focus lands in the question's field.
+
 ## Teacher
 
 `ProjectExamFormControl` on the project dashboard («لوحة المشروع»), for a project that ships a form: the state badge
