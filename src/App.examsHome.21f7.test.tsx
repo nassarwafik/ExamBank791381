@@ -8,6 +8,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, act } from "@testing-library/react";
 import App from "./App";
 
+// Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
+async function openBuilder() {
+  const nav = await screen.findByRole("button", { name: "باني الامتحان" }, { timeout: 8000 });
+  await act(async () => { fireEvent.click(nav); });
+}
+
+
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 const structuredExam = () => ({ schemaVersion: 2, examId: "E1", title: "امتحان الشبكات", status: "draft", metadata: {},
   sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: [{ examQuestionId: "q1", presentationType: "trueFalse", text: "عبارة", marks: 1, answer: { correct: true } }] }] });
@@ -55,6 +62,7 @@ const cards = () => within(screen.getByRole("list", { name: "الامتحانا�
 async function openHome() {
   localStorage.setItem("tadris.studio.layout", "studio");
   render(<App />);
+  await openBuilder();
   await screen.findByRole("heading", { name: "امتحاناتي" }, { timeout: 8000 });
   await screen.findByRole("list", { name: "الامتحانات المحفوظة" });
   await settle();
@@ -123,6 +131,7 @@ describe("21F.7 «امتحاناتي»", () => {
 
   it("21F.9 — the Studio is the default: with no stored choice the builder page shows «امتحاناتي»", async () => {
     render(<App />);
+    await openBuilder();
     expect(await screen.findByRole("heading", { name: "امتحاناتي" }, { timeout: 8000 })).toBeTruthy();
     expect(document.querySelector(".saved-exams-access")).toBeNull();
   }, 30000);
@@ -130,6 +139,7 @@ describe("21F.7 «امتحاناتي»", () => {
   it("the classic layout (chosen by the teacher) keeps its access bar", async () => {
     localStorage.setItem("tadris.studio.layout", "classic");
     render(<App />);
+    await openBuilder();
     expect(await screen.findByRole("button", { name: /الامتحانات المحفوظة/ }, { timeout: 8000 })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "امتحاناتي" })).toBeNull();
   }, 30000);

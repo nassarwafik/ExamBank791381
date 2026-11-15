@@ -38,6 +38,10 @@ async function signIn(teacherId: string) {
   // the teacher profile (the draft's owner) arrives after the session: let it settle
   await waitFor(() => expect((globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.some(c => String(c[0]).includes("/api/teacher-profile"))).toBe(true), SLOW);
   await act(async () => { await new Promise(r => setTimeout(r, 30)); });
+  // Teacher home — the teacher lands on the welcome page; the recovery offer lives in the exam builder, so open it.
+  const nav = Array.from(document.querySelectorAll<HTMLButtonElement>(".eb-nav-link")).find(b => b.textContent === "باني الامتحان") as HTMLButtonElement;
+  await act(async () => { fireEvent.click(nav); });
+  await act(async () => { await new Promise(r => setTimeout(r, 30)); });
 }
 const recoveryBar = () => document.querySelector(".recovery-draft-bar");
 

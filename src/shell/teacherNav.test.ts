@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activeNavId, breadcrumbFor, pageTitleFor, NAV_LABELS, PRIMARY_NAV, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, type TeacherNavState } from "./teacherNav";
+import { activeNavId, breadcrumbFor, pageTitleFor, NAV_LABELS, HOME_NAV, PRIMARY_NAV, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, type TeacherNavState } from "./teacherNav";
 
 // UX-2 — presentation mapping derived from the EXISTING App.tsx state (teacherView / workspaceTab / projectCode).
 const base = (over: Partial<TeacherNavState>): TeacherNavState => ({ teacherView: "builder", workspaceTab: "dashboard", projectCode: "", projectList: [{ projectCode: "899373", title: "مشروع 899373" }], ...over });
@@ -37,7 +37,7 @@ describe("UX-2 teacherNav mapping", () => {
     expect(pageTitleFor(base({ teacherView: "bank" }))).toBe("بنك الامتحانات");
   });
   it("every destination has a label and appears exactly once across the sidebar groups", () => {
-    const all = [...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV];
+    const all = [HOME_NAV, ...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV];   // HOME_NAV: the top bar's «الرئيسية», not a sidebar item
     expect(new Set(all).size).toBe(all.length);
     expect(all.sort()).toEqual(Object.keys(NAV_LABELS).sort());
     expect(FOOTER_NAV).toEqual(["audit"]);

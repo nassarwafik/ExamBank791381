@@ -6,10 +6,10 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import BrandMark from "../ui/BrandMark";
 import useFocusTrap from "../ui/useFocusTrap";
 import {
-  IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
+  IconHome, IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
   IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail, IconCheck, IconDownload } from "../icons";
 import {
-  NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, PRIMARY_NAV, PRIMARY_SECTIONS, EXAM_SECTION_LABEL, ACCOUNT_SECTION_LABEL,
+  NAV_LABELS, HOME_NAV, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, PRIMARY_NAV, PRIMARY_SECTIONS, EXAM_SECTION_LABEL, ACCOUNT_SECTION_LABEL,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
 } from "./teacherNav";
 import TeacherIdentity from "../teacher/TeacherIdentity";
@@ -38,7 +38,7 @@ import "./bottom-bar.css";   // Tadris+ P8-B2a
 // (manual compact rail on desktop, the drawer below 1024), the brand, a «لوحة المتابعة» home pill, the quick navigation
 // field and the teacher identity; the sidebar below it is white with hairline-separated groups.
 const ICONS: Record<TeacherNavId, (p: { size?: number }) => ReactNode> = {
-  dashboard: IconDashboard, learning: IconBook, students: IconStudents, assignments: IconAssignments, messages: IconMail, projects: IconProjects,
+  home: IconHome, dashboard: IconDashboard, learning: IconBook, students: IconStudents, assignments: IconAssignments, messages: IconMail, projects: IconProjects,
   reports: IconReports, games: IconSparkles, bank: IconBank, builder: IconBuilder, import: IconUpload, reviews: IconCheck, audit: IconAudit
 };
 /** Phase 8B — every teacher page title carries its destination's sidebar icon (the ONE central ICONS mapping; the
@@ -224,10 +224,10 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
         </div>
         {school && <SchoolBadge name={school.name} logoUrl={school.logoUrl} />}
-        {/* The home pill (the reference's «Projects» chip): a distinct name, so it never doubles the sidebar's «لوحة المتابعة». */}
-        {navAllowed("dashboard", access) && (
-          <button type="button" className="eb-topbar-pill" title={NAV_LABELS.dashboard} onClick={() => navigate("dashboard")}>
-            الرئيسية
+        {/* The home pill opens the welcome page (TeacherHome) — the same page the teacher lands on after signing in. */}
+        {navAllowed(HOME_NAV, access) && (
+          <button type="button" className={"eb-topbar-pill" + (active === HOME_NAV ? " is-active" : "")} aria-current={active === HOME_NAV ? "page" : undefined} onClick={() => navigate(HOME_NAV)}>
+            <IconHome size={16} />{NAV_LABELS.home}
           </button>
         )}
         <QuickNavSearch destinations={destinations} onNavigate={id => navigate(id as TeacherNavId)} className="eb-topbar-search" />

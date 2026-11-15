@@ -1,0 +1,105 @@
+/* Teacher home — the welcome page after sign-in («الرئيسية»). Tokens only (--eb-*), logical properties only (RTL-first). */
+.eb-home { display: flex; flex-direction: column; gap: var(--eb-space-6); min-width: 0; }
+
+/* Hero */
+.eb-home-hero {
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: center; gap: var(--eb-space-6);
+  padding: var(--eb-space-6) var(--eb-space-6);
+  background: linear-gradient(135deg, var(--eb-primary-050), var(--eb-surface) 70%);
+  border: 1px solid var(--eb-line); border-radius: var(--eb-r-xl); box-shadow: var(--eb-sh-sm);
+}
+.eb-home-hero-text { display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0; }
+.eb-home-greeting { margin: 0; color: var(--eb-primary); font-size: var(--eb-fs-15); font-weight: var(--eb-fw-semibold); }
+.eb-home-title {
+  margin: 0; display: flex; flex-direction: column; gap: var(--eb-space-1);
+  font-size: var(--eb-fs-28); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); color: var(--eb-text-heading);
+}
+.eb-home-tagline { font-size: var(--eb-fs-18); font-weight: var(--eb-fw-medium); color: var(--eb-text-secondary); }
+.eb-home-lead { margin: 0; max-inline-size: 60ch; font-size: var(--eb-fs-16); line-height: var(--eb-lh-body); color: var(--eb-text); }
+.eb-home-school { margin: 0; font-size: var(--eb-fs-14); color: var(--eb-muted); }
+.eb-home-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-3); margin-block-start: var(--eb-space-2); }
+.eb-home-cta { min-height: 44px; padding-inline: var(--eb-space-5); }
+.eb-home-art { inline-size: 100%; max-inline-size: 420px; aspect-ratio: 360 / 260; justify-self: center; }
+.eb-home-art svg { display: block; }
+
+/* Illustration palette (follows the teacher's palette and dark mode) */
+.eb-home-art .ill-blob { fill: var(--eb-primary-100); opacity: 0.55; }
+.eb-home-art .ill-dot { fill: var(--eb-primary-200); }
+.eb-home-art .ill-dot-2 { fill: var(--eb-warn); opacity: 0.7; }
+.eb-home-art .ill-board { fill: var(--eb-surface); stroke: var(--eb-line-2); stroke-width: 1.5; }
+.eb-home-art .ill-board-bar { fill: var(--eb-primary); }
+.eb-home-art .ill-surface { fill: var(--eb-surface); }
+.eb-home-art .ill-line { fill: var(--eb-line-2); }
+.eb-home-art .ill-check-bg { fill: var(--eb-success); }
+.eb-home-art .ill-check-bg.is-open { fill: none; stroke: var(--eb-border-strong); stroke-width: 1.5; }
+.eb-home-art .ill-check { fill: none; stroke: var(--eb-surface); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.eb-home-art .ill-card { fill: var(--eb-surface); stroke: var(--eb-line-2); stroke-width: 1.5; }
+.eb-home-art .ill-bar { fill: var(--eb-primary-200); }
+.eb-home-art .ill-bar.is-strong { fill: var(--eb-primary); }
+.eb-home-art .ill-trend { fill: none; stroke: var(--eb-warn); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.eb-home-art .ill-book-1 { fill: var(--eb-primary); }
+.eb-home-art .ill-book-2 { fill: var(--eb-success); }
+.eb-home-art .ill-book-3 { fill: var(--eb-warn); }
+.eb-home-art .ill-cap { fill: var(--eb-navy); }
+.eb-home-art .ill-cap-2 { fill: var(--eb-navy-2); }
+.eb-home-art .ill-tassel { fill: none; stroke: var(--eb-warn); stroke-width: 2; stroke-linecap: round; }
+.eb-home-art .ill-tassel-end { fill: var(--eb-warn); }
+.eb-home-art .ill-spark { fill: none; stroke: var(--eb-primary-300); stroke-width: 2.5; stroke-linecap: round; }
+.eb-home-art .ill-floor { fill: var(--eb-line); }
+
+/* Sections */
+.eb-home-section { display: flex; flex-direction: column; gap: var(--eb-space-4); min-width: 0; }
+.eb-home-section-title { margin: 0; font-size: var(--eb-fs-20); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+
+.eb-home-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--eb-space-4);
+}
+.eb-home-grid > li { display: flex; min-width: 0; }
+.eb-home-card {
+  flex: 1 1 auto; display: flex; align-items: flex-start; gap: var(--eb-space-3); min-width: 0;
+  padding: var(--eb-space-4) var(--eb-space-5);
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg);
+  color: inherit; font: inherit; text-align: start; cursor: pointer;
+  transition: border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
+}
+.eb-home-card:hover { border-color: var(--eb-primary-200); box-shadow: var(--eb-sh-md); }
+.eb-home-card:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-home-card-icon {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  inline-size: 44px; block-size: 44px; border-radius: var(--eb-r);
+  background: var(--eb-primary-050); color: var(--eb-primary);
+}
+.eb-home-card-body { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--eb-space-1); min-width: 0; }
+.eb-home-card-title { font-size: var(--eb-fs-16); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.eb-home-card-text { font-size: var(--eb-fs-14); line-height: var(--eb-lh-body); color: var(--eb-text-secondary); }
+.eb-home-card-go { flex: 0 0 auto; display: inline-flex; align-self: center; color: var(--eb-muted); }
+
+.eb-home-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--eb-space-4);
+}
+.eb-home-step {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--eb-space-3); row-gap: var(--eb-space-1);
+  padding: var(--eb-space-4) var(--eb-space-5);
+  background: var(--eb-surface-2); border-radius: var(--eb-r-lg);
+}
+.eb-home-step-num {
+  grid-row: span 2; display: inline-flex; align-items: center; justify-content: center;
+  inline-size: 36px; block-size: 36px; border-radius: var(--eb-pill);
+  background: var(--eb-primary); color: var(--eb-surface); font-weight: var(--eb-fw-bold);
+}
+.eb-home-step-title { font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.eb-home-step-text { font-size: var(--eb-fs-14); color: var(--eb-text-secondary); }
+
+@media (max-width: 1023px) {
+  .eb-home-hero { grid-template-columns: minmax(0, 1fr); padding: var(--eb-space-5); }
+  .eb-home-art { max-inline-size: 320px; order: -1; }
+  .eb-home-steps { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 599px) {
+  .eb-home-title { font-size: var(--eb-fs-24); }
+  .eb-home-actions .eb-button { flex: 1 1 auto; }
+  .eb-home-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .eb-home-card { transition: none; } }

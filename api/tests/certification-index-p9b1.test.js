@@ -18,7 +18,7 @@ const INDEX = {
     ["API", "api/tests/enforcement-routes-p3b.test.js", "blueprint test #1: a learning-only teacher does not open the exam builder or its AI"],
     ["API", "api/tests/enforce-switch-p3b2.test.js", "enforcement on → a learning-only teacher's AI tools are refused, classes allowed; back to observe → allowed on the next request"],
     ["API", "api/tests/certification-route-sweep-p9b1.test.js", "never assigned (default deny): every route, every action, GET and POST → 403 CAPABILITY_DENIED; nothing stored changes"],
-    ["UI", "src/AppShell.p3c.test.tsx", "enforced learning-only: lands on its dashboard, the builder is not offered, and no extra request is made"],
+    ["UI", "src/AppShell.p3c.test.tsx", "enforced learning-only: lands on the welcome page, the builder is not offered, and no extra request is made"],
     ["E2E", E2E, 'check("#1 server ']
   ],
   2: [
@@ -86,7 +86,7 @@ const INDEX = {
     ["UI", "src/shell/TeacherAppShell.p3c.test.tsx", "every palette and density: the same destinations (all, and limited), and a refused one stays «غير مفعّلة»"]
   ],
   13: [
-    ["UI", "src/AppShell.p3c.test.tsx", "enforced learning-only after a reload: the probe's access applies — the builder is «غير مفعّلة», not offered, its data never requested"],
+    ["UI", "src/AppShell.p3c.test.tsx", "enforced learning-only after a reload: the probe's access applies — the builder is not offered, its data never requested"],
     ["UI", "src/AppShell.p3c.test.tsx", "the same reload when the access cannot be read: nothing is offered (fail closed), never the stored «teacher» everything"],
     ["UI", "src/shell/TeacherAppShell.p3c.test.tsx", "a destination reached directly that is not enabled shows «غير مفعّلة» (not the page), with a way to an allowed one"],
     ["E2E", E2E, '["reload", () => page.reload()]'],

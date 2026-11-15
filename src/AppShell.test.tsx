@@ -4,7 +4,7 @@
 // destination still renders its surface, the project breadcrumb returns to the hub, the student session never
 // sees the teacher shell or teacher endpoints, and the shell adds NO API requests.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, cleanup, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { render, cleanup, screen, waitFor, fireEvent, within, act } from "@testing-library/react";
 import { configure } from "@testing-library/react";
 // Phase 8E-5 — StudentPortal is a lazy chunk: the FIRST student render in a test file also performs its dynamic import,
 // and vitest transforms the whole portal module tree at that moment (regularly > 1 s in a cold worker), while production
@@ -62,12 +62,17 @@ beforeEach(() => { try { sessionStorage.clear(); } catch { /* ignore */ } window
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("UX-2 App + TeacherAppShell integration", () => {
-  it("teacher login lands in the shell on the builder (unchanged initial view) with the existing login form intact", async () => {
+  it("teacher login lands in the shell on the welcome page («الرئيسية», owner request) with the existing login form intact", async () => {
     installFetch("teacher");
     render(<App />);
     expect(document.querySelector("form.auth-form")).toBeTruthy();
     await login();
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
+    expect(h1()).toBe("الرئيسية");
+    expect(await screen.findByRole("heading", { level: 2, name: /مرحبًا بك في/ })).toBeTruthy();
+    expect(document.querySelector(".builder-content")).toBeNull();
+    expect((document.querySelector(".eb-topbar-pill") as HTMLElement).getAttribute("aria-current")).toBe("page");
+    fireEvent.click(nav("باني الامتحان"));
     expect(h1()).toBe("باني الامتحان");
     expect(document.querySelector(".builder-content")).toBeTruthy();
     expect(nav("باني الامتحان").getAttribute("aria-current")).toBe("page");
@@ -142,16 +147,17 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     render(<App />); await login();
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
     await waitFor(() => expect(calls.some(u => u.includes("resource=projects-summary"))).toBe(true));
-    await waitFor(() => expect(calls.some(u => pathOf(u) === "/api/saved-exams")).toBe(true));
+    await screen.findByRole("heading", { level: 2, name: /مرحبًا بك في/ });
+    await act(async () => { await new Promise(r => setTimeout(r, 50)); });
     const set = new Set(calls.map(pathOf));
     // /api/teacher-profile is the teacher identity (name / icon / photo metadata) — read once per session, never per page.
     // /api/messages?kind=unread-summary is App's «الرسائل» badge (Phase 5D), owned by App like projects-summary — not the shell.
-    // /api/saved-exams is the landing page's content, not the shell: since Phase 21F.9 the builder page opens on «امتحاناتي» (the
-    // Exam Studio home), which lists the saved exams — once.
+    // Teacher home — the landing is now the welcome page, which fetches nothing: /api/saved-exams (the builder's «امتحاناتي» list) is
+    // no longer read at sign-in, only when the teacher opens the builder.
     // Phase P6 — the ONE summary read now asks for the students' own marks too (`include=attention`); updated deliberately.
-    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary&include=attention", "/api/teacher-profile", "/api/messages?kind=unread-summary", "/api/saved-exams"]));
+    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary&include=attention", "/api/teacher-profile", "/api/messages?kind=unread-summary"]));
     expect(calls.filter(u => pathOf(u) === "/api/teacher-profile").length).toBe(1);
-    expect(calls.filter(u => pathOf(u) === "/api/saved-exams").length).toBe(1);
+    expect(calls.filter(u => pathOf(u) === "/api/saved-exams").length).toBe(0);
   });
   it("student login renders the StudentShell-wrapped portal (welcome text unchanged), never the teacher shell, never teacher requests", async () => {
     const calls = installFetch("student");

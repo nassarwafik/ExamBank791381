@@ -16,6 +16,7 @@ const StudentPortal = lazy(lazyWithRetry(() => import("./StudentPortal"), "stude
 // src/deploymentRecovery.inventory.11d.test.ts.
 const ProjectTracker = lazy(lazyWithRetry(() => import("./projects/ProjectTracker"), "teacher-project-tracker"));
 const ProjectHub = lazy(lazyWithRetry(() => import("./projects/ProjectHub"), "teacher-project-hub"));
+const TeacherHome = lazy(lazyWithRetry(() => import("./teacher/TeacherHome"), "teacher-home"));
 const ReportsCenter = lazy(lazyWithRetry(() => import("./reports/ReportsCenter"), "teacher-reports"));
 const ExamBankPage = lazy(lazyWithRetry(() => import("./bank/ExamBankPage"), "teacher-exam-bank"));
 // Learning Materials (المواد التعليمية) — Phase 1 foundation; code-split so it only loads when opened.
@@ -68,13 +69,13 @@ import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation, IconAssignments, IconProjects } from "./icons";
 import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
-import { parseTeacherAccess, navAllowed, firstAllowed, type TeacherAccessView } from "./shell/teacherAccess";
+import { parseTeacherAccess, type TeacherAccessView } from "./shell/teacherAccess";
 import { TeacherAccessContext } from "./shell/teacherAccessContext";   // Tadris+ P8-B1
 import { parseTeacherTrial, type TeacherTrialView } from "./shell/TrialNotice";
 import { parseSchoolIdentity, SCHOOL_LOGO_URL, type SchoolIdentity } from "./shell/schoolIdentity";
 import { useProfilePhoto } from "./ui/useProfilePhoto";
 import { SchoolBadgeContext } from "./shell/schoolContext";
-import { PRIMARY_NAV, type TeacherNavId } from "./shell/teacherNav";
+import { type TeacherNavId } from "./shell/teacherNav";
 import { NO_PROJECT_ATTENTION, projectAttentionOf, type ProjectAttention, type ProjectsSummaryResponse } from "./projects/projectAttention";
 import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
 import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
@@ -632,6 +633,7 @@ function App() {
     setTeacherView
   ] =
     useState<
+      "home" |
       "builder" |
       "platform" |
       "import" |
@@ -643,8 +645,8 @@ function App() {
       "messages" |
       "reviews"
     >(
-      // Phase L.2 — a Learning Materials link (#/learning/…) opens that page; everything else starts where it always did.
-      () => (isLearningLocation() ? "learning" : "builder")
+      // Phase L.2 — a Learning Materials link (#/learning/…) opens that page; everything else starts on the welcome page (TeacherHome).
+      () => (isLearningLocation() ? "learning" : "home")
     );
 
   const [workspaceTab, setWorkspaceTab] = useState<"dashboard" | "students" | "assignments" | "audit">("dashboard");
@@ -780,6 +782,7 @@ function App() {
     setEvaluationQueue(null);                                                   // 9F: any shell navigation ends the evaluation session
     setAssignmentDrill(null);                                                   // 12B: … and forgets any unconsumed assignment drill
     if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { goToWorkspace(id); return; }
+    if (id === "home") { setTeacherView("home"); return; }                // the welcome page («الرئيسية»)
     if (id === "learning") { setTeacherView("learning"); return; }
     if (id === "games") { setTeacherView("games"); return; }
     if (id === "messages") { setTeacherView("messages"); return; }
@@ -1305,17 +1308,15 @@ function App() {
         ""
       );
 
-      // Tadris+ P3-C — the access the sign-in answer carries shapes the shell; a teacher limited away from the builder lands on
-      // their first enabled destination instead (unchanged for everyone else).
+      // Tadris+ P3-C — the access the sign-in answer carries shapes the shell (the welcome page offers only what it opens).
       const signedInAccess = resolvedRole === "teacher" ? parseTeacherAccess(data.access) : null;
       setTeacherAccess(signedInAccess);
       setTeacherTrial(resolvedRole === "teacher" ? parseTeacherTrial(data.trial) : null);   // Trial accounts
       setSessionSchool(parseSchoolIdentity(data.school));                                     // Tadris+ P4-C
-      // Phase L.2 — a Learning Materials link that brought the teacher to the sign-in page is honoured after it.
-      const landing = !isLearningLocation() && !navAllowed("builder", signedInAccess) ? firstAllowed(PRIMARY_NAV, signedInAccess) : null;
-      if (landing) navigateTeacherNow(landing);
-      else setTeacherView(
-        isLearningLocation() ? "learning" : "builder"
+      // Phase L.2 — a Learning Materials link that brought the teacher to the sign-in page is honoured after it; otherwise every
+      // teacher lands on the welcome page (TeacherHome), which offers only the destinations their access opens.
+      setTeacherView(
+        isLearningLocation() ? "learning" : "home"
       );
 
       // A fresh login is itself an authoritative role establishment — mark the session validated so the role app
@@ -1357,7 +1358,7 @@ function App() {
     setSessionDisplayName("");
     setSessionSchool(null);
     setSessionValidated(false);
-    setTeacherView("builder");
+    setTeacherView("home");
     setAssignmentDrill(null);                                                   // 12B: a session never inherits a drill
     setUserCode("");
     setPassword("");
@@ -6028,6 +6029,17 @@ function App() {
             onAssignmentDrillConsumed={consumeAssignmentDrill}
             onSessionExpired={handleLogout}
             onCredentialsPendingChange={reportCredentialsPending}
+          />
+        </Suspense>
+      )}
+
+      {teacherView === "home" && (
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
+          <TeacherHome
+            displayName={resolveTeacherDisplayName(teacherProfile, sessionDisplayName)}
+            schoolName={sessionSchool ? sessionSchool.name : null}
+            access={teacherAccess}
+            onNavigate={navigateTeacher}
           />
         </Suspense>
       )}

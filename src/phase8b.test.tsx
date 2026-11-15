@@ -279,6 +279,7 @@ describe("8B-B activity — the newest 30 records", () => {
 // ---------------------------------------------------------------------------------------------------------------
 // C. Teacher page-title icons
 const NAV_STATE: Record<TeacherNavId, Partial<TeacherNavState>> = {
+  home: { teacherView: "home" },
   dashboard: { teacherView: "platform", workspaceTab: "dashboard" }, students: { teacherView: "platform", workspaceTab: "students" },
   assignments: { teacherView: "platform", workspaceTab: "assignments" }, audit: { teacherView: "platform", workspaceTab: "audit" },
   learning: { teacherView: "learning" }, messages: { teacherView: "messages" }, projects: { teacherView: "project" }, reports: { teacherView: "reports" },

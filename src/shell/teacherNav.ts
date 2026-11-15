@@ -3,9 +3,9 @@
 // values to the active destination, the page title and the breadcrumb, and names the destinations the shell can
 // ask App to navigate to (App maps each id back onto its existing setters).
 
-export type TeacherView = "builder" | "platform" | "import" | "project" | "reports" | "bank" | "learning" | "games" | "messages" | "reviews";
+export type TeacherView = "home" | "builder" | "platform" | "import" | "project" | "reports" | "bank" | "learning" | "games" | "messages" | "reviews";
 export type WorkspaceTab = "dashboard" | "students" | "assignments" | "audit";
-export type TeacherNavId = "dashboard" | "learning" | "students" | "assignments" | "messages" | "projects" | "reports" | "games" | "bank" | "builder" | "import" | "reviews" | "audit";
+export type TeacherNavId = "home" | "dashboard" | "learning" | "students" | "assignments" | "messages" | "projects" | "reports" | "games" | "bank" | "builder" | "import" | "reviews" | "audit";
 
 export interface TeacherNavState {
   teacherView: TeacherView;
@@ -15,6 +15,7 @@ export interface TeacherNavState {
 }
 
 export const NAV_LABELS: Record<TeacherNavId, string> = {
+  home: "الرئيسية",
   dashboard: "لوحة المتابعة",
   learning: "المواد التعليمية",
   students: "الصفوف والطلاب",
@@ -30,6 +31,8 @@ export const NAV_LABELS: Record<TeacherNavId, string> = {
   audit: "سجل النشاط"
 };
 export const EXAM_BANK_GROUP_LABEL = "بنك الامتحانات";
+/** The welcome page (TeacherHome): where a teacher lands after signing in, opened by the top bar's «الرئيسية» — not a sidebar item. */
+export const HOME_NAV: TeacherNavId = "home";
 
 /** Primary destinations in sidebar order; the Exam Bank group is a real destination (UX-6c) whose children are builder + import; audit is footer/secondary. */
 // Phase 5C — «الرسائل» (teacher ↔ student conversations + class announcements) sits right after «الواجبات».
@@ -52,6 +55,7 @@ export const ACCOUNT_SECTION_LABEL = "الحساب";
 
 export function activeNavId(state: TeacherNavState): TeacherNavId {
   switch (state.teacherView) {
+    case "home": return "home";
     case "platform": return state.workspaceTab;
     case "learning": return "learning";
     case "games": return "games";

@@ -33,6 +33,15 @@ export function IconDashboard(props: IconProps) {
   );
 }
 
+export function IconHome(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 9.2 10 3.5l7 5.7" />
+      <path d="M4.8 8v8.5h3.7v-4.8h3v4.8h3.7V8" />
+    </svg>
+  );
+}
+
 export function IconStudents(props: IconProps) {
   return (
     <svg {...base(props)}>

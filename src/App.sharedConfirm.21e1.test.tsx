@@ -9,6 +9,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, act } from "@testing-library/react";
 import App from "./App";
 
+// Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
+async function openBuilder() {
+  const nav = await screen.findByRole("button", { name: "باني الامتحان" }, { timeout: 8000 });
+  await act(async () => { fireEvent.click(nav); });
+}
+
+
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 const q = (id: string, text: string, marks: number, difficulty: number) => ({ examQuestionId: id, origin: "bank", sourceId: "S-" + id, section: "BASIC", topic: "IPv4", secondaryTopics: [], difficulty, difficultyLabel: "", familyKey: "f-" + id, hasCLI: false, requiresCalculation: false, presentationType: "multipleChoice", marks, locked: false, text, options: [{ value: "a", text: "أ" }, { value: "b", text: "ب" }], fields: [], parts: [], answer: { correctOptionValue: "a" }, teacherNote: "", aiInstruction: "", wasModified: false, image: { exists: false, visible: false, origin: null, assets: [], prompt: null }, history: [], redoStack: [] });
 const legacyExam = () => ({ schemaVersion: 1, examId: "E1", title: "امتحان الشبكات", originalRequest: "", plan: null, totalMarks: 20, status: "draft", createdAt: "2026-10-01T10:00:00Z", updatedAt: "2026-10-01T10:00:00Z",
@@ -60,6 +67,7 @@ const click = async (el: Element) => { await act(async () => { fireEvent.click(e
 const escape = async () => { await act(async () => { fireEvent.keyDown(document.activeElement || document.body, { key: "Escape" }); }); };
 async function openSavedExams() {
   render(<App />);
+  await openBuilder();
   await click(await screen.findByRole("button", { name: /الامتحانات المحفوظة/ }, { timeout: 5000 }));
   return await screen.findByRole("heading", { name: /الامتحانات المحفوظة/ });
 }
@@ -97,6 +105,7 @@ describe("21E.1 — App.tsx confirmations through the shared dialog (real App, t
 
   it("delete a template: «إبقاء القالب» keeps it; «حذف القالب» posts the delete", async () => {
     render(<App />);
+    await openBuilder();
     await click(await screen.findByRole("button", { name: /القوالب/ }, { timeout: 5000 }));
     await screen.findByText("قالب نهائي", {}, { timeout: 5000 });
     const del = document.querySelector(".templates-panel .saved-delete-button") as HTMLButtonElement;

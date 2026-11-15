@@ -36,12 +36,13 @@
 .eb-topbar .eb-icon-button { color: var(--eb-chrome-text); }
 .eb-topbar .eb-icon-button:hover { background: var(--eb-chrome-hover); color: var(--eb-chrome-text); }
 .eb-topbar-pill {
-  flex: 0 0 auto; min-height: 34px; padding-inline: var(--eb-space-4);
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--eb-space-2); min-height: 34px; padding-inline: var(--eb-space-4);
   border: 0; border-radius: var(--eb-pill); background: var(--eb-chrome-active); color: var(--eb-chrome-text);
   font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
   transition: background var(--eb-dur) var(--eb-ease);
 }
 .eb-topbar-pill:hover { background: var(--eb-line-2); }
+.eb-topbar-pill.is-active { background: var(--eb-primary); color: var(--eb-surface); }
 .eb-topbar-pill:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .eb-topbar-actions { display: flex; align-items: center; gap: var(--eb-space-3); margin-inline-start: auto; }
 .eb-topbar-user { display: inline-flex; align-items: center; gap: var(--eb-space-2); color: var(--eb-chrome-text); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); white-space: nowrap; }

@@ -142,7 +142,7 @@ describe("B/C/D. StudentPortal is NOT loaded before an AUTHORITATIVE student ses
     installFetch("teacher");
     render(<App />); await login("T");
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
-    expect(h1()).toBe("باني الامتحان");
+    expect(h1()).toBe("الرئيسية");                                                   // Teacher home — the welcome page is the landing
     fireEvent.click(nav("التقارير"));
     expect(h1()).toBe("التقارير"); expect(await screen.findByRole("group", { name: "تصنيف التقارير" })).toBeTruthy();
     fireEvent.click(nav("باني الامتحان"));
