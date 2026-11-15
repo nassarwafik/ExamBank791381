@@ -15,7 +15,7 @@
 // always the newest one.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deriveSaveState, shouldWarnBeforeUnload, type SaveStateKind } from "../../studentSaveState";
-import { ExamFormRequestError, addExamFormImage, fetchExamForm, fetchExamFormImage, removeExamFormImage, saveExamFormDraft, submitExamForm } from "./api";
+import { ExamFormRequestError, addExamFormFile, addExamFormImage, fetchExamForm, fetchExamFormFile, fetchExamFormImage, removeExamFormFile, removeExamFormImage, saveExamFormDraft, submitExamForm } from "./api";
 import type { ExamFormAnswer, ExamFormAnswers, ExamFormImageRef, ExamFormView } from "./types";
 
 const BACKOFF_MS = [1000, 2000, 4000];
@@ -48,6 +48,13 @@ export type ExamFormDraft = {
   removeImage: (questionId: string, imageId: string) => Promise<void>;
   /** The bytes of one of the student's own images (stable across renders). */
   readImage: (imageId: string) => Promise<Blob>;
+  /** Phase F5-UI — the teacher switched file answers on for this class: file questions take a file here. */
+  filesOn: boolean;
+  /** Attach the file of a file question (base64 bytes and the file's name); rejects with the server's reason. */
+  addFile: (questionId: string, fileName: string, dataBase64: string) => Promise<void>;
+  removeFile: (questionId: string, fileId: string) => Promise<void>;
+  /** The bytes of one of the student's own files. */
+  readFile: (fileId: string) => Promise<Blob>;
   saveKind: SaveStateKind;
   lastSavedAt: string;
   retrySave: () => void;
@@ -63,6 +70,9 @@ export type ExamFormDraft = {
 
 // Image questions wait for a later phase unless the class has them on: the server says which kinds are still deferred.
 export const hasImageAnswers = (view: ExamFormView | null) => !!view && Array.isArray(view.deferredKinds) && !view.deferredKinds.includes("image");
+
+// Phase F5-UI — the same for file questions: the two switches are independent.
+export const hasFileAnswers = (view: ExamFormView | null) => !!view && Array.isArray(view.deferredKinds) && !view.deferredKinds.includes("file");
 
 // The student may write a draft and a form the teacher returned for correction (Phase F3); nothing else.
 export const isLocked = (view: ExamFormView | null) => !view || !(view.status === "draft" || view.status === "returned") || view.state !== "open" || view.readOnly === true;
@@ -224,6 +234,14 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
     imageRequest(() => removeExamFormImage(token, projectCode, questionId, imageId), "تعذر حذف الصورة."), [imageRequest, token, projectCode]);
   const readImage = useCallback((imageId: string) => fetchExamFormImage(token, projectCode, imageId), [token, projectCode]);
 
+  // Phase F5-UI — a file travels like an image: its own request, in the page's single request slot, the reference written
+  // by the server. A refused file (type, size, content) says nothing about the form, so the form is not read again.
+  const addFile = useCallback((questionId: string, fileName: string, dataBase64: string) =>
+    imageRequest(() => addExamFormFile(token, projectCode, questionId, fileName, dataBase64), "تعذر رفع الملف."), [imageRequest, token, projectCode]);
+  const removeFile = useCallback((questionId: string, fileId: string) =>
+    imageRequest(() => removeExamFormFile(token, projectCode, questionId, fileId), "تعذر حذف الملف."), [imageRequest, token, projectCode]);
+  const readFile = useCallback((fileId: string) => fetchExamFormFile(token, projectCode, fileId), [token, projectCode]);
+
   const submit = useCallback(async (): Promise<SubmitOutcome> => {
     setSubmitting(true);
     try {
@@ -273,6 +291,7 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
   return {
     view, unavailable, loading, loadError, answers, locked: isLocked(view), setAnswer,
     imagesOn: hasImageAnswers(view), addImage, removeImage, readImage,
+    filesOn: hasFileAnswers(view), addFile, removeFile, readFile,
     saveKind: deriveSaveState({ localRevision, savedRevision, saving, retrying, errorExhausted, online }),
     lastSavedAt, retrySave: () => { setErrorExhausted(false); void flush(); },
     notice, error, submitting, saveNow, submit, reload

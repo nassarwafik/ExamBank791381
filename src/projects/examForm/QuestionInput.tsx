@@ -5,6 +5,9 @@
 // Phase F4-UI — where the class has image answers on (`images` is given), an image question takes images, and a text / code /
 // table question that asks for images takes them under its own input. Without it everything is as before.
 import ExamFormImages, { type ExamFormImageTools } from "./ExamFormImages";
+// Phase F5-UI — where the class has file answers on (`files` is given), a file question takes its file. Without it a file
+// question stays the notice it was.
+import ExamFormFile, { type ExamFormFileTools } from "./ExamFormFile";
 import type { ExamFormAnswer, ExamFormEntry, ExamFormQuestion } from "./types";
 
 type Props = {
@@ -14,6 +17,8 @@ type Props = {
   onChange: (answer: ExamFormAnswer | null) => void;
   /** Phase F4-UI — present only where the class has image answers on. */
   images?: ExamFormImageTools;
+  /** Phase F5-UI — present only where the class has file answers on. */
+  files?: ExamFormFileTools;
 };
 
 const DEFERRED_TEXT: Record<string, string> = {
@@ -97,6 +102,7 @@ function OrderingInput({ question, answer, disabled, onChange }: Props) {
 
 export default function QuestionInput(props: Props) {
   const { question, answer, disabled, images } = props;
+  if (question.kind === "file" && props.files) return <ExamFormFile question={question} file={answer?.file} disabled={disabled} tools={props.files} />;
   if (!images) return <AnswerInput {...props} />;
   const attached = answer?.images || [];
   if (question.kind === "image") return <ExamFormImages question={question} images={attached} disabled={disabled} tools={images} />;

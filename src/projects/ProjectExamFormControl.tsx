@@ -5,6 +5,8 @@
 // Phase F4-UI — image answers. A class opened for the first time from here has them on (the owner's decision); a class
 // opened before keeps them off until its teacher switches them on with «تفعيل أسئلة الصور». The switch never goes back
 // off (the server refuses it), and it is offered only on an open form: the same action would reopen a closed one.
+// Phase F5-UI — file answers. Never on by default: the teacher switches them on per class with «تفعيل أسئلة الملفات», on
+// an open form, behind a confirmation that says what a student's file is. Like the image switch it never goes back off.
 import { useEffect, useRef, useState } from "react";
 import { trackerGet, trackerPost } from "./api";
 import StatusBadge from "../ui/StatusBadge";
@@ -13,7 +15,7 @@ import ExamFormHidePicker from "./examForm/ExamFormHidePicker";
 import TeacherExamFormList from "./examForm/TeacherExamFormList";
 import TeacherExamFormReview from "./examForm/TeacherExamFormReview";
 
-type ExamFormState = { hasForm?: boolean; state?: "none" | "open" | "closed"; imageAnswers?: boolean; summary?: { sections?: number; questions?: number }; hiddenQuestionIds?: string[] };
+type ExamFormState = { hasForm?: boolean; state?: "none" | "open" | "closed"; imageAnswers?: boolean; fileAnswers?: boolean; summary?: { sections?: number; questions?: number }; hiddenQuestionIds?: string[] };
 type Props = {
   token: string; projectCode: string; classId: string;
   /** An archived class, or a teacher without the manage capability: the state is shown, the action is not. */
@@ -58,6 +60,7 @@ export default function ProjectExamFormControl({ token, projectCode, classId, re
   const badge = BADGE[state];
   const opening = state !== "open";
   const imagesOn = form.imageAnswers === true;
+  const filesOn = form.fileAnswers === true;
   const hiddenStored = Array.isArray(form.hiddenQuestionIds) ? form.hiddenQuestionIds.length : 0;
 
   async function toggle() {
@@ -102,6 +105,24 @@ export default function ProjectExamFormControl({ token, projectCode, classId, re
     }
   }
 
+  async function enableFiles() {
+    const ok = await confirm({ title: "تفعيل أسئلة الملفات", confirmLabel: "تفعيل",
+      message: "سيرفق طلاب الصف ملف مشروعهم وكتابه في أسئلة الملفات (ملف واحد لكل سؤال، حتى 10 ميغابايت)، والإلزامي منها يصبح شرطًا للتسليم. الاستمارات التي سُلّمت تبقى مسلَّمة.\n"
+        + "الملفات لا تُعرض داخل الموقع: تنزّلها من صفحة التقدير وتفتحها على جهازك. الموقع لا يفحصها من الفيروسات، فعاملها كأي ملف يصلك من طالب.\n"
+        + "لا يمكن إلغاء التفعيل بعد ذلك." });
+    if (!ok) return;
+    setBusy(true); setNotice(""); setError("");
+    try {
+      const r = await trackerPost<{ examForm?: ExamFormState }>(token, projectCode, { action: "examForm.open", classId, fileAnswers: true });
+      if (r.examForm && r.examForm.hasForm === true) setForm(r.examForm);
+      setNotice("فُعّلت أسئلة الملفات لطلاب الصف.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذر تفعيل أسئلة الملفات.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="eb-project-exam-form" data-testid="project-exam-form">
       <div className="eb-project-exam-form-text">
@@ -114,6 +135,11 @@ export default function ProjectExamFormControl({ token, projectCode, classId, re
         {state !== "none" && (
           <p className="eb-muted" data-testid="project-exam-form-images">
             {imagesOn ? "أسئلة الصور مفعّلة: يرفق الطلاب صورًا من مشروعهم." : "أسئلة الصور غير مفعّلة لهذا الصف: لا يُطلب من الطلاب إرفاق صور."}
+          </p>
+        )}
+        {state !== "none" && (
+          <p className="eb-muted" data-testid="project-exam-form-files">
+            {filesOn ? "أسئلة الملفات مفعّلة: يرفق الطلاب ملف المشروع وكتابه." : "أسئلة الملفات غير مفعّلة لهذا الصف: لا يُطلب من الطلاب إرفاق ملفات."}
           </p>
         )}
       </div>
@@ -130,6 +156,9 @@ export default function ProjectExamFormControl({ token, projectCode, classId, re
         )}
         {!readOnly && state === "open" && !imagesOn && (
           <button type="button" className="eb-button" disabled={busy} onClick={() => void enableImages()}>تفعيل أسئلة الصور</button>
+        )}
+        {!readOnly && state === "open" && !filesOn && (
+          <button type="button" className="eb-button" disabled={busy} onClick={() => void enableFiles()}>تفعيل أسئلة الملفات</button>
         )}
         {!readOnly && (
           <button type="button" className={"eb-button" + (opening ? " is-primary" : "")} disabled={busy} onClick={() => void toggle()}>
