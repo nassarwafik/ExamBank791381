@@ -3,7 +3,7 @@
 // server (never for a visitor on the sign-in page, never for a student), so the teacher's first confirmation opens at once without
 // growing the initial bundle. Fail-first: on main b8a65f1 the App never calls prefetchConfirmDialog.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, cleanup, screen, act } from "@testing-library/react";
+import { render, cleanup, screen, act, fireEvent } from "@testing-library/react";
 
 const spy = vi.hoisted(() => ({ prefetch: vi.fn(), idle: vi.fn() }));
 vi.mock("./ui/confirmPrefetch", async importOriginal => {
@@ -11,6 +11,13 @@ vi.mock("./ui/confirmPrefetch", async importOriginal => {
   return { ...actual, prefetchConfirmDialog: spy.prefetch, whenIdle: (task: () => void) => { spy.idle(); task(); return () => {}; } };
 });
 import App from "./App";
+
+// Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
+async function openBuilder() {
+  const nav = await screen.findByRole("button", { name: "باني الامتحان" }, { timeout: 8000 });
+  await act(async () => { fireEvent.click(nav); });
+}
+
 
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 function installFetch(role: "teacher" | "student") {
@@ -43,6 +50,7 @@ describe("21E.1 slice 2 — App warms the confirmation dialog for a validated te
   it("validated teacher session → scheduled on idle and prefetched once", async () => {
     installFetch("teacher"); signIn("teacher");
     render(<App />);
+    await openBuilder();
     await screen.findByRole("button", { name: /الامتحانات المحفوظة/ }, { timeout: 5000 });
     await settle();
     expect(spy.idle).toHaveBeenCalledTimes(1);

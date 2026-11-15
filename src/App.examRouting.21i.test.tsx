@@ -10,6 +10,13 @@ import { render, cleanup, screen, fireEvent, within, act } from "@testing-librar
 import { createRequire } from "node:module";
 import App from "./App";
 
+// Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
+async function openBuilder() {
+  const nav = await screen.findByRole("button", { name: "باني الامتحان" }, { timeout: 8000 });
+  await act(async () => { fireEvent.click(nav); });
+}
+
+
 const nodeRequire = createRequire(import.meta.url);
 const { buildInterpretResult } = nodeRequire("../api/src/functions/interpret-exam-request.js") as { buildInterpretResult: (raw: unknown, prompt: string, topics: unknown, provider: string, model: string) => Record<string, unknown> };
 const TOPICS = { topics: [{ code: "IP_ADDRESSING", name: "IPv4 Addressing", parent: null }, { code: "DHCP", name: "DHCP", parent: "NETWORK_SERVICES" }] };
@@ -58,6 +65,7 @@ const settle = (ms = 30) => act(async () => { await new Promise(r => setTimeout(
 
 async function analyse(prompt: string) {
   render(<App />);
+  await openBuilder();
   const box = await screen.findByRole("textbox", { name: "وصف الامتحان المطلوب" }, { timeout: 8000 });
   await act(async () => { fireEvent.change(box, { target: { value: prompt } }); });
   await click(screen.getByRole("button", { name: "تحليل الطلب" }));
@@ -115,6 +123,7 @@ describe("21I builder prompt — multi-subject routing", () => {
   it("unsaved structured work is never discarded silently: the teacher is asked first", async () => {
     modelSubject = { domain: "programming", label: "Python", language: "ar", sourcePreference: "unspecified", questionCountExplicit: false, durationMinutes: 0, course: "", grade: "", topics: [] };
     render(<App />);
+    await openBuilder();
     await click(await screen.findByRole("button", { name: /امتحان منظّم جديد/ }, { timeout: 8000 }));
     await screen.findByRole("dialog", { name: /امتحان منظّم جديد/ }, { timeout: 15000 });
     await click(screen.getByRole("button", { name: "رجوع" }));

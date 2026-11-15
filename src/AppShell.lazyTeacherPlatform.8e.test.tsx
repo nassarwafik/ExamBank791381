@@ -117,6 +117,8 @@ describe("B/C/D. TeacherPlatform is NOT loaded before the platform view", () => 
     installFetch("teacher");
     render(<App />); await login("T");
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
+    expect(h1()).toBe("الرئيسية");                                                   // Teacher home — the welcome page is the landing
+    fireEvent.click(nav("باني الامتحان"));
     expect(h1()).toBe("باني الامتحان"); expect(document.querySelector(".builder-content")).toBeTruthy();
     fireEvent.click(nav("التقارير"));
     expect(h1()).toBe("التقارير"); expect(await screen.findByRole("group", { name: "تصنيف التقارير" })).toBeTruthy();

@@ -121,11 +121,17 @@ const ask = (page, token, method, url, body) => page.evaluate(async ([t, m, u, b
 }, [token, method, url, body]);
 const BUILDER_LABELS = ["باني الامتحان", "بنك الامتحانات", "استيراد من ملف"];
 const BUILDER_API = /\/api\/(saved-exams|templates|assessment-presets|generate-exam|exam-question-availability|bank-summary|bank-questions|ai-[a-z-]+|import-[a-z-]+|interpret-exam-request|analyze-global-exam-instruction|question-ai-action|structured-exam-ai-fix|exam-quality-fix|save-exam-artifact)/;
-const notEnabledShown = page => page.getByText("هذه الأداة غير مفعّلة لحسابك").isVisible().catch(() => false);
 // The builder page's own visible markers (its AI request box and «امتحاناتي»): none of them may be on screen.
 const builderShown = page => page.evaluate(() => { const t = document.querySelector("main")?.innerText || document.body.innerText; return t.includes("ماذا تريد في الامتحان؟") || /(^|\n)امتحاناتي(\n|$)/.test(t) || !!document.querySelector(".builder-workspace"); });
-/** Strict: the tab's place is answered «غير مفعّلة» AND nothing of the builder page is rendered. */
-const builderRefused = async page => (await notEnabledShown(page)) && !(await builderShown(page));
+// Teacher home — a signed-in teacher (and a reload / deep link) now lands on the welcome page «الرئيسية», never the builder. Strict:
+// the welcome page is what is shown, it offers no builder / bank / import entry, and nothing of the builder page is rendered.
+const BUILDER_ENTRY = /باني الامتحان|بنك الامتحانات|استيراد من ملف|إنشاء امتحان جديد/;
+const homeShown = async page => {
+  await page.locator(".eb-home").first().waitFor({ timeout: 20000 }).catch(() => {});
+  return page.evaluate(() => !!document.querySelector(".eb-home") && (document.querySelector("h1")?.textContent || "").trim() === "الرئيسية");
+};
+const homeOffersBuilder = page => page.evaluate(src => { const re = new RegExp(src); return [...document.querySelectorAll(".eb-home button")].some(b => re.test(b.textContent || "")); }, BUILDER_ENTRY.source);
+const builderKeptAway = async page => (await homeShown(page)) && !(await homeOffersBuilder(page)) && !(await builderShown(page));
 
 // ── #1 + #13: learning-only ─────────────────────────────────────────────────────────────────────────────────────────────────
 console.log("#1 learning-only: no exam builder, nor its API");
@@ -134,7 +140,7 @@ console.log("#1 learning-only: no exam builder, nor its API");
   await page.locator("aside button.eb-nav-link").first().waitFor({ timeout: 20000 });
   const labels = await sidebarLabels(page);
   check("#1 sidebar", BUILDER_LABELS.every(l => !labels.includes(l)) && labels.includes("المواد التعليمية"), "offers " + labels.join(" · ") + " — no builder, bank or import");
-  check("#1 landing", await builderRefused(page), "the builder page is not rendered; the tab's place is answered «غير مفعّلة»");
+  check("#1 landing", await builderKeptAway(page), "the welcome page «الرئيسية» is shown, offers no builder entry, and the builder page is not rendered");
   await page.screenshot({ path: path.join(out, "1-learning-only.png") });
   const t = tokens[LINA];
   for (const [m, u, b] of [["GET", "/api/saved-exams"], ["POST", "/api/ai-question-author", { request: "سؤال" }], ["POST", "/api/generate-exam", {}], ["POST", "/api/import-upload", {}], ["POST", "/api/saved-exams", { action: "save", exam: { title: "x" } }]]) {
@@ -151,7 +157,7 @@ console.log("#1 learning-only: no exam builder, nor its API");
     await page.locator("aside button.eb-nav-link").first().waitFor({ timeout: 20000 });
     const l = await sidebarLabels(page);
     const probed = apiLog.slice(before).some(e => e.path.startsWith("/api/platform-session") && e.status === 200);
-    check("#13 " + what, probed && BUILDER_LABELS.every(x => !l.includes(x)) && (await builderRefused(page)), (probed ? "re-read /api/platform-session; " : "NO session probe; ") + "offers " + l.join(" · "));
+    check("#13 " + what, probed && BUILDER_LABELS.every(x => !l.includes(x)) && (await builderKeptAway(page)), (probed ? "re-read /api/platform-session; " : "NO session probe; ") + "offers " + l.join(" · "));
     const leaked = apiLog.slice(before).filter(e => BUILDER_API.test(e.path) && e.status < 400);
     check("#13 " + what + " traffic", leaked.length === 0, leaked.length ? "served: " + leaked.map(e => e.path).join(", ") : "no builder route served anything");
   }
@@ -159,7 +165,7 @@ console.log("#1 learning-only: no exam builder, nor its API");
   await page.evaluate(() => { sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "مالك"); });
   await page.reload(); await page.waitForLoadState("networkidle").catch(() => {});
   await page.locator("aside button.eb-nav-link").first().waitFor({ timeout: 20000 });
-  check("#13 forged tab storage", (await sidebarLabels(page)).every(x => !BUILDER_LABELS.includes(x)) && (await builderRefused(page)), "the probe's access decides, not the tab's storage");
+  check("#13 forged tab storage", (await sidebarLabels(page)).every(x => !BUILDER_LABELS.includes(x)) && (await builderKeptAway(page)), "the probe's access decides, not the tab's storage");
   check("#13 server after reload", (await ask(page, t, "GET", "/api/saved-exams")).status === 403, "the builder API still refuses the same session");
   await page.screenshot({ path: path.join(out, "13-after-reload.png") });
   await ctx.close();

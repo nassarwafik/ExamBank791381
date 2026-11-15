@@ -7,6 +7,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, act } from "@testing-library/react";
 import App from "./App";
 
+// Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
+async function openBuilder() {
+  const nav = await screen.findByRole("button", { name: "باني الامتحان" }, { timeout: 8000 });
+  await act(async () => { fireEvent.click(nav); });
+}
+
+
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 const sq = (id: string, text: string) => ({ examQuestionId: id, presentationType: "shortAnswer", text, marks: 2, answer: { text: "-" } });
 const structuredExam = (title = "اختبار الوحدة الثانية") => ({ schemaVersion: 2, examId: "E9", title, status: "draft", createdAt: "2026-10-01T10:00:00Z", updatedAt: "2026-10-01T10:00:00Z", metadata: {},
@@ -51,6 +58,7 @@ const conflict409 = () => res(409, { ok: false, code: "EXAM_CONFLICT", error: "�
 
 async function openSavedExam() {
   render(<App />);
+  await openBuilder();
   await click(await screen.findByRole("button", { name: /الامتحانات المحفوظة/ }, { timeout: 5000 }));
   const panel = await screen.findByRole("heading", { name: /الامتحانات المحفوظة/ }).then(h => h.closest(".saved-exams-panel") as HTMLElement);
   await click(within(panel).getByRole("button", { name: /فتح وتعديل/ }));
@@ -119,6 +127,7 @@ describe("21F.0 — conditional saves from the structured builder", () => {
 
   it("a brand-new structured exam is saved create-only with a random id", async () => {
     render(<App />);
+    await openBuilder();
     await click(await screen.findByRole("button", { name: /امتحان منظّم جديد/ }, { timeout: 5000 }));
     const overlay = await screen.findByRole("dialog", { name: /باني الامتحان المنظّم/ }, { timeout: 15000 });
     await settle();

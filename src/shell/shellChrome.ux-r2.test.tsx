@@ -56,7 +56,8 @@ describe("UX-R2 — the top bar is the page's one banner", () => {
     const field = within(bar).getByRole("combobox", { name: "انتقل إلى صفحة" });
     fireEvent.change(field, { target: { value: "تقارير" } });
     fireEvent.keyDown(field, { key: "Enter" });
-    expect(onNavigate.mock.calls.map(c => c[0])).toEqual(["dashboard", "reports"]);
+    // Teacher home — «الرئيسية» now opens the welcome page (owner request), no longer «لوحة المتابعة».
+    expect(onNavigate.mock.calls.map(c => c[0])).toEqual(["home", "reports"]);
   });
 });
 

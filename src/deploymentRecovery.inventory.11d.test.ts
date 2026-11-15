@@ -15,6 +15,7 @@ const PROTECTED: [string, string, string, string][] = [
   ["./App.tsx", "TeacherPlatform", "./TeacherPlatform", "teacher-platform"],
   ["./App.tsx", "ProjectTracker", "./projects/ProjectTracker", "teacher-project-tracker"],
   ["./App.tsx", "ProjectHub", "./projects/ProjectHub", "teacher-project-hub"],
+  ["./App.tsx", "TeacherHome", "./teacher/TeacherHome", "teacher-home"],   // the teacher's welcome page («الرئيسية»)
   ["./App.tsx", "ReportsCenter", "./reports/ReportsCenter", "teacher-reports"],
   ["./App.tsx", "ExamBankPage", "./bank/ExamBankPage", "teacher-exam-bank"],
   ["./App.tsx", "LearningMaterialsPage", "./learning/LearningMaterialsPage", "teacher-learning-materials"],

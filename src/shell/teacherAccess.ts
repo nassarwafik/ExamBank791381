@@ -14,6 +14,7 @@ const GOV_ANY = ["examGovernance.exam.author", "examGovernance.exam.review", "ex
 
 /** Each destination and the capabilities that open it (any one of them) — the same names the server's routes ask for. */
 export const NAV_CAPABILITIES: Record<TeacherNavId, string[]> = {
+  home: [],                                   // the welcome page holds no data: open to every teacher whose access resolved (navAllowed)
   dashboard: ["classes.class.view"],
   learning: ["learning.course.view"],
   students: ["students.student.view"],
@@ -45,6 +46,7 @@ export function navAllowed(id: TeacherNavId, access: TeacherAccessView | null | 
   if (!access) return true;
   if (access.status === "unavailable") return false;
   if (!access.enforced) return true;
+  if (id === "home") return true;
   return NAV_CAPABILITIES[id].some(c => access.capabilities.includes(c));
 }
 

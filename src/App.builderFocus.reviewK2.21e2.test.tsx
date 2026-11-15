@@ -8,6 +8,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, act } from "@testing-library/react";
 import App from "./App";
 
+// Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
+async function openBuilder() {
+  const nav = await screen.findByRole("button", { name: "باني الامتحان" }, { timeout: 8000 });
+  await act(async () => { fireEvent.click(nav); });
+}
+
+
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 const sq = (id: string, text: string) => ({ examQuestionId: id, presentationType: "shortAnswer", text, marks: 2, answer: { text: "-" } });
 const structuredExam = () => ({ schemaVersion: 2, examId: "E9", title: "اختبار الوحدة الثانية", status: "draft", createdAt: "2026-10-01T10:00:00Z", updatedAt: "2026-10-01T10:00:00Z", metadata: {},
@@ -45,6 +52,7 @@ const settle = () => act(async () => { await new Promise(r => setTimeout(r, 30))
 describe("K2 A-F3 — App's builder overlay: focus in on open, onto a page control on close", () => {
   it("opened from a saved-exams row (gone with its panel): focus is inside the builder; «رجوع» lands on «متابعة تحرير الامتحان المنظّم»", async () => {
     render(<App />);
+    await openBuilder();
     await click(await screen.findByRole("button", { name: /الامتحانات المحفوظة/ }, { timeout: 5000 }));
     const panel = await screen.findByRole("heading", { name: /الامتحانات المحفوظة/ }).then(h => h.closest(".saved-exams-panel") as HTMLElement);
     const row = within(panel).getByRole("button", { name: /فتح وتعديل/ });
