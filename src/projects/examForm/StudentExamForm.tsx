@@ -2,6 +2,7 @@
 // the student goes (no time limit), resumed where they stopped, submitted once. After the submit, or while the teacher
 // keeps the form closed, the page is a read-only record of the answers.
 // Phase F4-UI — where the teacher switched image answers on for the class, image questions take images (ExamFormImages).
+// Phase F5-UI — and where file answers are on, a file question takes its file (ExamFormFile).
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProgressBar from "../../ui/ProgressBar";
 import StatusBadge from "../../ui/StatusBadge";
@@ -10,6 +11,7 @@ import { useConfirm } from "../../ui/useConfirm";
 import SaveStatus from "../../student/exam/SaveStatus";
 import QuestionInput from "./QuestionInput";
 import type { ExamFormImageTools } from "./ExamFormImages";
+import type { ExamFormFileTools } from "./ExamFormFile";
 import { useExamFormDraft } from "./useExamFormDraft";
 import type { ExamFormSection, ExamFormView } from "./types";
 
@@ -100,10 +102,18 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
     ? { read: draft.readImage, add: draft.addImage, remove: draft.removeImage,
       confirmRemove: () => confirm({ title: "حذف الصورة", message: "ستُحذف هذه الصورة من إجابتك. يمكنك إرفاق صورة أخرى بعدها.", confirmLabel: "حذف الصورة", tone: "danger" }) }
     : undefined;
-  const deferredNote = view.progress.deferred === 0 ? ""
-    : !draft.imagesOn ? view.progress.deferred + " سؤالًا تحتاج صورًا أو ملفات، وهي لا تمنع التسليم الآن. الملفات تُسلَّم لمعلمك مباشرة ولا تُرفع إلى الموقع."
-      : (view.progress.deferred === 1 ? "سؤال واحد يحتاج ملفًا" : view.progress.deferred === 2 ? "سؤالان يحتاجان ملفات" : view.progress.deferred + " أسئلة تحتاج ملفات")
-        + ". تُسلَّم الملفات لمعلمك مباشرة ولا تُرفع إلى الموقع، وهذا لا يمنع التسليم.";
+  // File questions take a file only where the server says the class has them on (Phase F5-UI).
+  const fileTools: ExamFormFileTools | undefined = draft.filesOn
+    ? { read: draft.readFile, add: draft.addFile, remove: draft.removeFile,
+      confirmRemove: () => confirm({ title: "حذف الملف", message: "سيُحذف هذا الملف من إجابتك. يمكنك إرفاق ملف آخر بعده.", confirmLabel: "حذف الملف", tone: "danger" }) }
+    : undefined;
+  // What is still deferred: images, files or both, by the two switches of the class.
+  const deferred = view.progress.deferred;
+  const counted = (one: string, two: string, many: string) => (deferred === 1 ? one : deferred === 2 ? two : deferred + (deferred <= 10 ? " أسئلة " : " سؤالًا ") + many);
+  const deferredNote = deferred === 0 ? ""
+    : !draft.imagesOn && !draft.filesOn ? deferred + " سؤالًا تحتاج صورًا أو ملفات. إرفاقها سيتاح قريبًا، وهي لا تمنع التسليم الآن."
+      : !draft.filesOn ? counted("سؤال واحد يحتاج ملفًا", "سؤالان يحتاجان ملفات", "تحتاج ملفات") + ". إرفاق الملفات غير مفعّل لصفك، وهذا لا يمنع التسليم الآن."
+        : counted("سؤال واحد يحتاج صورة", "سؤالان يحتاجان صورًا", "تحتاج صورًا") + ". إرفاق الصور غير مفعّل لصفك، وهذا لا يمنع التسليم الآن.";
   // Phase F3-UI — after the teacher's approval: this section's level and note, and right / wrong per auto-marked question.
   const sectionResult = view.result ? view.result.sections.find(r => r.sectionId === section.sectionId) : undefined;
   const verdicts = view.result ? view.result.auto : null;
@@ -194,7 +204,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
               <div className="eb-sp-form-question-body">
                 {question.help && <p className="eb-muted eb-sp-form-help">{question.help}</p>}
                 <QuestionInput question={question} answer={draft.answers[question.questionId]} disabled={draft.locked}
-                  onChange={answer => draft.setAnswer(question.questionId, answer)} images={imageTools} />
+                  onChange={answer => draft.setAnswer(question.questionId, answer)} images={imageTools} files={fileTools} />
                 {flagged && <p className="eb-sp-form-missing-mark">هذا السؤال إلزامي ولم يكتمل بعد.</p>}
                 {verdicts && question.questionId in verdicts && (
                   <p className="eb-sp-form-verdict" data-verdict={verdicts[question.questionId] === null ? "none" : verdicts[question.questionId] ? "right" : "wrong"}>
