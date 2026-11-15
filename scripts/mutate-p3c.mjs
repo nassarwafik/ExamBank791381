@@ -25,7 +25,9 @@ export const MUTANTS = [
   { id: "P3C-M7", what: "identities that predate the console are reported as limited", edits: [{ file: SERVER, find: "const enforced = user && user.am === \"managed\" ?", replace: "const enforced = true ?" }] },
   { id: "P3C-M8", what: "an unreadable mode is reported as not enforced instead of unavailable", edits: [{ file: SERVER, find: "(await readAccessMode(containerOf(), deps)).mode", replace: "(await readAccessMode(containerOf(), deps).catch(() => ({ mode: \"legacy\" }))).mode" }] },
   { id: "P3C-M9", what: "the builder destination keyed to the wrong capability", edits: [{ file: ACCESS, find: "  builder: [\"examBuilder.exam.edit\", \"examBuilder.exam.create\"],", replace: "  builder: [\"classes.class.view\"]," }] },
-  { id: "P3C-M10", what: "sign-in ignores the access for the landing page", edits: [{ file: APP, find: "      const landing = !isLearningLocation() && !navAllowed(\"builder\", signedInAccess) ? firstAllowed(PRIMARY_NAV, signedInAccess) : null;", replace: "      const landing = null as null | \"dashboard\";" }] }
+  // Since the welcome page (nassarwafik/ExamBank791381#646) every sign-in lands on «الرئيسية», which offers only what the access opens;
+  // the mutant lands a limited teacher on the builder again instead.
+  { id: "P3C-M10", what: "sign-in lands on the builder instead of the welcome page", edits: [{ file: APP, find: "      setTeacherView(\n        isLearningLocation() ? \"learning\" : \"home\"\n      );", replace: "      setTeacherView(\n        isLearningLocation() ? \"learning\" : \"builder\"\n      );" }] }
 ];
 
 const originals = new Map();
