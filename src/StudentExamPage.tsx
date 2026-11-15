@@ -831,7 +831,11 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
   if(draftMergedRef.current){await settleMergedDraft();return}   // QA-8: another device's answers were merged in — the student reviews before submitting
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField(),submitKey})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;dropJournal();scrollTop()}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField(),submitKey})});
+  // The attempt is over on the server. Disarm the strict exit NOW, not at the next render: `submittingRef` is released
+  // in `finally` below, before React re-renders, and a hide in that instant would send an exit for a submitted attempt.
+  strictArmedRef.current=false;
+  invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;dropJournal();scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(isDraftStale(e)){submittingRef.current=false;if(await mergeAfterStaleDraft()){await settleMergedDraft();return}}
