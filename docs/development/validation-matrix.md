@@ -104,6 +104,24 @@ not force it, so there is no reproducing run, only the recorded failure. The tes
 left) before reading the requests, exactly as its teacher / student sibling already did. No assertion and no timeout changed.
 A mutant that drops the refresh after ending a device still fails both tests.
 
+`src/StudentExamPage.attemptPolicy.7a.test.tsx`, «an ordinary submit stays «submitted»; hiding afterwards sends no exit», failed
+once on `main` in the Quality Gate after #638 (2026-11-15, attempt 1: «expected [ … ] to have a length of +0 but got 1»), with a
+tree byte-identical to the PR head where it had passed; 12 isolated local runs passed, and the owner's re-run passed. Root
+cause — a defect of the **page**, not of the test: after a submit the server accepted, the page released `submittingRef` in
+`finally` at once, but the strict-exit flag (`strictArmedRef`) was disarmed only by the effect of the next render. A
+`visibilitychange → hidden` between the two sent `finalizeIntegrityExit` for an attempt that had just been submitted. The test
+hides the page as soon as the server recorded the submit, so it sometimes landed in that window. The server kept the attempt
+«submitted» and the student saw the result (observed in the reproduction), so no grade was ever affected; the request was
+spurious. Reproduced deterministically, with no wait: the page's last step of a successful submit is `scrollTop()`, and a
+microtask queued from it runs after the submit handler finished and before any re-render — the new test «hiding in the instant
+a submit succeeded — before the page re-rendered — sends no exit and shows the result» fails on `b452e8e6` 5 runs of 5 with
+the same assertion as the CI failure. Fix: the page disarms the flag as soon as the submit's response is in hand
+(`StudentExamPage.tsx`, one statement). No existing assertion and no timeout changed. Two pins were added beside it (they pass
+on the baseline too): a submit that failed leaves the attempt armed, and hiding while the submit is in flight sends no exit —
+the second one because a mutant that removed the `submittingRef` check from the exit guard survived the existing suite.
+Mutants: the disarm removed; the disarm moved before the request; the disarm moved to `finally`; the `submittingRef` check
+removed — 4 KILLED.
+
 ### 4.1 Known capture flake — `studio-home`, the «الموديل» select (visual gate)
 
 The visual gate (`ux-visual-regression-r19b.yml`, `scripts/ux-visual-gate.mjs`) occasionally reports an **undeclared**

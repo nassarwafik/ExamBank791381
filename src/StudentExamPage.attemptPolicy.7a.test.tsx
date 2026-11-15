@@ -189,6 +189,90 @@ describe("strict", () => {
     await new Promise(r => setTimeout(r, 30));
     expect(posts("finalizeIntegrityExit")).toHaveLength(0);
   });
+
+  // The window the test above only sometimes hit (a CI failure on main, 2026-11-15): the submit's response has been
+  // processed — the page is no longer «submitting» — but React has not yet re-rendered, so the strict-exit flag of the
+  // previous render is still armed. The page's last step of a successful submit is scrollTop(); a microtask queued from
+  // it runs right after the submit handler finished and before any re-render. Deterministic: no wait, no sleep.
+  it("hiding in the instant a submit succeeded — before the page re-rendered — sends no exit and shows the result", async () => {
+    seed("strict");
+    await mount();
+    await startAttempt();
+    await type("حل");
+    fireEvent.click(screen.getAllByRole("button", { name: /مراجعة|المراجعة/ })[0]);
+    fireEvent.click(await screen.findByRole("button", { name: /تسليم/ }));
+    let hidden = 0;
+    (window as unknown as { scrollTo: () => void }).scrollTo = () => {
+      if (posts("submit").length !== 1 || hidden) return;
+      hidden += 1;
+      queueMicrotask(() => { vis = "hidden"; document.dispatchEvent(new Event("visibilitychange")); });
+    };
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));
+    await waitFor(() => expect(hidden).toBe(1));
+    await act(async () => {});
+    await new Promise(r => setTimeout(r, 30));
+    expect(posts("finalizeIntegrityExit")).toHaveLength(0);
+    expect(doc().attempts[0].endReason).toBe("submitted");
+    expect(screen.queryByText(/غادرت صفحة الامتحان/)).toBeNull();
+    expect(sessionStorage.getItem("examBankStrictExit:" + AID)).toBeNull();
+  });
+
+  // While the submit is on its way the page is «submitting»: leaving it then must not end the attempt as an exit — the
+  // student pressed submit, and the submit is what the server is about to record.
+  it("hiding while the submit is in flight sends no exit; the attempt ends as «submitted»", async () => {
+    seed("strict");
+    await mount();
+    await startAttempt();
+    await type("حل");
+    fireEvent.click(screen.getAllByRole("button", { name: /مراجعة|المراجعة/ })[0]);
+    fireEvent.click(await screen.findByRole("button", { name: /تسليم/ }));
+    const real = globalThis.fetch;
+    let release: () => void = () => {};
+    const gate = new Promise<void>(r => { release = r; });
+    let held = 0;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      if (body.action === "submit") { held += 1; await gate; }
+      return real(input, init);
+    }) as unknown as typeof fetch;
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));
+    await waitFor(() => expect(held).toBe(1));
+    hide();
+    await act(async () => {});
+    expect(posts("finalizeIntegrityExit")).toHaveLength(0);
+    expect(doc().activeAttempt).toBeTruthy();                                  // nothing ended the attempt meanwhile
+    release();
+    await waitFor(() => expect(doc().attempts?.[0]?.endReason).toBe("submitted"));
+    await act(async () => {});
+    expect(posts("finalizeIntegrityExit")).toHaveLength(0);
+    expect(screen.queryByText(/غادرت صفحة الامتحان/)).toBeNull();
+  });
+
+  // The other side of the same rule: only a submit the server ACCEPTED disarms the exit. A submit that failed leaves the
+  // attempt running, so leaving the page afterwards still ends it.
+  it("a submit that failed leaves the attempt armed: hiding afterwards ends it", async () => {
+    seed("strict");
+    await mount();
+    await startAttempt();
+    await type("حل");
+    fireEvent.click(screen.getAllByRole("button", { name: /مراجعة|المراجعة/ })[0]);
+    fireEvent.click(await screen.findByRole("button", { name: /تسليم/ }));
+    const real = globalThis.fetch;
+    let refused = 0;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      if (body.action === "submit") { refused += 1; return res(500, { ok: false, error: "تعذر تسليم الواجب." }); }
+      return real(input, init);
+    }) as unknown as typeof fetch;
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));
+    await waitFor(() => expect(refused).toBe(1));
+    await act(async () => {});
+    expect(doc().activeAttempt).toBeTruthy();
+    expect(posts("finalizeIntegrityExit")).toHaveLength(0);
+    hide();
+    await waitFor(() => expect(doc().attempts?.[0]?.endReason).toBe("integrityExit"));
+    expect(posts("finalizeIntegrityExit")).toHaveLength(1);
+  });
 });
 
 // Phase 7B — the teacher ends the attempt while the student is still on the exam page: the student's next write is refused
