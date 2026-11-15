@@ -288,3 +288,22 @@ describe("«المواد» — the teacher's learning materials in their own tab
     expect(posted("/api/owner-access/assign")).toHaveLength(0);
   });
 });
+
+describe("«لوحة البيانات» — from the teachers table, full screen", () => {
+  it("the row's «لوحة البيانات» opens the teacher's dashboard at its own address; «→ المعلمون» returns to the list", async () => {
+    window.location.hash = "#/owner/teachers";
+    routes["GET /api/owner-teacher-dashboard?accountId=" + SARA] = () => ({ status: 200, body: {
+      ok: true, generatedAt: "", teacher: { accountId: SARA, username: "t.sara", displayName: "سارة", status: "active" }, scope: { classId: "", className: "", from: "", to: "" },
+      classes: [], kpis: { activeClasses: 0, activeStudents: 0, publishedAssignments: 0, submissions: 0, expectedSubmissions: 0, missingSubmissions: 0, pendingReview: 0, lateSubmissions: 0, completionRate: 0, average: null, highest: null, lowest: null, performanceChange: 0, followUpStudents: 0, neverLogged: 0 },
+      submissionStatus: { submitted: 0, missing: 0, pendingReview: 0, late: 0 }, gradeDistribution: [], assignmentTrend: [], classComparison: [], topicAnalytics: [], followUp: [], topImprovers: [], insights: [], students: [], studentDetail: null
+    } });
+    render(<OwnerApp />);
+    fireEvent.click(await screen.findByRole("button", { name: "لوحة بيانات سارة" }));
+    expect(window.location.hash).toBe("#/owner/teachers/" + SARA + "/dashboard");
+    expect(await screen.findByRole("heading", { level: 1, name: "لوحة البيانات: سارة" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "أقسام لوحة المالك" })).toBeNull();          // full screen: the console menu is not there
+    fireEvent.click(screen.getByRole("button", { name: "→ المعلمون" }));
+    expect(window.location.hash).toBe("#/owner/teachers");
+    expect(await screen.findByRole("button", { name: "لوحة بيانات سارة" })).toBeTruthy();
+  });
+});

@@ -10,10 +10,11 @@
 // Tadris+ P5-A2 — `#/owner/courses`: the course catalog (published / archived, owner decision D12).
 // Tadris+ P6-D — `#/owner/exams`: «بنك الامتحانات», who sees each library exam (every teacher, or a chosen group).
 // Tadris+ P9-A2 — `#/owner/legacy`: «البيانات القديمة», the owner's decision for every class without an owner.
+// Owner teacher dashboard (phase 2) — `#/owner/teachers/<accountId>/dashboard`: «لوحة البيانات» of one teacher, full screen.
 export type OwnerView = "home" | "setup" | "teachers" | "access" | "schools" | "courses" | "exams" | "legacy";
 export type OwnerSection = "home" | "teachers" | "access" | "schools" | "courses" | "exams" | "legacy";
 
-const OWNER_HASH = /^#\/owner(?:\/(setup|access|schools|courses|exams|legacy)|\/(teachers)(?:\/(t_[a-f0-9]{16}|t_legacy))?)?\/?$/;
+const OWNER_HASH = /^#\/owner(?:\/(setup|access|schools|courses|exams|legacy)|\/(teachers)(?:\/(t_[a-f0-9]{16}|t_legacy)(?:\/(dashboard))?)?)?\/?$/;
 
 export function isOwnerLocation(hash: string = typeof window === "undefined" ? "" : window.location.hash): boolean {
   return OWNER_HASH.test(String(hash || ""));
@@ -30,9 +31,17 @@ export function ownerTeacherFromHash(hash: string = typeof window === "undefined
   return m && m[3] ? m[3] : null;
 }
 
+/** Whether the address opens that teacher's «لوحة البيانات» (`#/owner/teachers/<accountId>/dashboard`). */
+export function ownerDashboardFromHash(hash: string = typeof window === "undefined" ? "" : window.location.hash): boolean {
+  const m = OWNER_HASH.exec(String(hash || ""));
+  return Boolean(m && m[3] && m[4]);
+}
+
 export const OWNER_HOME_HASH = "#/owner";
 export const OWNER_SETUP_HASH = "#/owner/setup";
 /** The address of a console section. */
 export const ownerSectionHash = (section: OwnerSection): string => (section === "home" ? OWNER_HOME_HASH : OWNER_HOME_HASH + "/" + section);
 /** The address of one teacher's page. */
 export const ownerTeacherHash = (accountId: string): string => OWNER_HOME_HASH + "/teachers/" + accountId;
+/** The address of one teacher's «لوحة البيانات». */
+export const ownerTeacherDashboardHash = (accountId: string): string => ownerTeacherHash(accountId) + "/dashboard";

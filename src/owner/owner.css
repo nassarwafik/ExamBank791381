@@ -439,3 +439,7 @@
 .eb-owner-submission-row { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-3); flex-wrap: wrap; padding: var(--eb-space-2) 0; border-bottom: 1px solid var(--eb-line); }
 .eb-owner-submission-row .eb-owner-status { margin-inline-start: var(--eb-space-2); }
 .eb-owner-library-action .eb-owner-small + .eb-owner-small { margin-inline-start: var(--eb-space-2); }
+
+/* Owner teacher dashboard — «لوحة البيانات» in each row of the teachers table (the page itself: ownerDashboard.css, lazy) */
+.eb-owner-teacher-dash { white-space: nowrap; }
+.eb-owner-dash-open { display: inline-flex; align-items: center; gap: var(--eb-space-2); white-space: nowrap; }

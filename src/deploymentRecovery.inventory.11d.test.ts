@@ -5,7 +5,7 @@
 // changing its key, or reusing a key fails here by name.
 import { describe, it, expect } from "vitest";
 
-const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./owner/OwnerLibrary.tsx", "./owner/OwnerLibrarySubmissions.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx", "./pwa/DeferredInstallGuidanceDialog.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./owner/OwnerApp.tsx", "./owner/OwnerLibrary.tsx", "./owner/OwnerLibrarySubmissions.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx", "./pwa/DeferredInstallGuidanceDialog.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const ALL = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 /** [file, component, module path, stable key] — the protected lazy views. */
@@ -67,6 +67,7 @@ const PROTECTED: [string, string, string, string][] = [
   ["./owner/OwnerEntry.tsx", "OwnerApp", "./OwnerApp", "owner-app"],
   // Tadris+ P6-E — the owner's «استيراد امتحان» (parser, checks, safe repair) loads only when opened in «بنك الامتحانات».
   ["./owner/OwnerLibrary.tsx", "OwnerLibraryImport", "./OwnerLibraryImport", "owner-library-import"],
+  ["./owner/OwnerApp.tsx", "OwnerTeacherDashboard", "./OwnerTeacherDashboard", "owner-teacher-dashboard"],   // the owner's «لوحة البيانات» of one teacher (full screen)
   // Tadris+ P6-F — the exams teachers send (lazy in «بنك الامتحانات»), and the exam preview inside it.
   ["./owner/OwnerLibrary.tsx", "OwnerLibrarySubmissions", "./OwnerLibrarySubmissions", "owner-library-submissions"],
   ["./owner/OwnerLibrarySubmissions.tsx", "ExamPreview", "../ExamPreview", "owner-submission-preview"],

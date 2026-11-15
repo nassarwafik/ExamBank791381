@@ -1,0 +1,60 @@
+/* Owner Console — «لوحة البيانات» of one teacher, full screen. Tokens only (--eb-*), logical properties only (RTL-first). */
+.eb-owner-dash {
+  position: fixed; inset: 0; z-index: var(--eb-z-overlay);
+  display: flex; flex-direction: column; overflow: auto;
+  background: var(--eb-bg); color: var(--eb-text);
+}
+.eb-owner-dash-bar {
+  position: sticky; inset-block-start: 0; z-index: var(--eb-z-sticky);
+  display: flex; align-items: center; gap: var(--eb-space-4);
+  padding: var(--eb-space-3) var(--eb-space-6);
+  background: var(--eb-surface); border-block-end: 1px solid var(--eb-line);
+}
+.eb-owner-dash-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--eb-space-3); min-width: 0; }
+.eb-owner-dash-title h1 { margin: 0; font-size: var(--eb-fs-20); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+/* the title takes focus when the page opens (so a screen reader announces it); it is not a control, so no focus ring */
+.eb-owner-dash-title h1:focus, .eb-owner-dash-title h1:focus-visible { outline: none; }
+.eb-owner-dash-user { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.eb-owner-dash-main {
+  display: flex; flex-direction: column; gap: var(--eb-space-5);
+  inline-size: 100%; max-inline-size: 1400px; margin-inline: auto; padding: var(--eb-space-5) var(--eb-space-6) var(--eb-space-7);
+  min-width: 0;
+}
+.eb-owner-dash-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--eb-space-4); }
+.eb-owner-dash-field { display: flex; flex-direction: column; gap: var(--eb-space-1); font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.eb-owner-dash-field select {
+  min-height: 40px; min-inline-size: 220px; padding-inline: var(--eb-space-3);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); background: var(--eb-surface); color: var(--eb-text); font: inherit;
+}
+.eb-owner-dash-field select:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-owner-dash-error { display: flex; flex-direction: column; align-items: flex-start; gap: var(--eb-space-3); }
+.eb-owner-dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-5); }
+.eb-owner-dash-card {
+  display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0;
+  padding: var(--eb-space-5); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg);
+}
+.eb-owner-dash-card h2 { margin: 0; font-size: var(--eb-fs-16); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.eb-owner-dash-insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-owner-dash-insights li {
+  display: flex; flex-direction: column; gap: var(--eb-space-1);
+  padding: var(--eb-space-3) var(--eb-space-4); border-radius: var(--eb-r); border-inline-start: 4px solid var(--eb-info);
+  background: var(--eb-info-bg); color: var(--eb-info-tx);
+}
+.eb-owner-dash-insights li.is-warning { border-inline-start-color: var(--eb-warn); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+.eb-owner-dash-insights li.is-success { border-inline-start-color: var(--eb-success); background: var(--eb-success-bg); color: var(--eb-success-tx); }
+.eb-owner-dash-insights strong { font-weight: var(--eb-fw-bold); }
+.eb-owner-dash-table { inline-size: 100%; border-collapse: collapse; font-size: var(--eb-fs-14); }
+.eb-owner-dash-table th, .eb-owner-dash-table td { padding: var(--eb-space-2) var(--eb-space-3); text-align: start; border-block-end: 1px solid var(--eb-line); }
+.eb-owner-dash-table thead th { color: var(--eb-muted); font-weight: var(--eb-fw-semibold); font-size: var(--eb-fs-13); }
+.eb-owner-dash-table tbody th { font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); }
+.eb-owner-dash-table tr.is-current { background: var(--eb-primary-050); }
+.eb-owner-dash-note { font-size: var(--eb-fs-13); }
+
+@media (max-width: 1023px) {
+  .eb-owner-dash-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 639px) {
+  .eb-owner-dash-bar { padding-inline: var(--eb-space-4); flex-wrap: wrap; }
+  .eb-owner-dash-main { padding-inline: var(--eb-space-4); }
+  .eb-owner-dash-field, .eb-owner-dash-field select { inline-size: 100%; min-inline-size: 0; }
+}
