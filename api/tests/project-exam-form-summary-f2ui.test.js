@@ -34,7 +34,7 @@ describe("F2-UI the form summary in the student tracker response", () => {
     const t = setup();
     expect("examForm" in (await t.project("794589"))).toBe(false);
     await t.teacher("examForm.open");
-    expect((await t.project("794589")).examForm).toEqual({ title: "استمارة امتحان المشروع", state: "open", status: "draft", started: false, answered: 0, total: 77 });
+    expect((await t.project("794589")).examForm).toEqual({ title: "استمارة امتحان المشروع", state: "open", status: "draft", started: false, answered: 0, total: 78 });
     expect("examForm" in (await t.project("899373"))).toBe(false);
   });
 
@@ -42,7 +42,7 @@ describe("F2-UI the form summary in the student tracker response", () => {
     const t = setup();
     await t.teacher("examForm.open");
     await t.save({ S01Q01: { text: "EcoResort" }, S01Q02: { text: "شبكة منتجع" } }, 0);
-    expect((await t.project("794589")).examForm).toMatchObject({ state: "open", status: "draft", started: true, answered: 2, total: 77 });
+    expect((await t.project("794589")).examForm).toMatchObject({ state: "open", status: "draft", started: true, answered: 2, total: 78 });
     expect((await t.project("794589", "s2")).examForm).toMatchObject({ started: false, answered: 0 });
     await t.teacher("examForm.close");
     expect((await t.project("794589")).examForm).toMatchObject({ state: "closed", answered: 2 });

@@ -1,6 +1,6 @@
 {
   "projectCode": "794589",
-  "formVersion": 1,
+  "formVersion": 2,
   "title": "استمارة امتحان المشروع",
   "rubric": {
     "levels": [
@@ -1621,24 +1621,20 @@
           }
         },
         {
-          "questionId": "S16Q02",
-          "prompt": "أرفق ملف Packet Tracer النهائي.",
-          "kind": "file",
-          "grading": "teacher",
+          "questionId": "S16Q05",
+          "prompt": "أشّر ما سلّمته لمعلمك مباشرة. الملفات لا تُرفع إلى الموقع.",
+          "kind": "checklist",
+          "grading": "none",
           "required": true,
-          "accept": [
-            ".pkt"
-          ]
-        },
-        {
-          "questionId": "S16Q03",
-          "prompt": "أرفق كتاب المشروع النهائي.",
-          "kind": "file",
-          "grading": "teacher",
-          "required": true,
-          "accept": [
-            ".docx",
-            ".pdf"
+          "items": [
+            {
+              "id": "h1",
+              "text": "ملف Packet Tracer النهائي"
+            },
+            {
+              "id": "h2",
+              "text": "كتاب المشروع النهائي"
+            }
           ]
         },
         {

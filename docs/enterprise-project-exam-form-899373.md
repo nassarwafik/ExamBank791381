@@ -164,5 +164,6 @@ indentation of the data file; the patterns were corrected (no test changed) and 
   want questions hidden (the teacher can hide questions before the first open — F3-UI).
 - The teacher rates each section on the rubric; the auto-marked questions are evidence shown beside the answers, as in the
   other forms.
-- The two older forms keep their file questions (a reminder to hand the file to the teacher); this one replaces them with
-  a checklist. The three are not uniform on that point.
+- When this form shipped, the two older forms kept their file questions (a reminder to hand the file to the teacher) while
+  this one asked for a tick. Their form version 2 now asks the same question
+  (`docs/enterprise-project-exam-form-hand-in-checklist.md`); classes opened before it keep the reminder.

@@ -87,7 +87,7 @@ describe("F2-UI the form's card on the student's project page", () => {
     const card = await screen.findByTestId("exam-form-card");
     expect(card.textContent).toContain("استمارة امتحان المشروع");
     expect(card.textContent).toContain("لم تبدأ");
-    expect(card.textContent).toMatch(/أجبت عن\s*0\s*من\s*77/);
+    expect(card.textContent).toMatch(/أجبت عن\s*0\s*من\s*78/);
     expect(s.requests.some(r => r.url.startsWith("/api/student-project-exam-form"))).toBe(false);   // the card itself asks nothing
 
     fireEvent.click(within(card).getByRole("button", { name: "ابدأ الاستمارة" }));
@@ -96,7 +96,7 @@ describe("F2-UI the form's card on the student's project page", () => {
     await s.save({ S01Q01: { text: "EcoResort" } }, 0);
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى المشروع" }));
     const again = await screen.findByTestId("exam-form-card");
-    await waitFor(() => expect(again.textContent).toMatch(/أجبت عن\s*1\s*من\s*77/));
+    await waitFor(() => expect(again.textContent).toMatch(/أجبت عن\s*1\s*من\s*78/));
     expect(within(screen.getByTestId("exam-form-card")).getByRole("button", { name: "أكمل من حيث توقفت" })).toBeTruthy();
   });
 
@@ -119,9 +119,9 @@ describe("F2-UI the student fills the form", () => {
     openForm();
     expect((await screen.findByRole("heading", { name: /بطاقة المشروع/, level: 3 })).textContent).toBe("1. بطاقة المشروع");
     expect(screen.getByText("مسودة")).toBeTruthy();
-    expect(screen.getByText(/أجبت عن 0 من 77/)).toBeTruthy();
+    expect(screen.getByText(/أجبت عن 0 من 78/)).toBeTruthy();
     expect(within(screen.getByRole("navigation", { name: "أقسام الاستمارة" })).getAllByRole("button")).toHaveLength(16);
-    expect(screen.getByText(/15 سؤالًا تحتاج صورًا أو ملفات/)).toBeTruthy();
+    expect(screen.getByText(/13 سؤالًا تحتاج صورًا، وهي لا تمنع التسليم الآن/)).toBeTruthy();   // form version 2: no file question waits
     expect(within(questionBox("S01Q04")).getByText(/هذا السؤال يحتاج صورة/)).toBeTruthy();
     expect(within(questionBox("S01Q04")).queryByRole("textbox")).toBeNull();
     const received = JSON.stringify(await (await fetch("/api/student-project-exam-form?projectCode=" + CODE)).json());
@@ -140,7 +140,7 @@ describe("F2-UI the student fills the form", () => {
     expect(posts).toHaveLength(1);
     expect(posts[0].body).toEqual({ projectCode: CODE, action: "saveDraft", baseRevision: 0, answers: { S01Q01: { text: "EcoResort" } } });
     await screen.findByText(/تم الحفظ/);
-    await screen.findByText(/أجبت عن 1 من 77/);
+    await screen.findByText(/أجبت عن 1 من 78/);
     first.unmount();
 
     openForm();

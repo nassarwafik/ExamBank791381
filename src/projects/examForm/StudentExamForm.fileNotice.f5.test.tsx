@@ -2,7 +2,11 @@
 /// <reference types="node" />
 // Owner decision (2026-11-15): files are not uploaded to the site. A file question of the project exam form stays on the
 // student's page as a reminder of what to hand to the teacher: it says so, takes no input, promises no upload, and never
-// blocks the submit. Over the REAL handlers (in-memory container), for both bundled forms.
+// blocks the submit. Over the REAL handlers (in-memory container), for the two forms that had file questions.
+//
+// Since form version 2 neither bundled form has a file question (a hand-in checklist took their place), so the class of
+// these tests is one that opened its form under version 1 and keeps it: its class form is the one that first open stored
+// (api/tests/fixtures/exam-form-v1.js). The notice is what such a class still reads.
 import { createRequire } from "node:module";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, act, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -11,14 +15,15 @@ import StudentExamForm from "./StudentExamForm";
 const nodeRequire = createRequire(import.meta.url);
 const { handler: studentForm } = nodeRequire("../../../api/src/functions/student-project-exam-form.js");
 const { handler: tracker } = nodeRequire("../../../api/src/functions/project-tracker.js");
-const { getExamFormTemplate } = nodeRequire("../../../api/src/lib/project-tracker/registry.js");
+const { getExamFormTemplate, getStorageNamespace } = nodeRequire("../../../api/src/lib/project-tracker/registry.js");
 const { createMemoryContainer } = nodeRequire("../../../api/tests/fixtures/memory-container.js");
+const { v1Template, seedV1ClassForm } = nodeRequire("../../../api/tests/fixtures/exam-form-v1.js");
 
 type Body = Record<string, unknown>;
 type Question = { questionId: string; kind: string; required: boolean };
 type Section = { sectionId: string; title: string; questions: Question[] };
 const NOW = "2026-11-15T00:00:00.000Z";
-const sectionsOf = (code: string) => (getExamFormTemplate(code) as { sections: Section[] }).sections;
+const sectionsOf = (code: string) => (v1Template(code) as { sections: Section[] }).sections;
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function server(code: string) {
@@ -28,7 +33,6 @@ function server(code: string) {
   });
   const common = { container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async () => {}, recordProjectMilestones: async () => {} };
   const studentDeps = { ...common, requireActiveStudentSession: async () => ({ ok: true, container: ctx.container, user: { sub: "s1", sv: 1 }, student: ctx.getJson("platform/users/s1.json") }) };
-  const teacherDeps = { ...common, requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }) };
   const sent: { method: string; url: string; body?: Body }[] = [];
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = init?.method || "GET";
@@ -37,8 +41,13 @@ function server(code: string) {
     const r = (await studentForm({ method, url: "https://x" + url, json: async () => body ?? {} }, studentDeps)) as { status: number; jsonBody: Body };
     return { ok: r.status < 400, status: r.status, json: async () => r.jsonBody } as Response;
   }) as unknown as typeof fetch;
-  const open = (extra: Body = {}) => tracker({ method: "POST", url: "https://x/api/project-tracker", json: async () => ({ projectCode: code, classId: "c1", action: "examForm.open", ...extra }) }, teacherDeps);
-  return { sent, open };
+  // The class form a first open stored while form version 1 was bundled.
+  const openedUnderV1 = (extra: Body = {}) => { seedV1ClassForm(ctx, code, "c1", { now: NOW, extra }); };
+  // A first open today, through the teacher's route: it freezes the form bundled now (version 2).
+  const teacherDeps = { ...common, requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }) };
+  const openToday = () => tracker({ method: "POST", url: "https://x/api/project-tracker", json: async () => ({ projectCode: code, classId: "c1", action: "examForm.open" }) }, teacherDeps);
+  const answers = () => (ctx.getJson(getStorageNamespace(code).examFormAnswersName("c1", "s1")) as { answers: Record<string, Body> } | null)?.answers || {};
+  return { sent, openedUnderV1, openToday, answers };
 }
 const box = (id: string) => document.querySelector('[data-question="' + id + '"]') as HTMLElement | null;
 async function goToFileQuestions(code: string) {
@@ -58,7 +67,7 @@ describe("no file uploads — a file question is a reminder to hand the file to 
   for (const [code, count] of [["794589", 2], ["883589", 1]] as const) {
     it(code + ": every file question says so, takes no input and promises no upload", async () => {
       const s = server(code);
-      await s.open({ imageAnswers: true });
+      s.openedUnderV1({ imageAnswers: true });
       render(<StudentExamForm token="st" projectCode={code} onClose={() => {}} saveDelayMs={5} />);
       const files = await goToFileQuestions(code);
       expect(files).toHaveLength(count);
@@ -83,7 +92,7 @@ describe("no file uploads — a file question is a reminder to hand the file to 
 
   it("a class with image answers off reads the same about files", async () => {
     const s = server("794589");
-    await s.open();
+    s.openedUnderV1();
     render(<StudentExamForm token="st" projectCode="794589" onClose={() => {}} saveDelayMs={5} />);
     const files = await goToFileQuestions("794589");
     await settle();
@@ -93,4 +102,37 @@ describe("no file uploads — a file question is a reminder to hand the file to 
     expect(note).toContain("الملفات تُسلَّم لمعلمك مباشرة ولا تُرفع إلى الموقع");
     expect(document.body.textContent).not.toMatch(/إرفاق الملفات سيتاح|إرفاقها سيتاح/);
   });
+
+  it("the forms bundled now have no file question", () => {
+    for (const code of ["794589", "883589", "899373"]) {
+      const questions = (getExamFormTemplate(code) as { sections: Section[] }).sections.flatMap(x => x.questions);
+      expect(questions.filter(q => q.kind === "file"), code).toEqual([]);
+    }
+  });
+});
+
+describe("form version 2 — a class opened today ticks what was handed to the teacher", () => {
+  for (const [code, first] of [["794589", "ملف Packet Tracer النهائي"], ["883589", "مشروع Visual Studio النهائي"]] as const) {
+    it(code + ": the last section shows the hand-in checklist as two checkboxes, and a tick is saved", async () => {
+      const s = server(code);
+      await s.openToday();
+      render(<StudentExamForm token="st" projectCode={code} onClose={() => {}} saveDelayMs={5} />);
+      const sections = (getExamFormTemplate(code) as { sections: Section[] }).sections;
+      const last = sections[sections.length - 1];
+      const nav = await screen.findByRole("navigation", { name: "أقسام الاستمارة" });
+      fireEvent.click(within(nav).getByRole("button", { name: new RegExp(escape(last.title)) }));
+      await waitFor(() => expect(box("S16Q05")).not.toBeNull());
+      const q = box("S16Q05")!;
+      expect(q.textContent).toContain("أشّر ما سلّمته لمعلمك مباشرة. الملفات لا تُرفع إلى الموقع.");
+      const ticks = within(q).getAllByRole("checkbox") as HTMLInputElement[];
+      expect(ticks).toHaveLength(2);
+      expect(within(q).getByRole("checkbox", { name: first })).toBeTruthy();
+      expect(within(q).getByRole("checkbox", { name: "كتاب المشروع النهائي" })).toBeTruthy();
+      expect(ticks.every(t => !t.checked)).toBe(true);                               // nothing is ticked for the student
+      expect(q.querySelector('input[type="file"]')).toBeNull();
+      expect(document.body.textContent).not.toContain("سلّم الملف لمعلمك مباشرة");     // no file question, so no file notice
+      fireEvent.click(within(q).getByRole("checkbox", { name: "كتاب المشروع النهائي" }));
+      await waitFor(() => expect(s.answers().S16Q05).toEqual({ checked: ["h2"] }));
+    });
+  }
 });
