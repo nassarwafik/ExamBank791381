@@ -1375,6 +1375,446 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "DS-A2 (docs/enterprise-data-structures-course.md) — the learning library lists a fifth course, «الوحدة الرابعة — مبنى المعطيات» (899271d): one more course card after «الوحدة الخامسة — الأتمتة» (the page is one card row taller, and the count of available books reads 5). Nothing else on the page moves."
+    },
+    {
+      "page": "appearance-compact",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-compact",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-forest",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-forest",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-ocean",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-ocean",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-sand",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "appearance-sand",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "assignments",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "assignments",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "audit",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "audit",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "bank",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "bank",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "bank-exams",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "bank-exams",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "bank-questions",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "bank-questions",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "dashboard",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "dashboard",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "games",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "games",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "games-conversion",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "games-conversion",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "games-live",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "games-live",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "import",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "import",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "messages",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "messages",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "messages-thread",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "messages-thread",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-dashboard",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-dashboard",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-settings",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-settings",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-students",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "project-students",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "projects",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "projects",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "report-class",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "report-class",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "report-student",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "report-student",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "reports",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "reports",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "reviews",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "reviews",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "students",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "students",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "desktop",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "tablet",
+      "reason": "Teacher home — the top bar's «الرئيسية» pill now opens the new welcome page and carries a small home icon before its label (the owner's request); the pill is a few pixels wider and the quick-navigation field beside it shifts by the same amount. Nothing else on the page moves. The phone hides the pill, so it does not change."
+    },
+    {
+      "page": "studio-publish",
+      "viewport": "desktop",
+      "reason": "Teacher home — the «الرئيسية» pill's new home icon shows through the studio overlay's backdrop at its edge (a handful of pixels in the top bar); the studio itself does not change."
+    },
+    {
+      "page": "studio-publish",
+      "viewport": "tablet",
+      "reason": "Teacher home — the «الرئيسية» pill's new home icon shows through the studio overlay's backdrop at its edge (a handful of pixels in the top bar); the studio itself does not change."
+    },
+    {
+      "page": "studio-review",
+      "viewport": "desktop",
+      "reason": "Teacher home — the «الرئيسية» pill's new home icon shows through the studio overlay's backdrop at its edge (a handful of pixels in the top bar); the studio itself does not change."
+    },
+    {
+      "page": "studio-review",
+      "viewport": "tablet",
+      "reason": "Teacher home — the «الرئيسية» pill's new home icon shows through the studio overlay's backdrop at its edge (a handful of pixels in the top bar); the studio itself does not change."
     }
   ]
 }
