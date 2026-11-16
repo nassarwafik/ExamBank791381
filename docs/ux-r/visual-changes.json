@@ -1820,6 +1820,11 @@
       "page": "project-analytics",
       "viewport": "all",
       "reason": "Project statistics — live follow-up: the «الإحصائيات» heading row gains the «Live» and «ملء الشاشة» buttons at its end (the owner's request). The charts and the heatmap below do not change; the exam form's charts appear only for a class whose form was opened, which the captured class is not."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Classic builder — the access bar gains «العودة إلى استوديو الامتحان» after «استيراد امتحان منظّم» (the owner's request: a visible way back to the Exam Studio from the classic page). The bar sits in the page under the open editor this scene captures: the editor's pixels do not change, but the extra button wraps the bar onto one more row, so the document is a row taller (desktop 977 → 1006 px)."
     }
   ]
 }
