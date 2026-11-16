@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Owner Console «لوحة البيانات» (phase 1) — mutation proof for GET /api/owner-teacher-dashboard: owner-only, scoped to ONE teacher,
+// Owner Console «لوحة البيانات» (phases 1 and 4) — mutation proof for GET /api/owner-teacher-dashboard: owner-only, scoped to ONE teacher,
 // recorded strictly. Same engine and rules as scripts/mutate-p3c.mjs (byte-for-byte restore, sha256 verified; a timeout is not a kill).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -9,17 +9,23 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = buf => createHash("sha256").update(buf).digest("hex");
-const TESTS = ["api/tests/owner-teacher-dashboard.test.js"];
+const TESTS = ["api/tests/owner-teacher-dashboard.test.js", "api/tests/owner-teacher-progress.test.js"];
+const PROGRESS = "api/src/lib/owner-teacher-progress.js";   // phase 4
 const ROUTE = "api/src/functions/owner-teacher-dashboard.js";
 
 export const MUTANTS = [
-  { id: "OTD-M1", what: "the figures are computed unscoped (the whole platform)", edits: [{ file: ROUTE, find: "const result = await compute(container, { classId, studentId, fromMs, toMs, tenant, assignments: true, shows: () => true });", replace: "const result = await compute(container, { classId, studentId, fromMs, toMs, tenant: null, assignments: true, shows: () => true });" }] },
+  { id: "OTD-M1", what: "the figures are computed unscoped (the whole platform)", edits: [{ file: ROUTE, find: "result = await compute(container, { classId, studentId, fromMs, toMs, tenant, assignments: true, shows: () => true });", replace: "result = await compute(container, { classId, studentId, fromMs, toMs, tenant: null, assignments: true, shows: () => true });" }] },
   { id: "OTD-M2", what: "the scope is another identity than the teacher's own session", edits: [{ file: ROUTE, find: "  return tenantOf({ am: \"managed\", sub: accountId });", replace: "  return tenantOf({ am: \"managed\", sub: \"t_00112233445566bb\" });" }] },
   { id: "OTD-M3", what: "no owner session required", edits: [{ file: ROUTE, find: "  if (!auth.ok) return auth.response;\n", replace: "  if (!auth.ok) { auth.owner = { accountId: \"x\" }; auth.container = (deps.getContainer)(); }\n" }] },
   { id: "OTD-M4", what: "the view is not recorded", edits: [{ file: ROUTE, find: "    await audit(container, {", replace: "    void (() => audit)(container, {" }] },
   { id: "OTD-M5", what: "a view that cannot be recorded is served anyway (fail open)", edits: [{ file: ROUTE, find: "    await audit(container, {", replace: "    await Promise.resolve().then(() => audit(container, {" }, { file: ROUTE, find: "    });\n    return reply(200, {", replace: "    })).catch(() => {});\n    return reply(200, {" }] },
   { id: "OTD-M6", what: "an unknown account is answered with figures", edits: [{ file: ROUTE, find: "    if (!account) return reply(404,", replace: "    if (false) return reply(404," }] },
-  { id: "OTD-M7", what: "the record carries the student id", edits: [{ file: ROUTE, find: "details: { scope: studentId ? \"student\" : classId ? \"class\" : \"global\",", replace: "details: { studentId, scope: studentId ? \"student\" : classId ? \"class\" : \"global\"," }] },
+  { id: "OTD-M7", what: "the record carries the student id", edits: [{ file: ROUTE, find: "details: { scope: view === \"progress\" ? \"progress\" : studentId ?", replace: "details: { studentId, scope: view === \"progress\" ? \"progress\" : studentId ?" }] },
+  // phase 4 — the learning / project progress (view=progress)
+  { id: "OTD-M9", what: "progress: another teacher's classes are counted (the tenancy filter dropped)", edits: [{ file: PROGRESS, find: ".filter(c => c && c.classId && canAccessDocument(c, tenant))", replace: ".filter(c => c && c.classId)" }] },
+  { id: "OTD-M10", what: "progress: archived classes are counted in the default view", edits: [{ file: PROGRESS, find: ": normalizeClassStatus(c) === \"active\"))", replace: ": true))" }] },
+  { id: "OTD-M11", what: "progress: the view is recorded as an ordinary global view", edits: [{ file: ROUTE, find: "scope: view === \"progress\" ? \"progress\" : studentId", replace: "scope: studentId" }] },
+  { id: "OTD-M12", what: "progress: a reading average computed over all students of every class, not this class", edits: [{ file: PROGRESS, find: "averageRead: students && summary.totalPages ? Math.round(read / (students * summary.totalPages) * 100) : 0,", replace: "averageRead: students && summary.totalPages ? Math.round(read / ((students + 1) * summary.totalPages) * 100) : 0," }] },
   { id: "OTD-M8", what: "a storage failure serves an empty answer instead of 503", edits: [{ file: ROUTE, find: "    obs?.logError?.(\"owner.teacher.dashboard.error\", e);\n    return unavailable();", replace: "    obs?.logError?.(\"owner.teacher.dashboard.error\", e);\n    return reply(200, { ok: true });" }] }
 ];
 

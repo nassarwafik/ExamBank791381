@@ -418,10 +418,22 @@ export type OwnerTeacherDashboard = {
   studentDetail: (Omit<DashboardStudent, "severity" | "identityNumber"> & { needsFollowUp?: boolean; scoreTrend: Array<{ assignmentId: string; title: string; date: string; percentage: number }>; topicAnalytics: Array<{ topic: string; average: number | null; gradedQuestions: number }> }) | null;
 };
 export type DashboardQuery = { classId?: string; studentId?: string; from?: string; to?: string };
+/** Phase 4 — per class: how far the students read each learning book, and how far they got in each project. */
+export type DashboardProgress = {
+  ok: true; teacher: OwnerTeacherDashboard["teacher"];
+  learning: Array<{ classId: string; className: string; courseId: string; courseTitle: string; students: number; totalPages: number; averageRead: number; startedStudents: number; completedStudents: number;
+    modules: Array<{ moduleId: string; title: string; order: number; total: number; started: number; completed: number; averageRead: number }> }>;
+  projects: Array<{ classId: string; className: string; projectCode: string; title: string; studentCount: number; avgOverall: number; completedCount: number; studentsReadyForReview: number; totalReadyStages: number; staleCount: number }>;
+};
 export const ownerDashboardApi = {
   get: (token: string, accountId: string, q: DashboardQuery = {}) => {
     const params = new URLSearchParams({ accountId });
     for (const k of ["classId", "studentId", "from", "to"] as const) if (q[k]) params.set(k, String(q[k]));
     return call<OwnerTeacherDashboard>("/api/owner-teacher-dashboard?" + params.toString(), { token });
+  },
+  progress: (token: string, accountId: string, classId = "") => {
+    const params = new URLSearchParams({ accountId, view: "progress" });
+    if (classId) params.set("classId", classId);
+    return call<DashboardProgress>("/api/owner-teacher-dashboard?" + params.toString(), { token });
   }
 };
