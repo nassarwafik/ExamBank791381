@@ -6,12 +6,16 @@ const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 const { readTeacherAccount } = require("../lib/identity/teacher-accounts");
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { computeTeacherAnalytics, AnalyticsScopeError } = require("../lib/teacher-analytics-core");
+const { computeTeacherProgress } = require("../lib/owner-teacher-progress");   // phase 4
 
 // Owner Console — «لوحة البيانات» of ONE teacher (owner decisions of 2026-11-15: recorded in the owner's audit log without student
 // data · student names shown · no step-up, read only · learning materials and projects follow in a later phase).
 //
 //   GET /api/owner-teacher-dashboard?accountId=<teacher account>[&classId=][&studentId=][&from=][&to=]
 //     (owner session only)  → { ok, teacher: { accountId, username, displayName, status }, ...the teacher dashboard figures }
+//   GET /api/owner-teacher-dashboard?accountId=<teacher account>&view=progress[&classId=]   (phase 4)
+//     → { ok, teacher, learning: [per class × course: reading progress], projects: [per class × project: progress summary] }
+//     from the SAME computations as the teacher's own reading-progress and project summaries (lib/owner-teacher-progress.js).
 //
 // The figures are computed by the SAME function as the teacher's own «لوحة المتابعة» (lib/teacher-analytics-core.js), with the SAME
 // scope the teacher's own session has: the tenant of a managed session of that account (tenantOf — exactly what the teacher's
@@ -51,19 +55,27 @@ async function handler(request, deps = {}, obs = null) {
   const studentId = String(queryParam(request, "studentId")).trim();
   const fromMs = timestamp(queryParam(request, "from"));
   const toMs = timestamp(queryParam(request, "to"));
+  const view = String(queryParam(request, "view")).trim();
+  if (view && view !== "progress") return reply(400, { ok: false, code: "VIEW_INVALID", error: "طلب غير صالح." });
   const tenant = teacherScope(accountId);
   if (!tenant) return unavailable();                                                // never an unscoped (whole-platform) answer
 
   try {
     const account = await (deps.readTeacherAccount || readTeacherAccount)(container, accountId);
     if (!account) return reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود." });
-    const compute = deps.computeTeacherAnalytics || computeTeacherAnalytics;
-    const result = await compute(container, { classId, studentId, fromMs, toMs, tenant, assignments: true, shows: () => true });
+    let result;
+    if (view === "progress") {
+      if (classId && !/^[A-Za-z0-9_-]{1,64}$/.test(classId)) return reply(400, { ok: false, code: "CLASS_ID_INVALID", error: "معرّف الصف غير صالح." });
+      result = await (deps.computeTeacherProgress || computeTeacherProgress)(container, { tenant, classId }, deps);
+    } else {
+      const compute = deps.computeTeacherAnalytics || computeTeacherAnalytics;
+      result = await compute(container, { classId, studentId, fromMs, toMs, tenant, assignments: true, shows: () => true });
+    }
     const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;
     await audit(container, {
       actor: "owner:" + owner.accountId, action: "owner.teacher.dashboard.viewed", targetType: "teacher-account", targetId: accountId,
       targetLabel: String(account.username || accountId),
-      details: { scope: studentId ? "student" : classId ? "class" : "global", ...(classId ? { classId } : {}), ...(fromMs || toMs ? { from: fromMs ? new Date(fromMs).toISOString() : "", to: toMs ? new Date(toMs).toISOString() : "" } : {}) }
+      details: { scope: view === "progress" ? "progress" : studentId ? "student" : classId ? "class" : "global", ...(classId ? { classId } : {}), ...(fromMs || toMs ? { from: fromMs ? new Date(fromMs).toISOString() : "", to: toMs ? new Date(toMs).toISOString() : "" } : {}) }
     });
     return reply(200, {
       ok: true,

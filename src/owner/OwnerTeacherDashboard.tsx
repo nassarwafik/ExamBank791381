@@ -3,13 +3,15 @@ import { IconWarning, IconRefresh, IconChevronBack, IconPrint } from "../icons";
 import KpiStrip from "../ui/KpiStrip";
 import { ownerDashboardApi, type OwnerTeacherDashboard as Dashboard, type DashboardStudent } from "./ownerApi";
 import { DashboardCharts } from "./OwnerDashboardCharts";
+import OwnerDashboardProgress from "./OwnerDashboardProgress";   // phase 4
 import { RANGES, rangeFrom, pct, type RangeKey } from "./ownerDashboardFormat";
 import "./ownerDashboard.css";
 
 /**
  * Owner Console — «لوحة البيانات» of one teacher, full screen (`#/owner/teachers/<accountId>/dashboard`; its own lazy chunk).
  * Phase 2: the page, its filters (class, period), the headline figures, the classes and the written insights. Phase 3: the charts
- * (OwnerDashboardCharts), the students who need follow-up and the most improved, one student's detail (a name opens it), printing. The figures are the teacher's own «لوحة المتابعة» (GET /api/owner-teacher-dashboard: owner only, read only, every view
+ * (OwnerDashboardCharts), the students who need follow-up and the most improved, one student's detail (a name opens it), printing.
+ * Phase 4: the progress in the learning materials and the projects per class (OwnerDashboardProgress, its own request). The figures are the teacher's own «لوحة المتابعة» (GET /api/owner-teacher-dashboard: owner only, read only, every view
  * recorded in the owner's audit log). A 401 signs out; any other refusal shows the server's message with «إعادة المحاولة».
  */
 
@@ -156,6 +158,7 @@ export default function OwnerTeacherDashboard({ token, accountId, onBack, onSign
                 </section>
               </div>
             )}
+            {!detail && data.classes.length > 0 && <OwnerDashboardProgress token={token} accountId={accountId} classId={classId} onSignedOut={onSignedOut} />}
             {!detail && (data.followUp.length > 0 || data.topImprovers.length > 0) && (
               <div className="eb-owner-dash-grid">
                 <StudentList title="طلاب يحتاجون متابعة" id="dash-follow" items={data.followUp} reasons onPick={pickStudent} />

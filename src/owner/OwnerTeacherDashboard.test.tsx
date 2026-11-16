@@ -21,13 +21,24 @@ const answer = (over: Record<string, unknown> = {}) => ({
 });
 
 let calls: string[] = [];
+// phase 4 — the progress section asks separately (view=progress); its requests are kept apart from the figures' requests
+let progressCalls: string[] = [];
+const PROGRESS = {
+  ok: true, teacher: { accountId: "t_00112233445566aa", username: "t.sara", displayName: "سارة", status: "active" },
+  learning: [{ classId: "c1", className: "العاشر أ", courseId: "791381", courseTitle: "أسس علم الحاسوب", students: 24, totalPages: 300, averageRead: 37, startedStudents: 18, completedStudents: 2, modules: [] }],
+  projects: [{ classId: "c1", className: "العاشر أ", projectCode: "899373", title: "مشروع الشبكات", studentCount: 24, avgOverall: 81, completedCount: 5, studentsReadyForReview: 3, totalReadyStages: 4, staleCount: 1 }]
+};
+let respondProgress: () => { status: number; body: unknown } = () => ({ status: 200, body: PROGRESS });
 let respond: (url: string) => { status: number; body: unknown } = () => ({ status: 200, body: answer() });
 beforeEach(() => {
   calls = [];
+  progressCalls = [];
   respond = () => ({ status: 200, body: answer() });
+  respondProgress = () => ({ status: 200, body: PROGRESS });
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit = {}) => {
-    calls.push(url);
     expect((init.headers as Record<string, string>)["x-owner-token"]).toBe("owner-tok");
+    if (url.includes("view=progress")) { progressCalls.push(url); const p = respondProgress(); return { ok: p.status < 300, status: p.status, json: async () => p.body } as unknown as Response; }
+    calls.push(url);
     const r = respond(url);
     return { ok: r.status < 300, status: r.status, json: async () => r.body } as unknown as Response;
   }));
@@ -131,6 +142,32 @@ describe("the full-screen page", () => {
     mount();
     fireEvent.click(await screen.findByRole("button", { name: /طباعة/ }));
     expect(print).toHaveBeenCalled();
+  });
+  it("phase 4: the progress in the learning materials and the projects, per class, follows the class filter", async () => {
+    mount();
+    const section = await screen.findByRole("region", { name: "التقدّم في المواد والمشاريع" });
+    await within(section).findByText("37%");
+    expect(query(progressCalls[0])).toEqual({ accountId: SARA, view: "progress" });
+    const learning = within(section).getByRole("table", { name: "قراءة المواد التعليمية لكل صف" });
+    expect(within(learning).getByRole("rowheader").textContent).toContain("أسس علم الحاسوب");
+    expect(within(learning).getByText("18 من 24")).toBeTruthy();
+    const projects = within(section).getByRole("table", { name: "التقدّم في المشاريع لكل صف" });
+    expect(within(projects).getByText("81%")).toBeTruthy();
+    expect(within(projects).getByText("5 من 24")).toBeTruthy();
+    fireEvent.change(screen.getByRole("combobox", { name: "الصف" }), { target: { value: "c1" } });
+    await waitFor(() => expect(progressCalls).toHaveLength(2));
+    expect(query(progressCalls[1])).toEqual({ accountId: SARA, view: "progress", classId: "c1" });
+  });
+  it("phase 4: a progress refusal stays inside its section (the figures above still show) and can be retried", async () => {
+    respondProgress = () => ({ status: 503, body: { ok: false, code: "OWNER_DASHBOARD_UNAVAILABLE", error: "تعذر التحميل الآن." } });
+    mount();
+    const heading = await screen.findByRole("heading", { name: "التقدّم في المواد والمشاريع" });
+    const section = heading.closest("section") as HTMLElement;
+    expect((await within(section).findByRole("alert")).textContent).toContain("تعذر التحميل الآن.");
+    expect(screen.getByLabelText("المؤشرات الرئيسية")).toBeTruthy();
+    respondProgress = () => ({ status: 200, body: PROGRESS });
+    fireEvent.click(within(section).getByRole("button", { name: "إعادة المحاولة" }));
+    expect(await within(section).findByText("37%")).toBeTruthy();
   });
   it("formats the figures", () => {
     expect([pct(null), pct(85.03), pct(78.46), pct(100)]).toEqual(["—", "85%", "78.5%", "100%"]);
