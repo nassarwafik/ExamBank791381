@@ -2,12 +2,12 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
-const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
-const { isStudentInClass } = require("../lib/class-membership");   // Tadris+ P11-C: a shared student reads this class's course too
-const { classHasLearningCourse, getVisibleLearningModuleIds } = require("../lib/class-learning-materials");
-const { listLearningModules } = require("../lib/learning-materials-registry");
-const { progressDocName, loadPageIndex, classProgressSummary } = require("../lib/learning-progress");
+const { classHasLearningCourse } = require("../lib/class-learning-materials");
+const { loadPageIndex } = require("../lib/learning-progress");
+// the ONE class-reading computation, shared with the owner teacher dashboard (lib/learning-class-reading.js)
+const { classReadingSummary } = require("../lib/learning-class-reading");
 const { logReadCost } = require("../lib/read-cost-log");
 
 // Phase L.4 — GET /api/learning-class-progress/{classId}/{courseId}: how far a CLASS has read a book, for its teacher.
@@ -17,7 +17,7 @@ const { logReadCost } = require("../lib/read-cost-log");
 // course must be attached to it, and only the units published to it NOW are reported. Members come from the class's own
 // studentIds index and are re-checked against their user documents (an archived or moved student is never counted). Read-only:
 // one class read, one user read and one progress read per member. Per-unit counts only — never the exact pages a student read.
-const CP = "platform/classes/", UP = "platform/users/";
+const CP = "platform/classes/";
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "الصف أو الكتاب غير موجود." } };
 
@@ -38,20 +38,8 @@ async function handler(request, deps = {}, obs = null) {
     if (!classroom || !canAccessDocument(classroom, tenantOf(auth.user))) return NOT_FOUND;
     if (!classHasLearningCourse(classroom, courseId)) return NOT_FOUND;
 
-    // Members: the class's denormalized index when present (the normal case), else the authoritative user scan.
-    let users;
-    if (Array.isArray(classroom.studentIds)) {
-      const ids = [...new Set(classroom.studentIds.map(id => String(id || "").trim()).filter(id => ID.test(id)))];
-      users = await (deps.mapConcurrent || mapConcurrent)(ids, getReadConcurrency(), id => dl(container, UP + id + ".json"));
-    } else {
-      users = await (deps.listJson || listJson)(container, UP);
-    }
-    const members = users.filter(u => isStudentInClass(u, classId) && u.active !== false);
-    const docs = await (deps.mapConcurrent || mapConcurrent)(members, getReadConcurrency(), u => dl(container, progressDocName(u.userId)));
-    const visibleIds = new Set(getVisibleLearningModuleIds(classroom, courseId));
-    const modules = listLearningModules(courseId).filter(m => visibleIds.has(m.moduleId));
-    const summary = classProgressSummary(index, modules, members.map((u, i) => ({ userId: String(u.userId), displayName: String(u.displayName || ""), code: String(u.code || ""), doc: docs[i] })));
-    logReadCost(obs, "learning.class_progress.read_cost", { classDocs: 1, userDocs: users.length, progressDocs: members.length });
+    const { summary, cost } = await classReadingSummary(container, { ...classroom, classId }, courseId, index, deps);
+    logReadCost(obs, "learning.class_progress.read_cost", { classDocs: 1, ...cost });
     return { status: 200, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: true, classId, courseId, generatedAt: new Date(typeof deps.nowMs === "number" ? deps.nowMs : Date.now()).toISOString(), ...summary } };
   } catch (e) {
     obs?.logError?.("learning.class_progress.error", e);
