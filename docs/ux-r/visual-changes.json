@@ -1815,6 +1815,11 @@
       "page": "studio-review",
       "viewport": "tablet",
       "reason": "Teacher home — the «الرئيسية» pill's new home icon shows through the studio overlay's backdrop at its edge (a handful of pixels in the top bar); the studio itself does not change."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "all",
+      "reason": "Project statistics — live follow-up: the «الإحصائيات» heading row gains the «Live» and «ملء الشاشة» buttons at its end (the owner's request). The charts and the heatmap below do not change; the exam form's charts appear only for a class whose form was opened, which the captured class is not."
     }
   ]
 }
