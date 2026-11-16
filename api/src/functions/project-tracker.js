@@ -20,6 +20,7 @@ const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjec
 const svc = require("../lib/project-tracker/service");
 const examForms = require("../lib/project-tracker/exam-form-service");   // Phase F2
 const examReview = require("../lib/project-tracker/exam-form-review-service");   // Phase F3
+const examStats = require("../lib/project-tracker/exam-form-stats");   // the form's class statistics (numbers only)
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
@@ -303,6 +304,18 @@ async function handler(request, deps = {}, obs = null) {
             const studentId = String(url.searchParams.get("studentId") || "").trim();
             if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
             return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, ...(await examReview.teacherStudentForm(container, projectCode, classId, studentId)) } };
+          } catch (e) {
+            if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
+            throw e;
+          }
+        }
+
+        // The class statistics of the form for the «الإحصائيات» charts: numbers only (no answer, no key, no mark). `stats` is
+        // null for a project without a form and for a class whose form was never opened. A read only.
+        if (resource === "exam-form-stats") {
+          try {
+            const classStudents = await svc.listClassStudentsForReadViews(container, classId);
+            return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, stats: await examStats.classFormStats(container, projectCode, classId, classStudents, now) } };
           } catch (e) {
             if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
             throw e;

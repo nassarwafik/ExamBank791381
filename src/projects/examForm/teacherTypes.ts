@@ -56,3 +56,23 @@ export const STATUS_BADGE: Record<TeacherFormStatus, { tone: "success" | "neutra
 };
 
 export const entryText = (list: ExamFormEntry[] | undefined, id: string) => (list || []).find(e => e.id === id)?.text || id;
+
+/** The class statistics of the form (resource exam-form-stats): numbers only — no answer, key or mark. */
+export type FormStatsBucket = "0" | "1-25" | "26-50" | "51-75" | "76-99" | "100";
+export type FormStatsStudent = {
+  studentId: string; displayName: string; status: TeacherFormStatus;
+  answered: number; total: number; percent: number; updatedAt: string; submittedAt: string;
+  /** The student's own form was saved within the last `activeWindowSeconds`. */
+  active: boolean;
+};
+export type FormStatsSection = { sectionId: string; title: string; order: number; questions: number; averagePercent: number; completeCount: number };
+export type FormStats = {
+  state: "open" | "closed"; title: string; formVersion: number;
+  generatedAt: string; activeWindowSeconds: number;
+  studentCount: number; totalQuestions: number;
+  counts: Record<TeacherFormStatus, number>; buckets: Record<FormStatsBucket, number>;
+  activeNow: number; averagePercent: number;
+  students: FormStatsStudent[]; sections: FormStatsSection[];
+};
+/** One point of the live follow-up: the class at the moment of one refresh. */
+export type FormStatsTrendPoint = { at: string; averagePercent: number; activeNow: number; handedIn: number };
