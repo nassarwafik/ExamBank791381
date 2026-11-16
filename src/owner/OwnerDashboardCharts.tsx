@@ -48,7 +48,7 @@ function TrendLine({ items, label, reduce }: { items: { title: string; className
   const options: ChartOptions<"line"> = {
     responsive: true, maintainAspectRatio: false, animation: animation(reduce, 900), interaction: { mode: "index", intersect: false },
     plugins: { legend: { display: false }, tooltip: { rtl: true, callbacks: { label: i => " " + label + ": " + Number(i.raw || 0).toFixed(1) + "%" } } },
-    scales: { y: { position: "right", beginAtZero: true, max: 100, ticks: { color: t.text, callback: v => v + "%" }, grid: { color: t.grid } }, x: { reverse: true, grid: { display: false }, ticks: { color: t.text, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } }, }
+    scales: { y: { position: "right", beginAtZero: true, max: 100, ticks: { color: t.text, callback: v => v + "%" }, grid: { color: t.grid } }, x: { reverse: true, grid: { display: false }, ticks: { color: t.text, maxRotation: 0, autoSkip: true, maxTicksLimit: 8, align: "inner" } }, }
   };
   return <div className="eb-owner-dash-canvas is-line"><Line data={data} options={options} aria-hidden="true" /></div>;
 }

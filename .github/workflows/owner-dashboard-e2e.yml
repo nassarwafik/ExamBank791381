@@ -1,0 +1,52 @@
+name: Owner Teacher Dashboard E2E (Real Chromium)
+# Owner teacher dashboard, phase 5 (docs/enterprise-owner-teacher-dashboard.md) — «لوحة البيانات» end to end on the production build
+# in a real Chromium, against the real API in process (test data only): every part of the page, axe-core, the phone width, the
+# owner audit, and the timings of a large teacher. A NEW gate (it weakens nothing): it runs whenever the owner console, the shared
+# chart pieces, the API, the harness or this check changes. Nothing is deployed and no secret is used.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/owner/**"
+      - "src/ui/**"
+      - "src/teacher/dashboardChartTables.ts"
+      - "src/projects/chartPalette.ts"
+      - "api/src/**"
+      - "browser-harness/learning-l8-api.cjs"
+      - "scripts/check-owner-dashboard-e2e.mjs"
+      - "docs/enterprise-owner-teacher-dashboard.md"
+      - ".github/workflows/owner-dashboard-e2e.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: "«لوحة البيانات» in real Chromium (test data)"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets, the API and the measuring tools
+        run: |
+          npm ci
+          npm ci --prefix api
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0 axe-core@4.10.2
+          command -v google-chrome
+      - name: Check «لوحة البيانات» end to end in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          AXE_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-owner-dashboard
+        run: node scripts/check-owner-dashboard-e2e.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: owner-dashboard-e2e
+          path: .harness-owner-dashboard/
+          include-hidden-files: true
+          retention-days: 7
