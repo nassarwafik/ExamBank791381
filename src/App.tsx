@@ -6457,6 +6457,12 @@ function App() {
             </button>
           )}
 
+          {/* The way back to the Exam Studio (and its exams list) from the classic page itself: before, the only one sat inside
+              the open builder's tools menu, so a teacher who pressed «الواجهة الكلاسيكية» found no visible return. */}
+          <button onClick={() => changeBuilderLayout("studio")}>
+            ✨ العودة إلى استوديو الامتحان
+          </button>
+
           <span>
             افتح امتحانًا محفوظًا أو استخدم قالبًا لبناء امتحان جديد من نفس الصفحة.
           </span>
