@@ -61,6 +61,12 @@ describe("T1 — pre-start payload", () => {
     expect(out.exam.studentTools).toEqual(TOOLS);
     expect(out.exam.sections).toBeUndefined();
   });
+  it("delivers the CANONICAL copy, never the stored value itself", () => {
+    const raw = { version: 1, tools: [{ id: "baseConverter", bases: [16, 2, 10], showSteps: false }] };
+    const out = preStartAssignment(a(exam({ studentTools: raw })), false, "continuous").exam.studentTools;
+    expect(out).toEqual({ version: 1, tools: [{ id: "baseConverter", bases: [2, 10, 16], showSteps: false }] });
+    expect(out).not.toBe(raw);
+  });
   it("omits malformed or absent tools", () => {
     expect("studentTools" in preStartAssignment(a(exam({ studentTools: { ...TOOLS, x: 1 } })), false).exam).toBe(false);
     expect("studentTools" in preStartAssignment(a(exam({})), false).exam).toBe(false);
