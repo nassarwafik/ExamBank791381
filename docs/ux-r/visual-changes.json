@@ -1829,7 +1829,7 @@
     {
       "page": "studio-setup",
       "viewport": "all",
-      "reason": "Exam Studio setup step — the new «أدوات الطالب» panel (Phase T2/T3, the owner's request) appears under «الغلاف والتعليمات»: one row per student tool (calculator, base converter, function plotter marked «قريبًا», IPv4 calculator), all off for the captured exam. Nothing above it moves; the page is taller by the panel."
+      "reason": "Exam Studio setup step — the new «أدوات الطالب» panel (Phase T2/T3, the owner's request) appears under «الغلاف والتعليمات»: one row per student tool (calculator, base converter, function plotter, IPv4 calculator), all off for the captured exam. Nothing above it moves; the page is taller by the panel."
     },
     {
       "page": "state-classic-builder",

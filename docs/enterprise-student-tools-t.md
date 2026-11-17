@@ -1,10 +1,9 @@
-# Phase T — Student Exam Tools (design record; T0 – T3)
+# Phase T — Student Exam Tools (design record; T0 – T4)
 
-> STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator) and T3
-> (base converter, answer-risk notes, tools in the teacher preview, draggable panel) are implemented on branch
-> `claude/stoic-brown-yscldn`. They are waiting for independent review and the owner's manual merge. An exam without `studentTools`
-> looks, is delivered and is graded exactly as before. The function plotter is in the contract but has no UI yet: the Builder can't
-> switch it on, and the tool bar never lists it.
+> STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator), T3
+> (base converter, answer-risk notes, tools in the teacher preview, draggable panel) and T4 (function plotter) are implemented on
+> branch `claude/stoic-brown-yscldn`. They are waiting for independent review and the owner's manual merge. An exam without
+> `studentTools` looks, is delivered and is graded exactly as before. All four contract tools now have a student UI.
 
 ## 1. Goal
 
@@ -120,8 +119,8 @@ converter answers conversion questions. The catalog records this for each tool (
 | T1 | contract, catalog, IPv4 engine, quality gate, shared build, assignment gate, student / pre-start / preview projections | done (this branch) |
 | T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunk, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | done (this branch) |
 | T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | done (this branch) |
-| T4 | function plotter on `FunctionGraphView` | next |
-| T5 | formula sheet (rich content, strict projection) and scratch pad | |
+| T4 | function plotter on `FunctionGraphView` | done (this branch) |
+| T5 | formula sheet (rich content, strict projection) and scratch pad | next |
 | T6 | subject tools (ASCII and bitwise operations, truth tables, units, periodic table) | |
 | T7 | tools in training and learning materials; optional usage analytics (opens only, never the typed values) | |
 
@@ -252,3 +251,48 @@ is a bottom sheet: dragging is off, and a viewport that becomes phone-width drop
 - `src/studentTools/StudentToolDock.t2.test.tsx` (T3 blocks): the converter panel (bases, steps, errors, steps off), dragging with
   clamping, release, reset, and buttons not dragging.
 - `src/ExamPreview.studentTools.t3.test.tsx`: the dock in the preview, absent without tools or for a value the student would not receive.
+
+## 11. T4 — function plotter
+
+### What the student gets (`GraphPlotterTool.tsx`, `graphPlotter.ts`)
+
+- **Functions.** Up to the teacher's `maxFunctions` fields, `f(x) =`, `g(x) =`, `h(x) =` (LTR). «ارسم» or Enter draws them.
+- **Window.** A collapsible «نافذة الرسم» (xMin, xMax, yMin, yMax; default −10…10). Bounds must be numbers within ±10^6, with the
+  minimum below the maximum and a usable span.
+- **The graph.** Drawn by the existing owned SVG renderer `FunctionGraphView` (Phase 21A.2), with everything it already offers:
+  zoom (± and wheel / pinch), pan (drag, Shift + arrows), trace (arrows, with a spoken readout), reset, and the text description and
+  table of values for screen readers.
+- **Value at a point.** «القيمة عند x =» lists f(x), g(x), h(x) at that x, and «غير معرّفة» where a function is undefined.
+- **Analysis** (only when the teacher ticked «إظهار الجذور ونقاط التقاطع والقيم القصوى»). The engine's own `analyzeFunctionGraph`
+  becomes labelled points: roots, y-intercepts, minima, maxima and intersections, each naming its curve(s) (`تقاطع f و g (3، 5)`).
+  Vertical asymptotes become dashed reference lines. The engine requires distinct labels, so an exact repeat is skipped, and a
+  decorated graph the engine refuses falls back to the plain graph.
+
+### The engine stays the authority
+
+- **No new evaluator.** Every expression is compiled by `compileGraphExpression` (expression language 3), and the whole graph is
+  validated by `validateFunctionGraphSpec` before it's drawn. The graph engine itself is unchanged.
+- **School notation.** `normalizePlotExpression` rewrites only what is unambiguous, so students can type what they type into the
+  calculator: `2x → 2*x`, `2(x+1) → 2*(x+1)`, `)( → )*(`, `x( → x*(`, `π → pi`, `√( → sqrt(`, `× ÷ −`, and school `log( → log10(`.
+  A number inside a name (`log10(`) and an `x` inside a name (`exp(`) are untouched. Everything else is left to the engine, which
+  accepts it or refuses with its own Arabic message under the field.
+- **Angles.** Trigonometric functions take radians (the engine's convention), and the panel says so.
+- **Loading.** The plotter is its own lazy chunk inside the dock, so an exam that only allows the calculator never downloads the graph
+  engine. Its panel is wider (560 px) on desktop.
+
+### Builder
+
+- The plotter row offers «عدد الدوال» (1–3) and the analysis switch.
+- Answer-risk notes name graph-reading question types (`functionGraphSelection`, `functionStudy2d`).
+
+### Evidence for T4
+
+- `src/studentTools/graphPlotter.t4.test.ts`: the notation rewrite (names untouched), the window (reversed / equal bounds named as
+  such, range, span), building (empty fields skipped, per-field engine messages, the teacher's count, non-expressions refused, a window
+  the engine refuses draws nothing), analysis labels unique and naming curves, asymptote lines, values at a point.
+- `src/studentTools/StudentToolDock.t2.test.tsx` (T4 block): field count from the teacher, drawing, analysis labels, value at a point,
+  field error, analysis off.
+- `src/studentTools/StudentToolsEditor.t2.test.tsx` (T4 block): plotter defaults, function count, analysis switch; no tool is locked
+  as «قريبًا» any more.
+- Mutation M37–M44: 7 killed; M43 (skip a repeated label) is **equivalent** under reachable inputs, because the analysis already
+  removes repeated features, so the guard is a second line of defence.

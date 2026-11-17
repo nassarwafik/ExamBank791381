@@ -39,10 +39,10 @@ export const STUDENT_TOOLS_CATALOG: readonly StudentToolCatalogEntry[] = Object.
   {
     id: "graphPlotter",
     label: "راسم الدوال",
-    description: "رسم حتى ثلاث دوال معًا، مع التكبير والتحريك وقراءة قيمة الدالة عند نقطة.",
+    description: "رسم حتى ثلاث دوال معًا، مع التكبير والتحريك وتتبّع المنحنى وقراءة قيمة الدالة عند نقطة.",
     subjects: ["الرياضيات", "الفيزياء"],
-    answerRisk: "تكشف شكل الدالة ونقاط تقاطعها وقيمها القصوى عند تفعيل التحليل.",
-    available: false
+    answerRisk: "تكشف شكل الدالة وقيمها، ومع التحليل: الجذور ونقاط التقاطع والقيم القصوى.",
+    available: true
   },
   {
     id: "ipv4Calculator",

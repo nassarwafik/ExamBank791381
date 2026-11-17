@@ -1,7 +1,7 @@
 import { useId } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
-  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type NumberBase
+  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
 import { studentToolAnswerRisks } from "./studentToolsRisk";
@@ -144,6 +144,20 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                     <label className="sb-check">
                       <input type="checkbox" checked={tool.showSteps} disabled={disabled} onChange={e => patchTool(id, { showSteps: e.target.checked } as Partial<BaseConverterToolV1>)} />
                       <span>عرض خطوات التحويل</span>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "graphPlotter" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-field">
+                      <span className="sb-field-label">عدد الدوال</span>
+                      <select className="sb-input" value={tool.maxFunctions} disabled={disabled} onChange={e => patchTool(id, { maxFunctions: Number(e.target.value) } as Partial<GraphPlotterToolV1>)}>
+                        {Array.from({ length: GRAPH_MAX_FUNCTIONS_LIMIT }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n === 1 ? "دالة واحدة" : n === 2 ? "دالتان" : n + " دوال"}</option>)}
+                      </select>
+                    </label>
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.showAnalysis} disabled={disabled} onChange={e => patchTool(id, { showAnalysis: e.target.checked } as Partial<GraphPlotterToolV1>)} />
+                      <span>إظهار الجذور ونقاط التقاطع والقيم القصوى</span>
                     </label>
                   </div>
                 )}

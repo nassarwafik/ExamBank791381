@@ -1,9 +1,11 @@
-import { Component, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, Suspense, lazy, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { projectStudentToolsForStudent, enabledToolsForSection, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
 import { studentToolCatalogEntry, studentToolHasUi } from "./studentToolsCatalog";
 import CalculatorTool from "./CalculatorTool";
 import Ipv4CalculatorTool from "./Ipv4CalculatorTool";
 import BaseConverterTool from "./BaseConverterTool";
+// Phase T4 — the plotter carries the graph engine: its own chunk, fetched the first time the student opens it.
+const GraphPlotterTool = lazy(() => import("./GraphPlotterTool"));
 import "./studentTools.css";
 
 // Phase T2 — the student's tool bar inside a running exam.
@@ -32,6 +34,7 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
     case "baseConverter": return <BaseConverterTool config={tool} />;
+    case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
     default: return null;
   }
 }
@@ -120,7 +123,7 @@ export default function StudentToolDock({ studentTools, sectionId }: Props) {
         const titleId = baseId + "-" + t.id + "-title";
         const visible = openTool === t.id && openAllowed;
         return (
-          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className="stt-panel" role="dialog" aria-modal="false" aria-labelledby={titleId}
+          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (t.id === "graphPlotter" ? " is-wide" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
             hidden={!visible} tabIndex={-1} data-testid={"tool-panel-" + t.id}
             style={moved ? { transform: "translate(" + offset.x + "px, " + offset.y + "px)" } : undefined}>
             <header className="stt-panel-head" onPointerDown={onHeadPointerDown} onPointerMove={onHeadPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}

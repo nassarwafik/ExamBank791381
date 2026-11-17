@@ -75,3 +75,13 @@
 .stt-panel-head:active { cursor: grabbing; }
 .stt-head-actions { display: inline-flex; gap: var(--eb-space-1); }
 @media (max-width: 640px) { .stt-panel-head { cursor: default; touch-action: auto; } }
+/* Phase T4 — function plotter. */
+.stt-panel.is-wide { width: min(560px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(85vh, 860px); }
+.stt-plot-field + .stt-plot-field { margin-block-start: var(--eb-space-2); }
+.stt-plot-field .stt-error { margin-block: var(--eb-space-1) 0; }
+.stt-window { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--eb-space-2); margin-block-start: var(--eb-space-2); }
+.stt-window-field { display: flex; align-items: center; gap: var(--eb-space-2); font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); color: var(--eb-text-secondary); }
+.stt-plot-actions { margin-block-start: var(--eb-space-3); }
+.stt-plot-graph { margin-block-start: var(--eb-space-3); }
+.stt-plot-at { margin-block-start: var(--eb-space-2); }
+.stt-plot-at .stt-label { margin: 0; white-space: nowrap; }

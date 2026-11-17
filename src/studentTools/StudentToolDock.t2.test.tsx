@@ -19,8 +19,8 @@ const pick = (name: string) => fireEvent.click(within(screen.getByRole("group", 
 const press = (panel: HTMLElement, ...labels: string[]) => { for (const l of labels) fireEvent.click(within(panel).getByRole("button", { name: l })); };
 
 describe("T2 — the student tool dock", () => {
-  it("renders nothing without tools, for a malformed spec, or when no enabled tool has a UI yet", () => {
-    for (const v of [undefined, null, { version: 1, tools: [] }, { ...SPEC, smuggled: 1 }, { version: 1, tools: [{ id: "graphPlotter", maxFunctions: 2, showAnalysis: false }] }]) {
+  it("renders nothing without tools or for a malformed spec", () => {
+    for (const v of [undefined, null, { version: 1, tools: [] }, { ...SPEC, smuggled: 1 }]) {
       const r = render(<StudentToolDock studentTools={v} sectionId="s1" />);
       expect(r.container.innerHTML).toBe("");
       r.unmount();
@@ -211,5 +211,44 @@ describe("T3 — dragging the panel", () => {
     fireEvent.pointerDown(close, { button: 0, pointerId: 2, clientX: 10, clientY: 10 });
     fireEvent.pointerMove(close, { pointerId: 2, clientX: 200, clientY: 200 });
     expect(panel.style.transform).toBe("");
+  });
+});
+
+describe("T4 — the function plotter panel", () => {
+  const PLOT = { version: 1, tools: [{ id: "graphPlotter", maxFunctions: 2, showAnalysis: true }] };
+  it("offers the teacher's number of functions, draws them, marks the analysis and reads values at a point", async () => {
+    render(<StudentToolDock studentTools={PLOT} />);
+    openTools(); pick("راسم الدوال");
+    const panel = screen.getByRole("dialog", { name: "راسم الدوال" });
+    const f = await within(panel).findByLabelText("f(x) =");
+    expect(within(panel).getByLabelText("g(x) =")).toBeTruthy();
+    expect(within(panel).queryByLabelText("h(x) =")).toBeNull();
+    fireEvent.change(f, { target: { value: "x^2 - 4" } });
+    fireEvent.change(within(panel).getByLabelText("g(x) ="), { target: { value: "x + 2" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "ارسم" }));
+    const graph = await within(panel).findByTestId("plot-graph");
+    expect(graph.querySelector("svg")).toBeTruthy();
+    expect(graph.textContent).toContain("تقاطع f و g (3، 5)");
+    fireEvent.change(within(panel).getByLabelText(/القيمة عند/), { target: { value: "3" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "احسب" }));
+    expect(within(panel).getByTestId("plot-values").textContent).toMatch(/f\(x\).*5.*g\(x\).*5/);
+  });
+  it("shows the engine's message under the faulty field and draws nothing", async () => {
+    render(<StudentToolDock studentTools={PLOT} />);
+    openTools(); pick("راسم الدوال");
+    const panel = screen.getByRole("dialog", { name: "راسم الدوال" });
+    fireEvent.change(await within(panel).findByLabelText("f(x) ="), { target: { value: "y + 1" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "ارسم" }));
+    expect(within(panel).getByRole("alert").textContent).toMatch(/y/);
+    expect(within(panel).queryByTestId("plot-graph")).toBeNull();
+  });
+  it("without analysis no feature labels are drawn", async () => {
+    render(<StudentToolDock studentTools={{ version: 1, tools: [{ id: "graphPlotter", maxFunctions: 1, showAnalysis: false }] }} />);
+    openTools(); pick("راسم الدوال");
+    const panel = screen.getByRole("dialog", { name: "راسم الدوال" });
+    fireEvent.change(await within(panel).findByLabelText("f(x) ="), { target: { value: "x^2 - 4" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "ارسم" }));
+    const graph = await within(panel).findByTestId("plot-graph");
+    expect(graph.textContent).not.toMatch(/جذر|تقاطع|قيمة صغرى/);
   });
 });

@@ -20,10 +20,10 @@ describe("T2 — Builder «أدوات الطالب» panel", () => {
     expect(m.last()).toEqual({ version: 1, tools: [{ id: "calculator", variant: "scientific", angleUnit: "deg" }] });
   });
 
-  it("tools without a student UI yet cannot be switched on", () => {
+  it("every contract tool ships a student UI (T4): none is marked «قريبًا» or locked", () => {
     mount(undefined);
-    expect((screen.getByRole("checkbox", { name: "راسم الدوال قريبًا" }) as HTMLInputElement).disabled).toBe(true);
-    expect(screen.getAllByText("قريبًا")).toHaveLength(1);                     // T3: the base converter ships, the plotter does not yet
+    expect(screen.queryByText("قريبًا")).toBeNull();
+    for (const name of ["آلة حاسبة", "محوّل أنظمة العدّ", "راسم الدوال", "حاسبة الشبكات IPv4"]) expect((toolBox(name) as HTMLInputElement).disabled).toBe(false);
   });
 
   it("keeps tools in contract order and edits their options", () => {
@@ -112,5 +112,18 @@ describe("T3 — base converter options and the answer-risk note", () => {
     expect(screen.getByTestId("tool-risk-ipv4Calculator").textContent).toMatch(/سؤالًا واحدًا.*الشبكات · السؤال 1/);
     r.rerender(<StudentToolsEditor value={{ ...spec, sectionOverrides: { s2: { disabled: ["ipv4Calculator"] } } }} sections={sections} onChange={() => {}} />);
     expect(screen.queryByTestId("tool-risk-ipv4Calculator")).toBeNull();
+  });
+});
+
+describe("T4 — plotter options", () => {
+  it("switching the plotter on emits its default; the function count and analysis are editable", () => {
+    const m = mount(undefined);
+    fireEvent.click(toolBox("راسم الدوال"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "graphPlotter", maxFunctions: 3, showAnalysis: false }] });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "عدد الدوال" }), { target: { value: "1" } });
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "graphPlotter", maxFunctions: 1, showAnalysis: false }] });
+    fireEvent.click(toolBox("إظهار الجذور ونقاط التقاطع والقيم القصوى"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "graphPlotter", maxFunctions: 3, showAnalysis: true }] });
   });
 });
