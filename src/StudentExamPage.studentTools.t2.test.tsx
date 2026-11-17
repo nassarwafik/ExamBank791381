@@ -75,6 +75,28 @@ describe("T2 — student tools in the exam page", () => {
     expect(names()).toEqual(["حاسبة الشبكات IPv4"]);
   });
 
+  it("the tool bar disappears once the attempt is submitted (no longer writable)", async () => {
+    subState = started;
+    const r = mount(assignment(TOOLS, true));
+    await r.findByText("السؤال الأول");
+    await r.findByTestId("student-tools-button");
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    await r.findByText("السؤال الثاني");
+    fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" }));
+    expect(r.getByTestId("student-tools-button")).toBeTruthy();              // still writable while reviewing
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" }));
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));
+    await r.findByText(/تم تسليم المحاولة/);
+    expect(r.queryByTestId("student-tools-button")).toBeNull();
+  });
+
+  it("an attempt that is shown but no longer writable (expired, canWrite false) offers no tool bar", async () => {
+    subState = { ...started, canWrite: false, attemptExpired: true };
+    const r = mount(assignment(TOOLS, true));
+    await r.findByText("السؤال الأول");
+    expect(r.queryByTestId("student-tools-button")).toBeNull();
+  });
+
   it("an exam without tools shows neither the notice nor the tool bar", async () => {
     tools = undefined;
     const pre = mount(assignment(undefined, false));

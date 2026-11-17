@@ -48,9 +48,14 @@ export default function StudentToolDock({ studentTools, sectionId }: Props) {
   const fabRef = useRef<HTMLButtonElement>(null);
   const panelRefs = useRef<Partial<Record<StudentToolId, HTMLElement | null>>>({});
 
-  // A section that disables the open tool closes its panel (its state is kept for the sections that allow it).
+  // A section that disables the open tool closes its panel (its state is kept for the sections that allow it). Adjusted during render
+  // when the section changes (React's "adjusting state on a prop change" pattern), so returning to an allowing section does not reopen it.
   const openAllowed = openTool !== null && enabled.some(t => t.id === openTool);
-  useEffect(() => { if (openTool !== null && !openAllowed) setOpenTool(null); }, [openTool, openAllowed]);
+  const [seenSection, setSeenSection] = useState(sectionId);
+  if (seenSection !== sectionId) {
+    setSeenSection(sectionId);
+    if (openTool !== null && !openAllowed) setOpenTool(null);
+  }
 
   useEffect(() => {
     if (!openTool) return;

@@ -1,7 +1,7 @@
 /* Phase T2 — student tools (dock, panels, calculator, IPv4). Design tokens only; RTL page with LTR numeric fields. */
 .stt-dock { position: fixed; inset-inline-end: var(--eb-space-4); inset-block-end: calc(var(--eb-space-7) + 56px); z-index: var(--eb-z-dropdown); display: flex; flex-direction: column; align-items: flex-end; gap: var(--eb-space-2); pointer-events: none; }
 .stt-dock > * { pointer-events: auto; }
-.stt-fab { display: inline-flex; align-items: center; gap: var(--eb-space-2); min-height: 44px; padding: 0 var(--eb-space-4); border: 1px solid var(--eb-primary-strong); border-radius: var(--eb-pill); background: var(--eb-primary); color: #fff; font: inherit; font-weight: var(--eb-fw-semibold); box-shadow: var(--eb-sh-md); cursor: pointer; }
+.stt-fab { display: inline-flex; align-items: center; gap: var(--eb-space-2); min-height: 44px; padding: 0 var(--eb-space-4); border: 1px solid var(--eb-primary-strong); border-radius: var(--eb-pill); background: var(--eb-primary); color: var(--eb-surface); font: inherit; font-weight: var(--eb-fw-semibold); box-shadow: var(--eb-sh-md); cursor: pointer; }
 .stt-fab:hover { background: var(--eb-primary-strong); }
 .stt-fab:focus-visible, .stt-key:focus-visible, .stt-menu-item:focus-visible, .stt-close:focus-visible, .stt-btn:focus-visible, .stt-history-item:focus-visible { outline: none; box-shadow: var(--eb-focus-ring); }
 .stt-menu { display: flex; flex-direction: column; gap: var(--eb-space-1); min-width: 200px; padding: var(--eb-space-2); background: var(--eb-surface); border: 1px solid var(--eb-border); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-lg); }
@@ -29,7 +29,7 @@
 .stt-key:hover { border-color: var(--eb-border-strong); }
 .stt-key.is-fn { font-size: var(--eb-fs-14); background: var(--eb-bg-tint); }
 .stt-key.is-op, .stt-key.is-action { background: var(--eb-primary-050); color: var(--eb-primary-strong); }
-.stt-key.is-equals { background: var(--eb-primary); color: #fff; border-color: var(--eb-primary-strong); font-weight: var(--eb-fw-bold); }
+.stt-key.is-equals { background: var(--eb-primary); color: var(--eb-surface); border-color: var(--eb-primary-strong); font-weight: var(--eb-fw-bold); }
 .stt-key.is-wide { grid-column: span 4; }
 .stt-history { margin-block-start: var(--eb-space-3); font-size: var(--eb-fs-13); }
 .stt-history summary { cursor: pointer; color: var(--eb-text-secondary); }
@@ -38,7 +38,7 @@
 .stt-row { display: flex; gap: var(--eb-space-2); align-items: center; }
 .stt-row .stt-input { flex: 1 1 auto; min-width: 0; }
 .stt-btn { min-height: 44px; padding: 0 var(--eb-space-4); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface-2); color: var(--eb-text); font: inherit; cursor: pointer; white-space: nowrap; }
-.stt-btn.is-primary { background: var(--eb-primary); border-color: var(--eb-primary-strong); color: #fff; font-weight: var(--eb-fw-semibold); }
+.stt-btn.is-primary { background: var(--eb-primary); border-color: var(--eb-primary-strong); color: var(--eb-surface); font-weight: var(--eb-fw-semibold); }
 .stt-hint { margin: var(--eb-space-1) 0; font-size: var(--eb-fs-12); color: var(--eb-muted); }
 .stt-error { margin: var(--eb-space-2) 0; padding: var(--eb-space-2) var(--eb-space-3); border-radius: var(--eb-r); background: var(--eb-danger-bg); color: var(--eb-danger-tx); font-size: var(--eb-fs-13); }
 .stt-ltr { font-family: var(--eb-font-mono); unicode-bidi: isolate; }
