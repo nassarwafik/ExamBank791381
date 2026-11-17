@@ -89,8 +89,11 @@ function mountPortal(assignments: Summary[]) {
 
 describe("UX-S3 — the «الواجبات» view", () => {
   it("«الكل»: one labelled group per non-empty state, a heading with its count, the cards under it; other filters: one plain list", async () => {
+    // Both deadlines are relative to the real clock the portal reads: «AV» is due in 3 hours, «AV2» in 10 days. AV2 used to keep the
+    // fixture's fixed default (17 Nov 2026 12:00), which became the past on that day and reversed the order.
     const soon = new Date(Date.now() + 3 * 3600e3).toISOString();
-    mountPortal([asg("AV", { dueAt: soon }), asg("CO", { dashboardState: "completed" }), asg("AV2")]);
+    const later = new Date(Date.now() + 10 * 24 * 3600e3).toISOString();
+    mountPortal([asg("AV", { dueAt: soon }), asg("CO", { dashboardState: "completed" }), asg("AV2", { dueAt: later })]);
     await openStudentView("الواجبات");
     const region = within(await screen.findByRole("region", { name: /المهام والواجبات/ }));
     const groups = region.getAllByRole("group").filter(g => g.classList.contains("eb-sp-task-group"));
