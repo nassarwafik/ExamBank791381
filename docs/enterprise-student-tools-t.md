@@ -1,8 +1,9 @@
-# Phase T — Student Exam Tools (design record; T0 + T1)
+# Phase T — Student Exam Tools (design record; T0 + T1 + T2)
 
-> STATUS: T0 (this design) and T1 (contract and data path) are implemented on branch `claude/stoic-brown-yscldn`. They are waiting for
-> independent review and the owner's manual merge. **No student-visible UI exists yet**: the tool bar and the tools themselves are
-> phases T2 and later. Nothing in T1 changes how an existing exam looks, is delivered or is graded.
+> STATUS: T0 (this design), T1 (contract and data path) and T2 (Builder panel, student tool bar, calculator, IPv4 calculator) are
+> implemented on branch `claude/stoic-brown-yscldn`. They are waiting for independent review and the owner's manual merge. An exam
+> without `studentTools` looks, is delivered and is graded exactly as before. The base converter and the function plotter are in the
+> contract but have no UI yet: the Builder can't switch them on, and the tool bar never lists them.
 
 ## 1. Goal
 
@@ -25,8 +26,11 @@ example: calculator allowed, but not in the mental-arithmetic section).
   checks are for display only).
 - **No grading role.** The tools never read an answer key, never submit, never call the API with exam data, and never change a score.
   The grading paths are unchanged.
-- **No free-form code.** No `eval`, no `Function`, no HTML. The calculator and the plotter reuse the platform's own parser
-  (`src/parametricExpression.ts`, expression language 3); the IPv4 tool has its own strict grammar.
+- **No free-form code.** No `eval`, no `Function`, no HTML. The calculator (T2) has its own bounded parser
+  (`src/studentTools/calculatorEngine.ts`, §9). It deliberately does **not** reuse `src/parametricExpression.ts`: that engine is a
+  grading authority with frozen languages, and calculator conventions (degrees, factorial, Ans, implicit multiplication, `log` = base
+  10) must never change what a grading engine accepts. The IPv4 tool has its own strict grammar. The plotter (T4) will draw through
+  `FunctionGraphView`.
 - **No new infrastructure.** No storage migration, no new route, no new database. The configuration is one optional field on the exam.
 
 ## 3. Contract: `StudentToolsSpecV1` (`src/studentTools/studentToolsSpec.ts`)
@@ -71,7 +75,7 @@ for that content before they are accepted.
 
 | Step | Where | Rule |
 |---|---|---|
-| Builder authoring | `StructuredExam.studentTools` (`src/examTypes.ts`) | the Builder writes only canonical values (T2 settings panel) |
+| Builder authoring | `StructuredExam.studentTools` (`src/examTypes.ts`), edited by `StudentToolsEditor` | the panel emits only canonical values, or removes the key when no tool is left |
 | Builder quality gate | `validateStructuredExam` (`src/examQuality.ts`) | any contract issue or an override of a missing section is an **error**: it blocks a final save |
 | Server finalization / governance | the same `examQuality` via the shared build (`scripts/build-shared-finalization.mjs`) | byte-identical rules; drift guarded by `api/tests/shared-finalization-drift-14a.test.js` |
 | Assignment creation | `api/src/functions/manage-assignments.js` | a malformed spec ⇒ **400 `STUDENT_TOOLS_INVALID`**, nothing stored; a valid spec is stored **canonical** in the frozen `examSnapshot` |
@@ -112,8 +116,8 @@ converter answers conversion questions. The catalog records this for each tool (
 |---|---|---|
 | T0 | this design record | done |
 | T1 | contract, catalog, IPv4 engine, quality gate, shared build, assignment gate, student / pre-start / preview projections | done (this branch) |
-| T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunks, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | next |
-| T3 | base converter; answer-risk quality warnings | |
+| T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunk, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | done (this branch) |
+| T3 | base converter; answer-risk quality warnings; tools in the teacher's exam preview; draggable panel | next |
 | T4 | function plotter on `FunctionGraphView` | |
 | T5 | formula sheet (rich content, strict projection) and scratch pad | |
 | T6 | subject tools (ASCII and bitwise operations, truth tables, units, periodic table) | |
@@ -133,3 +137,66 @@ Each phase is one branch and one PR and follows AGENTS.md §3.
   unchanged).
 - Fail-first: not applicable. T1 adds a feature and fixes no defect. The "exam without tools is unchanged" tests are **pins**.
 - Mutation proof (the projection and the assignment gate are authority invariants): see the PR body for the campaign table.
+
+## 9. T2 — what the student and the teacher see
+
+### Builder: «أدوات الطالب»
+
+`src/studentTools/StudentToolsEditor.tsx` appears under the cover panel in both the Studio setup step and the classic workspace.
+
+- One row per contract tool: a switch, the description, and, once the tool is on, its answer-risk note (`answerRisk`) and its options
+  (calculator: scientific / basic, degrees / radians; IPv4: binary view, subnet split).
+- Tools whose student UI does not ship yet (`available: false` in the catalog) are marked «قريبًا» and can't be switched on.
+- «الأدوات في كل قسم» (exams with more than one section): a table of sections × enabled tools; unticking a cell adds the tool to that
+  section's `disabled` list.
+- Each edit is re-validated, and only a canonical spec is emitted. Switching the last tool off removes `studentTools`. A tool's section
+  overrides are dropped with it, and overrides of deleted sections are pruned (a banner offers it at once).
+- A stored value that fails validation is reported, with one button that removes it.
+
+### Student: the tool bar
+
+- **Start screen.** «الأدوات المسموحة: …» names the tools from the pre-start projection, so the student knows before starting.
+- **During the attempt.** `StudentToolDock` loads as its own lazy chunk, and only for an exam that has `studentTools`. It's offered only
+  while the attempt is writable (`canWrite`, not expired, not strict-ended). It re-projects the value itself: a malformed one renders
+  nothing.
+- The «الأدوات» button lists the tools enabled for the **current section**. Moving into a section that disables the open tool closes it.
+- The panel is non-modal (`role="dialog"`, `aria-modal="false"`): the question stays readable and answerable. Escape closes it and
+  focus returns to the button. On a phone (≤ 640 px) the panel becomes a bottom sheet. It isn't printed.
+- **State.** A tool, once opened, stays mounted (hidden when closed). Expression, last answer and history survive closing the panel
+  and moving between questions for the whole attempt. Nothing is stored or sent, and leaving the page discards it.
+- **Containment.** `ToolDockBoundary` wraps the dock (its chunk failing to load included), and each tool has its own boundary. A
+  failure shows a quiet note, never reaches the exam's error boundary or render-failure accounting, and never triggers a page reload
+  (a reload would end a strict attempt). That's why the dock uses a plain `lazy`, not `recoverableLazy`.
+
+### Calculator (`calculatorEngine.ts`, `CalculatorTool.tsx`)
+
+- **Grammar.** `+ − × ÷`, brackets, unary minus (`−2^2 = −4`), right-associative `^`, postfix `!`, `√`, implicit multiplication
+  (`2π`, `2(3)`, `2sin(30)`). A number directly after a value (`2 3`) is a syntax error, never a product.
+- **Functions.** `sin cos tan asin acos atan sqrt cbrt ln log exp abs`; `log` is base 10. Constants `π`/`pi` and `e`; `Ans` = the
+  last result.
+- **Angles.** In the teacher's unit; in degrees, exact values at the usual angles (`sin 180° = 0`, `tan 45° = 1`), and `tan 90°` is a
+  domain error.
+- **Basic variant.** The four operations, brackets and `Ans` only; anything else is `NOT_IN_BASIC`.
+- **Bounds.** 200 characters, nesting depth 32, factorial ≤ 170.
+- **Errors.** Every error has an Arabic message: division by zero, domain, overflow, syntax, unknown name, no previous result.
+- **Display.** 12 significant digits (`0.1 + 0.2 = 0.3`), exponent form at or above 1e12 or below 1e-9.
+
+### IPv4 calculator (`Ipv4CalculatorTool.tsx`)
+
+- **Results.** Network, broadcast, first / last host, address count, usable hosts, mask, wildcard, prefix, class and scope (LTR values
+  inside the RTL page); the binary table when `showBinary` is on.
+- **Subnet split** (when `allowSubnetting` is on). By new prefix, by number of subnets, or by hosts per subnet. The exact count is
+  shown, and at most 64 rows are listed.
+
+### Evidence for T2
+
+- `src/studentTools/calculatorEngine.t2.test.ts`: precedence, implicit multiplication, every function in both angle units, domain /
+  division / overflow errors, Ans, the basic variant, bounds, non-JavaScript input, formatting.
+- `src/studentTools/StudentToolDock.t2.test.tsx`: nothing rendered without valid tools; per-section listing; the keypad; state kept
+  across close / reopen and sections; Enter, Escape and focus; the basic variant; the IPv4 panel (analysis, binary, split, errors,
+  options off); containment of a failing dock.
+- `src/studentTools/StudentToolsEditor.t2.test.tsx`: canonical emission, unavailable tools, option edits, section overrides, removal of
+  the last tool, invalid values, pruning of deleted sections.
+- `src/StudentExamPage.studentTools.t2.test.tsx`, through the real exam page: the start-screen notice, the tool bar in a started
+  attempt following the section, no notice or tool bar for an exam without tools or with a malformed value.
+- Fail-first: not applicable (a new feature).

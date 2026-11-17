@@ -408,3 +408,18 @@
 :where(:root[data-theme="dark"]) .sb-nav-badge { color: var(--eb-success-tx); background: var(--eb-success-bg); border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); }
 :where(:root[data-theme="dark"]) .sb-gov-state.is-in-review { color: var(--eb-warn-tx); border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); }
 :where(:root[data-theme="dark"]) .sb-gov-state.is-published { background: var(--eb-success-bg); color: var(--eb-success-tx); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+
+/* Phase T2 — «أدوات الطالب» panel (shares the cover panel frame). */
+.sb-student-tools { margin-block-start: var(--eb-space-3); }
+.sb-tools-list { list-style: none; margin: var(--eb-space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.sb-tool { padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid var(--eb-border); border-radius: var(--eb-r); background: var(--eb-surface); }
+.sb-tool.is-on { border-color: var(--eb-primary-200); background: var(--eb-primary-050); }
+.sb-tool .sb-hint { margin: var(--eb-space-1) 0 0; }
+.sb-tool-soon { margin-inline-start: var(--eb-space-2); padding: 1px var(--eb-space-2); border-radius: var(--eb-pill); background: var(--eb-surface-2); color: var(--eb-muted); font-size: var(--eb-fs-12); }
+.sb-tool-risk { color: var(--eb-warn-tx); }
+.sb-tool-options { display: flex; flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-4); margin-block-start: var(--eb-space-2); }
+.sb-tools-sections { margin-block-start: var(--eb-space-3); }
+.sb-tools-sections summary { cursor: pointer; font-weight: var(--eb-fw-semibold); }
+.sb-tools-table { width: 100%; margin-block-start: var(--eb-space-2); border-collapse: collapse; font-size: var(--eb-fs-13); }
+.sb-tools-table th, .sb-tools-table td { padding: var(--eb-space-1) var(--eb-space-2); border-block-end: 1px solid var(--eb-border); text-align: start; }
+.sb-tools-table td { text-align: center; }
