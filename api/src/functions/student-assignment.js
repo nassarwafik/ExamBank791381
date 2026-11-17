@@ -5,6 +5,7 @@ const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {sanitizeExamForStudent,sanitizeCoverForStudent}=require("../lib/student-exam-sanitize");
 const {projectPresentationForStudent}=require("../lib/shared-finalization/presentation/presentationModel");
+const {projectStudentToolsForStudent}=require("../lib/shared-finalization/studentTools/studentToolsSpec");   // Phase T1
 const {hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 const {getAssignmentAvailability,timerState}=require("../lib/assignment-availability");
 const {normalizeExamStructure,sectionOfficialMaxMarks}=require("../lib/exam-structure");
@@ -47,7 +48,10 @@ function preStartAssignment(a,timed,attemptPolicy){
   requiresStart:true,timed:!!timed,attemptPolicy:attemptPolicy||"continuous",marksDistribution:safeMarksDistribution(snap),
   exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage?sanitizeCoverForStudent(preStartCover(snap.coverPage))||null:null,   // 20D.1: the strict cover allow-list (rich instructions projected)
    // Phase 20D.1 — the strictly projected enterprise presentation (canonical copy or absent) so the cover / start screen is themed.
-   ...(presentationForPreStart(snap.presentation)?{presentation:presentationForPreStart(snap.presentation)}:{})}};
+   ...(presentationForPreStart(snap.presentation)?{presentation:presentationForPreStart(snap.presentation)}:{}),
+   // Phase T1 — the allowed student tools (configuration only, canonical or absent) so the start screen can announce them before the
+   // attempt begins; the tools open only inside the started exam.
+   ...(projectStudentToolsForStudent(snap.studentTools)?{studentTools:projectStudentToolsForStudent(snap.studentTools)}:{})}};
 }
 // Review fix 1 — bank-origin images in the cover's rich instructions are stored as durable identities; sign them for delivery (the same
 // hydration every exam read path applies) before the strict cover projection.

@@ -6,6 +6,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
+const {validateStudentTools}=require("../lib/shared-finalization/studentTools/studentToolsSpec");   // Phase T1
 const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore}=require("../lib/assignment-lifecycle");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {activeAttemptOf,attemptPolicyOf,ATTEMPT_POLICIES}=require("../lib/assignment-availability");
@@ -130,6 +131,10 @@ async function handler(request,deps={},obs=null){
    // and the cover total agree.
    const stats=examOfficialStats(exam);
    if(!stats.questionCount)return {status:400,jsonBody:{ok:false,error:"افتح أو أنشئ امتحانًا قبل إنشاء الواجب."}};
+   // Phase T1 — the snapshot freezes the student tools with the exam. A malformed spec is REJECTED (never coerced, never silently
+   // dropped): the teacher announced tools that the student projection would withhold. Absent ⇒ no tools, exactly as before. The stored
+   // value is the canonical one, so every later read projects the same tools.
+   if(exam.studentTools!==undefined&&exam.studentTools!==null){const st=validateStudentTools(exam.studentTools);if(!st.ok)return {status:400,jsonBody:{ok:false,code:"STUDENT_TOOLS_INVALID",error:"إعدادات أدوات الطالب في الامتحان غير صالحة: "+st.issues[0].message}};exam.studentTools=st.value}
    // Normalize the CLEANED snapshot's own totalMarks to the authoritative structural value so
    // assignment.totalMarks and assignment.examSnapshot.totalMarks can never contradict each other.
    // `exam` is a deep clone (cleanExam), so the original source exam object is never mutated.

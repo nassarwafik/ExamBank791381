@@ -17,6 +17,7 @@ import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
 import { validateCompositeQuestion, compositeStructure, compositeChildNode, isSupportedCompositeChild, isCompositeQuestionId, COMPOSITE_CHILD_SEPARATOR } from "./compositeQuestion";
 import { validatePresentation, validateSectionPresentation, validateQuestionPresentation } from "./presentation/presentationModel";
 import { validateRichContent, richContentPlainText } from "./richContent/richContentModel";
+import { validateStudentTools, studentToolsUnknownSectionIssues } from "./studentTools/studentToolsSpec";
 
 export type Severity = "error" | "warning";
 export type StructuredIssue = {
@@ -55,6 +56,15 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
   if (exam.presentation !== undefined && exam.presentation !== null) for (const i of validatePresentation(exam.presentation).issues) add("error", i.code, "إعدادات العرض: " + i.message);
   const cover = exam.coverPage as Record<string, unknown> | undefined;
   if (cover && typeof cover === "object" && cover.instructionsRichContent !== undefined) for (const i of validateRichContent(cover.instructionsRichContent, "coverPage.instructionsRichContent").issues) add("error", i.code, "تعليمات الغلاف المنسقة: " + i.message);
+
+  // Phase T1 — the OPTIONAL student tools: strict, versioned, data only. Every violation BLOCKS (the student projection would withhold a
+  // malformed spec, so publishing it would silently remove the tools the teacher announced). A section override naming a section the
+  // exam does not have blocks too: the teacher's intent for that section could not be applied.
+  if (exam.studentTools !== undefined && exam.studentTools !== null) {
+    const tools = validateStudentTools(exam.studentTools);
+    if (!tools.ok) for (const i of tools.issues) add("error", i.code, "أدوات الطالب: " + i.message);
+    else for (const i of studentToolsUnknownSectionIssues(tools.value, sections.map(s => String(s.id ?? "")))) add("error", i.code, "أدوات الطالب: " + i.message);
+  }
 
   const seenQuestionIds = new Set<string>();
   // Phase 19G — the exam-wide question ids let a scenario reference be classified as CROSS-SECTION (exists elsewhere) rather than missing.

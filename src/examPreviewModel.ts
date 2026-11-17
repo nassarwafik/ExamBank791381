@@ -39,6 +39,7 @@ export const PREVIEW_SECRET_KEYS: readonly string[] = [
 ];
 
 import { sanitizeCoverForStudent } from "./examCover";
+import { projectStudentToolsForStudent } from "./studentTools/studentToolsSpec";
 
 const SECRET = new Set(PREVIEW_SECRET_KEYS);
 
@@ -82,6 +83,11 @@ export function toSafePreviewExam<T extends PreviewExamInput>(exam: T): T {
   // kept only when it is a safe embedded raster data URL) so the safe preview model is safe BY ITSELF —
   // never dependent on a second sanitizer at render time. `undefined` (no/invalid cover) drops the key.
   if ("coverPage" in clone) clone.coverPage = sanitizeCoverForStudent(clone.coverPage);
+  // Phase T1 — student tools parity with the real student sanitizer: the canonical spec or nothing.
+  if ("studentTools" in clone) {
+    const tools = projectStudentToolsForStudent((clone as Record<string, unknown>).studentTools);
+    if (tools) (clone as Record<string, unknown>).studentTools = tools; else delete (clone as Record<string, unknown>).studentTools;
+  }
   // Media parity with the real student sanitizer (applyStudentMediaVisibility): hidden question/part media — and a
   // legacy images[] fallback that would otherwise re-show it — never appears in the preview, so the teacher previews
   // exactly the images the student receives.

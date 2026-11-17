@@ -167,6 +167,8 @@ const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "i
 // so hidden tests, reference solutions, weights or notes smuggled into the public object never reach a student; a malformed
 // config is dropped (fail closed). Hidden tests / comparator / reference solutions live under `answer`, blanked above.
 const { projectCodingConfigForStudent } = require("./shared-finalization/codingQuestion");
+// Phase T1 — the student tools contract: the ONE projection (canonical spec or nothing), shared byte-for-byte with the Builder.
+const { projectStudentToolsForStudent } = require("./shared-finalization/studentTools/studentToolsSpec");
 function applyCodingProjection(node) {
   if (!("coding" in node)) return;
   const projected = projectCodingConfigForStudent(node.coding);
@@ -459,6 +461,7 @@ function sanitizeExamForStudent(exam, options) {
   for (const k of TEACHER_ANALYTICS_KEYS) if (k in x) delete x[k];             // Phase 13C-B: live intelligence is never student data
   if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
   if ("presentation" in x) { const p = projectPresentationForStudent(x.presentation); if (p) x.presentation = p; else delete x.presentation; }   // 20D.1: canonical or nothing
+  if ("studentTools" in x) { const t = projectStudentToolsForStudent(x.studentTools); if (t) x.studentTools = t; else delete x.studentTools; }   // T1: canonical or nothing
   if (Array.isArray(x.questions)) x.questions = x.questions.map((q, i) => sanitizeQuestionForStudent(q, generation && !structured ? { generation, questionKey: sectionQuestionId({ id: "__default__" }, q, i) } : null));
   if (Array.isArray(x.sections)) x.sections = x.sections.map((s, si) => sanitizeSectionForStudent(s, { generation, sectionId: String(s?.id ?? "section-" + (si + 1)) }));
   return x;
