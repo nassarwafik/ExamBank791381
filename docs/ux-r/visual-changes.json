@@ -1825,6 +1825,16 @@
       "page": "state-classic-builder",
       "viewport": "all",
       "reason": "Classic builder — the access bar gains «العودة إلى استوديو الامتحان» after «استيراد امتحان منظّم» (the owner's request: a visible way back to the Exam Studio from the classic page). The bar sits in the page under the open editor this scene captures: the editor's pixels do not change, but the extra button wraps the bar onto one more row, so the document is a row taller (desktop 977 → 1006 px)."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "all",
+      "reason": "Exam Studio setup step — the new «أدوات الطالب» panel (Phase T2/T3, the owner's request) appears under «الغلاف والتعليمات»: one row per student tool (calculator, base converter, function plotter marked «قريبًا», IPv4 calculator), all off for the captured exam. Nothing above it moves; the page is taller by the panel."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Classic builder — the same «أدوات الطالب» panel (Phase T2/T3) appears under the cover panel in the open editor, all tools off for the captured exam; the sections below move down by the panel's height."
     }
   ]
 }
