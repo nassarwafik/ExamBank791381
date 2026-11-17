@@ -22,9 +22,8 @@ describe("T2 — Builder «أدوات الطالب» panel", () => {
 
   it("tools without a student UI yet cannot be switched on", () => {
     mount(undefined);
-    expect((screen.getByRole("checkbox", { name: "محوّل أنظمة العدّ قريبًا" }) as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByRole("checkbox", { name: "راسم الدوال قريبًا" }) as HTMLInputElement).disabled).toBe(true);
-    expect(screen.getAllByText("قريبًا")).toHaveLength(2);
+    expect(screen.getAllByText("قريبًا")).toHaveLength(1);                     // T3: the base converter ships, the plotter does not yet
   });
 
   it("keeps tools in contract order and edits their options", () => {
@@ -83,5 +82,35 @@ describe("T2 — Builder «أدوات الطالب» panel", () => {
   it("a one-section exam has no per-section table", () => {
     mount({ version: 1, tools: [{ id: "calculator", variant: "basic", angleUnit: "deg" }] }, [SECTIONS[0]]);
     expect(screen.queryByText("الأدوات في كل قسم")).toBeNull();
+  });
+});
+
+describe("T3 — base converter options and the answer-risk note", () => {
+  it("switching the converter on emits its default; bases can be narrowed but never below two", () => {
+    const m = mount(undefined);
+    fireEvent.click(toolBox("محوّل أنظمة العدّ"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "baseConverter", bases: [2, 8, 10, 16], showSteps: false }] });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    fireEvent.click(toolBox("الثماني (8)"));
+    fireEvent.click(toolBox("عرض خطوات التحويل"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "baseConverter", bases: [2, 8, 10, 16], showSteps: true }] });
+    m.rerender(<StudentToolsEditor value={{ version: 1, tools: [{ id: "baseConverter", bases: [2, 10], showSteps: false }] }} sections={SECTIONS} onChange={m.onChange} />);
+    expect((toolBox("الثنائي (2)") as HTMLInputElement).disabled).toBe(true);
+    expect((toolBox("العشري (10)") as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(toolBox("الست عشري (16)"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "baseConverter", bases: [2, 10, 16], showSteps: false }] });
+  });
+
+  it("names the questions an enabled tool could answer, and only in sections where it is on", () => {
+    const sections = [
+      { id: "s1", title: "الأنظمة", questions: [{ examQuestionId: "a", text: "حوّل 13 إلى النظام الثنائي" }] },
+      { id: "s2", title: "الشبكات", questions: [{ examQuestionId: "b", text: "ما عنوان البث للشبكة 10.0.0.0/8؟" }, { examQuestionId: "c", text: "حوّل FF من الست عشري" }] }
+    ];
+    const spec = { version: 1, tools: [{ id: "baseConverter", bases: [2, 10, 16], showSteps: false }, { id: "ipv4Calculator", showBinary: false, allowSubnetting: false }] };
+    const r = render(<StudentToolsEditor value={spec} sections={sections} onChange={() => {}} />);
+    expect(screen.getByTestId("tool-risk-baseConverter").textContent).toMatch(/2 أسئلة.*الأنظمة · السؤال 1، الشبكات · السؤال 2/);
+    expect(screen.getByTestId("tool-risk-ipv4Calculator").textContent).toMatch(/سؤالًا واحدًا.*الشبكات · السؤال 1/);
+    r.rerender(<StudentToolsEditor value={{ ...spec, sectionOverrides: { s2: { disabled: ["ipv4Calculator"] } } }} sections={sections} onChange={() => {}} />);
+    expect(screen.queryByTestId("tool-risk-ipv4Calculator")).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
-# Phase T — Student Exam Tools (design record; T0 + T1 + T2)
+# Phase T — Student Exam Tools (design record; T0 – T3)
 
-> STATUS: T0 (this design), T1 (contract and data path) and T2 (Builder panel, student tool bar, calculator, IPv4 calculator) are
-> implemented on branch `claude/stoic-brown-yscldn`. They are waiting for independent review and the owner's manual merge. An exam
-> without `studentTools` looks, is delivered and is graded exactly as before. The base converter and the function plotter are in the
-> contract but have no UI yet: the Builder can't switch them on, and the tool bar never lists them.
+> STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator) and T3
+> (base converter, answer-risk notes, tools in the teacher preview, draggable panel) are implemented on branch
+> `claude/stoic-brown-yscldn`. They are waiting for independent review and the owner's manual merge. An exam without `studentTools`
+> looks, is delivered and is graded exactly as before. The function plotter is in the contract but has no UI yet: the Builder can't
+> switch it on, and the tool bar never lists it.
 
 ## 1. Goal
 
@@ -107,7 +108,8 @@ Some tools can answer some questions outright: the IPv4 calculator answers "netw
 converter answers conversion questions. The catalog records this for each tool (`answerRisk`). The planned Builder behaviour:
 
 - the settings panel shows the risk before the teacher switches a tool on (T2);
-- a quality **warning** (not an error: the teacher decides) appears when an enabled tool matches question kinds in the exam (T3);
+- an **advisory note** (never blocking: the teacher decides) names the questions an enabled tool could answer (T3, §10). It lives in
+  the panel, not in the shared quality gate, so finalization, governance and the server never depend on a text heuristic;
 - the section override lets the teacher keep a tool for one section and remove it from another (contract ready in T1).
 
 ## 7. Phases
@@ -117,8 +119,8 @@ converter answers conversion questions. The catalog records this for each tool (
 | T0 | this design record | done |
 | T1 | contract, catalog, IPv4 engine, quality gate, shared build, assignment gate, student / pre-start / preview projections | done (this branch) |
 | T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunk, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | done (this branch) |
-| T3 | base converter; answer-risk quality warnings; tools in the teacher's exam preview; draggable panel | next |
-| T4 | function plotter on `FunctionGraphView` | |
+| T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | done (this branch) |
+| T4 | function plotter on `FunctionGraphView` | next |
 | T5 | formula sheet (rich content, strict projection) and scratch pad | |
 | T6 | subject tools (ASCII and bitwise operations, truth tables, units, periodic table) | |
 | T7 | tools in training and learning materials; optional usage analytics (opens only, never the typed values) | |
@@ -200,3 +202,53 @@ Each phase is one branch and one PR and follows AGENTS.md §3.
 - `src/StudentExamPage.studentTools.t2.test.tsx`, through the real exam page: the start-screen notice, the tool bar in a started
   attempt following the section, no notice or tool bar for an exam without tools or with a malformed value.
 - Fail-first: not applicable (a new feature).
+
+## 10. T3 — base converter, answer-risk notes, preview, dragging
+
+### Base converter (`baseConverter.ts`, `BaseConverterTool.tsx`)
+
+- **Exact arithmetic.** BigInt; non-negative integers below 2^64; input bounded to 100 characters. It is self-contained: it does not
+  use the number-conversion game's helpers, which serve a server-graded board.
+- **Input.** Digits of the chosen source base; spaces and `_` as group separators; an optional prefix that must match the base
+  (`0b`, `0o`, `0x`). In base 16 only `0x` is a prefix, because `0B11` is the hexadecimal number B11.
+- **Errors.** Each error names the offending digit and the allowed digits, in Arabic.
+- **Output.** The value in every other base the teacher allowed: hex in upper case, binary in nibbles, octal in threes, decimal in
+  thousands.
+- **Steps** (only when `showSteps` is on). Positional expansion into decimal; repeated division out of decimal, with the remainders
+  read bottom-up; bit grouping between 2 and 8 / 16; octal ↔ hex through decimal. At most 64 rows (2^64 − 1 needs exactly 64).
+- **Builder options.** The allowed bases (at least two: the last two can't be unticked) and «عرض خطوات التحويل».
+
+### Answer-risk notes (`studentToolsRisk.ts`)
+
+- **Advisory only.** A heuristic over the question's **display text**: stem, parts, options, rich content. Answer keys, hints, teacher
+  notes, rubrics and the model answer are never read.
+- **Signals.** IPv4 calculator: an IPv4 address, or a networking term (network / broadcast address, mask, subnets, host count, CIDR).
+  Base converter: a base name (الثنائي، الثماني، الست عشري، …) or base notation (`(1011)₂`, `0x2F`). Plotter: a graph-reading
+  question type. The calculator is never named, because every numeric question would be.
+- **Scope.** Only sections where the tool is on are reported, so the note follows the section overrides.
+- **Display.** The panel names up to five questions («الشبكات · السؤال 2») and suggests the per-section table or switching the tool
+  off. Nothing blocks a save, and nothing reaches the student.
+
+### Teacher preview
+
+`ExamPreview` mounts the same lazy dock, fed `toSafePreviewExam`'s projection (canonical spec or nothing). The preview shows every
+section on one page, so it offers the exam-level tools: section overrides apply only in the student's page, where the current section
+is known.
+
+### Dragging
+
+On wide screens the open panel moves by its header (pointer capture; the header stays inside the viewport). «إعادة النافذة إلى
+موضعها» is the non-drag alternative (WCAG 2.5.7), and pressing a header button never starts a drag. On a phone (≤ 640 px) the panel
+is a bottom sheet: dragging is off, and a viewport that becomes phone-width drops the offset.
+
+### Evidence for T3
+
+- `src/studentTools/baseConverter.t3.test.ts`: parsing, prefixes (hex `0B`), refusals with messages, round trips up to 2^64 − 1,
+  grouping, every step kind.
+- `src/studentTools/studentToolsRisk.t3.test.ts`: positive / negative phrases per tool; answer data never read; bounded input; section
+  overrides respected.
+- `src/studentTools/StudentToolsEditor.t2.test.tsx` (T3 block): converter options, the two-base minimum, the risk note following the
+  overrides.
+- `src/studentTools/StudentToolDock.t2.test.tsx` (T3 blocks): the converter panel (bases, steps, errors, steps off), dragging with
+  clamping, release, reset, and buttons not dragging.
+- `src/ExamPreview.studentTools.t3.test.tsx`: the dock in the preview, absent without tools or for a value the student would not receive.

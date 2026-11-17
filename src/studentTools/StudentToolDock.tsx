@@ -3,6 +3,7 @@ import { projectStudentToolsForStudent, enabledToolsForSection, type StudentTool
 import { studentToolCatalogEntry, studentToolHasUi } from "./studentToolsCatalog";
 import CalculatorTool from "./CalculatorTool";
 import Ipv4CalculatorTool from "./Ipv4CalculatorTool";
+import BaseConverterTool from "./BaseConverterTool";
 import "./studentTools.css";
 
 // Phase T2 — the student's tool bar inside a running exam.
@@ -30,6 +31,7 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
   switch (tool.id) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
+    case "baseConverter": return <BaseConverterTool config={tool} />;
     default: return null;
   }
 }
@@ -46,6 +48,41 @@ export default function StudentToolDock({ studentTools, sectionId }: Props) {
   const [openTool, setOpenTool] = useState<StudentToolId | null>(null);
   const [mounted, setMounted] = useState<ReadonlySet<StudentToolId>>(() => new Set());
   const fabRef = useRef<HTMLButtonElement>(null);
+  // Phase T3 — the open panel can be dragged by its header on wide screens (on a phone it is a bottom sheet). One offset for the dock:
+  // only one panel is visible at a time. «إعادة الموضع» is the non-drag alternative (WCAG 2.5.7).
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ pointer: number; startX: number; startY: number; base: { x: number; y: number }; bounds: { minX: number; maxX: number; minY: number; maxY: number } } | null>(null);
+  const onHeadPointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(max-width: 640px)").matches) return;
+    const panel = (e.currentTarget as HTMLElement).closest(".stt-panel") as HTMLElement | null;
+    const r = panel?.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    drag.current = {
+      pointer: e.pointerId, startX: e.clientX, startY: e.clientY, base: offset,
+      // keep the whole header on screen: the panel may move left/up by its distance to the edge, right/down likewise
+      bounds: r ? { minX: offset.x - r.left, maxX: offset.x + (vw - r.right), minY: offset.y - r.top, maxY: offset.y + (vh - r.top - 48) } : { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity }
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  };
+  const onHeadPointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    const d = drag.current;
+    if (!d || d.pointer !== e.pointerId) return;
+    const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+    setOffset({ x: clamp(d.base.x + e.clientX - d.startX, d.bounds.minX, d.bounds.maxX), y: clamp(d.base.y + e.clientY - d.startY, d.bounds.minY, d.bounds.maxY) });
+  };
+  const endDrag = (e: React.PointerEvent<HTMLElement>) => { if (drag.current?.pointer === e.pointerId) drag.current = null; };
+  const moved = offset.x !== 0 || offset.y !== 0;
+  // A viewport that becomes phone-width shows the bottom sheet: a desktop drag offset no longer applies.
+  useEffect(() => {
+    if (!moved || typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const reset = () => { if (mq.matches) setOffset({ x: 0, y: 0 }); };
+    reset();
+    mq.addEventListener?.("change", reset);
+    return () => mq.removeEventListener?.("change", reset);
+  }, [moved]);
   const panelRefs = useRef<Partial<Record<StudentToolId, HTMLElement | null>>>({});
 
   // A section that disables the open tool closes its panel (its state is kept for the sections that allow it). Adjusted during render
@@ -84,10 +121,15 @@ export default function StudentToolDock({ studentTools, sectionId }: Props) {
         const visible = openTool === t.id && openAllowed;
         return (
           <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className="stt-panel" role="dialog" aria-modal="false" aria-labelledby={titleId}
-            hidden={!visible} tabIndex={-1} data-testid={"tool-panel-" + t.id}>
-            <header className="stt-panel-head">
+            hidden={!visible} tabIndex={-1} data-testid={"tool-panel-" + t.id}
+            style={moved ? { transform: "translate(" + offset.x + "px, " + offset.y + "px)" } : undefined}>
+            <header className="stt-panel-head" onPointerDown={onHeadPointerDown} onPointerMove={onHeadPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}
+              title="اسحب لتحريك النافذة">
               <h2 id={titleId} className="stt-panel-title">{toolTitle(t)}</h2>
-              <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
+              <span className="stt-head-actions">
+                {moved && <button type="button" className="stt-close" onClick={() => setOffset({ x: 0, y: 0 })} aria-label="إعادة النافذة إلى موضعها">↺</button>}
+                <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
+              </span>
             </header>
             <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} /></ToolBoundary></div>
           </section>

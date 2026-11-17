@@ -1421,7 +1421,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
 
   // Phase T2 — «أدوات الطالب»: the same controlled panel in the Studio setup step and the classic workspace. `undefined` removes the key.
   const studentToolsEditor = (
-    <StudentToolsEditor value={exam.studentTools} sections={(exam.sections || []).map(sec => ({ id: String(sec.id), title: sec.title }))} disabled={!!saving}
+    <StudentToolsEditor value={exam.studentTools} sections={(exam.sections || []).map(sec => ({ id: String(sec.id), title: sec.title, questions: sec.questions }))} disabled={!!saving}
       onChange={next => update(prev => { const out = { ...prev }; if (next) out.studentTools = next; else delete out.studentTools; return out; })} />
   );
 

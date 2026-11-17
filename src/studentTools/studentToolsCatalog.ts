@@ -33,8 +33,8 @@ export const STUDENT_TOOLS_CATALOG: readonly StudentToolCatalogEntry[] = Object.
     label: "محوّل أنظمة العدّ",
     description: "التحويل بين الأنظمة الثنائي والثماني والعشري والست عشري، مع عرض خطوات التحويل اختياريًا.",
     subjects: ["علم الحاسوب", "الشبكات"],
-    answerRisk: "تحلّ أسئلة التحويل بين أنظمة العدّ بالكامل.",
-    available: false
+    answerRisk: "تحلّ أسئلة التحويل بين أنظمة العدّ بالكامل، وتعرض خطوات الحل عند تفعيلها.",
+    available: true
   },
   {
     id: "graphPlotter",

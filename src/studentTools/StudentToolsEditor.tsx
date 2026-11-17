@@ -1,16 +1,20 @@
 import { useId } from "react";
 import {
-  STUDENT_TOOL_IDS, defaultStudentToolConfig, validateStudentTools,
-  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1
+  STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
+  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type NumberBase
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
+import { studentToolAnswerRisks } from "./studentToolsRisk";
+import { BASE_LABEL } from "./baseConverter";
+
+const MAX_RISK_LABELS = 5;
 
 // Phase T2 — Builder panel «أدوات الطالب»: which tools the student may open during this exam, their options, and the sections where a
 // tool is switched off. Controlled: every change is re-validated and only a CANONICAL spec (or undefined = no tools) is emitted, so the
 // exam never holds a value the quality gate or the server would refuse. Overrides of sections that no longer exist are pruned on the
 // next edit (until then the quality gate names them).
 
-type SectionRef = { id: string; title?: string };
+type SectionRef = { id: string; title?: string; questions?: unknown[] };
 type Props = {
   value: unknown;
   sections: readonly SectionRef[];
@@ -42,6 +46,8 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
   for (const [sid, o] of Object.entries(spec?.sectionOverrides ?? {})) overrides[sid] = [...o.disabled];
   const sectionIds = new Set(sections.map(s => s.id));
   const staleSections = Object.keys(overrides).filter(sid => !sectionIds.has(sid));
+  // Phase T3 — advisory: questions an enabled tool could answer outright (follows the section overrides; never blocks).
+  const risks = new Map(studentToolAnswerRisks({ sections: sections as SectionRef[] }, spec).map(r => [r.tool, r.hits]));
 
   const setTools = (next: StudentToolConfigV1[]) => emit(next, overrides, sectionIds, onChange);
   const toggleTool = (id: StudentToolId, on: boolean) => {
@@ -93,6 +99,13 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                 <p className="sb-hint" id={cid + "-desc"}>{entry.description}</p>
                 {on && !entry.available && <p className="sb-hint">هذه الأداة لن تظهر للطالب حتى تصدر واجهتها.</p>}
                 {on && entry.available && <p className="sb-hint sb-tool-risk"><strong>انتبه:</strong> {entry.answerRisk}</p>}
+                {on && risks.has(id) && (
+                  <p className="sb-banner sb-tool-hits" role="note" data-testid={"tool-risk-" + id}>
+                    قد تحلّ هذه الأداة {risks.get(id)!.length === 1 ? "سؤالًا واحدًا" : risks.get(id)!.length + " أسئلة"} في هذا الامتحان: {risks.get(id)!.slice(0, MAX_RISK_LABELS).map(h => h.label).join("، ")}
+                    {risks.get(id)!.length > MAX_RISK_LABELS ? " و" + (risks.get(id)!.length - MAX_RISK_LABELS) + " أخرى" : ""}.
+                    {sections.length > 1 ? " يمكنك إيقافها في هذه الأقسام من «الأدوات في كل قسم»." : " فكّر في إيقافها لهذا الامتحان."}
+                  </p>
+                )}
                 {tool?.id === "calculator" && (
                   <div className="sb-tool-options">
                     <label className="sb-field">
@@ -111,6 +124,27 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                         </select>
                       </label>
                     )}
+                  </div>
+                )}
+                {tool?.id === "baseConverter" && (
+                  <div className="sb-tool-options">
+                    <fieldset className="sb-tool-bases">
+                      <legend className="sb-field-label">أنظمة العدّ المتاحة (اثنان على الأقل)</legend>
+                      {NUMBER_BASES.map(b => {
+                        const checked = tool.bases.includes(b);
+                        return (
+                          <label key={b} className="sb-check">
+                            <input type="checkbox" checked={checked} disabled={disabled || (checked && tool.bases.length <= 2)}
+                              onChange={e => patchTool(id, { bases: (e.target.checked ? [...tool.bases, b] : tool.bases.filter(x => x !== b)) as NumberBase[] } as Partial<BaseConverterToolV1>)} />
+                            <span>{BASE_LABEL[b]} ({b})</span>
+                          </label>
+                        );
+                      })}
+                    </fieldset>
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.showSteps} disabled={disabled} onChange={e => patchTool(id, { showSteps: e.target.checked } as Partial<BaseConverterToolV1>)} />
+                      <span>عرض خطوات التحويل</span>
+                    </label>
                   </div>
                 )}
                 {tool?.id === "ipv4Calculator" && (

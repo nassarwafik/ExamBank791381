@@ -20,7 +20,7 @@ const press = (panel: HTMLElement, ...labels: string[]) => { for (const l of lab
 
 describe("T2 — the student tool dock", () => {
   it("renders nothing without tools, for a malformed spec, or when no enabled tool has a UI yet", () => {
-    for (const v of [undefined, null, { version: 1, tools: [] }, { ...SPEC, smuggled: 1 }, { version: 1, tools: [{ id: "baseConverter", bases: [2, 10], showSteps: false }] }]) {
+    for (const v of [undefined, null, { version: 1, tools: [] }, { ...SPEC, smuggled: 1 }, { version: 1, tools: [{ id: "graphPlotter", maxFunctions: 2, showAnalysis: false }] }]) {
       const r = render(<StudentToolDock studentTools={v} sectionId="s1" />);
       expect(r.container.innerHTML).toBe("");
       r.unmount();
@@ -149,5 +149,67 @@ describe("T2 — containment", () => {
     } finally { console.error = err; }
     expect(screen.getByText("السؤال")).toBeTruthy();
     expect(screen.getByTestId("tools-unavailable").textContent).toMatch(/متابعة الإجابة/);
+  });
+});
+
+describe("T3 — the base converter panel", () => {
+  const CONV = { version: 1, tools: [{ id: "baseConverter", bases: [2, 10, 16], showSteps: true }] };
+  it("converts from the chosen base into every other allowed base, with steps", () => {
+    render(<StudentToolDock studentTools={CONV} />);
+    openTools(); pick("محوّل أنظمة العدّ");
+    const panel = screen.getByRole("dialog", { name: "محوّل أنظمة العدّ" });
+    expect((within(panel).getByLabelText("من النظام") as HTMLSelectElement).value).toBe("10");
+    expect(within(panel).queryByRole("option", { name: /الثماني/ })).toBeNull();
+    const input = within(panel).getByLabelText("العدد");
+    fireEvent.change(input, { target: { value: "45" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    const result = within(panel).getByTestId("base-result");
+    expect(result.textContent).toContain("0010 1101");
+    expect(result.textContent).toContain("2D");
+    expect(within(panel).getByTestId("base-steps").textContent).toMatch(/نقسم على 2/);
+    fireEvent.click(within(panel).getByLabelText("إلى الست عشري"));
+    expect(within(panel).getByTestId("base-steps").textContent).toMatch(/نقسم على 16/);
+  });
+  it("explains an invalid digit, and hides the steps when the teacher did not allow them", () => {
+    render(<StudentToolDock studentTools={{ version: 1, tools: [{ id: "baseConverter", bases: [2, 10], showSteps: false }] }} />);
+    openTools(); pick("محوّل أنظمة العدّ");
+    const panel = screen.getByRole("dialog", { name: "محوّل أنظمة العدّ" });
+    fireEvent.change(within(panel).getByLabelText("من النظام"), { target: { value: "2" } });
+    fireEvent.change(within(panel).getByLabelText("العدد"), { target: { value: "1021" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "حوّل" }));
+    expect(within(panel).getByRole("alert").textContent).toMatch(/«2» غير مسموح/);
+    fireEvent.change(within(panel).getByLabelText("العدد"), { target: { value: "1101" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "حوّل" }));
+    expect(within(panel).getByTestId("base-result").textContent).toContain("13");
+    expect(within(panel).queryByTestId("base-steps")).toBeNull();
+  });
+});
+
+describe("T3 — dragging the panel", () => {
+  it("moves the open panel by its header, never past the viewport, and «إعادة الموضع» puts it back", () => {
+    render(<StudentToolDock studentTools={SPEC} sectionId="s1" />);
+    openTools(); pick("آلة حاسبة علمية");
+    const panel = screen.getByTestId("tool-panel-calculator");
+    panel.getBoundingClientRect = () => ({ left: 600, right: 960, top: 300, bottom: 700, width: 360, height: 400, x: 600, y: 300, toJSON: () => ({}) });
+    const head = within(panel).getByRole("heading", { name: "آلة حاسبة علمية" }).parentElement!;
+    fireEvent.pointerDown(head, { button: 0, pointerId: 1, clientX: 700, clientY: 320 });
+    fireEvent.pointerMove(head, { pointerId: 1, clientX: 600, clientY: 270 });
+    expect(panel.style.transform).toBe("translate(-100px, -50px)");
+    fireEvent.pointerMove(head, { pointerId: 1, clientX: -5000, clientY: -5000 });
+    expect(panel.style.transform).toBe("translate(-600px, -300px)");             // clamped at the viewport's top-left corner
+    fireEvent.pointerUp(head, { pointerId: 1 });
+    fireEvent.pointerMove(head, { pointerId: 1, clientX: 900, clientY: 900 });
+    expect(panel.style.transform).toBe("translate(-600px, -300px)");             // no drag after release
+    fireEvent.click(within(panel).getByRole("button", { name: "إعادة النافذة إلى موضعها" }));
+    expect(panel.style.transform).toBe("");
+  });
+  it("pressing the close button does not start a drag", () => {
+    render(<StudentToolDock studentTools={SPEC} sectionId="s1" />);
+    openTools(); pick("آلة حاسبة علمية");
+    const panel = screen.getByTestId("tool-panel-calculator");
+    const close = within(panel).getByRole("button", { name: "إغلاق آلة حاسبة علمية" });
+    fireEvent.pointerDown(close, { button: 0, pointerId: 2, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(close, { pointerId: 2, clientX: 200, clientY: 200 });
+    expect(panel.style.transform).toBe("");
   });
 });

@@ -66,3 +66,12 @@
 }
 @media print { .stt-dock { display: none; } }
 @media (prefers-reduced-motion: no-preference) { .stt-fab, .stt-menu-item, .stt-key { transition: background-color var(--eb-dur) var(--eb-ease); } }
+/* Phase T3 — base converter. */
+.stt-select { margin-block-end: var(--eb-space-2); font-family: var(--eb-font); }
+.stt-steps { margin-block-start: var(--eb-space-2); }
+.stt-steps-line { margin: var(--eb-space-1) 0; font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); overflow-wrap: anywhere; }
+/* Phase T3 — draggable header on wide screens. */
+.stt-panel-head { cursor: grab; touch-action: none; user-select: none; }
+.stt-panel-head:active { cursor: grabbing; }
+.stt-head-actions { display: inline-flex; gap: var(--eb-space-1); }
+@media (max-width: 640px) { .stt-panel-head { cursor: default; touch-action: auto; } }
