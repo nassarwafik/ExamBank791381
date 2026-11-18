@@ -12,6 +12,9 @@ import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import { TeacherPreviewContext } from "./questionTypes/studentAttemptContext";
 import "./exam-preview.css";
+import ToolDockBoundary from "./studentTools/ToolDockBoundary";
+// Phase T3 — the teacher tries the allowed student tools in the preview (the same lazy dock the student gets; nothing is saved).
+const StudentToolDock = lazy(() => import("./studentTools/StudentToolDock"));
 // Phase 20D.1 — an exam WITH a `presentation` object renders through the shared (lazy) presentation root and section shell — the same
 // components the student page uses; without one, the legacy themed preview below is unchanged.
 const PresentationRoot = lazy(() => import("./presentation/PresentationRoot"));
@@ -133,6 +136,9 @@ export default function ExamPreview({ exam, onClose }: Props) {
               return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />;
             })}
           </section>
+        )}
+        {(safe as Record<string, unknown>).studentTools != null && (
+          <ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={(safe as Record<string, unknown>).studentTools} /></Suspense></ToolDockBoundary>
         )}
       </div>
     )

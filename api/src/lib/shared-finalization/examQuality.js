@@ -13,6 +13,7 @@ const examBuilderState_1 = require("./examBuilderState");
 const compositeQuestion_1 = require("./compositeQuestion");
 const presentationModel_1 = require("./presentation/presentationModel");
 const richContentModel_1 = require("./richContent/richContentModel");
+const studentToolsSpec_1 = require("./studentTools/studentToolsSpec");
 const num = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : NaN;
@@ -36,6 +37,15 @@ function validateStructuredExam(exam) {
     if (cover && typeof cover === "object" && cover.instructionsRichContent !== undefined)
         for (const i of (0, richContentModel_1.validateRichContent)(cover.instructionsRichContent, "coverPage.instructionsRichContent").issues)
             add("error", i.code, "تعليمات الغلاف المنسقة: " + i.message);
+    if (exam.studentTools !== undefined && exam.studentTools !== null) {
+        const tools = (0, studentToolsSpec_1.validateStudentTools)(exam.studentTools);
+        if (!tools.ok)
+            for (const i of tools.issues)
+                add("error", i.code, "أدوات الطالب: " + i.message);
+        else
+            for (const i of (0, studentToolsSpec_1.studentToolsUnknownSectionIssues)(tools.value, sections.map(s => String(s.id ?? ""))))
+                add("error", i.code, "أدوات الطالب: " + i.message);
+    }
     const seenQuestionIds = new Set();
     const allQuestionIds = new Set();
     for (const s of sections)

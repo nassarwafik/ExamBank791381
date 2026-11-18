@@ -32,6 +32,7 @@ import type { CompositeRootV1 } from "./compositeModel";
 
 import type { ExamTheme } from "./examTheme";
 import type { ExamCoverPage } from "./examCover";
+import type { StudentToolsSpecV1 } from "./studentTools/studentToolsSpec";
 import { QUESTION_TYPE_CATALOG, compoundPartTypeKeys, type ProductionQuestionTypeKey } from "./questionTypeCatalog";
 
 export type { ExamCoverPage } from "./examCover";
@@ -284,6 +285,9 @@ export type StructuredExam = {
   // Phase 13C-A — OPTIONAL canonical assessment blueprint (teacher planning data; never delivered to students).
   // Absent on every existing exam: nothing is inferred or migrated by opening / saving.
   blueprint?: AssessmentBlueprintV1;
+  // Phase T1 — OPTIONAL tools the teacher allows students to open during the exam (calculator, base converter, plotter, IPv4
+  // calculator). Absent on every existing exam ⇒ no tools, exactly as before. Validated by studentToolsSpec.ts; never migrated.
+  studentTools?: StudentToolsSpecV1;
   sections: BuilderSection[];
   // Canonical question tree is sections[].questions[] — a structured exam carries NO top-level
   // questions[] (legacyToStructured / toSavedStructuredExam / the save-exam-artifact cleaner all

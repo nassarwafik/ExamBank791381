@@ -22,6 +22,7 @@ import { evaluateExamFinalization } from "./examFinalization";
 import { withQualityPolicy } from "./assessmentQualityPolicy";
 import ExamSectionEditor from "./ExamSectionEditor";
 import ExamCoverEditor from "./ExamCoverEditor";
+import StudentToolsEditor from "./studentTools/StudentToolsEditor";
 import ExamPreview from "./ExamPreview";
 import Dialog from "./ui/Dialog";
 import { useConfirm } from "./ui/useConfirm";
@@ -1418,12 +1419,18 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
     </>
   );
 
+  // Phase T2 — «أدوات الطالب»: the same controlled panel in the Studio setup step and the classic workspace. `undefined` removes the key.
+  const studentToolsEditor = (
+    <StudentToolsEditor value={exam.studentTools} sections={(exam.sections || []).map(sec => ({ id: String(sec.id), title: sec.title, questions: sec.questions }))} disabled={!!saving}
+      onChange={next => update(prev => { const out = { ...prev }; if (next) out.studentTools = next; else delete out.studentTools; return out; })} />
+  );
+
   // Phase 21F.6 / 21F.7 — the Studio's setup, review and publish steps (filled by those phases; the content step is the workspace's).
   const studioStepViews: Partial<Record<StudioStepKey, ReactNode>> = {
     setup: (
       <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل الإعداد…</p>}>
         <StudioSetup exam={exam} onTitle={title => update(prev => ({ ...prev, title }))} tools={toolMenuItems} disabled={!!saving} onStep={step => setStudioUi(prev => ({ ...prev, step }))}
-          coverEditor={<ExamCoverEditor cover={exam.coverPage} onChange={cover => update(prev => ({ ...prev, coverPage: cover }))} onPreviewCover={() => setPreview(exam)} disabled={saving} />} />
+          coverEditor={<><ExamCoverEditor cover={exam.coverPage} onChange={cover => update(prev => ({ ...prev, coverPage: cover }))} onPreviewCover={() => setPreview(exam)} disabled={saving} />{studentToolsEditor}</>} />
       </Suspense>
     ),
     publish: (
@@ -1580,6 +1587,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
         onPreviewCover={() => setPreview(exam)}
         disabled={saving}
       />
+      {studentToolsEditor}
 
       {selected.size > 0 && (
         <BulkActionBar count={selected.size} sections={sectionOptions} mediaPending={selectedMediaPending} disabled={saving}
