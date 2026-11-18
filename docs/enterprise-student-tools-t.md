@@ -1,9 +1,8 @@
 # Phase T — Student Exam Tools (design record; T0 – T7)
 
-> STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator), T3
-> (base converter, answer-risk notes, tools in the teacher preview, draggable panel) and T4 (function plotter) are implemented on
-> branch `claude/stoic-brown-yscldn`. They are waiting for independent review and the owner's manual merge. An exam without
-> `studentTools` looks, is delivered and is graded exactly as before. All four contract tools now have a student UI.
+> STATUS: T0 – T7 are merged to `main` and deployed: T0 – T4 in #659, T5 in #665, T6 in #667, T7 in #670. An exam without
+> `studentTools` looks, is delivered and is graded exactly as before. Every tool in the contract has a student UI. The owner approved
+> four further phases (T8 – T11, §7); each one adds its own section to this record when it is built.
 
 ## 1. Goal
 
@@ -29,9 +28,11 @@ example: calculator allowed, but not in the mental-arithmetic section).
 - **No free-form code.** No `eval`, no `Function`, no HTML. The calculator (T2) has its own bounded parser
   (`src/studentTools/calculatorEngine.ts`, §9). It deliberately does **not** reuse `src/parametricExpression.ts`: that engine is a
   grading authority with frozen languages, and calculator conventions (degrees, factorial, Ans, implicit multiplication, `log` = base
-  10) must never change what a grading engine accepts. The IPv4 tool has its own strict grammar. The plotter (T4) will draw through
+  10) must never change what a grading engine accepts. The IPv4 tool has its own strict grammar. The plotter (T4) draws through
   `FunctionGraphView`.
 - **No new infrastructure.** No storage migration, no new route, no new database. The configuration is one optional field on the exam.
+  This holds for T0 – T7. T8 and T11 store new documents and add routes. Each one states its need in its own section, uses the
+  existing Blob Storage document model, and adds no new service or database.
 
 ## 3. Contract: `StudentToolsSpecV1` (`src/studentTools/studentToolsSpec.ts`)
 
@@ -116,13 +117,17 @@ converter answers conversion questions. The catalog records this for each tool (
 | Phase | Scope | State |
 |---|---|---|
 | T0 | this design record | done |
-| T1 | contract, catalog, IPv4 engine, quality gate, shared build, assignment gate, student / pre-start / preview projections | done (this branch) |
-| T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunk, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | done (this branch) |
-| T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | done (this branch) |
-| T4 | function plotter on `FunctionGraphView` | done (this branch) |
-| T5 | formula sheet (rich content, strict projection) and scratch pad | done (branch `claude/student-tools-t5`, stacked on T0–T4) |
-| T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table) | done (branch `claude/student-tools-t6`, stacked on T5) |
-| T7 | tools in the course books (learning materials); usage analytics deferred by the owner | done (branch `claude/student-tools-t7`, stacked on T6) |
+| T1 | contract, catalog, IPv4 engine, quality gate, shared build, assignment gate, student / pre-start / preview projections | merged (#659) |
+| T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunk, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | merged (#659) |
+| T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | merged (#659) |
+| T4 | function plotter on `FunctionGraphView` | merged (#659) |
+| T5 | formula sheet (rich content, strict projection) and scratch pad | merged (#665) |
+| T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table Z 1 – 36) | merged (#667) |
+| T7 | tools in the course books (learning materials), a fixed set per course | merged (#670) |
+| T8 | tool usage record: which tool a student opened during an attempt, shown to the teacher | planned (owner approved) |
+| T9 | images in the formula sheet, served through the protected image path | planned (owner approved) |
+| T10 | periodic table extended to Z 1 – 118 | planned (owner approved) |
+| T11 | the course books' tool set chosen by the teacher instead of fixed in code | planned (owner approved) |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
