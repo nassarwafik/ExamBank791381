@@ -117,10 +117,20 @@ async function openStudents(vp) {
   const page = await ctx.newPage();
   page.on("pageerror", e => fail("page error @" + vp.width, e.message));
   await page.goto(origin + "/");
-  const nav = page.getByRole("button", { name: "الصفوف والطلاب" }).first();
-  await page.getByRole("button", { name: /القائمة/ }).first().waitFor({ timeout: 15000 }).catch(() => {});
-  if (!(await nav.isVisible().catch(() => false))) await page.getByRole("button", { name: /القائمة/ }).first().click().catch(() => {});
-  await nav.click({ timeout: 15000 });
+  // Below the shell breakpoint (1024 px) the destinations live in the drawer. Open it explicitly and wait until it is open and its
+  // slide has ended before tapping the destination inside it. Hotfix: the former «is the destination visible? else open the menu»
+  // raced the page's first paint — the destination could be tapped while the drawer was still closed, Playwright then scrolled the
+  // document to reach it, and the page opened mid-way (the class strip check measured the strip, then clicked where it no longer was).
+  if (vp.width < 1024) {
+    const menu = page.locator("button.eb-drawer-toggle");
+    await menu.waitFor({ state: "visible", timeout: 15000 });
+    await menu.click();
+    await page.locator(".eb-shell.is-drawer-open #eb-sidebar button.eb-drawer-close").waitFor({ state: "visible", timeout: 15000 });
+    await page.waitForTimeout(350);   // the drawer's slide (--eb-dur)
+    await page.locator("#eb-sidebar").getByRole("button", { name: "الصفوف والطلاب" }).first().click({ timeout: 15000 });
+  } else {
+    await page.getByRole("button", { name: "الصفوف والطلاب" }).first().click({ timeout: 15000 });
+  }
   await page.locator(".eb-roster-table tbody tr").first().waitFor({ timeout: 20000 });
   await page.waitForTimeout(400);
   return { ctx, page };
