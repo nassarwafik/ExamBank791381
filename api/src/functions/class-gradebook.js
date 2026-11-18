@@ -4,12 +4,21 @@
 //   GET  /api/class-gradebook?classId=…&resource=sources   the class's assignments and projects a scheme may pick
 //   POST { action: "scheme.save",  classId, etag, scheme }  validate and save the scheme (If-Match: a stale etag is 409)
 //   POST { action: "entries.save", classId, items }         manual marks and the teacher's excused / zero decisions (stale guard per cell)
+//   POST { action: "part.approve",  classId, categoryId, schemeRevision }   GB6: approve one complete part (frozen snapshot, locked)
+//   POST { action: "part.reopen",   classId, categoryId, reason }           GB6: reopen an approved part (explicit, with a reason, audited)
+//   POST { action: "final.approve", classId, schemeRevision }               GB6: approve the final mark (every part approved and unchanged)
+//   POST { action: "final.reopen",  classId, reason }                       GB6: reopen the final mark
 //
 // Authority (AGENTS.md §10): the teacher's session and tenancy (another teacher's class is reported as missing); the capability of each
 // action (owner decision O1, 2026-11-18: the assignment capabilities — reading needs assignments.assignment.view, writing
 // assignments.grading.grade); project columns only for a session that also holds projects.tracker.view (otherwise withheld, never
 // read); an archived class is read-only; a storage error is a 503, never an empty gradebook. The output is marks and states only: no
 // answer key, no per-question grade, no code or password.
+//
+// GB6 (owner decisions 2026-11-18): approving and reopening need assignments.results.release; an approved part's columns, weights and
+// cells are locked (scheme.save / entries.save refuse them), the approved final locks the whole scheme; reopening comes before any
+// change. A part is approved only when complete and released (lib/gradebook/approval.js); students read the frozen snapshot through
+// /api/student-gradebook, never a live value.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
@@ -21,7 +30,7 @@ const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { isStudentInClass } = require("../lib/class-membership");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
-const { isSafeId } = require("../lib/roster-input");
+const { isSafeId, cleanText } = require("../lib/roster-input");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { getSupportedClassProgramCodes, classHasProject } = require("../lib/project-tracker/class-programs");
 const { isSupportedProject, getProjectMeta } = require("../lib/project-tracker/registry");
@@ -30,6 +39,10 @@ const { validateScheme } = require("../lib/gradebook/scheme");
 const { assignmentEvidence, MISSING_SOURCE, UNCLASSIFIED } = require("../lib/gradebook/evidence");
 const { projectEvidenceFromProgress } = require("../lib/gradebook/project-source");
 const { computeGradebook, roundForDisplay, DECISIONS } = require("../lib/gradebook/compute");
+const {
+  readApprovals, normalizeReason, lockedItems, sameStructure, partReadiness, partSnapshot, partDrift, finalReadiness,
+  finalSnapshot, finalDrift, withHistory, REASON_MIN, REASON_MAX
+} = require("../lib/gradebook/approval");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -37,9 +50,10 @@ const ASSIGN_PREFIX = "platform/assignments/";
 const SUB_PREFIX = "platform/submissions/";
 const schemeName = classId => "platform/gradebooks/" + classId + "/scheme.json";
 const entriesName = classId => "platform/gradebooks/" + classId + "/entries.json";
+const approvalsName = classId => "platform/gradebooks/" + classId + "/approvals.json";
 const PROJECTS_CAPABILITY = "projects.tracker.view";
 const MAX_ENTRY_ITEMS = 300;
-const ACTIONS = ["scheme.save", "entries.save"];
+const ACTIONS = ["scheme.save", "entries.save", "part.approve", "part.reopen", "final.approve", "final.reopen"];
 
 const NO_STORE = { "Cache-Control": "no-store" };
 const reply = (status, body) => ({ status, headers: NO_STORE, jsonBody: body });
@@ -82,25 +96,30 @@ function withDisplay(rows) {
 }
 
 // ------------------------------------------------------------------------------------------------------------------- GET
-async function readGradebook(c, classroom, auth, grants, deps) {
+/**
+ * The ONE computation of a class's gradebook as this teacher sees it, shared by the read and by the approvals (GB6): what is approved is
+ * exactly what the table shows. Returns null when there is no scheme; throws Refusal(503) on a corrupt stored document.
+ */
+async function buildGradebook(c, classroom, grants, deps) {
   const dl = deps.downloadJsonOrNull || storage.downloadJsonOrNull;
   const withEtag = deps.downloadJsonWithEtagOrNull || storage.downloadJsonWithEtagOrNull;
   const classId = classroom.classId;
-  const [schemeDoc, entriesDoc, students] = await Promise.all([withEtag(c, schemeName(classId)), withEtag(c, entriesName(classId)), loadRoster(c, classId, deps)]);
-  const readOnly = normalizeClassStatus(classroom) === "archived";
+  const [schemeDoc, entriesDoc, approvalsDoc, students] = await Promise.all([withEtag(c, schemeName(classId)), withEtag(c, entriesName(classId)), dl(c, approvalsName(classId)), loadRoster(c, classId, deps)]);
+  const approvals = readApprovals(approvalsDoc, classId);
+  if (!approvals) throw new Refusal(unavailable());          // a corrupt approvals document is never read as «nothing approved»
   const projectsAllowed = grants.has(PROJECTS_CAPABILITY);
-  const base = { ok: true, classId, className: String(classroom.name || ""), readOnly, students, etags: { scheme: schemeDoc.etag, entries: entriesDoc.etag }, withheld: projectsAllowed ? [] : ["projects"] };
-  if (!schemeDoc.value) return reply(200, { ...base, scheme: null, columns: [], rows: [], warnings: [] });
+  const out = { classId, students, schemeDoc, entriesDoc, approvals, projectsAllowed, scheme: null };
+  if (!schemeDoc.value) return out;
 
   const scheme = schemeDoc.value;
-  if (!isPlainObject(scheme) || !Array.isArray(scheme.categories)) return unavailable();
+  if (!isPlainObject(scheme) || !Array.isArray(scheme.categories)) throw new Refusal(unavailable());
   const items = scheme.categories.flatMap(cat => (isPlainObject(cat) && Array.isArray(cat.items) ? cat.items : []));
   const ids = students.map(s => s.studentId);
   const evidence = new Map();     // itemId → Map(studentId → evidence)
   const titles = new Map();
   const map = deps.mapConcurrent || storage.mapConcurrent;
   const limit = (deps.getReadConcurrency || storage.getReadConcurrency)();
-  const now = new Date();
+  const now = deps.now ? new Date(deps.now()) : new Date();
 
   // GB7 — the assignment columns are read CONCURRENTLY, and their submissions through the shared ETag-verified document cache (the
   // Reports Center's rule, classes-students-read-cache): each assignment's submissions are LISTED on every request — so nothing is
@@ -148,9 +167,40 @@ async function readGradebook(c, classroom, auth, grants, deps) {
     scheme, studentIds: ids, entries: isPlainObject(entriesDoc.value) && isPlainObject(entriesDoc.value.cells) ? entriesDoc.value.cells : {},
     evidenceOf: (item, studentId) => (evidence.get(item.itemId) && evidence.get(item.itemId).get(studentId)) || UNCLASSIFIED
   });
-  if (!result.ok) return unavailable();      // a corrupt stored scheme is never half-computed
-
+  if (!result.ok) throw new Refusal(unavailable());      // a corrupt stored scheme is never half-computed
   const withheldItems = new Set(projectsAllowed ? [] : result.columns.filter(col => col.source.kind === "project").map(col => col.itemId));
+  return { ...out, scheme, result, titles, assignmentDocs, withheldItems, nowMs: now.getTime() };
+}
+
+/** GB6 — the teacher's view of the approvals: what is approved, whether it changed since, whether each part may be approved now. */
+function approvalsSummary(g) {
+  const { approvals } = g;
+  const parts = {};
+  for (const [categoryId, part] of Object.entries(approvals.parts)) {
+    parts[categoryId] = { approvedAt: String(part.approvedAt || ""), schemeRevision: Number(part.schemeRevision) || 0, drift: partDrift(part.snapshot, g) };
+  }
+  const readiness = { parts: {}, final: finalReadiness(g, approvals) };
+  for (const cat of g.scheme.categories) if (!approvals.parts[cat.categoryId]) readiness.parts[cat.categoryId] = partReadiness(cat.categoryId, g);
+  return {
+    approvals: {
+      revision: Number(approvals.revision) || 0, parts,
+      final: approvals.final ? { approvedAt: String(approvals.final.approvedAt || ""), drift: finalDrift(approvals.final.snapshot, g) } : null,
+      // who approved / reopened is in the audit log; the page shows what happened, when, and why
+      history: approvals.history.slice(-20).map(h => ({ action: String(h.action || ""), ...(h.categoryId ? { categoryId: String(h.categoryId) } : {}), at: String(h.at || ""), ...(h.reason ? { reason: String(h.reason) } : {}) }))
+    },
+    readiness
+  };
+}
+
+async function readGradebook(c, classroom, auth, grants, deps) {
+  const g = await buildGradebook(c, classroom, grants, deps);
+  const { classId, students, schemeDoc, entriesDoc } = g;
+  const readOnly = normalizeClassStatus(classroom) === "archived";
+  const base = { ok: true, classId, className: String(classroom.name || ""), readOnly, students, etags: { scheme: schemeDoc.etag, entries: entriesDoc.etag }, withheld: g.projectsAllowed ? [] : ["projects"] };
+  if (!g.scheme) return reply(200, { ...base, scheme: null, columns: [], rows: [], warnings: [] });
+  const { scheme, result, titles, withheldItems } = g;
+  const ids = students.map(s => s.studentId);
+
   const rows = withDisplay(result.rows).map(r => {
     if (!withheldItems.size) return r;
     const cells = { ...r.cells };
@@ -172,7 +222,8 @@ async function readGradebook(c, classroom, auth, grants, deps) {
   return reply(200, {
     ...base,
     scheme: { revision: Number(scheme.revision) || 0, categories: scheme.categories, updatedAt: String(scheme.updatedAt || "") },
-    schemeStatus: result.status, columns, rows, warnings: result.warnings, entries
+    schemeStatus: result.status, columns, rows, warnings: result.warnings, entries,
+    ...approvalsSummary(g)
   });
 }
 
@@ -209,6 +260,13 @@ async function saveScheme(c, classroom, body, auth, grants, deps) {
   const context = { classId, assignments: new Map(assignmentIds.map((id, i) => [id, docs[i]]).filter(([, d]) => d)), projectCodes: getSupportedClassProgramCodes(classroom) };
   const v = validateScheme(input, context);
   if (!v.ok) return bad("مخطط العلامات غير صالح.", "SCHEME_INVALID", { errors: v.errors });
+  const locked = await approvalLock(c, classId, deps);
+  if (locked.final) return reply(409, { ok: false, code: "FINAL_APPROVED", error: "العلامة النهائية معتمدة؛ أعد فتحها قبل تعديل المخطط." });
+  const changed = Object.entries(locked.parts).filter(([categoryId, part]) => {
+    const cat = v.scheme.categories.find(x => x.categoryId === categoryId);
+    return !cat || !sameStructure(lockedItems(cat), part.snapshot.items.map(({ itemId, weight, source }) => ({ itemId, weight, source })));
+  }).map(([categoryId]) => categoryId);
+  if (changed.length) return reply(409, { ok: false, code: "PART_APPROVED", error: "لا يمكن تعديل أعمدة جزء معتمد أو حذفه؛ أعد فتحه أولًا.", categoryIds: changed });
 
   const current = await withEtag(c, schemeName(classId));
   if ((current.etag || null) !== body.etag) return reply(409, { ok: false, code: "STALE_SCHEME", error: "عُدّل المخطط في مكان آخر بعد أن فتحته. أعد التحميل ثم احفظ.", etag: current.etag });
@@ -275,6 +333,10 @@ async function saveEntries(c, classroom, body, auth, grants, deps) {
   const seen = new Set();
   items.forEach((raw, i) => { const k = isPlainObject(raw) ? raw.itemId + "/" + raw.studentId : ""; if (k && seen.has(k)) errors.push({ index: i, code: "DUPLICATE", error: "الخلية مكررة في الطلب." }); seen.add(k); });
   if (errors.length) return bad("بعض التعديلات غير صالحة؛ لم يُحفظ شيء.", "ENTRIES_INVALID", { errors });
+  const locked = await approvalLock(c, classId, deps);
+  const lockedItemIds = new Map(Object.entries(locked.parts).flatMap(([categoryId, part]) => part.snapshot.items.map(i => [i.itemId, categoryId])));
+  const blocked = items.map((raw, index) => (lockedItemIds.has(raw.itemId) ? { index, categoryId: lockedItemIds.get(raw.itemId) } : null)).filter(Boolean);
+  if (blocked.length) return reply(409, { ok: false, code: "PART_APPROVED", error: "هذه الخلايا في جزء معتمد؛ أعد فتحه قبل التعديل. لم يُحفظ شيء.", errors: blocked });
 
   const at = new Date().toISOString(), by = String(auth.user && auth.user.sub || "");
   let applied = [], stale = [];
@@ -308,6 +370,109 @@ async function saveEntries(c, classroom, body, auth, grants, deps) {
   return reply(200, { ok: true, revision: written.revision, applied: applied.map(({ itemId, studentId }) => ({ itemId, studentId })), stale });
 }
 
+// ------------------------------------------------------------------------------------------------------------------- GB6 approvals
+/** The class's approvals for a lock check; a corrupt document refuses the write (fail closed: never read as «nothing approved»). */
+async function approvalLock(c, classId, deps) {
+  const approvals = readApprovals(await (deps.downloadJsonOrNull || storage.downloadJsonOrNull)(c, approvalsName(classId)), classId);
+  if (!approvals) throw new Refusal(unavailable());
+  return approvals;
+}
+
+const staleScheme = () => reply(409, { ok: false, code: "STALE_SCHEME", error: "تغيّر المخطط بعد أن فتحت السجل. أعد التحميل ثم اعتمد." });
+const notReady = (issues, code = "PART_NOT_READY") => reply(409, { ok: false, code, error: issues.map(i => i.message).join(" "), issues });
+
+/** Writes the approvals document (read-modify-write with retry). `change(doc)` returns the new document, or throws a Refusal. */
+async function writeApprovals(c, classId, deps, change) {
+  const mutate = deps.mutateJsonWithRetry || storage.mutateJsonWithRetry;
+  try {
+    return await mutate(c, approvalsName(classId), current => {
+      const doc = readApprovals(current, classId);
+      if (!doc) throw new Refusal(unavailable());
+      const next = change(doc);
+      return { ...next, schemaVersion: 1, classId, revision: (Number(doc.revision) || 0) + 1 };
+    });
+  } catch (e) {
+    if (e instanceof storage.StorageConflictError) return reply(409, { ok: false, code: "SAVE_CONFLICT", error: "تعارض في الحفظ، أعد المحاولة." });
+    throw e;
+  }
+}
+
+async function audit(c, deps, auth, classroom, action, details) {
+  await (deps.recordAuditEvent || recordAuditEvent)(c, { actor: auth.user && auth.user.sub, action, targetType: "class", targetId: classroom.classId, targetLabel: String(classroom.name || ""), details: { classId: classroom.classId, ...details } });
+}
+
+async function approve(c, classroom, body, auth, grants, deps, action) {
+  const classId = classroom.classId;
+  const isPart = action === "part.approve";
+  if (isPart && !isSafeId(body.categoryId)) return bad("categoryId غير صالح.");
+  if (!Number.isInteger(body.schemeRevision) || body.schemeRevision < 1) return bad("يجب إرسال نسخة المخطط التي ظهرت (schemeRevision).");
+  const g = await buildGradebook(c, classroom, grants, deps);
+  if (!g.scheme) return reply(409, { ok: false, code: "NO_SCHEME", error: "احفظ مخطط العلامات أولًا." });
+  if ((Number(g.scheme.revision) || 0) !== body.schemeRevision) return staleScheme();
+  const at = new Date(g.nowMs).toISOString(), by = String(auth.user && auth.user.sub || "");
+
+  if (isPart) {
+    const categoryId = body.categoryId;
+    if (!g.scheme.categories.some(cat => cat.categoryId === categoryId)) return reply(404, { ok: false, code: "PART_NOT_FOUND", error: "الجزء غير موجود في المخطط." });
+    if (g.approvals.parts[categoryId]) return reply(200, { ok: true, unchanged: true, revision: Number(g.approvals.revision) || 0 });   // a repeated approval changes nothing
+    const ready = partReadiness(categoryId, g);
+    if (!ready.ready) return notReady(ready.issues);
+    const snapshot = partSnapshot(categoryId, g, g.titles);
+    const written = await writeApprovals(c, classId, deps, doc => {
+      if (doc.parts[categoryId]) throw new Refusal(reply(200, { ok: true, unchanged: true, revision: Number(doc.revision) || 0 }));
+      if (doc.final) throw new Refusal(reply(409, { ok: false, code: "FINAL_APPROVED", error: "العلامة النهائية معتمدة؛ أعد فتحها أولًا." }));
+      return { ...doc, parts: { ...doc.parts, [categoryId]: { approvedAt: at, approvedBy: by, schemeRevision: body.schemeRevision, snapshot } }, history: withHistory(doc, { action: "part.approve", categoryId, at, by }) };
+    });
+    if (written.status) return written;
+    await audit(c, deps, auth, classroom, "gradebook.part.approve", { categoryId, schemeRevision: body.schemeRevision, revision: written.revision, students: Object.keys(snapshot.students).length, items: snapshot.items.length });
+    return reply(200, { ok: true, revision: written.revision, categoryId, approvedAt: at });
+  }
+
+  if (g.approvals.final) return reply(200, { ok: true, unchanged: true, revision: Number(g.approvals.revision) || 0 });
+  const ready = finalReadiness(g, g.approvals);
+  if (!ready.ready) return notReady(ready.issues, "FINAL_NOT_READY");
+  const snapshot = finalSnapshot(g);
+  const approvedParts = JSON.stringify(Object.keys(g.approvals.parts).sort());
+  const written = await writeApprovals(c, classId, deps, doc => {
+    if (doc.final) throw new Refusal(reply(200, { ok: true, unchanged: true, revision: Number(doc.revision) || 0 }));
+    // the parts checked above must still be the approved ones (none reopened meanwhile)
+    if (JSON.stringify(Object.keys(doc.parts).sort()) !== approvedParts || Object.keys(doc.parts).some(id => doc.parts[id].approvedAt !== g.approvals.parts[id].approvedAt)) {
+      throw new Refusal(reply(409, { ok: false, code: "APPROVALS_CHANGED", error: "تغيّرت اعتمادات الأجزاء في مكان آخر. أعد التحميل ثم اعتمد." }));
+    }
+    return { ...doc, final: { approvedAt: at, approvedBy: by, schemeRevision: body.schemeRevision, snapshot }, history: withHistory(doc, { action: "final.approve", at, by }) };
+  });
+  if (written.status) return written;
+  await audit(c, deps, auth, classroom, "gradebook.final.approve", { schemeRevision: body.schemeRevision, revision: written.revision, students: Object.keys(snapshot.students).length });
+  return reply(200, { ok: true, revision: written.revision, approvedAt: at });
+}
+
+async function reopen(c, classroom, body, auth, deps, action) {
+  const classId = classroom.classId;
+  const isPart = action === "part.reopen";
+  if (isPart && !isSafeId(body.categoryId)) return bad("categoryId غير صالح.");
+  const reason = normalizeReason(body.reason, cleanText);
+  if (!reason) return bad("اكتب سبب إعادة الفتح (من " + REASON_MIN + " إلى " + REASON_MAX + " حرفًا).", "REASON_REQUIRED");
+  const at = (deps.now ? new Date(deps.now()) : new Date()).toISOString(), by = String(auth.user && auth.user.sub || "");
+  let previous = null;
+  const written = await writeApprovals(c, classId, deps, doc => {
+    if (isPart) {
+      const part = doc.parts[body.categoryId];
+      if (!part) throw new Refusal(reply(409, { ok: false, code: "NOT_APPROVED", error: "هذا الجزء غير معتمد." }));
+      if (doc.final) throw new Refusal(reply(409, { ok: false, code: "FINAL_APPROVED", error: "العلامة النهائية معتمدة؛ أعد فتحها قبل إعادة فتح جزء." }));
+      previous = { approvedAt: part.approvedAt, schemeRevision: part.schemeRevision };
+      const parts = { ...doc.parts };
+      delete parts[body.categoryId];
+      return { ...doc, parts, history: withHistory(doc, { action: "part.reopen", categoryId: body.categoryId, at, by, reason }) };
+    }
+    if (!doc.final) throw new Refusal(reply(409, { ok: false, code: "NOT_APPROVED", error: "العلامة النهائية غير معتمدة." }));
+    previous = { approvedAt: doc.final.approvedAt, schemeRevision: doc.final.schemeRevision };
+    return { ...doc, final: null, history: withHistory(doc, { action: "final.reopen", at, by, reason }) };
+  });
+  if (written.status) return written;
+  await audit(c, deps, auth, classroom, isPart ? "gradebook.part.reopen" : "gradebook.final.reopen", { ...(isPart ? { categoryId: body.categoryId } : {}), reason, revision: written.revision, previous });
+  return reply(200, { ok: true, revision: written.revision });
+}
+
 // ------------------------------------------------------------------------------------------------------------------- handler
 async function handler(request, deps = {}, obs = null) {
   try {
@@ -335,6 +500,8 @@ async function handler(request, deps = {}, obs = null) {
     if (isGet) return params.get("resource") === "sources" ? await readSources(c, classroom, grants, deps) : await readGradebook(c, classroom, auth, grants, deps);
     if (normalizeClassStatus(classroom) === "archived") return reply(409, { ok: false, code: "CLASS_ARCHIVED", error: "الصف مؤرشف؛ سجل علاماته للقراءة فقط." });
     if (action === "scheme.save") return await saveScheme(c, classroom, body, auth, grants, deps);
+    if (action === "part.approve" || action === "final.approve") return await approve(c, classroom, body, auth, grants, deps, action);
+    if (action === "part.reopen" || action === "final.reopen") return await reopen(c, classroom, body, auth, deps, action);
     return await saveEntries(c, classroom, body, auth, grants, deps);
   } catch (e) {
     if (e instanceof Refusal) return e.response;

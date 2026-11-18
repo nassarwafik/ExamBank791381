@@ -101,7 +101,8 @@ describe("GB7 — «سجل العلامات» at 40 students × 30 columns", () 
     expect((await s.get()).status).toBe(200);
     const repeat = { ...s.meter.counts };
     expect(repeat.submissionDownloads).toBe(0);
-    expect(repeat.downloads).toBeLessThanOrEqual(3 + ASSIGNMENTS);          // class, scheme, entries + the scheme's assignment documents
+    // class, scheme, entries, approvals (GB6: one more document, the frozen approvals) + the scheme's assignment documents
+    expect(repeat.downloads).toBeLessThanOrEqual(4 + ASSIGNMENTS);
     console.info("GB7 read cost — first open:", JSON.stringify(first), "· repeat open:", JSON.stringify(repeat), "· sequential floor (ms):", sequentialFloorMs);
   }, 60000);
 
