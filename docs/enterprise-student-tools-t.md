@@ -493,7 +493,7 @@ All or nothing, like the exam's validator.
 «تعديل الأدوات» opens `BookToolsDialog`:
 - **The editor.** The exam's «أدوات الطالب» editor (lazy), without sections and without the formula sheet (`excludeTools`). It starts
   from the current set.
-- **Saving.** «حفظ» saves the selection; an empty selection turns the tools off.
+- **Saving.** «حفظ التغييرات» (the shared `SAVE_LABELS.saveChanges`) saves the selection; an empty selection turns the tools off.
 - **Restoring.** «استعادة أدوات الكتاب» sends `null`.
 
 An archived class shows the tools without the edit button.

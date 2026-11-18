@@ -75,7 +75,7 @@ describe("T11 — the teacher's control in «المواد التعليمية ل�
     expect(within(dialog).queryByRole("checkbox", { name: "ورقة القوانين" })).toBeNull();
     expect((within(dialog).getByRole("checkbox", { name: "حاسبة الشبكات IPv4" }) as HTMLInputElement).checked).toBe(true);   // starts from the book's set
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "حاسبة الشبكات IPv4" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التغييرات" }));
     expect(onSetTools).toHaveBeenCalledTimes(1);
     const [cls, courseId, spec] = onSetTools.mock.calls[0];
     expect([cls.classId, courseId]).toEqual(["c1", "791381"]);
@@ -88,7 +88,7 @@ describe("T11 — the teacher's control in «المواد التعليمية ل�
     fireEvent.click(within(screen.getByTestId("book-tools-899371")).getByRole("button", { name: "تعديل الأدوات" }));
     let dialog = await screen.findByRole("dialog");
     fireEvent.click(await within(dialog).findByRole("checkbox", { name: "آلة حاسبة" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التغييرات" }));
     expect(onSetTools.mock.calls[0][2]).toEqual({ version: 1, tools: [] });
     fireEvent.click(within(screen.getByTestId("book-tools-899371")).getByRole("button", { name: "تعديل الأدوات" }));
     dialog = await screen.findByRole("dialog");
