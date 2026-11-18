@@ -121,13 +121,20 @@ describe("GB2 — the computed gradebook", () => {
   it("reads only the submissions of the assignments in the scheme", async () => {
     const s = await setup();
     await s.post(s.A, { action: "scheme.save", classId: s.a1, etag: null, scheme: s.scheme() });
-    const read = [];
-    const storage = require("../src/lib/platform-storage.js");
-    const dl = async (c, name) => { read.push(name); return storage.downloadJsonOrNull(c, name); };
-    expect((await s.get(s.A, s.a1, { downloadJsonOrNull: dl })).status).toBe(200);
+    // Every download and listing is recorded at the container itself (GB7: submissions are listed per assignment and read through
+    // the shared document cache, not through downloadJsonOrNull).
+    // A submission left by a student who is no longer in the class (moved, or another class's student) is listed but never downloaded.
+    s.mem.setJson("platform/submissions/" + s.hw + "/" + s.sB + ".json", { assignmentId: s.hw, studentId: s.sB, attempts: [attempt(1, 3)] });
+    const read = [], listed = [];
+    const watched = { ...s.mem.container,
+      getBlobClient: name => { read.push(name); return s.mem.container.getBlobClient(name); },
+      listBlobsFlat: opts => { listed.push(opts && opts.prefix); return s.mem.container.listBlobsFlat(opts); } };
+    expect((await s.get(s.A, s.a1, { container: watched, getContainer: () => watched })).status).toBe(200);
     const subs = read.filter(n => n.startsWith("platform/submissions/"));
-    expect(subs.length).toBe(6);                                                                         // 2 assignments × 3 students
+    expect(subs.length).toBe(5);                                    // 2 assignments × 3 students, of which s3 never submitted the exam
     expect(subs.some(n => n.includes("/" + s.unused + "/"))).toBe(false);
+    expect(subs.some(n => n.endsWith("/" + s.sB + ".json"))).toBe(false);
+    expect(listed.filter(p => String(p).startsWith("platform/submissions/")).sort()).toEqual(["platform/submissions/" + s.ex + "/", "platform/submissions/" + s.hw + "/"].sort());
   });
   it("an assignment purged after the scheme was saved is a missing source, never a zero", async () => {
     const s = await setup();
