@@ -21,6 +21,8 @@ const REGISTRY = {
     "reports.js": TENANT, "teacher-today.js": TENANT, "teacher-achievement-feed.js": TENANT, "messages.js": TENANT, "project-tracker.js": TENANT,
     "game-live-session.js": TENANT, "teacher-analytics.js": TENANT, "teacher-analytics-ai.js": TENANT,
     "student-profile-photo.js": TENANT, "assignment-progress.js": TENANT,
+    // Class gradebook GB2 — every read and write resolves the class through canAccessDocument(classroom, tenantOf(auth.user)).
+    "class-gradebook.js": TENANT,
     "learning-class-progress.js": /canAccessDocument\(classroom, tenantOf\(auth\.user\)\)/
   },
   teacherOwned: {

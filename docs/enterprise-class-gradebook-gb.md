@@ -1,6 +1,8 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0 (this design record). No code yet. Each later phase is its own branch and pull request, with exact-head CI,
+**Status:** GB0 merged (nassarwafik/ExamBank791381#660). GB1, the computation engine, is in review
+(nassarwafik/ExamBank791381#662). GB2, the route, is implemented on `feature/gb2-gradebook-route`, which branches from GB1's branch at
+the owner's direction (2026-11-18) while #662 awaits the merge. Each phase is its own branch and pull request, with exact-head CI,
 an independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 **Baseline:** `origin/main` `1950f8f0` (merge of PR #658).
@@ -38,7 +40,7 @@ This example becomes a fixture of the GB1 tests, with its numbers worked by hand
 | D2 | **Nothing becomes a zero by itself.** A student who did not submit shows «—». A zero exists only through the teacher's explicit, recorded decision. The decision can be made for one cell, or for every non-submitter of one column at once («اعتبار غير المسلِّمين صفرًا»). | GB1, GB5 |
 | D3 | **Three sources of a column:** a class assignment or exam, a class project (its 0–100 project grade) and a **manual column**, for a paper exam whose marks the teacher types in. | GB1, GB5 |
 | D4 | **Teacher only at first.** Students do not see the gradebook. Showing it to students is a later, optional phase (GB6), and it must respect each assignment's results release. | GB2, GB6 |
-| D5 | **Two new capabilities:** `grades.book.view` (read the gradebook) and `grades.scheme.manage` (edit the scheme, enter manual marks, record excused / zero decisions). How they reach existing teachers is settled in GB2 (§6, open point O1). | GB2 |
+| D5 | ~~Two new capabilities, `grades.book.view` and `grades.scheme.manage`.~~ **Superseded by O1 (2026-11-18): no new capability.** Reading the gradebook needs `assignments.assignment.view`; editing the scheme, the manual marks and the excused / zero decisions needs `assignments.grading.grade`; project columns also need `projects.tracker.view` (§4.5, §6). | GB2 |
 | D6 | **Rounding at display only.** Every value is computed at full precision. The table shows one decimal, the precision the assignment and report averages already use (`toFixed(1)`). An integer final mark is not adopted now. | GB1, GB4 |
 | D7 | **Scheme templates** (copy one class's scheme to another class) are a later feature, after GB4. | after GB4 |
 
@@ -137,7 +139,8 @@ For each student and each item, the value is resolved **in this order**:
 | 3 | Manual column with a typed score | the score / `maxScore` | yes |
 | 4 | Assignment: latest attempt is `final` (D1) | its `percentage` (late deduction included) | yes |
 | 5 | Assignment: latest attempt is `pendingReview` (includes the compile-error `reviewRequired` route and technical holds) | «بانتظار التصحيح» | **no** — the final mark becomes provisional |
-| 6 | Project: a grade exists | the project grade (0–100) | yes |
+| 6 | Project: the student's project is **complete** (every required, active stage approved) | the project grade (0–100), the project tracker's own number | yes |
+| 6b | Project: started but not complete (GB2) | «بانتظار التصحيح» | **no** — a partial running total is not a final mark; the final becomes provisional |
 | 7 | Nothing submitted, no manual score, no decision | «—» | **no** — the final mark becomes incomplete |
 | 8 | Source missing (the assignment was purged, or the project left the class) | «مصدر مفقود» | **no** — a warning on the column, never a zero |
 | 9 | Anything the module cannot classify | «غير محدد» | **no** — fail closed (`AGENTS.md` §10) |
@@ -178,10 +181,13 @@ There is one route, `api/src/functions/class-gradebook.js`. Its actions are decl
 
 | Action | Capability | Does |
 |---|---|---|
-| `GET ?classId=` | `grades.book.view` | the scheme, the columns, the rows (values, states, category and final with status), the warnings, and the ETags |
-| `scheme.save` | `grades.scheme.manage` | validate and save the scheme (`If-Match`) |
-| `entries.save` | `grades.scheme.manage` | manual scores and decisions, up to 300 items, each with `expected` (stale guard) |
-| `sources` | `grades.book.view` | the class's reportable assignments and projects that can be picked |
+| `GET ?classId=` | `assignments.assignment.view` | the scheme, the columns, the rows (values, states, category and final with status, each with its one-decimal `display`), the warnings, and the ETags |
+| `GET ?classId=&resource=sources` | `assignments.assignment.view` | the class's reportable assignments and projects that can be picked |
+| `scheme.save` | `assignments.grading.grade` | validate and save the scheme. The body carries the `etag` the scheme was opened with (`null` for a new one): a different one is `409 STALE_SCHEME` |
+| `entries.save` | `assignments.grading.grade` | manual scores and decisions (`value`: `{ score }`, `{ decision }` or `null` to clear), 1–300 items, each with `expected`. A cell changed elsewhere is returned in `stale` and kept; any invalid item refuses the whole request |
+
+**Project columns (O1).** A session without `projects.tracker.view` never reads project progress: its project cells are `withheld`,
+`sources` lists no project, and saving a scheme with a project column, or an entry on one, is refused.
 
 The route's authority checks:
 
@@ -189,7 +195,7 @@ The route's authority checks:
 - **An archived class is read-only:** reading is allowed, writing is refused.
 - **Storage errors:** a storage error answers 503 and is never treated as an empty gradebook.
 - **Reads:** the route reads **only the submissions of the assignments named in the scheme**, never every assignment of the
-  platform. It reads them through the ETag document cache, with `mapConcurrent`.
+  platform. It reads them by name, with bounded concurrency (`mapConcurrent`); the roster comes through the ETag document cache.
 - **What the route never returns:** answer keys, per-question grades, codes or passwords. Its output is marks and states only.
 
 ### 4.6 User interface
@@ -230,7 +236,7 @@ The gradebook is a «سجل العلامات» tab inside the class page.
 |---|---|---|
 | **GB0** | This design record | none (documentation only) |
 | **GB1** | `api/src/lib/gradebook/` with scheme validation (§4.2) and computation (§4.3), pure | unit tests for every state of §4.3 and the example of §4.4. **Mutation proof** on invariants 1–3 (for example: a missing cell counted as 0, a pending result counted, no draft on a sum of 99). |
-| **GB2** | The route (§4.5), the capabilities (D5, O1) and the audit | capability declaration and the route sweep; tenancy; 409 on a stale write; 503 on a storage error; reads limited to the assignments in the scheme |
+| **GB2** | The route (§4.5), its capability declaration (O1), the project-column evidence (state 6b) and the audit | capability declaration and the route sweep; tenancy; 409 on a stale write; 503 on a storage error; reads limited to the assignments in the scheme |
 | **GB3** | The scheme builder UI | component tests; the bundle guard |
 | **GB4** | The gradebook table, the drill-down, the export and print | component tests; accessibility (labels, not colour alone) |
 | **GB5** | Manual columns, the excused / zero decisions, the column actions | stale guard; audit; **mutation proof** on «no zero without a decision» |
@@ -242,15 +248,12 @@ Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`
 
 ## 6. Open points (settled in the phase named)
 
-- **O1 (GB2): how the new capabilities reach existing teachers.** The presets in `api/src/lib/access/presets.js` are built from
-  `TEACHER_CAPABILITIES` (for example `legacy-full` is «every teacher capability»). So adding a capability to the registry also
-  adds it to every published preset version that is built this way. Those versions are meant never to change. GB2 must:
-  1. check whether the registry has an established way to add a capability (a new preset version, as `full-teaching` v2 did, or
-     an accepted addition to the existing versions);
-  2. present the choice to the owner before implementing it.
-
-  Under `observe` mode nothing is refused either way. Under `enforce`, a teacher without the capability does not see the
-  gradebook until the owner grants it.
+- **O1 (GB2) — settled 2026-11-18: reuse the assignment capabilities.** The presets in `api/src/lib/access/presets.js` are built
+  from `TEACHER_CAPABILITIES` (`legacy-full` and both `full-teaching` versions), and a teacher's capabilities are computed from the
+  preset on every read. Adding a capability would therefore change already-published preset versions, which are meant never to
+  change, and no capability has been added since the registry was created (no precedent). The owner chose the option that changes
+  no preset: `assignments.assignment.view` to read, `assignments.grading.grade` to write, and `projects.tracker.view` in addition for
+  project columns. D5 is superseded. Every teacher who grades assignments can use the gradebook at once, in both modes.
 - **O2 (GB4): where the tab lives.** The gradebook belongs to the class page, but the class page may not offer tabs. GB4 reads the
   class page's current layout and keeps the existing navigation conventions.
 - **O3 (GB6): a term approval.** A frozen snapshot is the only gradebook value ever stored. Its form (per term, per scheme
