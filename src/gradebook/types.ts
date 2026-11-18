@@ -31,7 +31,14 @@ export type GbGradebook = {
   columns: GbColumn[];
   rows: GbRow[];
   warnings: { itemId: string; code: string }[];
+  /** GB5 — the teacher's stored entries per column and student (a typed score or a decision); absent on an older API. */
+  entries?: Record<string, Record<string, GbEntryValue>>;
 };
+
+/** A stored teacher entry: a manual column's score, or an excused / zero decision. */
+export type GbEntryValue = { score: number } | { decision: "excused" | "zero" };
+export type GbEntryItem = { itemId: string; studentId: string; expected: GbEntryValue | null; value: GbEntryValue | null };
+export type GbEntriesSaved = { ok: true; revision: number; applied: { itemId: string; studentId: string }[]; stale: { itemId: string; studentId: string; current: GbEntryValue | null }[] };
 
 export type GbAssignmentSource = { assignmentId: string; title: string; status: string; totalMarks: number; publishedAt: string };
 export type GbProjectSource = { projectCode: string; title: string };

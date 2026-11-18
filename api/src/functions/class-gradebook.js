@@ -140,10 +140,21 @@ async function readGradebook(c, classroom, auth, grants, deps) {
     return { ...r, cells };
   });
   const columns = result.columns.map(col => ({ ...col, title: titles.get(col.itemId) || "" }));
+  // GB5 — the teacher's own entries as stored (a typed score or an excused / zero decision), so the page can show the score it edits
+  // and send the value it saw (`expected`). Only the scheme's columns and the roster's students; never a withheld column; never who /
+  // when (the audit keeps that).
+  const storedCells = isPlainObject(entriesDoc.value) && isPlainObject(entriesDoc.value.cells) ? entriesDoc.value.cells : {};
+  const entries = {};
+  for (const col of result.columns) {
+    if (withheldItems.has(col.itemId) || !isPlainObject(storedCells[col.itemId])) continue;
+    const byStudent = {};
+    for (const id of ids) { const v = cellValue(storedCells[col.itemId][id]); if (v) byStudent[id] = v; }
+    if (Object.keys(byStudent).length) entries[col.itemId] = byStudent;
+  }
   return reply(200, {
     ...base,
     scheme: { revision: Number(scheme.revision) || 0, categories: scheme.categories, updatedAt: String(scheme.updatedAt || "") },
-    schemeStatus: result.status, columns, rows, warnings: result.warnings
+    schemeStatus: result.status, columns, rows, warnings: result.warnings, entries
   });
 }
 

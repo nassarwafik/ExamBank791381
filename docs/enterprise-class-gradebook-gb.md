@@ -3,8 +3,9 @@
 **Status:**
 - **Merged:** GB0 (nassarwafik/ExamBank791381#660), GB1, the computation engine (nassarwafik/ExamBank791381#662), and GB2, the route
   (nassarwafik/ExamBank791381#663).
-- **In review:** GB3, the scheme builder (nassarwafik/ExamBank791381#664).
-- **In progress:** GB4, the table of marks, on `feature/gb4-gradebook-table`.
+- **Merged:** GB3, the scheme builder (nassarwafik/ExamBank791381#664).
+- **In review:** GB4, the table of marks (nassarwafik/ExamBank791381#669).
+- **In progress:** GB5, manual marks and decisions, on `feature/gb5-gradebook-entries`.
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
 (`AGENTS.md` §3, §13).
@@ -246,6 +247,23 @@ GB3). It is its own lazy chunk (`src/gradebook/LazyClassGradebook.tsx`), so the 
    - one save bar, «حفظ العلامات (N)»;
    - the column menu: «اعتبار غير المسلِّمين صفرًا», «إعفاء», «مسح»; each one only creates unsaved changes until the teacher saves;
    - leaving the page with unsaved changes asks first.
+   - **As built (GB5):**
+     - **Reading:** `GET` also returns `entries`, the teacher's stored values per column and student (a score or a decision, never who /
+       when). It covers the scheme's columns and the roster only, and never a withheld project column. The page edits what it saw, and
+       each saved item carries that value as `expected`.
+     - **Editing:** «تعديل العلامات» turns the table into its edit mode, under a save bar. Every cell has a decision (بلا قرار / معفى /
+       صفر). A manual column also has a score field, out of its maximum, that accepts Arabic digits. A decision wins over a typed score.
+     - **Unsaved changes:** an edit that comes back to the stored value disappears. Unsaved cells say «غير محفوظ». An invalid score
+       blocks the save, with its reason.
+     - **Column actions** («اعتبار غير المسلِّمين صفرًا», «إعفاء غير المسلِّمين», «مسح قرارات العمود») apply to the students shown. The
+       first two touch **only** cells with nothing: the server says «missing», and the teacher has no decision and no typed score there,
+       saved or not. A result, a result awaiting the teacher, a typed score or a decision is never replaced (mutation-proven, U1–U3).
+     - **After a save:** the gradebook is read again. Applied edits leave the draft. An edit whose cell changed elsewhere stays, now over
+       the server's value, which it shows («تغيّر في مكان آخر: …»); nothing is overwritten unseen.
+     - **Unsaved work:** the unsaved edits belong to their class. Leaving the edit mode with unsaved edits asks first, and so does
+       closing the page.
+     - **The zero conflict:** in the view, a zero decision with a result under it shows both («0 (قرار) · تسليم 80»). The teacher keeps it
+       or clears it.
 
 ### 4.7 Safety invariants (enforced by tests and mutation proof)
 

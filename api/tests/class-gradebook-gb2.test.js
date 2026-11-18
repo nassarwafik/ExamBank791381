@@ -336,3 +336,37 @@ describe("GB2 — project columns", () => {
     expect(entry.jsonBody.errors.map(e => e.code)).toEqual(["WITHHELD"]);
   });
 });
+
+describe("GB5 — the stored entries in the read (the page edits what it saw)", () => {
+  const withManual = s => s.scheme([{ itemId: "i_hw", weight: 40, source: { kind: "assignment", assignmentId: s.hw } }], [{ itemId: "i_paper", weight: 60, source: { kind: "manual", title: "امتحان ورقي", maxScore: 20 } }]);
+  it("returns each stored value (score or decision) without who / when; nothing before any entry", async () => {
+    const s = await setup();
+    await s.post(s.A, { action: "scheme.save", classId: s.a1, etag: null, scheme: withManual(s) });
+    expect((await s.get(s.A)).jsonBody.entries).toEqual({});
+    await s.post(s.A, { action: "entries.save", classId: s.a1, items: [
+      { itemId: "i_paper", studentId: s.s1, expected: null, value: { score: 12.5 } },
+      { itemId: "i_hw", studentId: s.s3, expected: null, value: { decision: "excused" } }
+    ] });
+    const g = (await s.get(s.A)).jsonBody;
+    expect(g.entries).toEqual({ i_paper: { [s.s1]: { score: 12.5 } }, i_hw: { [s.s3]: { decision: "excused" } } });
+    expect(JSON.stringify(g.entries)).not.toMatch(/"(at|by)"/);
+  });
+  it("only the scheme's columns and the roster's students: a removed column or a foreign student is not returned", async () => {
+    const s = await setup();
+    await s.post(s.A, { action: "scheme.save", classId: s.a1, etag: null, scheme: withManual(s) });
+    s.mem.setJson("platform/gradebooks/" + s.a1 + "/entries.json", { schemaVersion: 1, classId: s.a1, revision: 3, cells: {
+      i_paper: { [s.s1]: { score: 10, at: "x", by: "y" }, [s.sB]: { score: 20 } },
+      i_gone: { [s.s1]: { decision: "zero" } }
+    } });
+    expect((await s.get(s.A)).jsonBody.entries).toEqual({ i_paper: { [s.s1]: { score: 10 } } });
+  });
+  it("a withheld project column's entries are never returned", async () => {
+    const s = await setup();
+    const name = "platform/classes/" + s.a1 + ".json";
+    s.mem.setJson(name, { ...s.mem.getJson(name), programCodes: ["794589"] });
+    await s.post(s.A, { action: "scheme.save", classId: s.a1, etag: null, scheme: s.scheme([{ itemId: "i_hw", weight: 50, source: { kind: "assignment", assignmentId: s.hw } }], [{ itemId: "i_proj", weight: 50, source: { kind: "project", projectCode: "794589" } }]) });
+    await s.post(s.A, { action: "entries.save", classId: s.a1, items: [{ itemId: "i_proj", studentId: s.s1, expected: null, value: { decision: "excused" } }] });
+    expect((await s.get(s.A)).jsonBody.entries).toEqual({ i_proj: { [s.s1]: { decision: "excused" } } });
+    expect((await s.get(s.A, s.a1, { sessionGrants: async () => NO_PROJECTS })).jsonBody.entries).toEqual({});
+  });
+});

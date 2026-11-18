@@ -1,7 +1,7 @@
 // Class gradebook — the teacher UI's calls to /api/class-gradebook. Errors are TeacherHttpError (status + server code) from the shared
 // teacher fetch; the caller decides what a 409 STALE_SCHEME means for the page.
 import { teacherFetchJson } from "../teacherFetch";
-import type { GbGradebook, GbSchemeSaved, GbSources, GbCategory } from "./types";
+import type { GbGradebook, GbSchemeSaved, GbSources, GbCategory, GbEntryItem, GbEntriesSaved } from "./types";
 
 const URL_BASE = "/api/class-gradebook";
 
@@ -16,4 +16,10 @@ export function loadSources(token: string, classId: string): Promise<GbSources> 
 /** Saves the scheme over the version it was opened from (`etag`; null for a new scheme). A different stored version is a 409. */
 export function saveScheme(token: string, classId: string, etag: string | null, scheme: { categories: GbCategory[] }): Promise<GbSchemeSaved> {
   return teacherFetchJson<GbSchemeSaved>(token, URL_BASE, { method: "POST", body: JSON.stringify({ action: "scheme.save", classId, etag, scheme }) }, "تعذر حفظ مخطط العلامات.");
+}
+
+/** GB5 — saves manual scores and excused / zero decisions. Each item carries the value the teacher saw (`expected`): a cell changed
+ *  elsewhere meanwhile is returned in `stale` and kept on the server; a 409 STALE_ENTRIES means none applied. */
+export function saveEntries(token: string, classId: string, items: GbEntryItem[]): Promise<GbEntriesSaved> {
+  return teacherFetchJson<GbEntriesSaved>(token, URL_BASE, { method: "POST", body: JSON.stringify({ action: "entries.save", classId, items }) }, "تعذر حفظ العلامات.");
 }
