@@ -265,6 +265,9 @@
 .iex-start-meta{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 .iex-start-meta span{ padding:var(--eb-space-1) var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .iex-start-hint{ color:var(--eb-muted); font-size:var(--eb-fs-13); }
+/* Phase T2 — the allowed student tools on the start screen, and the quiet note when the tool bar could not load. */
+.iex-tools-notice{ margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); color:var(--eb-info-tx); font-size:var(--eb-fs-14); }
+.iex-tools-unavailable{ margin:var(--eb-space-3) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
 .iex-start-actions, .iex-result-actions{ display:flex; flex-direction:column-reverse; gap:var(--eb-space-2); }
 .iex-start-actions .eb-button, .iex-result-actions .eb-button{ min-height:48px; }
 .iex-result-card{ text-align:center; align-items:center; }

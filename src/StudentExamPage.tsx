@@ -1,5 +1,6 @@
 
-import {useEffect,useMemo,useRef,useState,useCallback,Suspense,type ReactNode} from "react";
+import {useEffect,useMemo,useRef,useState,useCallback,Suspense,lazy,type ReactNode} from "react";
+import ToolDockBoundary from "./studentTools/ToolDockBoundary";
 import {IconCheck,IconMenu} from "./icons";
 import {useConfirm} from "./ui/useConfirm";
 import {usePrefersReducedMotion} from "./ui/usePrefersReducedMotion";
@@ -17,6 +18,9 @@ import {normalizeExamStructure,calculateSectionProgress,selectGradedUnits} from 
 import {StructuredSectionQuestion} from "./StructuredExamSection";
 // Phase 19G — the scenario block (shared sources) of a page whose question belongs to a scenario: lazy, rendered beside the question on wide screens.
 const ScenarioView=recoverableLazy("ScenarioView",()=>import("./scenario/ScenarioView"));
+// Phase T2 — the student tool bar (calculator, IPv4 calculator …): its own lazy chunk, loaded only for an exam whose teacher allowed tools.
+// A plain lazy (never a reload, never the question recovery card): ToolDockBoundary contains a failed chunk so the exam is untouched.
+const StudentToolDock=lazy(()=>import("./studentTools/StudentToolDock"));
 import {buildQuestionPages,clampPageIndex,countAnsweredPages} from "./student/exam/questionPager";
 import ExamBottomNavigation from "./student/exam/ExamBottomNavigation";
 import QuestionNavigatorDialog from "./student/exam/QuestionNavigatorDialog";
@@ -26,6 +30,8 @@ import StructuredExamCover from "./StructuredExamCover";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import {StudentAttemptContext,type StudentAttemptApi} from "./questionTypes/studentAttemptContext";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
+import {projectStudentToolsForStudent} from "./studentTools/studentToolsSpec";
+import {studentToolsSummary} from "./studentTools/studentToolsCatalog";
 import {countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
 import {deriveSaveState,shouldWarnBeforeUnload} from "./studentSaveState";
@@ -55,7 +61,7 @@ import {EMPTY_RENDER_FAILURES,reduceRenderFailure,failedQuestionIds,renderFailur
 import type {SaveStateKind} from "./studentSaveState";
 import {NETWORK_ERROR_TEXT,UNEXPECTED_RESPONSE_TEXT,safeJson,userFacingMessage} from "./userFacingErrors";
 
-type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
+type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[];studentTools?:unknown};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
 type Result={resultsVisible?:boolean;resultsVisibility?:string;resultsVisibleAt?:string;autoGradingPending?:boolean;autoGradingStatus?:string;technicalHolds?:number;attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>;questionBreakdown?:QuestionBreakdown;late?:unknown;rawScore?:number;latePenalty?:number};
@@ -919,11 +925,15 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // Pre-start, the server deliberately omits sections/questions, so `structured` is false here. Cover
   // selection must therefore depend only on the (safe) coverPage config, never on the hidden structure.
   // Phase 7A — the strict warning is shown BEFORE the student starts (nothing is armed until the attempt runs).
+  // Phase T2 — the tools the teacher allowed, announced before the attempt starts (the tools themselves open only inside it).
+  const toolNames=studentToolsSummary(projectStudentToolsForStudent(exam.studentTools));
+  const toolsNotice=toolNames.length?<p className="iex-tools-notice" role="note" data-testid="tools-notice"><strong>الأدوات المسموحة:</strong> {toolNames.join("، ")} — تجدها في زر «الأدوات» أثناء المحاولة.</p>:null;
   const strictWarning=policy==="strict"&&!resumeMode?<div className="iex-strict-warning" role="note"><strong>تنبيه:</strong> هذا امتحان بوضع صارم. بعد بدء المحاولة، مغادرة صفحة الامتحان أو الانتقال إلى تطبيق أو تبويب آخر ستؤدي إلى إنهاء المحاولة.</div>:null;
   if(cover?.enabled){
    return shell(<div className="iex-wrap">
     {error&&<div className="platform-error iex-error">{error}</div>}
     {strictWarning}
+    {toolsNotice}
     <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
      runtime={{studentName,className:className||exam.metadata?.className||"",examDate,duration:timed?dur:""}}
      starting={starting} onStart={()=>{void startTimedAttempt()}}/>
@@ -933,6 +943,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    {error&&<div className="platform-error iex-error">{error}</div>}
    <section className="iex-start-card"><span className="iex-eyebrow">{timed?"محاولة مؤقتة":"محاولة"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p><LateWindowNotice lateWindow={state?.lateWindow}/>
     {strictWarning}
+    {toolsNotice}
     <div className="iex-start-meta">{timed&&<span>مدة المحاولة: <strong>{dur}</strong></span>}<span>{assignment.questionCount} سؤال · {assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div>
     <p className="iex-start-hint">{resumeMode?(timed?"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة. لن يُعاد ضبط العدّاد.":"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة."):(timed?"لن تظهر الأسئلة إلا بعد بدء المحاولة، وسيبدأ العدّاد فور الضغط على الزر.":"لن تظهر الأسئلة إلا بعد بدء المحاولة.")}</p>
     <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!canStartOrResume}>{startLabel}</button></div>
@@ -1036,6 +1047,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
   <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages} unavailable={failedIds}/>
   </QuestionErrorBoundary>
+  {/* Phase T2 — the teacher-allowed tools, only while the attempt is writable. Outside the exam's error boundary and render-failure
+      accounting on purpose: the dock has its own containment, and a tool can never mark a question as failed. */}
+  {writable&&exam.studentTools!=null&&<ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={exam.studentTools} sectionId={currentPage?.section?String(currentPage.section.id??""):undefined}/></Suspense></ToolDockBoundary>}
   {confirmDialog}
  </div></QuestionRecoveryContext.Provider>)
 }

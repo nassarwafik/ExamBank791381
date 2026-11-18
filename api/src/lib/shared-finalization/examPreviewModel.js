@@ -20,6 +20,7 @@ exports.PREVIEW_SECRET_KEYS = [
     "externalUrl", "importMeta", "revisionHistory"
 ];
 const examCover_1 = require("./examCover");
+const studentToolsSpec_1 = require("./studentTools/studentToolsSpec");
 const SECRET = new Set(exports.PREVIEW_SECRET_KEYS);
 function scrub(node) {
     if (Array.isArray(node)) {
@@ -48,6 +49,13 @@ function toSafePreviewExam(exam) {
     scrub(clone);
     if ("coverPage" in clone)
         clone.coverPage = (0, examCover_1.sanitizeCoverForStudent)(clone.coverPage);
+    if ("studentTools" in clone) {
+        const tools = (0, studentToolsSpec_1.projectStudentToolsForStudent)(clone.studentTools);
+        if (tools)
+            clone.studentTools = tools;
+        else
+            delete clone.studentTools;
+    }
     for (const section of Array.isArray(clone.sections) ? clone.sections : []) {
         const questions = section.questions;
         if (Array.isArray(questions))
