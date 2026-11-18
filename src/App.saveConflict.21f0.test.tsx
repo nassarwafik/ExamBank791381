@@ -4,8 +4,13 @@
 // states the server version it starts from; a refused save (409 EXAM_CONFLICT) overwrites nothing and opens «تعارض في الحفظ»,
 // whose resolutions are explicit (save as a new exam, replace the server copy after a confirmation, or open the server copy).
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, within, act } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, within, act, waitFor } from "@testing-library/react";
 import App from "./App";
+
+// The save path loads its policy lazily (useExamStudioController: `await import("../structuredSavePolicy")`). In a full suite run that first
+// load competes with transforming every other test file and can take far longer than a fixed sleep. This mock makes that delay
+// deterministic (150 ms, once per file, as on a busy machine), so the tests below must wait for the save REQUEST itself.
+vi.mock("./structuredSavePolicy", async importOriginal => { await new Promise(r => setTimeout(r, 150)); return importOriginal(); });
 
 // Teacher home — a signed-in teacher now lands on the welcome page («الرئيسية»); these tests start in the exam builder.
 async function openBuilder() {
@@ -66,7 +71,10 @@ async function openSavedExam() {
   await settle();
   return overlay;
 }
-const saveDraft = async (overlay: HTMLElement) => { await click(within(overlay).getByRole("button", { name: /حفظ مسودة/ })); await settle(60); };
+// Wait for the save REQUEST (the condition the assertions need), never a fixed sleep: the first save loads its policy lazily, which can take
+// longer than any fixed delay on a busy machine. The short settle afterwards lets the response be applied (etag, conflict dialog).
+const untilSaves = (n: number) => waitFor(() => expect(saves.length).toBeGreaterThanOrEqual(n), { timeout: 5000 });
+const saveDraft = async (overlay: HTMLElement) => { const n = saves.length + 1; await click(within(overlay).getByRole("button", { name: /حفظ مسودة/ })); await untilSaves(n); await settle(60); };
 
 describe("21F.0 — conditional saves from the structured builder", () => {
   it("a save states the version it was opened from, and the next save the version the server returned", async () => {
@@ -86,6 +94,7 @@ describe("21F.0 — conditional saves from the structured builder", () => {
     expect(screen.queryByText(/تم حفظ مسودة الامتحان المنظّم/)).toBeNull();
 
     await click(within(dialog).getByRole("button", { name: "حفظ نسختي كامتحان جديد" }));
+    await untilSaves(2);
     await settle(80);
     expect(saves).toHaveLength(2);
     expect(saves[1].conditional).toBe(true);
@@ -105,6 +114,7 @@ describe("21F.0 — conditional saves from the structured builder", () => {
     const confirm = await screen.findByRole("alertdialog", { name: "استبدال نسخة الخادم" }).catch(() => screen.findByRole("dialog", { name: "استبدال نسخة الخادم" }));
     expect(saves).toHaveLength(1);
     await click(within(confirm).getByRole("button", { name: "استبدال بنسختي" }));
+    await untilSaves(2);
     await settle(80);
     expect(saves).toHaveLength(2);
     expect(saves[1]).toMatchObject({ conditional: true, baseEtag: "E-2" });
