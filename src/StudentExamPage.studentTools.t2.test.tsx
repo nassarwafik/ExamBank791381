@@ -97,6 +97,15 @@ describe("T2 — student tools in the exam page", () => {
     expect(r.queryByTestId("student-tools-button")).toBeNull();
   });
 
+  it("T5: the start screen names the formula sheet but never shows its content", async () => {
+    const withSheet = { version: 1, tools: [{ id: "formulaSheet", title: "قوانين الحركة", content: { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "SHEET-BODY v = d / t" }] }] } }] };
+    // the server's pre-start payload carries a placeholder (api test); even a payload that carried the body shows only the title here
+    const r = mount(assignment(withSheet, false));
+    const notice = await r.findByTestId("tools-notice");
+    expect(notice.textContent).toContain("قوانين الحركة");
+    expect(r.container.textContent).not.toContain("SHEET-BODY");
+  });
+
   it("an exam without tools shows neither the notice nor the tool bar", async () => {
     tools = undefined;
     const pre = mount(assignment(undefined, false));

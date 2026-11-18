@@ -122,3 +122,24 @@ describe("T1 — assignment creation freezes the tools with the snapshot", () =>
     expect("studentTools" in stored.examSnapshot).toBe(false);
   });
 });
+
+describe("T5 — the formula sheet on the server", () => {
+  const SHEET = { id: "formulaSheet", title: "قوانين", content: { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "SECRET-SHEET-BODY F = m a" }] }] } };
+  const spec5 = { version: 1, tools: [SHEET, { id: "scratchPad", drawing: true }] };
+  const a = snap => ({ assignmentId: "a1", title: "واجب", examSnapshot: snap });
+  it("the started exam delivers the sheet's content", () => {
+    expect(JSON.stringify(sanitizeExamForStudent(exam({ studentTools: spec5 })).studentTools)).toContain("SECRET-SHEET-BODY");
+  });
+  it("the pre-start payload announces the sheet by title but never carries its content", () => {
+    const out = preStartAssignment(a(exam({ studentTools: spec5 })), true, "continuous");
+    expect(out.exam.studentTools.tools.map(t => t.id)).toEqual(["formulaSheet", "scratchPad"]);
+    expect(out.exam.studentTools.tools[0].title).toBe("قوانين");
+    expect(JSON.stringify(out)).not.toContain("SECRET-SHEET-BODY");
+  });
+  it("a sheet with a refused block is withheld from the student and refused at assignment creation", async () => {
+    const bad = { version: 1, tools: [{ ...SHEET, content: { schemaVersion: 1, blocks: [{ type: "cli", source: "show run" }] } }] };
+    expect("studentTools" in sanitizeExamForStudent(exam({ studentTools: bad }))).toBe(false);
+    const codes = validateStructuredExam(exam({ studentTools: bad })).filter(i => i.code.startsWith("STUDENT_TOOLS_")).map(i => i.code);
+    expect(codes).toEqual(["STUDENT_TOOLS_BLOCK_NOT_ALLOWED"]);
+  });
+});

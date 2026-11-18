@@ -1,13 +1,16 @@
-import { useId } from "react";
+import { Suspense, lazy, useId, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
-  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT
+  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
 import { studentToolAnswerRisks } from "./studentToolsRisk";
 import { BASE_LABEL } from "./baseConverter";
+import type { RichContentV1 } from "../richContent/richContentModel";
 
 const MAX_RISK_LABELS = 5;
+// Phase T5 — the formula sheet is authored with the platform's rich-content editor (lazy: builder-only, like the cover's rich instructions).
+const RichContentEditor = lazy(() => import("../richContent/RichContentEditor"));
 
 // Phase T2 — Builder panel «أدوات الطالب»: which tools the student may open during this exam, their options, and the sections where a
 // tool is switched off. Controlled: every change is re-validated and only a CANONICAL spec (or undefined = no tools) is emitted, so the
@@ -22,8 +25,9 @@ type Props = {
   disabled?: boolean;
 };
 
-function emit(tools: StudentToolConfigV1[], overrides: Record<string, StudentToolId[]>, sectionIds: ReadonlySet<string>, onChange: Props["onChange"]): void {
-  if (!tools.length) { onChange(undefined); return; }
+/** Emits the canonical spec; returns the first refusal message (nothing is emitted then), or "" on success. */
+function emit(tools: StudentToolConfigV1[], overrides: Record<string, StudentToolId[]>, sectionIds: ReadonlySet<string>, onChange: Props["onChange"]): string {
+  if (!tools.length) { onChange(undefined); return ""; }
   const enabled = new Set(tools.map(t => t.id));
   const sectionOverrides: Record<string, { disabled: StudentToolId[] }> = {};
   for (const [sid, list] of Object.entries(overrides)) {
@@ -32,7 +36,8 @@ function emit(tools: StudentToolConfigV1[], overrides: Record<string, StudentToo
   }
   const raw: StudentToolsSpecV1 = { version: 1, tools, ...(Object.keys(sectionOverrides).length ? { sectionOverrides } : {}) };
   const v = validateStudentTools(raw);
-  if (v.ok) onChange(v.value);
+  if (v.ok) { onChange(v.value); return ""; }
+  return v.issues[0]?.message ?? "تعذّر حفظ إعدادات الأدوات.";
 }
 
 export default function StudentToolsEditor({ value, sections, onChange, disabled }: Props) {
@@ -49,7 +54,8 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
   // Phase T3 — advisory: questions an enabled tool could answer outright (follows the section overrides; never blocks).
   const risks = new Map(studentToolAnswerRisks({ sections: sections as SectionRef[] }, spec).map(r => [r.tool, r.hits]));
 
-  const setTools = (next: StudentToolConfigV1[]) => emit(next, overrides, sectionIds, onChange);
+  const [refusal, setRefusal] = useState("");
+  const setTools = (next: StudentToolConfigV1[]) => setRefusal(emit(next, overrides, sectionIds, onChange));
   const toggleTool = (id: StudentToolId, on: boolean) => {
     if (on) {
       const next = [...tools.filter(t => t.id !== id), defaultStudentToolConfig(id)];
@@ -61,7 +67,7 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
   const toggleSection = (sid: string, id: StudentToolId, allowed: boolean) => {
     const list = new Set(overrides[sid] ?? []);
     if (allowed) list.delete(id); else list.add(id);
-    emit(tools, { ...overrides, [sid]: [...list] }, sectionIds, onChange);
+    setRefusal(emit(tools, { ...overrides, [sid]: [...list] }, sectionIds, onChange));
   };
 
   return (
@@ -75,6 +81,7 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
           <button type="button" className="sb-mini-btn" onClick={() => onChange(undefined)} disabled={disabled}>إزالة الإعدادات غير الصالحة</button>
         </div>
       )}
+      {refusal && <div className="sb-banner sb-banner-error" role="alert" data-testid="tools-refusal">لم يُحفظ التعديل الأخير: {refusal}</div>}
       {staleSections.length > 0 && (
         <div className="sb-banner sb-banner-error" role="alert">
           تخصيص الأدوات يشير إلى قسم محذوف.
@@ -158,6 +165,31 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                     <label className="sb-check">
                       <input type="checkbox" checked={tool.showAnalysis} disabled={disabled} onChange={e => patchTool(id, { showAnalysis: e.target.checked } as Partial<GraphPlotterToolV1>)} />
                       <span>إظهار الجذور ونقاط التقاطع والقيم القصوى</span>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "formulaSheet" && (
+                  <div className="sb-tool-options sb-tool-sheet">
+                    <label className="sb-field">
+                      <span className="sb-field-label">عنوان الورقة</span>
+                      <input className="sb-input" value={tool.title} maxLength={FORMULA_SHEET_TITLE_MAX} disabled={disabled}
+                        onChange={e => patchTool(id, { title: e.target.value } as Partial<FormulaSheetToolV1>)} />
+                    </label>
+                    <p className="sb-hint">المسموح: نصوص وعناوين وقوائم وجداول ومعادلات. لا صور ولا رسوم بيانية في هذا الإصدار.</p>
+                    <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المحرّر…</p>}>
+                      <RichContentEditor value={tool.content} disabled={disabled} label="محتوى ورقة القوانين"
+                        onChange={(next: RichContentV1 | undefined) => {
+                          if (!next) { setRefusal("ورقة القوانين لا يمكن أن تكون فارغة."); return; }
+                          patchTool(id, { content: next } as Partial<FormulaSheetToolV1>);
+                        }} />
+                    </Suspense>
+                  </div>
+                )}
+                {tool?.id === "scratchPad" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.drawing} disabled={disabled} onChange={e => patchTool(id, { drawing: e.target.checked } as Partial<ScratchPadToolV1>)} />
+                      <span>السماح بالرسم الحر (قلم وممحاة)</span>
                     </label>
                   </div>
                 )}

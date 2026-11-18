@@ -85,3 +85,9 @@
 .stt-plot-graph { margin-block-start: var(--eb-space-3); }
 .stt-plot-at { margin-block-start: var(--eb-space-2); }
 .stt-plot-at .stt-label { margin: 0; white-space: nowrap; }
+/* Phase T5 — formula sheet and scratch pad. */
+.stt-sheet .xp-rich { font-size: var(--eb-fs-14); }
+.stt-notes { min-height: 8em; padding: var(--eb-space-2) var(--eb-space-3); font-family: var(--eb-font); resize: vertical; }
+.stt-draw { margin-block-start: var(--eb-space-3); }
+.stt-draw-tools { flex-wrap: wrap; margin-block-end: var(--eb-space-2); }
+.stt-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border: 1px dashed var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-bg); color: var(--eb-text); touch-action: none; cursor: crosshair; }

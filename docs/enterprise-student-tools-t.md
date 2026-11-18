@@ -1,4 +1,4 @@
-# Phase T — Student Exam Tools (design record; T0 – T4)
+# Phase T — Student Exam Tools (design record; T0 – T5)
 
 > STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator), T3
 > (base converter, answer-risk notes, tools in the teacher preview, draggable panel) and T4 (function plotter) are implemented on
@@ -120,7 +120,7 @@ converter answers conversion questions. The catalog records this for each tool (
 | T2 | Builder settings panel; student tool bar (floating window on desktop, bottom sheet on phone, lazy chunk, keyboard / screen reader, state kept per attempt); scientific calculator; IPv4 calculator UI | done (this branch) |
 | T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | done (this branch) |
 | T4 | function plotter on `FunctionGraphView` | done (this branch) |
-| T5 | formula sheet (rich content, strict projection) and scratch pad | next |
+| T5 | formula sheet (rich content, strict projection) and scratch pad | done (branch `claude/student-tools-t5`, stacked on T0–T4) |
 | T6 | subject tools (ASCII and bitwise operations, truth tables, units, periodic table) | |
 | T7 | tools in training and learning materials; optional usage analytics (opens only, never the typed values) | |
 
@@ -296,3 +296,60 @@ is a bottom sheet: dragging is off, and a viewport that becomes phone-width drop
   as «قريبًا» any more.
 - Mutation M37–M44: 7 killed; M43 (skip a repeated label) is **equivalent** under reachable inputs, because the analysis already
   removes repeated features, so the guard is a second line of defence.
+
+## 12. T5 — formula sheet and scratch pad
+
+### Contract (additive within version 1)
+
+`STUDENT_TOOL_IDS` gains two ids. Every spec that was valid before T5 stays valid and means the same.
+
+- **`formulaSheet`: `{ id, title, content }`.**
+  - `title`: 1–80 characters with no control or bidirectional-override characters. It is trimmed in the canonical form.
+  - `content`: a `RichContentV1` document validated by the platform's one rich-content authority (`validateRichContent`), bounded to
+    64 KiB serialized.
+  - Allow-list of blocks (`FORMULA_SHEET_BLOCKS`): headings, paragraphs, lists, tables, maths, callouts, key–value grids, dividers,
+    code, quotes and columns. The check walks inside columns.
+  - **Refused in version 1:** images and figures (bank images need signed delivery), charts, function graphs, 3D surfaces / scenes,
+    and CLI blocks. A sheet is reference text that renders with no network and no heavy engine.
+- **`scratchPad`: `{ id, drawing }`.** `drawing` switches the pen and eraser on or off.
+
+### The pre-start projection withholds the sheet
+
+The start screen is shown before the attempt and its timer begin. `projectStudentToolsForPreStart` keeps the sheet's **title**
+(announced as «ورقة القوانين «…»») and replaces its **content** with a fixed placeholder. The teacher's content arrives only with the
+exam body after the start, so a sheet never gives reading time before the clock runs. The student sanitizer (started exam) delivers the
+full canonical sheet.
+
+### Student panels
+
+- **Formula sheet** (`FormulaSheetTool.tsx`). Read-only and drawn by the one `RichContentRenderer`. It is its own lazy chunk (the maths
+  renderer stays off the dock), and the panel is titled with the teacher's title.
+- **Scratch pad** (`ScratchPadTool.tsx`).
+  - Notes (`dir="auto"`, at most 20,000 characters) and, when allowed, a canvas with pen, eraser, undo (one stroke) and clear (at most
+    500 strokes, 4,000 points each).
+  - The panel states that the scratch pad is **not saved, not sent and not graded**, and is cleared when the exam page is left. It
+    lives in component state only (no storage: a shared school computer must not keep a student's notes). Like every tool it survives
+    closing the panel and changing questions during the attempt.
+
+### Builder
+
+- **Formula sheet.** A title field plus the platform's rich-content editor (lazy, as for the cover's rich instructions), with the
+  allow-list stated.
+- **Scratch pad.** The drawing switch.
+- **Refused edits.** An edit the contract refuses (a blank title, a disallowed block, an empty sheet) is **not** emitted, and the panel
+  says why («لم يُحفظ التعديل الأخير: …») instead of dropping it silently.
+- **Risk notes.** The formula sheet's catalog note reminds the teacher that the sheet shows only what they write. The risk heuristic
+  names no question for either tool.
+
+### Evidence for T5
+
+- `src/studentTools/formulaSheet.t5.test.ts`: canonical sheet, default, refusals (title, empty or missing content, raw HTML, a *valid*
+  image block refused by the allow-list, CLI, a graph also inside columns, unknown key, oversize), scratch pad switch, the pre-start
+  placeholder, catalog and risk.
+- `api/tests/student-tools-t1.test.js` (T5 block): the started exam carries the content; the pre-start payload never does; a refused
+  block is withheld and blocks finalization.
+- `src/studentTools/StudentToolDock.t2.test.tsx` (T5 block): the sheet under its title with its table; the scratch pad notice, notes
+  and strokes kept across close / reopen, undo removing one stroke, clear; no canvas when drawing is off.
+- `src/studentTools/StudentToolsEditor.t2.test.tsx` (T5 block): defaults, the drawing switch, a refused title shown and not emitted.
+- `src/StudentExamPage.studentTools.t2.test.tsx`: the start screen names the sheet by title and never shows its content.
+- Mutation M45–M52: 8 KILLED. M52 (undo clears everything) first SURVIVED; the test now draws two strokes.

@@ -1835,6 +1835,16 @@
       "page": "state-classic-builder",
       "viewport": "all",
       "reason": "Classic builder — the same «أدوات الطالب» panel (Phase T2/T3) appears under the cover panel in the open editor, all tools off for the captured exam; the sections below move down by the panel's height."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "all",
+      "reason": "Exam Studio setup step — Phase T5 adds two rows to the «أدوات الطالب» panel: «ورقة القوانين» (the teacher's formula sheet) and «ورقة مسودة» (the student's scratch pad), both off for the captured exam. Nothing above the panel moves; the page is taller by two rows."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Classic builder — the same two Phase T5 rows («ورقة القوانين», «ورقة مسودة») in the «أدوات الطالب» panel under the cover panel, both off for the captured exam; the sections below move down by two rows."
     }
   ]
 }
