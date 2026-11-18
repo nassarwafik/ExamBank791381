@@ -34,10 +34,15 @@ import { useHighlightPainter, useReaderAnnotations } from "../annotations/useRea
 import "./reader-print-l5.css";
 import "../themes/booklet-theme.css";
 import { pageThemeFor } from "../themes/courseTheme";
+import ToolDockBoundary from "../../studentTools/ToolDockBoundary";
+import { courseStudentTools } from "../../studentTools/courseTools";
 
 // Phase 21E L3-B — the search panel is its own lazy chunk: the Reader pays for it only when search is opened, and it
 // indexes the manifest's titles + keywords only (opening it imports no module body).
 const LearningSearchPanel = lazy(lazyWithRetry(() => import("../search/LearningSearchPanel"), "reader-search-panel"));
+// Phase T7 — the course's student tools (the exam's tool bar, a fixed set per course). A plain lazy inside ToolDockBoundary: a tool
+// failure or a failed chunk shows a quiet note and never disturbs the book.
+const StudentToolDock = lazy(() => import("../../studentTools/StudentToolDock"));
 
 export type { ReaderContentApi } from "./readerContentApi";
 
@@ -468,6 +473,7 @@ export default function LearningReader({
   }
 
   const position = (selectedPageId ? pagePosition(manifest, selectedPageId) : null) ?? { index: 0, total: pages.length };
+  const courseTools = courseStudentTools(courseId);
   const header: ReaderPageHeader | null = located ? {
     courseId,
     pageTitle: located.page.title,
@@ -764,6 +770,10 @@ export default function LearningReader({
             {renderToc("mobile")}
           </div>
         </div>
+      )}
+      {/* Phase T7 — the book's student tools; not in presentation mode (the teacher projects the page to the class). */}
+      {!presentation && courseTools && (
+        <ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={courseTools} /></Suspense></ToolDockBoundary>
       )}
     </div>
   );

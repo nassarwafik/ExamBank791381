@@ -1,4 +1,4 @@
-# Phase T — Student Exam Tools (design record; T0 – T6)
+# Phase T — Student Exam Tools (design record; T0 – T7)
 
 > STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator), T3
 > (base converter, answer-risk notes, tools in the teacher preview, draggable panel) and T4 (function plotter) are implemented on
@@ -122,7 +122,7 @@ converter answers conversion questions. The catalog records this for each tool (
 | T4 | function plotter on `FunctionGraphView` | done (this branch) |
 | T5 | formula sheet (rich content, strict projection) and scratch pad | done (branch `claude/student-tools-t5`, stacked on T0–T4) |
 | T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table) | done (branch `claude/student-tools-t6`, stacked on T5) |
-| T7 | tools in training and learning materials; optional usage analytics (opens only, never the typed values) | |
+| T7 | tools in the course books (learning materials); usage analytics deferred by the owner | done (branch `claude/student-tools-t7`, stacked on T6) |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
@@ -383,3 +383,45 @@ the mass and configuration switches.
 - T6 blocks in `StudentToolDock.t2.test.tsx` (each panel end to end, including the teacher's limits) and `StudentToolsEditor.t2.test.tsx`
   (defaults and options).
 - Mutation M53–M64: 12 / 12 KILLED.
+
+## 14. T7 — tools in training and in the course books
+
+### Owner decisions
+
+- **Books.** A **fixed tool set per course**, defined in code (`src/studentTools/courseTools.ts`). There is no stored setting, no route
+  and no teacher screen; a set can be changed later in a reviewed PR.
+- **No usage tracking in T7.** Recording which student opened which tool would store new data about students (privacy, retention, a
+  new route). It is left for its own phase, once the owner decides what the teacher needs to see.
+
+### Training
+
+A training assignment is an assignment whose cover says `activityType: "training"`, and it runs in the same `StudentExamPage`. It
+already offers the teacher's tools exactly like an exam (T2): nothing to add.
+
+### The course books
+
+| Course | Book | Tools |
+|---|---|---|
+| 791381, 791381s | شبكات الاتصال، أوراق التلخيص | IPv4 calculator (binary view, subnetting), base converter (2/8/10/16 with steps), bitwise calculator (32 bits), unit converter (data, data rate), scientific calculator, scratch pad |
+| 899371 | أسس علم الحاسوب | base converter (with steps), ASCII table (full), truth table (6 variables), bitwise calculator (8 bits), unit converter (data, data rate), scientific calculator, scratch pad |
+| 899271 | الأتمتة | scratch pad, base converter (with steps), scientific calculator |
+| 899271d | مبنى المعطيات | scientific calculator, base converter (with steps), bitwise calculator (32 bits), scratch pad |
+
+- **Working is on.** A book is practice, not an exam, so the sets switch on the working: conversion steps, subnetting and the binary
+  view.
+- **Same tool bar.** `LearningReader` mounts the exam's tool bar (`StudentToolDock`, lazy, inside `ToolDockBoundary`) with the
+  course's set. It is hidden in presentation mode, where the teacher projects the page to the class.
+- **No sections.** A book has no sections, so the set applies throughout.
+- **No tools without an entry.** A course without an entry shows no tool bar. `courseStudentTools` reads own properties only.
+
+### Evidence for T7
+
+- `src/studentTools/courseTools.t7.test.tsx`:
+  - every set is a valid canonical spec of tools that have a UI;
+  - the sets match the registered courses one-to-one;
+  - the networks book has subnetting;
+  - unknown and inherited names have no tools;
+  - in the real reader, the networks book lists its six tools and the IPv4 calculator works with subnetting;
+  - the bar is hidden in presentation mode and comes back after it.
+- All 1,963 learning tests still pass.
+- Mutation M65–M68: 4 / 4 KILLED.
