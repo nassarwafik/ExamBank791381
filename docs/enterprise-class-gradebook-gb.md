@@ -3,7 +3,8 @@
 **Status:**
 - **Merged:** GB0 (nassarwafik/ExamBank791381#660), GB1, the computation engine (nassarwafik/ExamBank791381#662), and GB2, the route
   (nassarwafik/ExamBank791381#663).
-- **In progress:** GB3, the scheme builder, on `feature/gb3-gradebook-scheme-builder`.
+- **In review:** GB3, the scheme builder (nassarwafik/ExamBank791381#664).
+- **In progress:** GB4, the table of marks, on `feature/gb4-gradebook-table`.
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
 (`AGENTS.md` §3, §13).
@@ -228,7 +229,19 @@ GB3). It is its own lazy chunk (`src/gradebook/LazyClassGradebook.tsx`), so the 
      label is shown, not the colour alone.
    - **Filters:** الكل / ناقص / بانتظار التصحيح.
    - **Drill-down:** a click on an assignment cell opens that student's review in the assignment page (the existing drill target).
-   - **Export and print:** export to Excel (RTL, with a status column) and print.
+   - **Export and print:** export to Excel (RTL, with a status column), CSV and print. All three are built from the same rows as the
+     table (`exportTable`), so they say exactly what the table says: numbers as numbers, states as words.
+   - **As built (GB4):**
+     - **Where:** the table sits in the «سجل العلامات» panel under the scheme summary (`src/gradebook/GradebookTable.tsx`, pure model
+       `gradebookTable.ts`).
+     - **Values:** every value is the server's `display` (one decimal); the UI computes no mark.
+     - **Final mark:** it shows its status in words (مؤقتة / ناقصة / معدَّلة / المخطط مسودة).
+     - **Totals:** a category with nothing counted shows «—», or «معفى» when every item was excused.
+     - **Filters:** «ناقصة» and «بانتظار التصحيح» follow the final mark's status.
+     - **Layout:** the table scrolls sideways inside its own named region, so the page never overflows.
+     - **Legend:** a «معاني الخانات» note explains the states.
+     - **Drill-down:** an assignment cell is a button that opens the existing drill target
+       `{ assignmentId, mode: "student", studentId }`; a manual column is plain text.
 3. **Manual marks and decisions (GB5).** The conventions of the project matrix apply:
    - one save bar, «حفظ العلامات (N)»;
    - the column menu: «اعتبار غير المسلِّمين صفرًا», «إعفاء», «مسح»; each one only creates unsaved changes until the teacher saves;

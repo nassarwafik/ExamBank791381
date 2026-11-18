@@ -33,3 +33,24 @@
   .eb-gb-items tr{ display:grid; grid-template-columns:1fr auto; gap:var(--eb-space-1); padding-block:var(--eb-space-2); border-block-end:1px solid var(--eb-line); }
   .eb-gb-items th, .eb-gb-items td{ border:0; padding:2px 0; }
 }
+
+/* GB4 — the table of marks. The table scrolls sideways inside its own region (the page never overflows); the student column stays in view. */
+.eb-gb-table-wrap{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-gb-table-tools{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
+.eb-gb-filters, .eb-gb-exports{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-gb-scroll{ max-width:100%; overflow-x:auto; border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+.eb-gb-table{ border-collapse:separate; border-spacing:0; min-width:100%; font-variant-numeric:tabular-nums; }
+.eb-gb-table th, .eb-gb-table td{ padding:var(--eb-space-2) var(--eb-space-3); border-block-end:1px solid var(--eb-line); border-inline-start:1px solid var(--eb-line); text-align:center; white-space:nowrap; background:var(--eb-surface); }
+.eb-gb-table thead th{ background:var(--eb-surface-2); font-weight:var(--eb-fw-bold); }
+.eb-gb-band{ border-block-end:2px solid var(--eb-line-2); }
+.eb-gb-weight-tag{ font-weight:var(--eb-fw-medium); color:var(--eb-muted); }
+.eb-gb-sticky{ position:sticky; inset-inline-start:0; z-index:1; text-align:start; }
+.eb-gb-table tbody th.eb-gb-sticky{ font-weight:var(--eb-fw-medium); }
+.eb-gb-cell.is-total, .eb-gb-total-head{ background:var(--eb-surface-2); font-weight:var(--eb-fw-bold); }
+.eb-gb-cell.is-final, .eb-gb-final-head{ font-weight:var(--eb-fw-bold); }
+.eb-gb-cell.is-pending, .eb-gb-cell.is-partial .eb-gb-final-status{ color:var(--eb-warn-tx); }
+.eb-gb-cell.is-missingSource, .eb-gb-cell.is-unclassified{ color:var(--eb-danger-tx); }
+.eb-gb-cell.is-missing, .eb-gb-cell.is-excused, .eb-gb-cell.is-withheld{ color:var(--eb-muted); }
+.eb-gb-final-status{ display:block; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); }
+.eb-gb-legend summary{ cursor:pointer; }
+.eb-gb-legend ul{ margin:var(--eb-space-2) 0; padding-inline-start:var(--eb-space-4); }

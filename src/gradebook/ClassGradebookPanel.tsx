@@ -5,18 +5,20 @@ import EmptyState from "../ui/EmptyState";
 import { IconEdit, IconPlus } from "../icons";
 import { loadGradebook } from "./gradebookApi";
 import SchemeBuilderDialog from "./SchemeBuilderDialog";
+import GradebookTable from "./GradebookTable";
+import type { AssignmentDrillTarget } from "../assignments/drillTarget";
 import type { GbGradebook } from "./types";
 import "./gradebook.css";
 
 /**
  * Class gradebook — «سجل العلامات» for the selected class, under its roster (docs/enterprise-class-gradebook-gb.md §4.6, O2). GB3: the
- * scheme summary and the builder; GB4 adds the table of marks here. Presentation only: the server decides access (assignments.assignment.view
+ * scheme summary and the builder; GB4: the table of marks under it. Presentation only: the server decides access (assignments.assignment.view
  * to read, assignments.grading.grade to edit — owner decision O1) and computes everything. A class switch drops the previous class's data
  * (a response for a class the teacher has left is ignored).
  */
 type Load = { classId: string; status: "loading" } | { classId: string; status: "ready"; data: GbGradebook } | { classId: string; status: "error"; error: string };
 
-export default function ClassGradebookPanel({ token, classroom, classActive }: { token: string; classroom: { classId: string; name: string } | null; classActive: boolean }) {
+export default function ClassGradebookPanel({ token, classroom, classActive, onOpenAssignment }: { token: string; classroom: { classId: string; name: string } | null; classActive: boolean; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
   const can = useCan();
   const classId = classroom?.classId || "";
   const [load, setLoad] = useState<Load | null>(null);
@@ -82,6 +84,7 @@ export default function ClassGradebookPanel({ token, classroom, classActive }: {
           </ul>
           {data.warnings.length > 0 && <p className="eb-gb-warning" role="status">{"مصدر مفقود في " + data.warnings.length + " من الأعمدة: لا يُحسب صفرًا، راجع المخطط."}</p>}
           {data.readOnly && <p className="eb-muted">للعرض فقط: هذا الصف في الأرشيف.</p>}
+          <GradebookTable gradebook={data} onOpenAssignment={onOpenAssignment} />
         </>
       )}
       {data && builderOpen && (
