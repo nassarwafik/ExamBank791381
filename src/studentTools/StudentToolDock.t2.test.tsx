@@ -296,3 +296,64 @@ describe("T5 — the formula sheet and the scratch pad panels", () => {
     expect(within(screen.getByRole("dialog", { name: "ورقة مسودة" })).queryByTestId("scratch-canvas")).toBeNull();
   });
 });
+
+describe("T6 — the subject tool panels", () => {
+  const T6 = { version: 1, tools: [
+    { id: "asciiTable", range: "printable" }, { id: "bitwiseCalculator", width: 8 }, { id: "truthTable", maxVariables: 3 },
+    { id: "unitConverter", categories: ["data", "dataRate"] }, { id: "periodicTable", showMass: false, showConfiguration: true }
+  ] };
+  const open = (name: string) => { openTools(); pick(name); return screen.getByRole("dialog", { name }); };
+  it("ASCII: looks a character up, refuses a control code in the printable table", () => {
+    render(<StudentToolDock studentTools={T6} />);
+    const panel = open("جدول ASCII");
+    fireEvent.change(within(panel).getByLabelText(/ابحث بحرف أو برمز/), { target: { value: "A" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "ابحث" }));
+    expect(within(panel).getByTestId("ascii-found").textContent).toMatch(/A65411010100 0001|A65/);
+    fireEvent.change(within(panel).getByLabelText(/ابحث بحرف أو برمز/), { target: { value: "LF" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "ابحث" }));
+    expect(within(panel).getByRole("alert").textContent).toMatch(/رمز تحكم/);
+  });
+  it("bitwise: AND in binary on the teacher's 8-bit word", () => {
+    render(<StudentToolDock studentTools={T6} />);
+    const panel = open("حاسبة العمليات على البتات");
+    expect(within(panel).getByText(/طول الكلمة: 8 بت/)).toBeTruthy();
+    fireEvent.change(within(panel).getByLabelText("A"), { target: { value: "11001010" } });
+    fireEvent.change(within(panel).getByLabelText("B"), { target: { value: "10101100" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "احسب" }));
+    expect(within(panel).getByTestId("bitwise-result").textContent).toContain("1000 1000");
+  });
+  it("truth table: builds the table and refuses more variables than allowed", () => {
+    render(<StudentToolDock studentTools={T6} />);
+    const panel = open("جدول الحقيقة");
+    const input = within(panel).getByLabelText(/العبارة المنطقية \(حتى 3 متغيرات\)/);
+    fireEvent.change(input, { target: { value: "A AND (B OR NOT C)" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "أنشئ الجدول" }));
+    const res = within(panel).getByTestId("truth-result");
+    expect(within(res).getAllByRole("row")).toHaveLength(9);
+    expect(res.textContent).toContain("Σm(4, 6, 7)");
+    fireEvent.change(input, { target: { value: "A B C D" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "أنشئ الجدول" }));
+    expect(within(panel).getByRole("alert").textContent).toMatch(/4 متغيرات.*3/);
+  });
+  it("unit converter: only the teacher's categories; Mbps to MB/s", () => {
+    render(<StudentToolDock studentTools={T6} />);
+    const panel = open("محوّل الوحدات");
+    const cat = within(panel).getByLabelText("الكمية") as HTMLSelectElement;
+    expect([...cat.options].map(o => o.value)).toEqual(["data", "dataRate"]);
+    fireEvent.change(cat, { target: { value: "dataRate" } });
+    fireEvent.change(within(panel).getByLabelText("القيمة"), { target: { value: "100" } });
+    fireEvent.change(within(panel).getByLabelText("من"), { target: { value: "Mbps" } });
+    fireEvent.change(within(panel).getByLabelText("إلى"), { target: { value: "MBps" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "حوّل" }));
+    expect(within(panel).getByTestId("unit-result").textContent).toContain("12.5");
+  });
+  it("periodic table: element details, configuration shown, mass hidden as the teacher chose", async () => {
+    render(<StudentToolDock studentTools={T6} />);
+    const panel = open("الجدول الدوري");
+    fireEvent.click(await within(panel).findByRole("gridcell", { name: /صوديوم Na/ }));
+    const d = within(panel).getByTestId("pt-detail");
+    expect(d.textContent).toContain("11");
+    expect(d.textContent).toContain("التوزيع الإلكتروني");
+    expect(d.textContent).not.toContain("الكتلة الذرية");
+  });
+});

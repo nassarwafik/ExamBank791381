@@ -1,4 +1,4 @@
-# Phase T — Student Exam Tools (design record; T0 – T5)
+# Phase T — Student Exam Tools (design record; T0 – T6)
 
 > STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator), T3
 > (base converter, answer-risk notes, tools in the teacher preview, draggable panel) and T4 (function plotter) are implemented on
@@ -121,7 +121,7 @@ converter answers conversion questions. The catalog records this for each tool (
 | T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | done (this branch) |
 | T4 | function plotter on `FunctionGraphView` | done (this branch) |
 | T5 | formula sheet (rich content, strict projection) and scratch pad | done (branch `claude/student-tools-t5`, stacked on T0–T4) |
-| T6 | subject tools (ASCII and bitwise operations, truth tables, units, periodic table) | |
+| T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table) | done (branch `claude/student-tools-t6`, stacked on T5) |
 | T7 | tools in training and learning materials; optional usage analytics (opens only, never the typed values) | |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
@@ -353,3 +353,33 @@ full canonical sheet.
 - `src/studentTools/StudentToolsEditor.t2.test.tsx` (T5 block): defaults, the drawing switch, a refused title shown and not emitted.
 - `src/StudentExamPage.studentTools.t2.test.tsx`: the start screen names the sheet by title and never shows its content.
 - Mutation M45–M52: 8 KILLED. M52 (undo clears everything) first SURVIVED; the test now draws two strokes.
+
+## 13. T6 — subject tools
+
+Five tools join version 1 additively: `asciiTable`, `bitwiseCalculator`, `truthTable`, `unitConverter` and `periodicTable`. Every
+earlier spec keeps its validity and meaning. The option values live in the contract module itself (`BIT_WIDTH_OPTIONS`,
+`UNIT_CATEGORY_IDS`, `TRUTH_MAX_VARIABLES_RANGE`), so it stays a leaf of the shared build. A test pins the unit categories to the
+engine's list.
+
+| Tool | Contract | Engine | What the student gets |
+|---|---|---|---|
+| ASCII table | `range: "printable" \| "full"` | `asciiTable.ts` | lookup by character, text (≤ 32 characters), decimal, `0x41` / `41h`, binary, or control name (LF, CR …); the table in dec / hex / oct / bin; control codes only in the full range; non-ASCII (Arabic) characters named as such |
+| Bitwise calculator | `width: 8 \| 16 \| 32` | `bitwise.ts` (BigInt, the base converter's strict parser) | AND, OR, XOR, NAND, NOR, NOT, logical shifts; operands in binary, decimal or hex; result in binary (nibbles), decimal and hex; values that don't fit the word are refused; SHL drops the bits shifted out |
+| Truth table | `maxVariables: 2–6` | `truthTable.ts` (bounded parser, no eval) | `¬ ! ~ NOT '`, `∧ & && · * AND` and implicit `AB`, `∨ \| \|\| + OR`, `⊕ ^ XOR`, `NAND`, `NOR`, `0`/`1`, brackets; precedence NOT > AND > XOR > OR; variables A–Z in alphabetical order (A most significant); the table, the expression as understood, and the minterms Σm(…) |
+| Unit converter | `categories`: non-empty subset of length, mass, time, temperature, speed, data, dataRate (canonical order) | `unitConverter.ts` | factor conversions (temperature is affine and refuses values below 0 K; mass, time, data and rates refuse negatives); decimal prefixes (kB = 1000 B, Mbps = 10⁶ bit/s) and binary prefixes written as such (KiB = 1024 B); 12-significant-digit display |
+| Periodic table | `showMass`, `showConfiguration` | the platform's verified chemistry catalog (`src/chemistry/elements.ts`, `electrons.ts`) | an 18-group grid of **Z 1–36** (the curriculum's scope, stated on the panel); a selected element's name, symbol, Z, period / group, category, and, as the teacher chose, its atomic mass and ground-state configuration; its own lazy chunk |
+
+**Answer-risk notes.** The heuristic names ASCII questions, bit-operation questions (including literal `1100 AND 1010`), truth-table /
+logic-gate questions, and atomic number / mass / configuration questions. It never names a question for the unit converter: units
+appear in most physics questions.
+
+**Builder options.** ASCII range; word width; maximum variables (2–6); unit categories (at least one, the last can't be unticked);
+the mass and configuration switches.
+
+### Evidence for T6
+
+- `src/studentTools/subjectTools.t6.test.ts`: all five engines (operations, notations, precedence, bounds, refusals with Arabic
+  messages), contract defaults, refusals and canonical order, catalog ↔ contract, risk terms.
+- T6 blocks in `StudentToolDock.t2.test.tsx` (each panel end to end, including the teacher's limits) and `StudentToolsEditor.t2.test.tsx`
+  (defaults and options).
+- Mutation M53–M64: 12 / 12 KILLED.
