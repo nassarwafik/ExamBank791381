@@ -238,6 +238,19 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                 )}
                 {tool?.id === "periodicTable" && (
                   <div className="sb-tool-options">
+                    <label className="sb-field">
+                      <span className="sb-field-label">العناصر المعروضة</span>
+                      <select className="sb-input" value={tool.range === "all" ? "all" : "curriculum"} disabled={disabled}
+                        onChange={e => setTools(tools.map(t => {
+                          if (t.id !== "periodicTable") return t;
+                          const { range: _drop, ...rest } = t;   // T10: "curriculum" is the absence of the key (the canonical form)
+                          void _drop;
+                          return e.target.value === "all" ? { ...rest, range: "all" as const } : rest;
+                        }))}>
+                        <option value="all">الجدول كاملًا (1–118)</option>
+                        <option value="curriculum">نطاق المنهاج (1–36)</option>
+                      </select>
+                    </label>
                     <label className="sb-check">
                       <input type="checkbox" checked={tool.showMass} disabled={disabled} onChange={e => patchTool(id, { showMass: e.target.checked } as Partial<PeriodicTableToolV1>)} />
                       <span>إظهار الكتلة الذرية</span>
