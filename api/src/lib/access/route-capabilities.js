@@ -97,6 +97,10 @@ const ROUTE_CAPABILITIES = Object.freeze({
   "assignment-progress.js": { "*": "assignments.assignment.view" },
   "assignment-item-analysis.js": { "*": "assignments.assignment.view" },
   "assignment-results.js": { GET: "assignments.assignment.view", "*": "assignments.schedule.set" },
+  // Class gradebook GB2 (owner decision O1, 2026-11-18): the assignment capabilities, no new ones — reading the gradebook is seeing
+  // assignments; changing the scheme, the manual marks and the excused / zero decisions is grading. Project columns additionally need
+  // projects.tracker.view, checked inside the route (withheld otherwise).
+  "class-gradebook.js": { GET: "assignments.assignment.view", "scheme.save": "assignments.grading.grade", "entries.save": "assignments.grading.grade", "*": "assignments.grading.grade" },
   "assignment-review.js": { "*": "assignments.grading.grade" },
   "coding-grading.js": { "*": "assignments.grading.grade" },
   "coding-grading-recovery.js": { "*": "assignments.grading.grade" },
