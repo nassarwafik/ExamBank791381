@@ -520,6 +520,17 @@ function TeacherPlatform(props:TeacherPlatformProps){
   }catch(e){setError(e instanceof Error?e.message:"تعذر تغيير حالة الحلول.")}
   finally{setActionBusy(false)}
  }
+ // Phase T11 — the student tools of the class's book (null = the book's built-in set). The server checks and stores the choice.
+ async function setLearningCourseTools(classroom:Classroom,courseId:string,studentTools:unknown){
+  if(actionBusy)return;
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   const result=await teacherApi<{ok:true;classId:string;learningMaterials:ClassLearningMaterial[]}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setLearningCourseTools",classId:classroom.classId,courseId,studentTools})});
+   commitLearningMaterials(classroom.classId,Array.isArray(result.learningMaterials)?result.learningMaterials:[]);
+   setNotice(studentTools===null?"✓ عادت أدوات الطالب في الكتاب إلى أدوات الكتاب.":"✓ حُفظت أدوات الطالب في الكتاب لهذا الصف.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ أدوات الكتاب.")}
+  finally{setActionBusy(false)}
+ }
  // Detach the whole course from THIS class (its publication list goes with it). Never deletes book content.
  async function removeLearningCourse(classroom:Classroom,courseId:string){
   if(actionBusy)return;
@@ -1042,7 +1053,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
    onAddCourse={(classroom,courseId,moduleIds)=>void addLearningCourse(classroom,courseId,moduleIds)}
    onToggleModule={(classroom,courseId,moduleId,publish)=>void toggleLearningModule(classroom,courseId,moduleId,publish)}
    onToggleRelease={(classroom,courseId,moduleId,open)=>void toggleSolutionsRelease(classroom,courseId,moduleId,open)}
-   onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}/>
+   onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}
+   onSetTools={(classroom,courseId,spec)=>void setLearningCourseTools(classroom,courseId,spec)}/>
 
   <LazyClassGradebook token={token} classroom={selectedClass} classActive={classActive} onOpenAssignment={props.onOpenAssignmentTarget}/>   {/* Class gradebook GB3 — its own lazy chunk */}
 

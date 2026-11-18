@@ -8,7 +8,7 @@ export type ClassArchiveView = "active" | "archived";
 // `courseId` = the book/course the class uses; `visibleModuleIds` = the modules CURRENTLY published to its students
 // (canonical content order, server-normalized). A course may be attached with [] (nothing released yet).
 /** 899371 P13 (D1) — `releasedModuleIds`: the modules whose BOOK solutions / output tracers the teacher opened to the class (absent = none). */
-export type ClassLearningMaterial = { courseId: string; visibleModuleIds: string[]; releasedModuleIds?: string[] };
+export type ClassLearningMaterial = { courseId: string; visibleModuleIds: string[]; releasedModuleIds?: string[]; /** T11 */ studentTools?: unknown };
 /** One releasable module as the server publication registry describes it (identity + title + content order only). */
 export type LearningCatalogModule = { moduleId: string; title: string; order: number };
 /** One publishable course from GET /api/learning-materials-catalog (production-approved modules only, no bodies). */

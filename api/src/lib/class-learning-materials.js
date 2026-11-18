@@ -20,6 +20,12 @@
 // read or write any other classroom field.
 
 const defaultRegistry = require("./learning-materials-registry");
+// Phase T11 — STUDENT TOOLS of the book: the tools the class's teacher chose for this course (entry.studentTools, a canonical version-1
+// spec checked by validateBookStudentTools; an empty list = tools off). Stored only when the teacher chose; absent ⇒ the book's
+// built-in set (src/studentTools/courseTools.ts). A stored value that is no longer valid is read as absent (the built-in set), never
+// as a partial spec. The tools grade, store and send nothing, so this is a convenience, never a protection.
+const { validateBookStudentTools } = require("./shared-finalization/studentTools/studentToolsSpec");
+const bookTools = raw => { if (raw === undefined) return undefined; let r; try { r = validateBookStudentTools(raw); } catch { return undefined; } return r.ok ? r.value : undefined; };
 
 const FIELD = "learningMaterials";
 const cleanId = value => String(value || "").trim();
@@ -39,6 +45,7 @@ function rawEntries(classroom) {
 function getClassLearningMaterials(classroom, registry = defaultRegistry) {
   const merged = new Map();   // courseId -> Set(rawModuleIds)
   const released = new Map();   // courseId -> Set(rawModuleIds) — the solutions release (P13 D1)
+  const tools = new Map();      // courseId -> canonical book tools (T11): the first valid stored value wins
   for (const entry of rawEntries(classroom)) {
     if (!entry || typeof entry !== "object") continue;
     const courseId = cleanId(entry.courseId);
@@ -48,13 +55,14 @@ function getClassLearningMaterials(classroom, registry = defaultRegistry) {
     for (const id of ids) { const clean = cleanId(id); if (clean) merged.get(courseId).add(clean); }
     const rel = Array.isArray(entry.releasedModuleIds) ? entry.releasedModuleIds : [];
     for (const id of rel) { const clean = cleanId(id); if (clean) released.get(courseId).add(clean); }
+    if (!tools.has(courseId)) { const t = bookTools(entry.studentTools); if (t) tools.set(courseId, t); }
   }
   const out = [];
   for (const course of registry.listLearningCourses()) {
     if (!merged.has(course.courseId)) continue;
     // a release counts only for a course that has one; an unknown / stale id never surfaces
     const rel = releasesSolutions(registry, course.courseId) ? registry.canonicalizeLearningModuleIds(course.courseId, [...released.get(course.courseId)]) : [];
-    out.push({ courseId: course.courseId, visibleModuleIds: registry.canonicalizeLearningModuleIds(course.courseId, [...merged.get(course.courseId)]), ...(rel.length ? { releasedModuleIds: rel } : {}) });
+    out.push({ courseId: course.courseId, visibleModuleIds: registry.canonicalizeLearningModuleIds(course.courseId, [...merged.get(course.courseId)]), ...(rel.length ? { releasedModuleIds: rel } : {}), ...(tools.has(course.courseId) ? { studentTools: tools.get(course.courseId) } : {}) });
   }
   return out;
 }
@@ -107,8 +115,9 @@ function setClassLearningCourseModules(classroom, courseId, canonicalModuleIds, 
   const id = cleanId(courseId);
   const all = getClassLearningMaterials(classroom, registry);
   const others = all.filter(e => e.courseId !== id);
-  const released = (all.find(e => e.courseId === id) || {}).releasedModuleIds;   // publication never drops a release (P13)
-  const next = [...others, { courseId: id, visibleModuleIds: registry.canonicalizeLearningModuleIds(id, canonicalModuleIds), ...(released && released.length ? { releasedModuleIds: released } : {}) }];
+  const prev = all.find(e => e.courseId === id) || {};
+  const released = prev.releasedModuleIds;   // publication never drops a release (P13)
+  const next = [...others, { courseId: id, visibleModuleIds: registry.canonicalizeLearningModuleIds(id, canonicalModuleIds), ...(released && released.length ? { releasedModuleIds: released } : {}), ...(prev.studentTools ? { studentTools: prev.studentTools } : {}) }];   // …nor the book's tools (T11)
   // keep registry course order in storage too (deterministic documents)
   const rank = new Map(registry.listLearningCourses().map((c, i) => [c.courseId, i]));
   next.sort((a, b) => (rank.get(a.courseId) ?? 1e9) - (rank.get(b.courseId) ?? 1e9));
@@ -132,6 +141,30 @@ function setClassLearningCourseReleases(classroom, courseId, canonicalModuleIds,
     return rel.length ? { ...rest, releasedModuleIds: rel } : rest;
   });
   return { ...classroom, [FIELD]: next };
+}
+
+/**
+ * Phase T11 — pure mutation: set the book tools of an ATTACHED course (`spec` already checked by validateBookStudentTools, canonical), or
+ * `null` to go back to the book's built-in set. Returns a NEW classroom; the publication, the release and every other field and course
+ * entry are untouched. Throws when the course is not attached (callers check first).
+ */
+function setClassLearningCourseTools(classroom, courseId, spec, registry = defaultRegistry) {
+  const id = cleanId(courseId);
+  const all = getClassLearningMaterials(classroom, registry);
+  if (!all.some(e => e.courseId === id)) throw new Error("course " + id + " is not attached to the class");
+  const canonical = spec === null ? null : bookTools(spec);
+  if (spec !== null && !canonical) throw new Error("invalid book tools");
+  const next = all.map(e => {
+    if (e.courseId !== id) return e;
+    const { studentTools: _drop, ...rest } = e;
+    return canonical ? { ...rest, studentTools: canonical } : rest;
+  });
+  return { ...classroom, [FIELD]: next };
+}
+/** The book tools the class's teacher chose for a course (canonical), or undefined (the built-in set). */
+function getClassLearningCourseTools(classroom, courseId, registry = defaultRegistry) {
+  const e = getClassLearningMaterials(classroom, registry).find(x => x.courseId === cleanId(courseId));
+  return e ? e.studentTools : undefined;
 }
 
 /**
@@ -159,7 +192,7 @@ function buildStudentLearningMaterials(classroom, registry = defaultRegistry) {
     const course = registry.findLearningCourse(entry.courseId);
     if (!course) continue;
     const visible = new Set(entry.visibleModuleIds);
-    out.push({ courseId: course.courseId, title: course.title, modules: course.modules.filter(m => visible.has(m.moduleId)).map(m => ({ moduleId: m.moduleId, title: m.title, order: m.order })) });
+    out.push({ courseId: course.courseId, title: course.title, modules: course.modules.filter(m => visible.has(m.moduleId)).map(m => ({ moduleId: m.moduleId, title: m.title, order: m.order })), ...(entry.studentTools ? { studentTools: entry.studentTools } : {}) });   // T11
   }
   return out;
 }
@@ -168,5 +201,6 @@ module.exports = {
   LEARNING_MATERIALS_FIELD: FIELD,
   getClassLearningMaterials, getClassLearningCourse, classHasLearningCourse, getVisibleLearningModuleIds, classCanSeeLearningModule,
   getReleasedLearningModuleIds, classSolutionsReleased, setClassLearningCourseReleases,
-  setClassLearningCourseModules, removeClassLearningCourse, buildStudentLearningMaterials
+  setClassLearningCourseModules, removeClassLearningCourse, buildStudentLearningMaterials,
+  setClassLearningCourseTools, getClassLearningCourseTools
 };

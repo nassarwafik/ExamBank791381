@@ -334,3 +334,20 @@ export function studentToolsUnknownSectionIssues(spec: StudentToolsSpecV1, secti
     message: "تخصيص الأدوات يشير إلى قسم غير موجود في الامتحان."
   }));
 }
+
+/** Phase T11 — the tools a course book offers when the class's teacher chooses them (docs/enterprise-student-tools-t.md §18). */
+export const BOOK_EXCLUDED_TOOLS: readonly StudentToolId[] = Object.freeze(["formulaSheet"] as StudentToolId[]);
+
+/**
+ * A course book's tool set, chosen by the teacher for a class: a valid version-1 spec without section overrides (a book has no sections)
+ * and without a formula sheet (the book is the reference text, and a sheet would make every class document heavy). An empty tool list is
+ * valid: the teacher turned the book's tools off. All or nothing, like validateStudentTools.
+ */
+export function validateBookStudentTools(raw: unknown): StudentToolsValidation {
+  const r = validateStudentTools(raw);
+  if (!r.ok) return r;
+  const issues: StudentToolsIssue[] = [];
+  if (r.value.sectionOverrides) issues.push({ code: "STUDENT_TOOLS_BOOK_NO_SECTIONS", path: "studentTools.sectionOverrides", message: "الكتاب ليس فيه أقسام، فلا تخصيص للأقسام في أدواته." });
+  for (const t of r.value.tools) if (BOOK_EXCLUDED_TOOLS.includes(t.id)) issues.push({ code: "STUDENT_TOOLS_BOOK_TOOL_NOT_ALLOWED", path: "studentTools.tools", message: "ورقة القوانين لا تُضاف إلى الكتاب: الكتاب نفسه هو المرجع." });
+  return issues.length ? { ok: false, issues } : r;
+}

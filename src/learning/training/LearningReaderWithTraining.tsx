@@ -25,8 +25,10 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, codeRun = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null }: {
+export default function LearningReaderWithTraining({ courseId, bookTools, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, codeRun = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null }: {
   courseId: string;
+  /** Phase T11 — the class's chosen book tools (passed to the reader's tool bar); absent ⇒ the book's built-in set. */
+  bookTools?: unknown;
   api?: ReaderContentApi;
   onExit: () => void;
   exitLabel: string;
@@ -201,6 +203,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   return (
     <LearningReader
       courseId={courseId}
+      bookTools={bookTools}
       api={api}
       onExit={onExit}
       exitLabel={exitLabel}

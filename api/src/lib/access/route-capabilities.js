@@ -17,7 +17,7 @@ const ROUTE_CAPABILITIES = Object.freeze({
     GET: "classes.class.view", create: "classes.class.create", update: "classes.class.manage", archive: "classes.class.manage",
     unarchive: "classes.class.manage", graduateandarchive: "classes.class.manage",
     // Tadris+ P10-J (O10, owner decision §19.47) — enrolling a class in a project is the PROJECTS capability, not course assignment.
-    setprograms: "projects.tracker.manage", setprogram: "projects.tracker.manage", setlearningcoursemodules: "learning.module.release", setlearningcoursereleases: "learning.module.release", removelearningcourse: "learning.course.assign",
+    setprograms: "projects.tracker.manage", setprogram: "projects.tracker.manage", setlearningcoursemodules: "learning.module.release", setlearningcoursereleases: "learning.module.release", setlearningcoursetools: "learning.module.release", removelearningcourse: "learning.course.assign",
     reconcileroster: "students.student.edit", "*": "classes.class.manage"
   },
   "manage-students.js": {

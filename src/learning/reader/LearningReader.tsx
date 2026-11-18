@@ -69,9 +69,11 @@ type ManifestState =
  */
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, examItems, study, codeRun, initialPageId, initialModuleId, onPageChange,
-  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null,
+  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null, bookTools,
 }: {
   courseId: string;
+  /** Phase T11 — the tools the class's teacher chose for this book (student sessions); absent ⇒ the book's built-in set. */
+  bookTools?: unknown;
   onExit: () => void;
   api?: ReaderContentApi;
   /** Label of the back/exit control — the host decides where "back" leads (teacher library, student portal). */
@@ -771,7 +773,7 @@ export default function LearningReader({
       )}
       {/* Phase T7 — the book's student tools; not in presentation mode (the teacher projects the page to the class). */}
       {!presentation && (
-        <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} /></Suspense></ToolDockBoundary>
+        <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} /></Suspense></ToolDockBoundary>
       )}
     </div>
   );
