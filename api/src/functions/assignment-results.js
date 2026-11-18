@@ -15,6 +15,7 @@ const {deriveGradingStatus}=require("../lib/grading-status");
 // Phase 21E.3 — a verified render-failure hold (an unanswered question the student's device could not display) on the teacher-ended path, and
 // the per-attempt count of such holds for the gradebook row (information only; the review screen carries the question-level reason).
 const {normalizeRenderFailures,applyRenderFailureHolds,technicalHoldsField}=require("../lib/render-failures");
+const {attemptToolUsage}=require("../lib/student-tool-usage");   // Phase T8
 const {stampLateAttempt,lateInfo,lateMarks,latePolicyOf}=require("../lib/late-policy");   // D5 (item 10)
 const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");
 const {syncAssessmentMedal}=require("../lib/achievement-feed");
@@ -359,11 +360,11 @@ async function handler(request,deps={},obs=null){
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(fa.examSnapshot,serverAnswers,parametricGenerationContext(a.assignmentId,student.userId,active.attemptNumber)),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
      const holds=applyRenderFailureHolds(g,normalizeRenderFailures(doc.draftRenderFailures,fa.examSnapshot||null),serverAnswers,fa.examSnapshot,now);   // 21E.3 — the record saved with the draft
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{}),...(holds?{renderFailures:holds}:{})};
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{}),...(holds?{renderFailures:holds}:{}),...(()=>{const u=attemptToolUsage(doc,undefined,fa.examSnapshot||null,now);return u?{toolUsage:u}:{}})()};   // T8 — the draft's tool record, as saved
      stampLateAttempt(attempt,fa,ts.dueMs,Date.parse(endedAt));                  // D5 (item 10) — a late attempt keeps its deduction
      codingPlan=planCodingGrading(fa.examSnapshot,attempt,{assignmentId:a.assignmentId,studentId:student.userId,now});endedAttemptNumber=attempt.attemptNumber;   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;{const r=Number(doc.draftRevision);doc.draftRevision=(Number.isInteger(r)&&r>=0?r:0)+1}   // QA2-11: a device still holding the cleared draft's revision is stale
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;delete doc.draftToolUsage;{const r=Number(doc.draftRevision);doc.draftRevision=(Number.isInteger(r)&&r>=0?r:0)+1}   // QA2-11: a device still holding the cleared draft's revision is stale
      snap={...lifecycle(fa,doc),...resultFields(doc)};
      // Audit: identity + timing + policy only — NEVER answers, grades of questions, tokens or exam content.
      auditDetails={assignmentId:a.assignmentId,attemptNumber:attempt.attemptNumber,startedAt:String(attempt.startedAt),endedAt,endReason,attemptPolicy:attemptPolicyOf(fa),pauseCount:Math.max(0,Number(active.pauseCount)||0),previousStatus,timed:!!ts.timed};
