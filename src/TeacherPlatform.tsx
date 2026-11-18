@@ -1044,7 +1044,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    onToggleRelease={(classroom,courseId,moduleId,open)=>void toggleSolutionsRelease(classroom,courseId,moduleId,open)}
    onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}/>
 
-  <LazyClassGradebook token={token} classroom={selectedClass} classActive={classActive}/>   {/* Class gradebook GB3 — its own lazy chunk */}
+  <LazyClassGradebook token={token} classroom={selectedClass} classActive={classActive} onOpenAssignment={props.onOpenAssignmentTarget}/>   {/* Class gradebook GB3 — its own lazy chunk */}
 
   <CreateClassDialog open={dialog==="createClass"} onClose={closeDialog} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}
    onName={setNewClassName} onGrade={setNewClassGrade} onSchoolYear={setNewSchoolYear} onSubmit={()=>void createClass()} busy={actionBusy} error={dialog==="createClass"?dialogError:""}/>
