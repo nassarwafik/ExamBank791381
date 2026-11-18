@@ -16,7 +16,7 @@ const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");
 const { sessionGrants } = require("../lib/access/session-grants");
 const storage = require("../lib/platform-storage");
-const { loadDocs } = require("../lib/classes-students-read-cache");
+const { loadDocs, loadEntries, listEntries } = require("../lib/classes-students-read-cache");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { isStudentInClass } = require("../lib/class-membership");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -102,16 +102,34 @@ async function readGradebook(c, classroom, auth, grants, deps) {
   const limit = (deps.getReadConcurrency || storage.getReadConcurrency)();
   const now = new Date();
 
+  // GB7 — the assignment columns are read CONCURRENTLY, and their submissions through the shared ETag-verified document cache (the
+  // Reports Center's rule, classes-students-read-cache): each assignment's submissions are LISTED on every request — so nothing is
+  // stale — and a submission is downloaded only when it is new or its ETag changed. Measured at 40 students × 30 columns
+  // (api/tests/class-gradebook-perf-gb7.test.js): a repeat open no longer downloads the 1 120 submissions again.
+  const roster = new Set(ids);
+  const assignmentIds = [...new Set(items.filter(i => isPlainObject(i) && isPlainObject(i.source) && i.source.kind === "assignment" && isSafeId(i.source.assignmentId)).map(i => i.source.assignmentId))];
+  const assignmentDocs = new Map();
+  const submissions = new Map();       // assignmentId → Map(studentId → submission document)
+  await map(assignmentIds, limit, async id => {
+    const a = await dl(c, ASSIGN_PREFIX + id + ".json");
+    if (!a || String(a.classId || "") !== classId || !isReportableAssessment(a)) return;   // a missing source: its results are never read
+    assignmentDocs.set(id, a);
+    const prefix = SUB_PREFIX + id + "/";
+    const listed = (await (deps.listEntries || listEntries)(c, prefix)).filter(e => roster.has(e.name.slice(prefix.length, -".json".length)));
+    const docs = await (deps.loadEntries || loadEntries)(c, listed);
+    submissions.set(id, new Map(listed.map((e, i) => [e.name.slice(prefix.length, -".json".length), docs[i]])));
+  });
+
   for (const item of items) {
     if (!isPlainObject(item) || !isPlainObject(item.source)) continue;
     const src = item.source;
     const all = e => new Map(ids.map(id => [id, e]));
     if (src.kind === "assignment") {
-      const a = isSafeId(src.assignmentId) ? await dl(c, ASSIGN_PREFIX + src.assignmentId + ".json") : null;
-      if (!a || String(a.classId || "") !== classId || !isReportableAssessment(a)) { evidence.set(item.itemId, all(MISSING_SOURCE)); titles.set(item.itemId, ""); continue; }
+      const a = assignmentDocs.get(src.assignmentId);
+      if (!a) { evidence.set(item.itemId, all(MISSING_SOURCE)); titles.set(item.itemId, ""); continue; }
       titles.set(item.itemId, String(a.title || ""));
-      const subs = await map(ids, limit, id => dl(c, SUB_PREFIX + src.assignmentId + "/" + id + ".json"));
-      evidence.set(item.itemId, new Map(ids.map((id, i) => [id, assignmentEvidence(subs[i])])));
+      const subs = submissions.get(src.assignmentId) || new Map();
+      evidence.set(item.itemId, new Map(ids.map(id => [id, assignmentEvidence(subs.has(id) ? subs.get(id) : null)])));
     } else if (src.kind === "project") {
       const code = String(src.projectCode || "");
       titles.set(item.itemId, isSupportedProject(code) ? getProjectMeta(code).title : "");
