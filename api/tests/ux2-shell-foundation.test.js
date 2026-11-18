@@ -466,6 +466,7 @@ describe("Final acceptance — class card hit area and ActionMenu ordering", () 
     expect(importers.map(f => f.replace(SRC, "src")).sort()).toEqual([
       "src/AssignmentsPanel.tsx", "src/assignments/AssignmentList.tsx", "src/assignments/Gradebook.tsx",
       "src/builder/BuilderToolbar.tsx",                          // Phase 21E.2 — the structured builder's two overflow menus
+      "src/gradebook/GradebookTable.tsx",                        // Class gradebook GB5 — the table's per-column menu in «تعديل العلامات»
       "src/owner/OwnerAccountMenu.tsx",                          // UX-O3 — the owner's account menu in the console header
       "src/owner/OwnerTeachers.tsx",                             // UX-O1 — the owner's teachers table: each teacher's «⋯» menu
       "src/projects/ProjectScoreGrid.tsx",                       // Phase G1 — the class matrix's per-stage column menu
