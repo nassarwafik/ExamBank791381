@@ -28,7 +28,7 @@ describe("T5 — formula sheet contract", () => {
     ["empty content", sheet({ content: { schemaVersion: 1, blocks: [] } }), "STUDENT_TOOLS_INVALID_CONTENT"],
     ["no content", sheet({ content: undefined }), "STUDENT_TOOLS_INVALID_CONTENT"],
     ["raw HTML", sheet({ content: { schemaVersion: 1, blocks: [para("<script>alert(1)</script>")] } }), "STUDENT_TOOLS_INVALID_CONTENT"],
-    ["a (valid) image block", sheet({ content: { schemaVersion: 1, blocks: [{ type: "image", alt: "صورة", asset: { dataUrl: "data:image/png;base64,iVBORw0KGgo=", origin: "uploaded" } }] } }), "STUDENT_TOOLS_BLOCK_NOT_ALLOWED"],
+    // (a valid image block was refused here until Phase T9, when the owner approved images in the sheet: formulaSheet.t9.test.ts)
     ["an unknown key", sheet({ answer: "x" }), "STUDENT_TOOLS_UNKNOWN_KEY"],
     ["an oversized document", sheet({ content: { schemaVersion: 1, blocks: Array.from({ length: 10 }, () => para("ق".repeat(4000))) } }), "STUDENT_TOOLS_TOO_LARGE"]
   ])("refuses %s", (_n, tool, code) => {

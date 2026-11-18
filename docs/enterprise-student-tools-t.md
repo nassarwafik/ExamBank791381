@@ -431,3 +431,66 @@ already offers the teacher's tools exactly like an exam (T2): nothing to add.
 - All 1,963 learning tests still pass.
 - `CourseToolDock` directly: the course's set, and nothing for a course without one.
 - Mutation M65–M70: 6 / 6 KILLED, including the deployment-recovery wrapper (M70, killed by the inventory test).
+
+## 16. T9 — images in the formula sheet
+
+The owner approved images in the formula sheet, for example a circuit symbol, a diagram or a reference table as a picture.
+
+### One image model, not a second one
+
+A sheet image is the platform's one image asset (`src/imageAsset.ts`):
+
+- **Uploaded image.** A png, jpeg or webp raster data URL, which rides inside the exam exactly like a question's uploaded image.
+- **Bank image.** A bank image's durable identity, delivered through a freshly signed `/api/question-image` URL.
+
+`api/src/lib/bank-asset-hydrate.js` now also walks the sheet's content (`studentTools`, tool `formulaSheet`, top level and inside
+columns):
+- **Storage.** Saving or freezing an exam keeps only a bank image's identity, so a signed URL sent back by a browser is dropped.
+- **Delivery.** A fresh signed URL is minted for each delivery.
+
+An uploaded raster and a sheet without bank images are returned as the same reference.
+
+The rest is unchanged:
+- **Validation.** The validator refuses SVG, remote URLs and unknown keys.
+- **The student projection.** It is still canonical or nothing.
+- **Before the start.** The pre-start payload still replaces the whole content, images included, with the placeholder (T5).
+
+### Contract: an image budget apart from the text
+
+`image` and `figure` join `FORMULA_SHEET_BLOCKS`. Charts, graphs and 3D scenes stay refused. Before T9 every image was refused, so no
+published sheet has one: the change is additive within version 1.
+
+| Bound | Value |
+|---|---|
+| text (the document with the images' data left out) | 64 KiB, as before |
+| images | at most `FORMULA_SHEET_MAX_IMAGES` = 4, columns included |
+| one uploaded image | at most 1,400,000 characters of data URL (about 1 MB) |
+| all uploaded images | at most 2,800,000 characters (about 2 MB); a bank image costs nothing, being a reference |
+
+An outer bound (text + the whole image budget) refuses a huge value before it is walked. The Builder's hint names the budget.
+
+### Evidence for T9
+
+- `src/studentTools/formulaSheet.t9.test.ts`: the contract and the projections.
+  - **Accepted.** Images, figures, images inside columns and bank images, unchanged.
+  - **Refused.** Unsafe images, and charts.
+  - **Bounds.** An image never eats into the text; the text bound still holds; 4 images at most, columns included; the per-image and
+    total bounds; a bank image is free.
+  - **Pre-start.** The projection withholds images.
+- `api/tests/formula-sheet-images-t9.test.js`:
+  - delivery signs a bank image, at the top level and in columns;
+  - storage keeps the identity only;
+  - uploaded images are untouched;
+  - the student projection keeps a valid image;
+  - a malformed image drops the whole tools value.
+- `src/studentTools/FormulaSheetTool.t9.test.tsx`: the student panel draws the image and the figure with their alternative text and
+  caption.
+- `src/studentTools/formulaSheet.t5.test.ts`: its "a (valid) image block is refused" case was the T5 rule. The owner's T9 decision
+  reverses it, so the case moved to the T9 tests as an acceptance.
+- Mutation M92–M100: 9 / 9 KILLED. The planted defects:
+  - images refused;
+  - the text bound counting image data;
+  - each image bound removed;
+  - columns escaping the count;
+  - delivery not signing, or not walking columns;
+  - a bank image charged to the budget.

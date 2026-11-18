@@ -1,7 +1,7 @@
 import { Suspense, lazy, useId, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
-  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX,
+  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX, FORMULA_SHEET_MAX_IMAGES,
   type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId,
   BIT_WIDTH_OPTIONS, UNIT_CATEGORY_IDS, TRUTH_MAX_VARIABLES_RANGE
 } from "./studentToolsSpec";
@@ -178,7 +178,7 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                       <input className="sb-input" value={tool.title} maxLength={FORMULA_SHEET_TITLE_MAX} disabled={disabled}
                         onChange={e => patchTool(id, { title: e.target.value } as Partial<FormulaSheetToolV1>)} />
                     </label>
-                    <p className="sb-hint">المسموح: نصوص وعناوين وقوائم وجداول ومعادلات. لا صور ولا رسوم بيانية في هذا الإصدار.</p>
+                    <p className="sb-hint">المسموح: نصوص وعناوين وقوائم وجداول ومعادلات وصور (حتى {FORMULA_SHEET_MAX_IMAGES} صور، نحو 1 ميغابايت للصورة). لا رسوم بيانية في هذا الإصدار.</p>
                     <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المحرّر…</p>}>
                       <RichContentEditor value={tool.content} disabled={disabled} label="محتوى ورقة القوانين"
                         onChange={(next: RichContentV1 | undefined) => {

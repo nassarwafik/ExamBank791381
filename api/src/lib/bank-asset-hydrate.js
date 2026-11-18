@@ -124,6 +124,17 @@ function mapScenarioSources(scenarios, assetFn) {
     return sources === sc.sources ? sc : { ...sc, sources };
   });
 }
+// Phase T9 — the formula sheet's images (exam.studentTools, tool "formulaSheet", its RichContentV1 `content`) follow the same model:
+// durable identity in storage, a freshly signed URL at delivery. Other tools carry no media; anything else is the same reference.
+function mapStudentTools(studentTools, assetFn) {
+  if (!studentTools || typeof studentTools !== "object" || Array.isArray(studentTools) || !Array.isArray(studentTools.tools)) return studentTools;
+  const tools = mapArray(studentTools.tools, t => {
+    if (!t || typeof t !== "object" || t.id !== "formulaSheet") return t;
+    const content = mapRichContent(t.content, assetFn);
+    return content === t.content ? t : { ...t, content };
+  });
+  return tools === studentTools.tools ? studentTools : { ...studentTools, tools };
+}
 function mapExamAssets(exam, assetFn) {
   if (!exam || typeof exam !== "object") return exam;
   const questions = mapArray(exam.questions, q => mapNode(q, assetFn));
@@ -141,8 +152,10 @@ function mapExamAssets(exam, assetFn) {
   });
   const cover = exam.coverPage && typeof exam.coverPage === "object" && !Array.isArray(exam.coverPage) ? exam.coverPage : null;
   const coverRich = cover ? mapRichContent(cover.instructionsRichContent, assetFn) : undefined;   // 20D.1
-  if (questions === exam.questions && sections === exam.sections && (!cover || coverRich === cover.instructionsRichContent)) return exam;
+  const studentTools = mapStudentTools(exam.studentTools, assetFn);                          // T9
+  if (questions === exam.questions && sections === exam.sections && (!cover || coverRich === cover.instructionsRichContent) && studentTools === exam.studentTools) return exam;
   const out = { ...exam };
+  if (studentTools !== exam.studentTools) out.studentTools = studentTools;
   if (questions !== exam.questions) out.questions = questions;
   if (sections !== exam.sections) out.sections = sections;
   if (cover && coverRich !== cover.instructionsRichContent) out.coverPage = { ...cover, instructionsRichContent: coverRich };
