@@ -151,3 +151,32 @@ describe("T5 — formula sheet and scratch pad options", () => {
     expect(screen.queryByTestId("tools-refusal")).toBeNull();
   });
 });
+
+describe("T6 — subject tool options", () => {
+  it("each tool emits its default and its options are editable", () => {
+    const m = mount(undefined);
+    fireEvent.click(toolBox("حاسبة العمليات على البتات"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "bitwiseCalculator", width: 8 }] });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "طول الكلمة" }), { target: { value: "32" } });
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "bitwiseCalculator", width: 32 }] });
+  });
+  it("the unit converter keeps at least one category", () => {
+    const m = mount({ version: 1, tools: [{ id: "unitConverter", categories: ["data", "dataRate"] }] });
+    fireEvent.click(toolBox("حجم البيانات"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "unitConverter", categories: ["dataRate"] }] });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    expect((toolBox("سرعة نقل البيانات") as HTMLInputElement).disabled).toBe(true);
+  });
+  it("periodic table switches and ASCII range", () => {
+    const m = mount({ version: 1, tools: [{ id: "periodicTable", showMass: true, showConfiguration: true }, { id: "asciiTable", range: "printable" }, { id: "truthTable", maxVariables: 4 }] });
+    fireEvent.click(toolBox("إظهار الكتلة الذرية"));
+    expect(m.last()!.tools.find(t => t.id === "periodicTable")).toEqual({ id: "periodicTable", showMass: false, showConfiguration: true });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "نطاق الجدول" }), { target: { value: "full" } });
+    expect(m.last()!.tools.find(t => t.id === "asciiTable")).toEqual({ id: "asciiTable", range: "full" });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "أقصى عدد للمتغيرات" }), { target: { value: "6" } });
+    expect(m.last()!.tools.find(t => t.id === "truthTable")).toEqual({ id: "truthTable", maxVariables: 6 });
+  });
+});

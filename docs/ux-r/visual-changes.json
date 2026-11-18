@@ -1875,6 +1875,21 @@
       "page": "state-menu-open",
       "viewport": "all",
       "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "all",
+      "reason": "Exam Studio setup step — Phase T6 adds five subject-tool rows to the «أدوات الطالب» panel (جدول ASCII، حاسبة العمليات على البتات، جدول الحقيقة، محوّل الوحدات، الجدول الدوري), all off for the captured exam; the page is taller by five rows."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Classic builder — the same five Phase T6 subject-tool rows in the «أدوات الطالب» panel under the cover panel, all off for the captured exam; the sections below move down by five rows."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "all",
+      "reason": "Course book reader — Phase T7 (the owner's decision: a fixed set of student tools per course): the floating «الأدوات» button of the exam's tool bar now appears at the reader's lower edge (the networks book's set). Nothing else on the page moves; the tool panels open only when pressed."
     }
   ]
 }

@@ -91,3 +91,16 @@
 .stt-draw { margin-block-start: var(--eb-space-3); }
 .stt-draw-tools { flex-wrap: wrap; margin-block-end: var(--eb-space-2); }
 .stt-canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border: 1px dashed var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-bg); color: var(--eb-text); touch-action: none; cursor: crosshair; }
+/* Phase T6 — periodic table grid (18 groups; the cell colour follows the category through tokens only). */
+.stt-pt { display: flex; flex-direction: column; gap: 2px; overflow-x: auto; }
+.stt-pt-row { display: grid; grid-template-columns: repeat(18, minmax(26px, 1fr)); gap: 2px; }
+.stt-pt-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 34px; padding: 1px; border: 1px solid var(--eb-border); border-radius: var(--eb-r-sm); background: var(--eb-surface-2); color: var(--eb-text); font: inherit; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); cursor: pointer; }
+.stt-pt-cell small { font-size: 9px; font-weight: var(--eb-fw-regular); color: var(--eb-muted); }
+.stt-pt-cell.is-alkaliMetal, .stt-pt-cell.is-alkalineEarthMetal { background: var(--eb-warn-bg); }
+.stt-pt-cell.is-transitionMetal, .stt-pt-cell.is-postTransitionMetal { background: var(--eb-info-bg); }
+.stt-pt-cell.is-metalloid { background: var(--eb-bg-tint); }
+.stt-pt-cell.is-nonmetal, .stt-pt-cell.is-halogen { background: var(--eb-success-bg); }
+.stt-pt-cell.is-nobleGas { background: var(--eb-primary-050); }
+.stt-pt-cell.is-selected { outline: 2px solid var(--eb-primary); outline-offset: 0; }
+.stt-pt-cell:focus-visible { outline: none; box-shadow: var(--eb-focus-ring); }
+.stt-pt-empty { min-height: 34px; }

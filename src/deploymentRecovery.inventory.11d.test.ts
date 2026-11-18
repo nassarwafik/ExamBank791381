@@ -64,6 +64,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./ui/useDeferredConfirm.tsx", "LazyConfirmDialog", "./ConfirmDialog", "shared-confirm-dialog"],
   // 21E L3-B — the search panel loads on demand in the Reader («بحث») and in the teacher library; one key per call site.
   ["./learning/reader/LearningReader.tsx", "LearningSearchPanel", "../search/LearningSearchPanel", "reader-search-panel"],
+  // Phase T7 — the course book's student tools (CourseToolDock: the course's set in the exam's tool bar) load on demand in the Reader.
+  ["./learning/reader/LearningReader.tsx", "CourseToolDock", "../../studentTools/CourseToolDock", "reader-student-tools"],
   ["./learning/search/LibrarySearch.tsx", "LearningSearchPanel", "./LearningSearchPanel", "library-search-panel"],
   // Tadris+ P1-A2 — the platform owner's screens (#/owner) load through their own lazy boundary.
   ["./owner/OwnerEntry.tsx", "OwnerApp", "./OwnerApp", "owner-app"],
