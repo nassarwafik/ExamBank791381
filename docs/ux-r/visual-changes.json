@@ -1825,6 +1825,36 @@
       "page": "state-classic-builder",
       "viewport": "all",
       "reason": "Classic builder — the access bar gains «العودة إلى استوديو الامتحان» after «استيراد امتحان منظّم» (the owner's request: a visible way back to the Exam Studio from the classic page). The bar sits in the page under the open editor this scene captures: the editor's pixels do not change, but the extra button wraps the bar onto one more row, so the document is a row taller (desktop 977 → 1006 px)."
+    },
+    {
+      "page": "students",
+      "viewport": "all",
+      "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "all",
+      "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "all",
+      "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "all",
+      "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "all",
+      "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "all",
+      "reason": "Class gradebook GB3 — «سجل العلامات» (the owner's request: each class defines how its final mark is calculated): a new panel under the selected class, after «المواد التعليمية لهذا الصف», with its own empty state and «إنشاء مخطط العلامات». Nothing above it moves; the page is one panel taller (desktop 1246 → 1541 px). The focus / hover / menu scenes are captured on this page, so they grow the same way."
     }
   ]
 }

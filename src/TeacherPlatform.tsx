@@ -23,6 +23,7 @@ import {useConfirm} from "./ui/useConfirm";
 import ClassesPane from "./students/ClassesPane";
 import RosterPane from "./students/RosterPane";
 import ClassLearningMaterialsPanel from "./students/ClassLearningMaterialsPanel";
+import LazyClassGradebook from "./gradebook/LazyClassGradebook";
 import { classReleasedModuleIds } from "./students/classSolutionsRelease";
 import {classLearningMaterials} from "./students/classLearningMaterials";
 import StudentDialog from "./students/StudentDialog";
@@ -1042,6 +1043,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
    onToggleModule={(classroom,courseId,moduleId,publish)=>void toggleLearningModule(classroom,courseId,moduleId,publish)}
    onToggleRelease={(classroom,courseId,moduleId,open)=>void toggleSolutionsRelease(classroom,courseId,moduleId,open)}
    onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}/>
+
+  <LazyClassGradebook token={token} classroom={selectedClass} classActive={classActive}/>   {/* Class gradebook GB3 — its own lazy chunk */}
 
   <CreateClassDialog open={dialog==="createClass"} onClose={closeDialog} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}
    onName={setNewClassName} onGrade={setNewClassGrade} onSchoolYear={setNewSchoolYear} onSubmit={()=>void createClass()} busy={actionBusy} error={dialog==="createClass"?dialogError:""}/>
