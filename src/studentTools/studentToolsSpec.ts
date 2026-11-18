@@ -19,13 +19,20 @@ export const STUDENT_TOOLS_VERSION = 1 as const;
 
 /** Every tool of contract version 1, in their default display order. Adding a tool is a reviewed contract change. */
 // Phase T5 — `formulaSheet` and `scratchPad` were added to version 1 additively: every spec that was valid stays valid and means the same.
-export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad"] as const;
+// Phase T6 — five subject tools, added additively in the same way.
+export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
+  "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable"] as const;
 export type StudentToolId = (typeof STUDENT_TOOL_IDS)[number];
 
 export const NUMBER_BASES = [2, 8, 10, 16] as const;
 export type NumberBase = (typeof NUMBER_BASES)[number];
 
 export const GRAPH_MAX_FUNCTIONS_LIMIT = 3;
+/** Phase T6 — subject tool option values (kept here, not imported from the engines, so the contract stays a leaf module). */
+export const BIT_WIDTH_OPTIONS = [8, 16, 32] as const;
+export const UNIT_CATEGORY_IDS = ["length", "mass", "time", "temperature", "speed", "data", "dataRate"] as const;
+export type UnitCategoryId = (typeof UNIT_CATEGORY_IDS)[number];
+export const TRUTH_MAX_VARIABLES_RANGE = { min: 2, max: 6 } as const;
 export const MAX_SECTION_OVERRIDES = 100;
 export const MAX_SECTION_ID_LENGTH = 120;
 /** Phase T5 — formula sheet bounds: a short title and a light document (it travels inside every delivered exam). */
@@ -41,7 +48,13 @@ export type GraphPlotterToolV1 = { id: "graphPlotter"; maxFunctions: number; sho
 export type Ipv4CalculatorToolV1 = { id: "ipv4Calculator"; showBinary: boolean; allowSubnetting: boolean };
 export type FormulaSheetToolV1 = { id: "formulaSheet"; title: string; content: RichContentV1 };
 export type ScratchPadToolV1 = { id: "scratchPad"; drawing: boolean };
-export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1;
+export type AsciiTableToolV1 = { id: "asciiTable"; range: "printable" | "full" };
+export type BitwiseCalculatorToolV1 = { id: "bitwiseCalculator"; width: 8 | 16 | 32 };
+export type TruthTableToolV1 = { id: "truthTable"; maxVariables: number };
+export type UnitConverterToolV1 = { id: "unitConverter"; categories: UnitCategoryId[] };
+export type PeriodicTableToolV1 = { id: "periodicTable"; showMass: boolean; showConfiguration: boolean };
+export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
+  | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1;
 
 export type StudentToolsSectionOverrideV1 = { disabled: StudentToolId[] };
 export type StudentToolsSpecV1 = {
@@ -74,6 +87,11 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "ipv4Calculator": return { id, showBinary: true, allowSubnetting: false };
     case "formulaSheet": return { id, title: "ورقة القوانين", content: { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "اكتب هنا القوانين والثوابت المسموحة للطالب." }] }] } };
     case "scratchPad": return { id, drawing: true };
+    case "asciiTable": return { id, range: "printable" };
+    case "bitwiseCalculator": return { id, width: 8 };
+    case "truthTable": return { id, maxVariables: 4 };
+    case "unitConverter": return { id, categories: [...UNIT_CATEGORY_IDS] };
+    case "periodicTable": return { id, showMass: true, showConfiguration: true };
   }
 }
 
@@ -84,7 +102,12 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   graphPlotter: ["id", "maxFunctions", "showAnalysis"],
   ipv4Calculator: ["id", "showBinary", "allowSubnetting"],
   formulaSheet: ["id", "title", "content"],
-  scratchPad: ["id", "drawing"]
+  scratchPad: ["id", "drawing"],
+  asciiTable: ["id", "range"],
+  bitwiseCalculator: ["id", "width"],
+  truthTable: ["id", "maxVariables"],
+  unitConverter: ["id", "categories"],
+  periodicTable: ["id", "showMass", "showConfiguration"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -172,6 +195,35 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
     }
     case "scratchPad":
       value = { id, drawing: bool("drawing") };
+      break;
+    case "asciiTable":
+      if (raw.range !== "printable" && raw.range !== "full") add("STUDENT_TOOLS_INVALID_VALUE", path + ".range", "نطاق جدول ASCII يجب أن يكون الرموز المطبوعة أو الجدول كاملًا.");
+      value = { id, range: raw.range === "full" ? "full" : "printable" };
+      break;
+    case "bitwiseCalculator":
+      if (!(BIT_WIDTH_OPTIONS as readonly unknown[]).includes(raw.width)) add("STUDENT_TOOLS_INVALID_VALUE", path + ".width", "طول الكلمة يجب أن يكون 8 أو 16 أو 32 بت.");
+      value = { id, width: raw.width === 16 ? 16 : raw.width === 32 ? 32 : 8 };
+      break;
+    case "truthTable": {
+      const m = raw.maxVariables;
+      if (typeof m !== "number" || !Number.isInteger(m) || m < TRUTH_MAX_VARIABLES_RANGE.min || m > TRUTH_MAX_VARIABLES_RANGE.max)
+        add("STUDENT_TOOLS_INVALID_VALUE", path + ".maxVariables", "عدد المتغيرات يجب أن يكون عددًا صحيحًا من " + TRUTH_MAX_VARIABLES_RANGE.min + " إلى " + TRUTH_MAX_VARIABLES_RANGE.max + ".");
+      value = { id, maxVariables: typeof m === "number" ? m : TRUTH_MAX_VARIABLES_RANGE.min };
+      break;
+    }
+    case "unitConverter": {
+      const cats: UnitCategoryId[] = [];
+      if (!Array.isArray(raw.categories) || raw.categories.length === 0) add("STUDENT_TOOLS_INVALID_VALUE", path + ".categories", "اختر فئة وحدات واحدة على الأقل.");
+      else for (const c of raw.categories) {
+        if (!(UNIT_CATEGORY_IDS as readonly unknown[]).includes(c)) { add("STUDENT_TOOLS_INVALID_VALUE", path + ".categories", "فئة وحدات غير معروفة: «" + String(c) + "»."); continue; }
+        if (cats.includes(c as UnitCategoryId)) { add("STUDENT_TOOLS_DUPLICATE_VALUE", path + ".categories", "فئة الوحدات «" + String(c) + "» مكررة."); continue; }
+        cats.push(c as UnitCategoryId);
+      }
+      value = { id, categories: UNIT_CATEGORY_IDS.filter(c => cats.includes(c)) };
+      break;
+    }
+    case "periodicTable":
+      value = { id, showMass: bool("showMass"), showConfiguration: bool("showConfiguration") };
       break;
   }
   return issues.length === before ? value : null;

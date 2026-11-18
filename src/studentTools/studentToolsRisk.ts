@@ -37,6 +37,11 @@ const IPV4_TERMS = /عنوان\s*(?:ال)?شبكة|عنوان\s*(?:ال)?بث|ق
 const BASE_TERMS = /الثنائي|الثماني|الست\s*عشري|السادس\s*عشر|السداسي\s*عشر|النظام\s*العشري|أنظمة\s*العد|binary|octal|hexadecimal|\bhex\b/i;
 const BASE_NOTATION = /\b[01]+\s*[)\]]?\s*[₂]|\(\s*[0-9A-F]+\s*\)\s*(?:₂|₈|₁₆|_?(?:2|8|16)\b)|\b0x[0-9a-f]+\b|\b0b[01]+\b/i;
 const GRAPH_TYPES = new Set(["functionGraphSelection", "functionStudy2d"]);
+// Phase T6 — subject tools.
+const ASCII_TERMS = /\bascii\b|آسكي|أسكي|اسكي/i;
+const BITWISE_TERMS = /bitwise|إزاحة|على مستوى البت|عمليات? (?:منطقية )?على البتات|\b[01]{4,}\s*(?:AND|OR|XOR|NAND|NOR)\s*[01]{4,}\b/i;
+const TRUTH_TERMS = /جدول\s*(?:ال)?حقيقة|truth\s*table|بوابات?\s*(?:ال)?منطقية|(?:ال)?دارة\s*(?:ال)?منطقية|logic\s*gates?/i;
+const PERIODIC_TERMS = /العدد\s*الذري|الكتلة\s*الذرية|التوزيع\s*الإلكتروني|الجدول\s*الدوري|atomic\s*(?:number|mass)|electron\s*configuration/i;
 
 function questionType(q: Record<string, unknown>): string {
   return String(q.type ?? q.presentationType ?? "");
@@ -52,6 +57,11 @@ export function questionRiskFor(tool: StudentToolId, q: unknown): boolean {
     case "calculator": return false;      // too broad to be useful: every numeric question would be named
     case "formulaSheet": return false;    // the teacher's own text: its risk is stated in the catalog, not guessed
     case "scratchPad": return false;      // answers nothing
+    case "asciiTable": return ASCII_TERMS.test(text);
+    case "bitwiseCalculator": return BITWISE_TERMS.test(text);
+    case "truthTable": return TRUTH_TERMS.test(text);
+    case "unitConverter": return false;   // unit changes appear in most physics questions: too broad to name
+    case "periodicTable": return PERIODIC_TERMS.test(text);
   }
 }
 
