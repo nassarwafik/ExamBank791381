@@ -1,11 +1,17 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:**
-- **Merged:** GB0 (nassarwafik/ExamBank791381#660), GB1, the computation engine (nassarwafik/ExamBank791381#662), and GB2, the route
-  (nassarwafik/ExamBank791381#663).
-- **Merged:** GB3, the scheme builder (nassarwafik/ExamBank791381#664).
-- **In review:** GB4, the table of marks (nassarwafik/ExamBank791381#669).
-- **In progress:** GB5, manual marks and decisions, on `feature/gb5-gradebook-entries`.
+**Status:** GB0–GB5 merged; GB7 (this record's last phase) in review; GB6 postponed by the owner (§8).
+
+| Phase | Pull request |
+|---|---|
+| GB0 — design record | nassarwafik/ExamBank791381#660 |
+| GB1 — validation and computation engine | nassarwafik/ExamBank791381#662 |
+| GB2 — route, capabilities, project evidence | nassarwafik/ExamBank791381#663 |
+| GB3 — scheme builder | nassarwafik/ExamBank791381#664 |
+| GB4 — table of marks | nassarwafik/ExamBank791381#669 |
+| GB5 — manual marks and decisions | nassarwafik/ExamBank791381#671 |
+| GB7 — performance and final review | `feature/gb7-gradebook-performance` |
+| Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
 (`AGENTS.md` §3, §13).
@@ -303,3 +309,66 @@ Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`
   adds the table of marks to it.
 - **O3 (GB6): a term approval.** A frozen snapshot is the only gradebook value ever stored. Its form (per term, per scheme
   revision) is designed in GB6, if the owner opens that phase.
+
+## 7. GB7 — performance at 40 students × 30 columns
+
+Measured by `api/tests/class-gradebook-perf-gb7.test.js`, which runs the real route over the in-memory container with a fixed 4 ms
+latency on every download and listing:
+- **The class:** 40 students and 30 columns (28 assignments with every submission present, and 2 manual columns).
+- **What is checked:** all 40 final marks against an independent computation.
+
+| | Before GB7 (`main` `fcdc9db7`) | After GB7 |
+|---|---|---|
+| First open: wall time | 755 ms (columns read one after another) | **166 ms** (columns read concurrently) |
+| First open: submission downloads | 1 120 | 1 120 (each read once) |
+| Repeat open, nothing changed: downloads | ~1 190 (every submission again) | **31** (class, scheme, entries, 28 assignment documents); **0 submissions** |
+| One submission changed | 1 120 downloads again | **1** download, and its new mark is shown at once |
+
+**How:**
+- **Concurrent columns:** the assignment columns are read concurrently, within the platform's read concurrency.
+- **The shared document cache:** their submissions go through the ETag-verified cache already used by «الصفوف والطلاب» and the Reports
+  Center (`classes-students-read-cache`). Each assignment's submissions are listed on every request, so nothing is stale. A
+  submission is downloaded only when it is new or its ETag changed.
+- **Roster only:** only the roster's students are downloaded. A submission left by a student who is no longer in the class is listed
+  but never read.
+
+**Mutation proof (route):** P1 (the missing-source check), P2 (the roster filter) and P3 (the concurrency) are each KILLED. P2
+survived the first run and was killed after the test recorded a non-roster submission.
+
+**Limits:**
+- The cache holds at most 32 MB (LRU, shared with the other readers). A larger school re-downloads what was evicted: still correct,
+  only slower.
+- The first open of a class still reads every submission once (1 120 here).
+
+## 8. Final review and handover
+
+**Safety invariants and their proof:**
+
+| Invariant (§4.7) | Proven by |
+|---|---|
+| Nothing becomes a zero by itself; only a recorded decision is a zero | GB1 M1, M2; GB5 U1–U3; GB2 G16 |
+| A result that is not final never counts | GB1 M3, M9, M11, M12; GB2 G15 |
+| Weights are never rescaled silently | GB1 M4, M5, M14 |
+| Tenancy, capability, archived read-only, storage errors as 503 | GB2 G1–G4, G14; P9-B1 route sweep |
+| A stale write never overwrites | GB2 G5, G6; GB5 U4, U5 |
+| Project data only with `projects.tracker.view` | GB2 G7, G8, G13; GB5 U8 |
+| Reads limited to the scheme's assignments and the roster | GB2 G11; GB7 P1, P2 |
+
+**Mutation total:** 18 (GB1) + 16 (GB2) + 8 (GB5) + 3 (GB7) = **45 planted defects, 45 KILLED**. Four survived a first run (GB2 G7, GB5 U3,
+GB7 P2, and none in GB1). Each was killed by a stronger test, and none was declared equivalent.
+
+**What the teacher has:** in «الصفوف والطلاب» → the selected class → «سجل العلامات»:
+- **The scheme:** parts and weights, and the assignments, projects and manual columns in each part.
+- **The table:** every state written in words, each part's total, and the final mark with its status.
+- **Navigation and export:** a drill to an assignment's review, and Excel / CSV / print.
+- **Editing:** manual marks and «معفى» / «صفر» decisions, with column actions limited to non-submitters.
+
+**Postponed or open, for the owner:**
+- **GB6 (optional, postponed):** a term approval (a frozen snapshot) and showing the gradebook to students, with each assignment's
+  results release respected. It is designed here in outline only (O3).
+- **Scheme templates (D7):** copying one class's scheme to another class.
+- **Repository follow-ups met on the way, outside this feature:**
+  - **The Exam Studio's step circles** render a few edge pixels two ways from one capture to the next, on `main` itself; this once
+    failed the visual gate on #669. A harness-only fix (no transition while capturing) would remove it.
+  - **The Static Web App's preview-environment limit** refused the PR previews of #666 and #669. Closing stale PRs or removing old
+    preview environments frees a slot.
