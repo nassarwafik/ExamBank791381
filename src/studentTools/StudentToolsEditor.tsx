@@ -1,11 +1,14 @@
 import { Suspense, lazy, useId, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
-  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX
+  type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX,
+  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId,
+  BIT_WIDTH_OPTIONS, UNIT_CATEGORY_IDS, TRUTH_MAX_VARIABLES_RANGE
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
 import { studentToolAnswerRisks } from "./studentToolsRisk";
 import { BASE_LABEL } from "./baseConverter";
+import { UNIT_CATEGORY_LABEL } from "./unitConverter";
 import type { RichContentV1 } from "../richContent/richContentModel";
 
 const MAX_RISK_LABELS = 5;
@@ -183,6 +186,66 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                           patchTool(id, { content: next } as Partial<FormulaSheetToolV1>);
                         }} />
                     </Suspense>
+                  </div>
+                )}
+                {tool?.id === "asciiTable" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-field">
+                      <span className="sb-field-label">نطاق الجدول</span>
+                      <select className="sb-input" value={tool.range} disabled={disabled} onChange={e => patchTool(id, { range: e.target.value } as Partial<AsciiTableToolV1>)}>
+                        <option value="printable">الرموز المطبوعة (32–126)</option>
+                        <option value="full">الجدول كاملًا مع رموز التحكم (0–127)</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "bitwiseCalculator" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-field">
+                      <span className="sb-field-label">طول الكلمة</span>
+                      <select className="sb-input" value={tool.width} disabled={disabled} onChange={e => patchTool(id, { width: Number(e.target.value) } as Partial<BitwiseCalculatorToolV1>)}>
+                        {BIT_WIDTH_OPTIONS.map(w => <option key={w} value={w}>{w} بت</option>)}
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "truthTable" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-field">
+                      <span className="sb-field-label">أقصى عدد للمتغيرات</span>
+                      <select className="sb-input" value={tool.maxVariables} disabled={disabled} onChange={e => patchTool(id, { maxVariables: Number(e.target.value) } as Partial<TruthTableToolV1>)}>
+                        {Array.from({ length: TRUTH_MAX_VARIABLES_RANGE.max - TRUTH_MAX_VARIABLES_RANGE.min + 1 }, (_, i) => i + TRUTH_MAX_VARIABLES_RANGE.min).map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "unitConverter" && (
+                  <div className="sb-tool-options">
+                    <fieldset className="sb-tool-bases">
+                      <legend className="sb-field-label">الكميات المتاحة (واحدة على الأقل)</legend>
+                      {UNIT_CATEGORY_IDS.map(c => {
+                        const checked = tool.categories.includes(c);
+                        return (
+                          <label key={c} className="sb-check">
+                            <input type="checkbox" checked={checked} disabled={disabled || (checked && tool.categories.length <= 1)}
+                              onChange={e => patchTool(id, { categories: (e.target.checked ? [...tool.categories, c] : tool.categories.filter(x => x !== c)) as UnitCategoryId[] } as Partial<UnitConverterToolV1>)} />
+                            <span>{UNIT_CATEGORY_LABEL[c]}</span>
+                          </label>
+                        );
+                      })}
+                    </fieldset>
+                  </div>
+                )}
+                {tool?.id === "periodicTable" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.showMass} disabled={disabled} onChange={e => patchTool(id, { showMass: e.target.checked } as Partial<PeriodicTableToolV1>)} />
+                      <span>إظهار الكتلة الذرية</span>
+                    </label>
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.showConfiguration} disabled={disabled} onChange={e => patchTool(id, { showConfiguration: e.target.checked } as Partial<PeriodicTableToolV1>)} />
+                      <span>إظهار التوزيع الإلكتروني</span>
+                    </label>
                   </div>
                 )}
                 {tool?.id === "scratchPad" && (

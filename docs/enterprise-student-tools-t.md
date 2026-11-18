@@ -1,4 +1,4 @@
-# Phase T — Student Exam Tools (design record; T0 – T5)
+# Phase T — Student Exam Tools (design record; T0 – T7)
 
 > STATUS: T0 (this design), T1 (contract and data path), T2 (Builder panel, student tool bar, calculator, IPv4 calculator), T3
 > (base converter, answer-risk notes, tools in the teacher preview, draggable panel) and T4 (function plotter) are implemented on
@@ -121,8 +121,8 @@ converter answers conversion questions. The catalog records this for each tool (
 | T3 | base converter; answer-risk notes; tools in the teacher's exam preview; draggable panel | done (this branch) |
 | T4 | function plotter on `FunctionGraphView` | done (this branch) |
 | T5 | formula sheet (rich content, strict projection) and scratch pad | done (branch `claude/student-tools-t5`, stacked on T0–T4) |
-| T6 | subject tools (ASCII and bitwise operations, truth tables, units, periodic table) | |
-| T7 | tools in training and learning materials; optional usage analytics (opens only, never the typed values) | |
+| T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table) | done (branch `claude/student-tools-t6`, stacked on T5) |
+| T7 | tools in the course books (learning materials); usage analytics deferred by the owner | done (branch `claude/student-tools-t7`, stacked on T6) |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
@@ -353,3 +353,81 @@ full canonical sheet.
 - `src/studentTools/StudentToolsEditor.t2.test.tsx` (T5 block): defaults, the drawing switch, a refused title shown and not emitted.
 - `src/StudentExamPage.studentTools.t2.test.tsx`: the start screen names the sheet by title and never shows its content.
 - Mutation M45–M52: 8 KILLED. M52 (undo clears everything) first SURVIVED; the test now draws two strokes.
+
+## 13. T6 — subject tools
+
+Five tools join version 1 additively: `asciiTable`, `bitwiseCalculator`, `truthTable`, `unitConverter` and `periodicTable`. Every
+earlier spec keeps its validity and meaning. The option values live in the contract module itself (`BIT_WIDTH_OPTIONS`,
+`UNIT_CATEGORY_IDS`, `TRUTH_MAX_VARIABLES_RANGE`), so it stays a leaf of the shared build. A test pins the unit categories to the
+engine's list.
+
+| Tool | Contract | Engine | What the student gets |
+|---|---|---|---|
+| ASCII table | `range: "printable" \| "full"` | `asciiTable.ts` | lookup by character, text (≤ 32 characters), decimal, `0x41` / `41h`, binary, or control name (LF, CR …); the table in dec / hex / oct / bin; control codes only in the full range; non-ASCII (Arabic) characters named as such |
+| Bitwise calculator | `width: 8 \| 16 \| 32` | `bitwise.ts` (BigInt, the base converter's strict parser) | AND, OR, XOR, NAND, NOR, NOT, logical shifts; operands in binary, decimal or hex; result in binary (nibbles), decimal and hex; values that don't fit the word are refused; SHL drops the bits shifted out |
+| Truth table | `maxVariables: 2–6` | `truthTable.ts` (bounded parser, no eval) | `¬ ! ~ NOT '`, `∧ & && · * AND` and implicit `AB`, `∨ \| \|\| + OR`, `⊕ ^ XOR`, `NAND`, `NOR`, `0`/`1`, brackets; precedence NOT > AND > XOR > OR; variables A–Z in alphabetical order (A most significant); the table, the expression as understood, and the minterms Σm(…) |
+| Unit converter | `categories`: non-empty subset of length, mass, time, temperature, speed, data, dataRate (canonical order) | `unitConverter.ts` | factor conversions (temperature is affine and refuses values below 0 K; mass, time, data and rates refuse negatives); decimal prefixes (kB = 1000 B, Mbps = 10⁶ bit/s) and binary prefixes written as such (KiB = 1024 B); 12-significant-digit display |
+| Periodic table | `showMass`, `showConfiguration` | the platform's verified chemistry catalog (`src/chemistry/elements.ts`, `electrons.ts`) | an 18-group grid of **Z 1–36** (the curriculum's scope, stated on the panel); a selected element's name, symbol, Z, period / group, category, and, as the teacher chose, its atomic mass and ground-state configuration; its own lazy chunk |
+
+**Answer-risk notes.** The heuristic names ASCII questions, bit-operation questions (including literal `1100 AND 1010`), truth-table /
+logic-gate questions, and atomic number / mass / configuration questions. It never names a question for the unit converter: units
+appear in most physics questions.
+
+**Builder options.** ASCII range; word width; maximum variables (2–6); unit categories (at least one, the last can't be unticked);
+the mass and configuration switches.
+
+### Evidence for T6
+
+- `src/studentTools/subjectTools.t6.test.ts`: all five engines (operations, notations, precedence, bounds, refusals with Arabic
+  messages), contract defaults, refusals and canonical order, catalog ↔ contract, risk terms.
+- T6 blocks in `StudentToolDock.t2.test.tsx` (each panel end to end, including the teacher's limits) and `StudentToolsEditor.t2.test.tsx`
+  (defaults and options).
+- Mutation M53–M64: 12 / 12 KILLED.
+
+## 14. T7 — tools in training and in the course books
+
+### Owner decisions
+
+- **Books.** A **fixed tool set per course**, defined in code (`src/studentTools/courseTools.ts`). There is no stored setting, no route
+  and no teacher screen; a set can be changed later in a reviewed PR.
+- **No usage tracking in T7.** Recording which student opened which tool would store new data about students (privacy, retention, a
+  new route). It is left for its own phase, once the owner decides what the teacher needs to see.
+
+### Training
+
+A training assignment is an assignment whose cover says `activityType: "training"`, and it runs in the same `StudentExamPage`. It
+already offers the teacher's tools exactly like an exam (T2): nothing to add.
+
+### The course books
+
+| Course | Book | Tools |
+|---|---|---|
+| 791381, 791381s | شبكات الاتصال، أوراق التلخيص | IPv4 calculator (binary view, subnetting), base converter (2/8/10/16 with steps), bitwise calculator (32 bits), unit converter (data, data rate), scientific calculator, scratch pad |
+| 899371 | أسس علم الحاسوب | base converter (with steps), ASCII table (full), truth table (6 variables), bitwise calculator (8 bits), unit converter (data, data rate), scientific calculator, scratch pad |
+| 899271 | الأتمتة | scratch pad, base converter (with steps), scientific calculator |
+| 899271d | مبنى المعطيات | scientific calculator, base converter (with steps), bitwise calculator (32 bits), scratch pad |
+
+- **Working is on.** A book is practice, not an exam, so the sets switch on the working: conversion steps, subnetting and the binary
+  view.
+- **Same tool bar, one lazy chunk.** `LearningReader` mounts `CourseToolDock`: the course lookup plus the exam's `StudentToolDock`, in
+  one lazy chunk. Only the tiny `ToolDockBoundary` stays in the reader's first load (41.5 KB of the 42 KB budget; 40.9 KB before T7).
+  The tool bar is hidden in presentation mode, where the teacher projects the page to the class.
+- **Deployment recovery.** In the reader the chunk loads through `lazyWithRetry` (key `reader-student-tools`, inventoried in
+  `src/deploymentRecovery.inventory.11d.test.ts`), like every lazy view of the reader. A stale chunk after a deployment recovers with
+  one reload. A reload is harmless in a book; that's why the exam page keeps a plain `lazy` (a reload there would end a strict
+  attempt).
+- **No sections.** A book has no sections, so the set applies throughout.
+- **No tools without an entry.** A course without an entry shows no tool bar. `courseStudentTools` reads own properties only.
+
+### Evidence for T7
+
+- `src/studentTools/courseTools.t7.test.tsx`:
+  - every set is a valid canonical spec of tools that have a UI;
+  - the sets match the registered courses one-to-one;
+  - the networks book has subnetting;
+  - unknown and inherited names have no tools;
+  - in the real reader, the networks book lists its six tools and the IPv4 calculator works with subnetting;
+  - the bar is hidden in presentation mode and comes back after it.
+- All 1,963 learning tests still pass.
+- `CourseToolDock` directly: the course's set, and nothing for a course without one.
+- Mutation M65–M70: 6 / 6 KILLED, including the deployment-recovery wrapper (M70, killed by the inventory test).

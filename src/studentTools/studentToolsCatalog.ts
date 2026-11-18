@@ -67,6 +67,46 @@ export const STUDENT_TOOLS_CATALOG: readonly StudentToolCatalogEntry[] = Object.
     subjects: ["جميع المواد"],
     answerRisk: "لا تحلّ أي سؤال؛ هي ورق مسودة فقط.",
     available: true
+  },
+  {
+    id: "asciiTable",
+    label: "جدول ASCII",
+    description: "رموز ASCII مع قيمها بالعشري والست عشري والثماني والثنائي، والبحث بالحرف أو بالرمز.",
+    subjects: ["علم الحاسوب", "البرمجة"],
+    answerRisk: "تحلّ أسئلة إيجاد رمز ASCII لحرف أو حرف لرمز بالكامل.",
+    available: true
+  },
+  {
+    id: "bitwiseCalculator",
+    label: "حاسبة العمليات على البتات",
+    description: "AND وOR وXOR وNOT وNAND وNOR والإزاحة، على كلمة بطول 8 أو 16 أو 32 بت، مع الناتج بالثنائي والعشري والست عشري.",
+    subjects: ["علم الحاسوب", "الشبكات"],
+    answerRisk: "تحلّ أسئلة العمليات المنطقية على البتات والإزاحة بالكامل.",
+    available: true
+  },
+  {
+    id: "truthTable",
+    label: "جدول الحقيقة",
+    description: "يكتب الطالب عبارة منطقية (مثل A AND (B OR NOT C)) فيظهر جدول الحقيقة كاملًا مع الحدود الصغرى.",
+    subjects: ["علم الحاسوب", "المنطق والدوائر الرقمية"],
+    answerRisk: "تحلّ أسئلة بناء جدول الحقيقة لعبارة أو بوابات منطقية بالكامل.",
+    available: true
+  },
+  {
+    id: "unitConverter",
+    label: "محوّل الوحدات",
+    description: "تحويل وحدات الطول والكتلة والزمن والحرارة والسرعة وحجم البيانات وسرعة نقلها (bit وB وkB وKiB وMbps …).",
+    subjects: ["الفيزياء", "الكيمياء", "الشبكات"],
+    answerRisk: "تحلّ أسئلة التحويل المباشر بين الوحدات المسموحة.",
+    available: true
+  },
+  {
+    id: "periodicTable",
+    label: "الجدول الدوري",
+    description: "العناصر من 1 إلى 36 (نطاق المنهاج) مع رمز العنصر واسمه وعدده الذري، وكتلته الذرية وتوزيعه الإلكتروني حسب اختيارك.",
+    subjects: ["الكيمياء"],
+    answerRisk: "تكشف العدد الذري والكتلة الذرية والتوزيع الإلكتروني للعناصر عند تفعيلها.",
+    available: true
   }
 ]);
 
