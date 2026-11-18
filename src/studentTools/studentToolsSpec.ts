@@ -13,10 +13,13 @@
 //   • the student copy is the CANONICAL value or nothing (projectStudentToolsForStudent): a malformed spec is withheld,
 //     which only removes a convenience — it can never change a score, an answer or an attempt.
 
+import { validateRichContent, type RichContentV1, type RichBlockType } from "../richContent/richContentModel";
+
 export const STUDENT_TOOLS_VERSION = 1 as const;
 
 /** Every tool of contract version 1, in their default display order. Adding a tool is a reviewed contract change. */
-export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator"] as const;
+// Phase T5 — `formulaSheet` and `scratchPad` were added to version 1 additively: every spec that was valid stays valid and means the same.
+export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad"] as const;
 export type StudentToolId = (typeof STUDENT_TOOL_IDS)[number];
 
 export const NUMBER_BASES = [2, 8, 10, 16] as const;
@@ -25,12 +28,20 @@ export type NumberBase = (typeof NUMBER_BASES)[number];
 export const GRAPH_MAX_FUNCTIONS_LIMIT = 3;
 export const MAX_SECTION_OVERRIDES = 100;
 export const MAX_SECTION_ID_LENGTH = 120;
+/** Phase T5 — formula sheet bounds: a short title and a light document (it travels inside every delivered exam). */
+export const FORMULA_SHEET_TITLE_MAX = 80;
+export const FORMULA_SHEET_MAX_BYTES = 65536;
+/** The rich-content blocks a formula sheet may use: text, maths and tables only. Images (which need signed delivery), charts, graphs and
+ *  3D scenes are refused in version 1 — a sheet is reference text, and every allowed block renders without network or heavy engines. */
+export const FORMULA_SHEET_BLOCKS: readonly RichBlockType[] = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "math", "callout", "keyValueGrid", "divider", "code", "quote", "columns"] as RichBlockType[]);
 
 export type CalculatorToolV1 = { id: "calculator"; variant: "basic" | "scientific"; angleUnit: "deg" | "rad" };
 export type BaseConverterToolV1 = { id: "baseConverter"; bases: NumberBase[]; showSteps: boolean };
 export type GraphPlotterToolV1 = { id: "graphPlotter"; maxFunctions: number; showAnalysis: boolean };
 export type Ipv4CalculatorToolV1 = { id: "ipv4Calculator"; showBinary: boolean; allowSubnetting: boolean };
-export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1;
+export type FormulaSheetToolV1 = { id: "formulaSheet"; title: string; content: RichContentV1 };
+export type ScratchPadToolV1 = { id: "scratchPad"; drawing: boolean };
+export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1;
 
 export type StudentToolsSectionOverrideV1 = { disabled: StudentToolId[] };
 export type StudentToolsSpecV1 = {
@@ -61,6 +72,8 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "baseConverter": return { id, bases: [2, 8, 10, 16], showSteps: false };
     case "graphPlotter": return { id, maxFunctions: GRAPH_MAX_FUNCTIONS_LIMIT, showAnalysis: false };
     case "ipv4Calculator": return { id, showBinary: true, allowSubnetting: false };
+    case "formulaSheet": return { id, title: "ورقة القوانين", content: { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "اكتب هنا القوانين والثوابت المسموحة للطالب." }] }] } };
+    case "scratchPad": return { id, drawing: true };
   }
 }
 
@@ -69,8 +82,28 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   calculator: ["id", "variant", "angleUnit"],
   baseConverter: ["id", "bases", "showSteps"],
   graphPlotter: ["id", "maxFunctions", "showAnalysis"],
-  ipv4Calculator: ["id", "showBinary", "allowSubnetting"]
+  ipv4Calculator: ["id", "showBinary", "allowSubnetting"],
+  formulaSheet: ["id", "title", "content"],
+  scratchPad: ["id", "drawing"]
 };
+
+const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
+function utf8Length(s: string): number {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c < 0x80) n += 1; else if (c < 0x800) n += 2;
+    else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length && (s.charCodeAt(i + 1) & 0xfc00) === 0xdc00) { n += 4; i++; } else n += 3;
+  }
+  return n;
+}
+/** Every block type used by a document, columns included. */
+function blockTypes(content: RichContentV1): RichBlockType[] {
+  const out: RichBlockType[] = [];
+  const walk = (blocks: readonly RichContentV1["blocks"][number][]) => { for (const b of blocks) { out.push(b.type); if (b.type === "columns") for (const c of b.columns) walk(c.blocks); } };
+  walk(content.blocks);
+  return out;
+}
 
 type Add = (code: string, path: string, message: string) => void;
 
@@ -122,6 +155,23 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
     }
     case "ipv4Calculator":
       value = { id, showBinary: bool("showBinary"), allowSubnetting: bool("allowSubnetting") };
+      break;
+    case "formulaSheet": {
+      const title = raw.title;
+      if (typeof title !== "string" || !title.trim() || title.length > FORMULA_SHEET_TITLE_MAX || hasControlOrBidi(title))
+        add("STUDENT_TOOLS_INVALID_VALUE", path + ".title", "عنوان ورقة القوانين مطلوب، بلا محارف تحكم، وبحد أقصى " + FORMULA_SHEET_TITLE_MAX + " محرفًا.");
+      let size = Infinity;
+      try { size = utf8Length(JSON.stringify(raw.content) ?? ""); } catch { /* cyclic → refused */ }
+      if (size > FORMULA_SHEET_MAX_BYTES) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "ورقة القوانين أكبر من الحد المسموح."); break; }
+      const rc = validateRichContent(raw.content, path + ".content");
+      if (!rc.ok || !rc.value) { for (const i of rc.issues.slice(0, 5)) add("STUDENT_TOOLS_INVALID_CONTENT", i.path, "ورقة القوانين: " + i.message); break; }
+      const refused = [...new Set(blockTypes(rc.value).filter(t => !FORMULA_SHEET_BLOCKS.includes(t)))];
+      if (refused.length) { add("STUDENT_TOOLS_BLOCK_NOT_ALLOWED", path + ".content", "ورقة القوانين لا تقبل هذا النوع من المحتوى: " + refused.join("، ") + " (المسموح نصوص ومعادلات وجداول)."); break; }
+      if (typeof title === "string") value = { id, title: title.trim(), content: rc.value };
+      break;
+    }
+    case "scratchPad":
+      value = { id, drawing: bool("drawing") };
       break;
   }
   return issues.length === before ? value : null;
@@ -199,6 +249,20 @@ export function projectStudentToolsForStudent(raw: unknown): StudentToolsSpecV1 
   const v = validateStudentTools(raw);
   if (!v.ok || v.value.tools.length === 0) return undefined;
   return v.value;
+}
+
+/** The fixed stand-in for a formula sheet's content before the attempt starts. */
+export const PRE_START_SHEET_PLACEHOLDER: RichContentV1 = Object.freeze({ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "تظهر ورقة القوانين بعد بدء المحاولة." }] }] }) as RichContentV1;
+
+/**
+ * Phase T5 — the PRE-START projection (start screen, before the attempt and its timer begin): the same canonical spec, except that a
+ * formula sheet keeps its title but not its content (a fixed placeholder instead). The start screen only announces the tools; the
+ * teacher's sheet arrives with the exam body once the attempt has started, so it never gives reading time before the clock runs.
+ */
+export function projectStudentToolsForPreStart(raw: unknown): StudentToolsSpecV1 | undefined {
+  const spec = projectStudentToolsForStudent(raw);
+  if (!spec) return undefined;
+  return { ...spec, tools: spec.tools.map(t => (t.id === "formulaSheet" ? { ...t, content: PRE_START_SHEET_PLACEHOLDER } : t)) };
 }
 
 /** The tools available while the student is in `sectionId` (the exam's tools minus that section's disabled ones), in spec order. */
