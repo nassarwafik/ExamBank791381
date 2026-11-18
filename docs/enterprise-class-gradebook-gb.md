@@ -1,9 +1,12 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0 merged (nassarwafik/ExamBank791381#660). GB1, the computation engine, is in review
-(nassarwafik/ExamBank791381#662). GB2, the route, is implemented on `feature/gb2-gradebook-route`, which branches from GB1's branch at
-the owner's direction (2026-11-18) while #662 awaits the merge. Each phase is its own branch and pull request, with exact-head CI,
-an independent review and the owner's manual merge (`AGENTS.md` §3, §13).
+**Status:**
+- **Merged:** GB0 (nassarwafik/ExamBank791381#660), GB1, the computation engine (nassarwafik/ExamBank791381#662), and GB2, the route
+  (nassarwafik/ExamBank791381#663).
+- **In progress:** GB3, the scheme builder, on `feature/gb3-gradebook-scheme-builder`.
+
+Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
+(`AGENTS.md` §3, §13).
 
 **Baseline:** `origin/main` `1950f8f0` (merge of PR #658).
 
@@ -200,14 +203,24 @@ The route's authority checks:
 
 ### 4.6 User interface
 
-The gradebook is a «سجل العلامات» tab inside the class page.
+The gradebook is a «سجل العلامات» panel under the selected class in «الصفوف والطلاب», after «المواد التعليمية لهذا الصف» (O2, settled in
+GB3). It is its own lazy chunk (`src/gradebook/LazyClassGradebook.tsx`), so the Teacher Platform chunk carries only the wrapper.
 
-1. **The scheme builder (GB3).**
-   - One card per category, holding the category's title and weight.
-   - Items are added with a picker that lists the class's published assignments and exams, its projects, and «عمود يدوي».
-   - Each item has a weight field.
-   - A sum indicator on each card and for the whole scheme: green at 100, red otherwise, with «توزيع بالتساوي».
-   - Saving shows the draft state when a sum is not 100.
+1. **The scheme builder (GB3).** The panel shows the scheme's parts with their weights and whether it is complete or a draft; «إنشاء
+   مخطط العلامات» / «تعديل مخطط العلامات» opens the builder dialog.
+   - **Parts:** one card per category, holding the category's title and weight.
+   - **Items:** added with a picker that lists the class's published assignments and exams and its projects (a source already used is not
+     offered), or as a manual column (title and an integer maximum, 1–1000). Each item has a weight field and can be moved or removed.
+   - **Weights:** typed as text; Arabic-Indic digits and «٫» are accepted.
+   - **Sums:** a sum line on each card and for the whole scheme, written in text («✓ صحيح» / «يجب أن يكون 100»), never colour alone, with
+     «توزيع بالتساوي» (hundredths that add up to exactly 100; the teacher presses it, nothing is rescaled silently).
+   - **Problems:** a structural problem blocks the save, with its reason beside the part, before any request.
+   - **Drafts:** when a sum is not 100 the button reads «حفظ كمسودة» and the page explains that no final mark is computed.
+   - **Conflicts:** the save is made over the version the dialog opened (`etag`). A 409 keeps the teacher's draft and offers «إعادة
+     التحميل».
+   - **Leaving:** closing with unsaved changes asks first.
+   - **Read-only:** an archived class, or a teacher without `assignments.grading.grade`, sees the builder read-only.
+   - **Access:** a teacher without `assignments.assignment.view` gets no panel and no request (presentation only; the server enforces).
 2. **The gradebook table (GB4).**
    - **Columns:** grouped under a band per category, as in the owner's example. Each column header shows the item's title and
      weight. After its items comes the category's total column, and the final column comes last.
@@ -254,7 +267,8 @@ Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`
   change, and no capability has been added since the registry was created (no precedent). The owner chose the option that changes
   no preset: `assignments.assignment.view` to read, `assignments.grading.grade` to write, and `projects.tracker.view` in addition for
   project columns. D5 is superseded. Every teacher who grades assignments can use the gradebook at once, in both modes.
-- **O2 (GB4): where the tab lives.** The gradebook belongs to the class page, but the class page may not offer tabs. GB4 reads the
-  class page's current layout and keeps the existing navigation conventions.
+- **O2 — settled in GB3: where the gradebook lives.** The class page offers no tabs: the selected class's content is a sequence of
+  panels (the roster, then «المواد التعليمية لهذا الصف»). The gradebook is the next panel, «سجل العلامات», under the same convention. GB4
+  adds the table of marks to it.
 - **O3 (GB6): a term approval.** A frozen snapshot is the only gradebook value ever stored. Its form (per term, per scheme
   revision) is designed in GB6, if the owner opens that phase.

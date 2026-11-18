@@ -5,7 +5,7 @@
 // changing its key, or reusing a key fails here by name.
 import { describe, it, expect } from "vitest";
 
-const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./owner/OwnerApp.tsx", "./owner/OwnerLibrary.tsx", "./owner/OwnerLibrarySubmissions.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx", "./pwa/DeferredInstallGuidanceDialog.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./gradebook/LazyClassGradebook.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./owner/OwnerApp.tsx", "./owner/OwnerLibrary.tsx", "./owner/OwnerLibrarySubmissions.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx", "./pwa/DeferredInstallGuidanceDialog.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const ALL = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 /** [file, component, module path, stable key] — the protected lazy views. */
@@ -51,6 +51,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./App.tsx", "ExamPreview", "./ExamPreview", "teacher-theme-preview"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
+  // Class gradebook GB3 — «سجل العلامات» under the selected class, its own chunk behind a one-line wrapper (TeacherPlatform keeps one Suspense).
+  ["./gradebook/LazyClassGradebook.tsx", "ClassGradebookPanel", "./ClassGradebookPanel", "class-gradebook"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],
   ["./reports/ReportsCenter.tsx", "ReportsOverview", "./ReportsOverview", "teacher-reports-overview"],   // Reports R-5a — the hub overview (its own lazy chunk)
   ["./StudentPortal.tsx", "StudentReader", "./student/StudentReader", "student-reader"],
