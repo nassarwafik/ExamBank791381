@@ -409,8 +409,13 @@ already offers the teacher's tools exactly like an exam (T2): nothing to add.
 
 - **Working is on.** A book is practice, not an exam, so the sets switch on the working: conversion steps, subnetting and the binary
   view.
-- **Same tool bar.** `LearningReader` mounts the exam's tool bar (`StudentToolDock`, lazy, inside `ToolDockBoundary`) with the
-  course's set. It is hidden in presentation mode, where the teacher projects the page to the class.
+- **Same tool bar, one lazy chunk.** `LearningReader` mounts `CourseToolDock`: the course lookup plus the exam's `StudentToolDock`, in
+  one lazy chunk. Only the tiny `ToolDockBoundary` stays in the reader's first load (41.5 KB of the 42 KB budget; 40.9 KB before T7).
+  The tool bar is hidden in presentation mode, where the teacher projects the page to the class.
+- **Deployment recovery.** In the reader the chunk loads through `lazyWithRetry` (key `reader-student-tools`, inventoried in
+  `src/deploymentRecovery.inventory.11d.test.ts`), like every lazy view of the reader. A stale chunk after a deployment recovers with
+  one reload. A reload is harmless in a book; that's why the exam page keeps a plain `lazy` (a reload there would end a strict
+  attempt).
 - **No sections.** A book has no sections, so the set applies throughout.
 - **No tools without an entry.** A course without an entry shows no tool bar. `courseStudentTools` reads own properties only.
 
@@ -424,4 +429,5 @@ already offers the teacher's tools exactly like an exam (T2): nothing to add.
   - in the real reader, the networks book lists its six tools and the IPv4 calculator works with subnetting;
   - the bar is hidden in presentation mode and comes back after it.
 - All 1,963 learning tests still pass.
-- Mutation M65–M68: 4 / 4 KILLED.
+- `CourseToolDock` directly: the course's set, and nothing for a course without one.
+- Mutation M65–M70: 6 / 6 KILLED, including the deployment-recovery wrapper (M70, killed by the inventory test).

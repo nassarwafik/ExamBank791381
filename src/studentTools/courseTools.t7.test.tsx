@@ -7,6 +7,7 @@ import { studentToolHasUi } from "./studentToolsCatalog";
 import { registeredCourseIds } from "../learning/content/registry";
 import LearningReader from "../learning/reader/LearningReader";
 import { makeImmediateApi } from "../learning/reader/readerFixtures";
+import CourseToolDock from "./CourseToolDock";
 
 // Phase T7 — the student tools in the course books: a fixed, valid set per course, shown by the same tool bar as the exam.
 
@@ -59,5 +60,16 @@ describe("T7 — the tool bar in the book reader", () => {
     await waitFor(() => expect(screen.queryByTestId("student-tools-button")).toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "خروج من وضع العرض" }));
     expect(await screen.findByTestId("student-tools-button")).toBeTruthy();
+  });
+});
+
+describe("T7 — CourseToolDock", () => {
+  it("renders the course's tool bar, and nothing for a course without a set", () => {
+    const a = render(<CourseToolDock courseId="899371" />);
+    fireEvent.click(a.getByTestId("student-tools-button"));
+    expect(within(screen.getByRole("group", { name: "الأدوات المسموحة" })).getByRole("button", { name: "جدول الحقيقة" })).toBeTruthy();
+    a.unmount();
+    const b = render(<CourseToolDock courseId="000000" />);
+    expect(b.container.innerHTML).toBe("");
   });
 });
