@@ -208,6 +208,20 @@ describe("the submission routes carry the record; grading never sees it", () => 
   });
 });
 
+describe("a leftover record never carries into a new attempt", () => {
+  it("a draft record left without a live attempt (another path closed it) is dropped when the next attempt starts", async () => {
+    const aid = await create();
+    const name = "platform/submissions/" + aid + "/" + S1 + ".json";
+    ctx.setJson(name, { schemaVersion: 1, assignmentId: aid, studentId: S1, classId: CID, draftAnswers: {}, attempts: [], activeAttempt: null,
+      draftToolUsage: { calculator: { opens: 7, firstSeenAt: iso(T0 - MIN), lastSeenAt: iso(T0 - MIN) } } });
+    const st = await start(aid);
+    expect(st.draftToolUsage).toBeUndefined();
+    expect(doc(aid).draftToolUsage).toBeUndefined();
+    await sub(aid, { action: "submit", answers: { q1: A1 }, ...idOf(st) });
+    expect(doc(aid).attempts[0].toolUsage).toBeUndefined();
+  });
+});
+
 describe("the teacher's review shows the record", () => {
   it("GET assignment-review returns the attempt's tools in the spec's order; an attempt without tool use has no field", async () => {
     const aid = await create();

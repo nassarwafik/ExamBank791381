@@ -485,3 +485,15 @@ It lives inside the submission document that already holds the answers. No stora
 - `src/StudentExamPage.toolUsage.t8.test.tsx`: in the real exam page, openings are counted, a re-selection is not, the submit carries
   the counts, an attempt without tool use sends no field, and a reload resumes from the server's counts.
 - `src/studentTools/toolUsage.t8.test.tsx`: the helpers and the teacher's line in the real review screen.
+- Mutation M71–M85: 15 / 15 KILLED. The planted defects:
+  - an unoffered tool kept;
+  - a count lowered;
+  - the 999 bound removed;
+  - the record leaked into the student's result;
+  - the draft record left behind after a submit, or inherited by a new attempt;
+  - the teacher end, the timeout or the pause dropping it;
+  - the resume counts missing, or the review hiding the record;
+  - a re-selection counted, or a reload restarting the count;
+  - an empty field sent, or the submit omitting the counts.
+
+  M85 (the inheritance guard) survived the first run and is killed by the leftover-record test added for it.
