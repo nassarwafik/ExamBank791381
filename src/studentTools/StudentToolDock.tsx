@@ -5,11 +5,17 @@ import CalculatorTool from "./CalculatorTool";
 import Ipv4CalculatorTool from "./Ipv4CalculatorTool";
 import BaseConverterTool from "./BaseConverterTool";
 import ScratchPadTool from "./ScratchPadTool";
+import AsciiTableTool from "./AsciiTableTool";
+import BitwiseTool from "./BitwiseTool";
+import TruthTableTool from "./TruthTableTool";
+import UnitConverterTool from "./UnitConverterTool";
 import "./studentTools.css";
 // Phase T4 — the plotter carries the graph engine: its own chunk, fetched the first time the student opens it.
 const GraphPlotterTool = lazy(() => import("./GraphPlotterTool"));
 // Phase T5 — the formula sheet carries the rich-content renderer (maths): its own chunk as well.
 const FormulaSheetTool = lazy(() => import("./FormulaSheetTool"));
+// Phase T6 — the periodic table carries the chemistry catalog: its own chunk.
+const PeriodicTableTool = lazy(() => import("./PeriodicTableTool"));
 
 // Phase T2 — the student's tool bar inside a running exam.
 //
@@ -22,6 +28,7 @@ const FormulaSheetTool = lazy(() => import("./FormulaSheetTool"));
 // • A failure inside a tool stays inside the tool (its own error boundary): it never reaches the exam's answer / render-failure state.
 
 type Props = { studentTools: unknown; sectionId?: string };
+const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable"]);
 
 class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -39,6 +46,11 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
     case "baseConverter": return <BaseConverterTool config={tool} />;
     case "formulaSheet": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل ورقة القوانين…</p>}><FormulaSheetTool config={tool} /></Suspense>;
     case "scratchPad": return <ScratchPadTool config={tool} />;
+    case "asciiTable": return <AsciiTableTool config={tool} />;
+    case "bitwiseCalculator": return <BitwiseTool config={tool} />;
+    case "truthTable": return <TruthTableTool config={tool} />;
+    case "unitConverter": return <UnitConverterTool config={tool} />;
+    case "periodicTable": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل الجدول الدوري…</p>}><PeriodicTableTool config={tool} /></Suspense>;
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
     default: return null;
   }
@@ -128,7 +140,7 @@ export default function StudentToolDock({ studentTools, sectionId }: Props) {
         const titleId = baseId + "-" + t.id + "-title";
         const visible = openTool === t.id && openAllowed;
         return (
-          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (t.id === "graphPlotter" || t.id === "scratchPad" || t.id === "formulaSheet" ? " is-wide" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
+          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (WIDE_TOOLS.has(t.id) ? " is-wide" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
             hidden={!visible} tabIndex={-1} data-testid={"tool-panel-" + t.id}
             style={moved ? { transform: "translate(" + offset.x + "px, " + offset.y + "px)" } : undefined}>
             <header className="stt-panel-head" onPointerDown={onHeadPointerDown} onPointerMove={onHeadPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}
