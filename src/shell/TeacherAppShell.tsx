@@ -78,6 +78,15 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
   const active = activeNavId(nav);
+  // Hotfix — a page switch starts at the top. Without it the new page kept the document's old offset: on a phone, opening a page from
+  // the menu could land mid-page (the offset the tap left, then followed by the browser while the page loaded). Only a REAL change of
+  // destination resets it: the first render (a reload keeps the browser's position), a re-render and a cancelled navigation do not.
+  const shownDestination = useRef(active);
+  useEffect(() => {
+    if (shownDestination.current === active) return;
+    shownDestination.current = active;
+    if (typeof window.scrollTo === "function") window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [active]);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   // Tadris+ P8-A1 — the teacher's palette / density (their account; a device copy first) on <html> while this shell is open only.
   const appearanceToken = identity ? identity.token : "";
