@@ -252,3 +252,47 @@ describe("T4 — the function plotter panel", () => {
     expect(graph.textContent).not.toMatch(/جذر|تقاطع|قيمة صغرى/);
   });
 });
+
+describe("T5 — the formula sheet and the scratch pad panels", () => {
+  const T5 = { version: 1, tools: [
+    { id: "formulaSheet", title: "قوانين الحركة", content: { schemaVersion: 1, blocks: [{ type: "heading", level: 2, runs: [{ text: "الحركة المنتظمة" }] }, { type: "table", columnHeaders: ["الثابت", "القيمة"], rows: [["g", "9.8"]] }] } },
+    { id: "scratchPad", drawing: true }
+  ] };
+  it("the sheet opens under its own title and shows the teacher's content", async () => {
+    render(<StudentToolDock studentTools={T5} />);
+    openTools(); pick("قوانين الحركة");
+    const panel = screen.getByRole("dialog", { name: "قوانين الحركة" });
+    expect(await within(panel).findByRole("heading", { name: "الحركة المنتظمة" })).toBeTruthy();
+    expect(within(panel).getByRole("table").textContent).toContain("9.8");
+  });
+  it("the scratch pad says it is not saved, and keeps notes and drawing for the attempt", () => {
+    render(<StudentToolDock studentTools={T5} />);
+    openTools(); pick("ورقة مسودة");
+    const panel = screen.getByRole("dialog", { name: "ورقة مسودة" });
+    expect(within(panel).getByRole("note").textContent).toMatch(/لا تُحفظ ولا تُرسل ولا تُصحّح/);
+    fireEvent.change(within(panel).getByLabelText("ملاحظات"), { target: { value: "x = 2" } });
+    const canvas = within(panel).getByTestId("scratch-canvas");
+    fireEvent.pointerDown(canvas, { button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 40, clientY: 30 });
+    fireEvent.pointerUp(canvas, { pointerId: 1 });
+    expect(within(panel).getByTestId("scratch-strokes").textContent).toBe("عدد الخطوط: 1");
+    fireEvent.click(within(panel).getByRole("button", { name: "إغلاق ورقة مسودة" }));
+    openTools(); pick("ورقة مسودة");
+    const again = screen.getByRole("dialog", { name: "ورقة مسودة" });
+    expect((within(again).getByLabelText("ملاحظات") as HTMLTextAreaElement).value).toBe("x = 2");
+    expect(within(again).getByTestId("scratch-strokes").textContent).toBe("عدد الخطوط: 1");
+    const canvas2 = within(again).getByTestId("scratch-canvas");
+    fireEvent.pointerDown(canvas2, { button: 0, pointerId: 2, clientX: 50, clientY: 50 });
+    fireEvent.pointerUp(canvas2, { pointerId: 2 });
+    expect(within(again).getByTestId("scratch-strokes").textContent).toBe("عدد الخطوط: 2");
+    fireEvent.click(within(again).getByRole("button", { name: "تراجع" }));
+    expect(within(again).getByTestId("scratch-strokes").textContent).toBe("عدد الخطوط: 1");      // undo removes ONE stroke
+    fireEvent.click(within(again).getByRole("button", { name: "مسح الرسم" }));
+    expect(within(again).getByTestId("scratch-strokes").textContent).not.toMatch(/عدد الخطوط/);
+  });
+  it("without the drawing switch there is no canvas", () => {
+    render(<StudentToolDock studentTools={{ version: 1, tools: [{ id: "scratchPad", drawing: false }] }} />);
+    openTools(); pick("ورقة مسودة");
+    expect(within(screen.getByRole("dialog", { name: "ورقة مسودة" })).queryByTestId("scratch-canvas")).toBeNull();
+  });
+});

@@ -51,6 +51,22 @@ export const STUDENT_TOOLS_CATALOG: readonly StudentToolCatalogEntry[] = Object.
     subjects: ["الشبكات"],
     answerRisk: "تحلّ أسئلة عنوان الشبكة والبث وعدد الأجهزة بالكامل، وأسئلة تقسيم الشبكات عند تفعيل التقسيم.",
     available: true
+  },
+  {
+    id: "formulaSheet",
+    label: "ورقة القوانين",
+    description: "ورقة تكتبها أنت (قوانين، ثوابت، جداول، معادلات) يفتحها الطالب أثناء الامتحان.",
+    subjects: ["الرياضيات", "الفيزياء", "الكيمياء", "الشبكات"],
+    answerRisk: "تعرض ما تكتبه أنت فقط: تأكد أنها لا تتضمن حل سؤال من الامتحان.",
+    available: true
+  },
+  {
+    id: "scratchPad",
+    label: "ورقة مسودة",
+    description: "مساحة للطالب يكتب فيها ملاحظاته ويرسم بالقلم. لا تُحفظ ولا تُرسل ولا تُصحّح، وتُمسح عند مغادرة الصفحة.",
+    subjects: ["جميع المواد"],
+    answerRisk: "لا تحلّ أي سؤال؛ هي ورق مسودة فقط.",
+    available: true
   }
 ]);
 
@@ -66,10 +82,11 @@ export function studentToolHasUi(id: StudentToolId): boolean {
 }
 
 /** Short Arabic names of a spec's tools that have a UI — for the start screen ("الأدوات المسموحة"). */
-export function studentToolsSummary(spec: { tools: readonly { id: StudentToolId; variant?: string }[] } | undefined): string[] {
+export function studentToolsSummary(spec: { tools: readonly { id: StudentToolId; variant?: string; title?: string }[] } | undefined): string[] {
   if (!spec) return [];
   return spec.tools.filter(t => studentToolHasUi(t.id)).map(t =>
-    t.id === "calculator" ? (t.variant === "basic" ? "آلة حاسبة بسيطة" : "آلة حاسبة علمية") : studentToolCatalogEntry(t.id).label);
+    t.id === "calculator" ? (t.variant === "basic" ? "آلة حاسبة بسيطة" : "آلة حاسبة علمية")
+      : t.id === "formulaSheet" && t.title ? "ورقة القوانين «" + t.title + "»" : studentToolCatalogEntry(t.id).label);
 }
 
 export const STUDENT_TOOLS_CATALOG_IDS: readonly StudentToolId[] = STUDENT_TOOL_IDS;

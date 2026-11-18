@@ -50,6 +50,8 @@ export function questionRiskFor(tool: StudentToolId, q: unknown): boolean {
     case "baseConverter": return BASE_TERMS.test(text) || BASE_NOTATION.test(text);
     case "graphPlotter": return GRAPH_TYPES.has(questionType(q as Record<string, unknown>));
     case "calculator": return false;      // too broad to be useful: every numeric question would be named
+    case "formulaSheet": return false;    // the teacher's own text: its risk is stated in the catalog, not guessed
+    case "scratchPad": return false;      // answers nothing
   }
 }
 

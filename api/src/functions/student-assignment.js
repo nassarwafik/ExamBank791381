@@ -5,7 +5,7 @@ const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {sanitizeExamForStudent,sanitizeCoverForStudent}=require("../lib/student-exam-sanitize");
 const {projectPresentationForStudent}=require("../lib/shared-finalization/presentation/presentationModel");
-const {projectStudentToolsForStudent}=require("../lib/shared-finalization/studentTools/studentToolsSpec");   // Phase T1
+const {projectStudentToolsForPreStart}=require("../lib/shared-finalization/studentTools/studentToolsSpec");   // Phase T1 / T5 (sheet content withheld pre-start)
 const {hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 const {getAssignmentAvailability,timerState}=require("../lib/assignment-availability");
 const {normalizeExamStructure,sectionOfficialMaxMarks}=require("../lib/exam-structure");
@@ -51,7 +51,7 @@ function preStartAssignment(a,timed,attemptPolicy){
    ...(presentationForPreStart(snap.presentation)?{presentation:presentationForPreStart(snap.presentation)}:{}),
    // Phase T1 — the allowed student tools (configuration only, canonical or absent) so the start screen can announce them before the
    // attempt begins; the tools open only inside the started exam.
-   ...(projectStudentToolsForStudent(snap.studentTools)?{studentTools:projectStudentToolsForStudent(snap.studentTools)}:{})}};
+   ...(projectStudentToolsForPreStart(snap.studentTools)?{studentTools:projectStudentToolsForPreStart(snap.studentTools)}:{})}};
 }
 // Review fix 1 — bank-origin images in the cover's rich instructions are stored as durable identities; sign them for delivery (the same
 // hydration every exam read path applies) before the strict cover projection.

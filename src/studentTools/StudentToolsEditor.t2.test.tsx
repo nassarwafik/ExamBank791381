@@ -127,3 +127,27 @@ describe("T4 — plotter options", () => {
     expect(m.last()).toEqual({ version: 1, tools: [{ id: "graphPlotter", maxFunctions: 3, showAnalysis: true }] });
   });
 });
+
+describe("T5 — formula sheet and scratch pad options", () => {
+  it("switching them on emits their defaults; the scratch pad's drawing switch is editable", () => {
+    const m = mount(undefined);
+    fireEvent.click(toolBox("ورقة مسودة"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "scratchPad", drawing: true }] });
+    m.rerender(<StudentToolsEditor value={m.last()} sections={SECTIONS} onChange={m.onChange} />);
+    fireEvent.click(toolBox("السماح بالرسم الحر (قلم وممحاة)"));
+    expect(m.last()).toEqual({ version: 1, tools: [{ id: "scratchPad", drawing: false }] });
+    fireEvent.click(toolBox("ورقة القوانين"));
+    const sheet = m.last()!.tools.find(t => t.id === "formulaSheet");
+    expect(sheet && sheet.id === "formulaSheet" && sheet.title).toBe("ورقة القوانين");
+  });
+  it("a title the contract refuses is not emitted, and the panel says why", () => {
+    const spec = { version: 1, tools: [{ id: "formulaSheet", title: "قوانين", content: { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "F = m a" }] }] } }] };
+    const m = mount(spec);
+    fireEvent.change(screen.getByRole("textbox", { name: "عنوان الورقة" }), { target: { value: "   " } });
+    expect(m.onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId("tools-refusal").textContent).toMatch(/عنوان ورقة القوانين مطلوب/);
+    fireEvent.change(screen.getByRole("textbox", { name: "عنوان الورقة" }), { target: { value: "قوانين نيوتن" } });
+    expect(m.last()!.tools[0]).toMatchObject({ id: "formulaSheet", title: "قوانين نيوتن" });
+    expect(screen.queryByTestId("tools-refusal")).toBeNull();
+  });
+});
