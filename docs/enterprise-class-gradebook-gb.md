@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB5 merged; GB7 (this record's last phase) in review; GB6 postponed by the owner (§8).
+**Status:** GB0–GB5 and GB7 merged; GB6 opened by the owner on 2026-11-18 (§4.8): GB6a (server) in review, GB6b (the pages) next.
 
 | Phase | Pull request |
 |---|---|
@@ -10,7 +10,9 @@
 | GB3 — scheme builder | nassarwafik/ExamBank791381#664 |
 | GB4 — table of marks | nassarwafik/ExamBank791381#669 |
 | GB5 — manual marks and decisions | nassarwafik/ExamBank791381#671 |
-| GB7 — performance and final review | `feature/gb7-gradebook-performance` |
+| GB7 — performance and final review | nassarwafik/ExamBank791381#672 |
+| GB6a — approval, lock, reopen, the student read (server) | `feature/gb6a-gradebook-approval` |
+| GB6b — approval buttons for the teacher, «علاماتي» for the student | planned |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -279,6 +281,76 @@ GB3). It is its own lazy chunk (`src/gradebook/LazyClassGradebook.tsx`), so the 
 4. One teacher never reads or writes another teacher's class, and a storage error is never read as «no data».
 5. A stale write is refused (`409`) and never overwrites the newer value.
 6. GB6 only: a student never sees a gradebook value that depends on a mark withheld by its results release.
+7. GB6 only: a part is approved only when complete (no pending, missing, missing-source, unclassified or withheld cell), and what a
+   student sees is the frozen snapshot of approved parts: their own row, never a live value.
+
+### 4.8 GB6 — approving a part and the final mark (owner decisions 2026-11-18)
+
+**The owner's decisions.**
+- **Per part.** The teacher approves each part (category) on its own («اعتماد الجزء»), then the final mark once every part is approved.
+- **Locked; reopening is explicit.** An approved part cannot be edited. Reopening it is a separate action with a written reason
+  (3–300 characters). It is kept in the approvals history and in the audit log (400 days, D17).
+- **Students see approved parts only:** their own items and part mark, and the final mark once it is approved.
+
+**Two safety rules, announced before the code (AGENTS.md §10).**
+1. **No approval of an incomplete part.** Every student's every cell must be a mark (`graded`), the teacher's «صفر» or «معفى».
+   A result awaiting review, a missing submission, a missing typed mark, a missing source, an unclassified cell or a withheld
+   project column blocks it. Approval never turns any of them into a zero; the teacher decides cell by cell (GB5).
+2. **No approval while results are hidden.** Every assignment in the part must have its results released to students now
+   (`resultsReleased`, fail closed: an unknown mode or an unreadable assignment blocks).
+
+**Storage.** `platform/gradebooks/<classId>/approvals.json` (read-modify-write with retry; a corrupt document is a 503 everywhere,
+never read as «nothing approved», never overwritten):
+
+```
+{ schemaVersion: 1, classId, revision,
+  parts: { <categoryId>: { approvedAt, approvedBy, schemeRevision,
+                           snapshot: { categoryId, title, weight, items: [{ itemId, weight, source, title }],
+                                       students: { <studentId>: { value, allExcused?, cells: { <itemId>: { state, percent? } } } } } } },
+  final: null | { approvedAt, approvedBy, schemeRevision, snapshot: { weights: { <categoryId>: W }, students: { <studentId>: { value, adjusted? } } } },
+  history: [ { action, categoryId?, at, by, reason? } ]          (the last 100; the audit log keeps every one) }
+```
+
+The snapshot is computed by the **same** `buildGradebook` as the table (the route's one computation), so what is approved is exactly
+what the teacher saw. It is the only gradebook value ever stored, and the only one a student reads.
+
+**Actions** (`POST /api/class-gradebook`; capability `assignments.results.release` — approving is publishing results):
+
+| Action | Body | Refusals |
+|---|---|---|
+| `part.approve` | `categoryId`, `schemeRevision` | `STALE_SCHEME` (another revision), `PART_NOT_FOUND`, `PART_NOT_READY` with `issues`, `CLASS_ARCHIVED`. A repeated approval is `200 unchanged` and writes nothing. |
+| `part.reopen` | `categoryId`, `reason` | `REASON_REQUIRED`, `NOT_APPROVED`, `FINAL_APPROVED` (reopen the final first) |
+| `final.approve` | `schemeRevision` | `FINAL_NOT_READY`: `SCHEME_DRAFT`, `PARTS_NOT_APPROVED`, `PART_DRIFT`, `PART_WITHHELD`, `FINAL_INCOMPLETE`; `APPROVALS_CHANGED` |
+| `final.reopen` | `reason` | `REASON_REQUIRED`, `NOT_APPROVED` |
+
+**The lock.**
+- `entries.save` refuses any cell of an approved part (`409 PART_APPROVED`, all or nothing).
+- `scheme.save` refuses a change to an approved part's columns: its item ids, weights and sources, a manual column's maximum
+  included, or its removal (`409 PART_APPROVED`). Its title and the parts' weights stay editable until the final is approved.
+- An approved final refuses every scheme change (`409 FINAL_APPROVED`).
+
+**Drift.** The gradebook still reads live sources: a regrade in the assignment page or a student who joins or leaves the class can
+change a value after the approval. The page then shows `drift: { structure, students }` for that part or the final, and the final
+cannot be approved over a drifted part. The approved value stays frozen. It reaches students only through reopen → approve again.
+A part with a column this teacher may not see has `students: null` (unknown, never «unchanged»). A write racing an approval within
+the same instant is reported as drift the same way.
+
+**The teacher's read** adds `approvals` (approved parts with their drift, the final, the last 20 history entries without who) and
+`readiness` (for each part not yet approved, and for the final: `ready` and the `issues` with counts), so the page can say why the
+button is disabled.
+
+**The student's read:** `GET /api/student-gradebook`.
+- **Session:** the hardened student session (`requireActiveStudentSession`). An anonymous request, a forged token, or a disabled or
+  archived account is `401`. `no-store`.
+- **Classes:** the student's own (home and shared).
+- **For each class with an approved part:** the parts, with their title, weight, the student's own cells and part mark (rounded for
+  display, D6); and the final once approved.
+- **Never:** another student's row, a part not approved, or who approved.
+- **Results release, checked at every read:** a part whose assignment's results are hidden again is withheld, and the final with it.
+
+**Cost.** One more document per teacher read (`approvals.json`; the GB7 repeat-open budget becomes class + scheme + entries +
+approvals + the scheme's assignments). The student read: per class, the class and its approvals, plus the approved parts'
+assignments for the release check.
 
 ## 5. Phases
 
@@ -290,7 +362,8 @@ GB3). It is its own lazy chunk (`src/gradebook/LazyClassGradebook.tsx`), so the 
 | **GB3** | The scheme builder UI | component tests; the bundle guard |
 | **GB4** | The gradebook table, the drill-down, the export and print | component tests; accessibility (labels, not colour alone) |
 | **GB5** | Manual columns, the excused / zero decisions, the column actions | stale guard; audit; **mutation proof** on «no zero without a decision» |
-| **GB6** (optional) | Approving a term (a frozen snapshot with its audit) and showing the gradebook to students | tests that a withheld mark never reaches a student |
+| **GB6a** | Approval per part and of the final, lock, reopen with a reason, the student read (§4.8) | tests that an incomplete or unreleased part is never approved and that a student sees only their frozen approved row; **mutation proof** (§8) |
+| **GB6b** | The teacher's approval buttons and locked display; the student's «علاماتي» | component tests; the bundle guard |
 | **GB7** | Performance (a class of 40 students × 30 columns) and the final review | measured read count and time |
 
 Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`, `npx tsc -b`, `npm run build` and
@@ -307,8 +380,7 @@ Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`
 - **O2 — settled in GB3: where the gradebook lives.** The class page offers no tabs: the selected class's content is a sequence of
   panels (the roster, then «المواد التعليمية لهذا الصف»). The gradebook is the next panel, «سجل العلامات», under the same convention. GB4
   adds the table of marks to it.
-- **O3 (GB6): a term approval.** A frozen snapshot is the only gradebook value ever stored. Its form (per term, per scheme
-  revision) is designed in GB6, if the owner opens that phase.
+- **O3 — settled 2026-11-18 (GB6): approval per part, locked, students see approved parts only.** Designed in §4.8.
 
 ## 7. GB7 — performance at 40 students × 30 columns
 
@@ -357,6 +429,18 @@ survived the first run and was killed after the test recorded a non-roster submi
 **Mutation total:** 18 (GB1) + 16 (GB2) + 8 (GB5) + 3 (GB7) = **45 planted defects, 45 KILLED**. Four survived a first run (GB2 G7, GB5 U3,
 GB7 P2, and none in GB1). Each was killed by a stronger test, and none was declared equivalent.
 
+**GB6a mutation proof** (`api/src/lib/gradebook/approval.js`, `class-gradebook.js`, `student-gradebook.js`, the capability registry).
+- **Planted:** 26 defects (G6-1 … G6-25, plus G6-18+). Among them: a pending or missing cell counted as final, the release check
+  dropped, each lock removed, the reason not required, a student shown a hidden-release part or another student's row, a corrupt
+  approvals document read as empty, drift blind to cells or to new students, the final approved without every part or despite
+  drift, the capability weakened, `no-store` dropped.
+- **Result:** all killed except three on the first run.
+  - G6-13 (drift blind to a cell whose change leaves the part mark equal) was killed by a new test.
+  - G6-12 (drift blind to the part mark) was equivalent: the same columns and cells give the same mark. The redundant comparison was
+    removed from the code rather than kept.
+  - G6-18 (one of the two idempotency guards removed) survived because the atomic guard inside the write answers the same. Removing
+    both (G6-18+) is killed.
+
 **What the teacher has:** in «الصفوف والطلاب» → the selected class → «سجل العلامات»:
 - **The scheme:** parts and weights, and the assignments, projects and manual columns in each part.
 - **The table:** every state written in words, each part's total, and the final mark with its status.
@@ -364,8 +448,7 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
 - **Editing:** manual marks and «معفى» / «صفر» decisions, with column actions limited to non-submitters.
 
 **Postponed or open, for the owner:**
-- **GB6 (optional, postponed):** a term approval (a frozen snapshot) and showing the gradebook to students, with each assignment's
-  results release respected. It is designed here in outline only (O3).
+- **GB6:** opened on 2026-11-18 and designed in §4.8 (GB6a server, GB6b pages).
 - **Scheme templates (D7):** copying one class's scheme to another class.
 - **Repository follow-ups met on the way, outside this feature:**
   - **The Exam Studio's step circles** render a few edge pixels two ways from one capture to the next, on `main` itself; this once
