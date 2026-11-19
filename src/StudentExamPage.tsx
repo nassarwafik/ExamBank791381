@@ -57,6 +57,8 @@ import ResultBreakdown,{type QuestionBreakdown} from "./student/exam/ResultBreak
 import {LateWindowNotice,LateResultNote,type LateWindow} from "./student/exam/LateNotice";   // D5 (item 10)
 import {studentIdFromToken,readJournal,writeJournal,clearJournal,pruneExpiredJournals,type AnswerJournal} from "./student/exam/answerJournal";
 // Phase 21E.3 — assessment integrity: the record of questions whose renderer could not recover (see student/exam/renderFailures.ts).
+// Phase T8 — the attempt's count of tool openings rides with every save / pause / submit (the teacher's information only).
+import {bumpToolUsage,serverToolUsage,maxToolUsage,toolUsageRequestField,type ToolUsageCounts} from "./studentTools/toolUsage";
 import {EMPTY_RENDER_FAILURES,reduceRenderFailure,failedQuestionIds,renderFailureReport,unavailablePages,renderFailureSubmitWarning,type RenderFailureState,type RenderFailureEvent,type RenderFailureReport} from "./student/exam/renderFailures";
 import type {SaveStateKind} from "./studentSaveState";
 import {NETWORK_ERROR_TEXT,UNEXPECTED_RESPONSE_TEXT,safeJson,userFacingMessage} from "./userFacingErrors";
@@ -70,7 +72,7 @@ type Result={resultsVisible?:boolean;resultsVisibility?:string;resultsVisibleAt?
 const resultGradingStatus=(r:Result):GradingStatus=>resolveGradingStatus(r);
 // Phase 7A (model 3): attemptEpoch advances on pause/resume; a paused attempt carries its stopped budget.
 type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string;status?:string;lastSavedAt?:string;attemptEpoch?:number;pausedAt?:string;pausedRemainingMs?:number|null;pauseCount?:number};
-type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;lateWindow?:LateWindow;draftAnswers:Answers;draftSavedAt:string;draftRevision?:number;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;attemptPolicy?:string;effectiveDueAt?:string;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
+type State={draftToolUsage?:Record<string,number>;attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;lateWindow?:LateWindow;draftAnswers:Answers;draftSavedAt:string;draftRevision?:number;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;attemptPolicy?:string;effectiveDueAt?:string;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
 type Props={token:string;assignment:Assignment;studentName:string;className:string;onBack:()=>void;onLogout:()=>void};
 // Roadmap #10/#11 — a stable identity for the attempt a local dirty snapshot was produced under, so a
 // reconnect/late write can never land on a DIFFERENT (newer) attempt.
@@ -128,6 +130,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const failureSentRef=useRef(false);
  const failureField=useCallback(():{renderFailures?:RenderFailureReport[]}=>{const r=failureReportRef.current;if(!r.length&&!failureSentRef.current)return {};failureSentRef.current=r.length>0;return {renderFailures:r}},[]);
  const failedIds=useMemo(()=>failedQuestionIds(renderFailures),[renderFailures]);
+ // Phase T8 — openings per tool for THIS attempt (attemptNumber + startedAt). The server's counts seed it (a reload or a second device
+ // resumes, never restarts); a new attempt starts empty. A legacy untimed draft gets its identity on the first save, so the move from
+ // "no identity yet" to the first identity keeps the counts.
+ const toolUsageRef=useRef<{key:string;counts:ToolUsageCounts}>({key:"",counts:{}});
+ useEffect(()=>{const a=state&&state.activeAttempt,k=a?String(a.attemptNumber)+"|"+String(a.startedAt||""):"",srv=serverToolUsage(state&&state.draftToolUsage),cur=toolUsageRef.current;toolUsageRef.current=k===cur.key||cur.key===""?{key:k,counts:maxToolUsage(cur.counts,srv)}:{key:k,counts:srv}},[state]);
+ const onToolOpen=useCallback((id:string)=>{const cur=toolUsageRef.current;toolUsageRef.current={key:cur.key,counts:bumpToolUsage(cur.counts,id)}},[]);
+ const usageField=useCallback(()=>toolUsageRequestField(toolUsageRef.current.counts),[]);
  const failureSyncRef=useRef("");   // the report the server CONFIRMED last (set only by a successful save — Review Fix 4, P1); "" = none
  const reportKey=(r:RenderFailureReport[])=>r.map(f=>f.questionId+":"+f.code).join("|");
  // A new exam body (a started / resumed attempt) or a next legacy attempt renders every question afresh: the record starts empty
@@ -267,7 +276,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
     if(mountedRef.current){setSaving(true);setRetrying(false)} // B1: SAVING = a request is actually in flight
     try{
      const sentKey=reportKey(failureReportRef.current);
-     const resp=await api<{savedAt?:string;draftRevision?:number}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...failureField(),...identity,...draftBaseField()})});
+     const resp=await api<{savedAt?:string;draftRevision?:number}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...failureField(),...usageField(),...identity,...draftBaseField()})});
      // STALE-SUCCESS GUARD: if the context changed while this request was in flight (another tab started a new
      // attempt / this one closed), this 200 belongs to the OLD attempt — never advance savedRevision or claim
      // a saved time for the new context. The server-side guard already refused any real cross-attempt write.
@@ -564,7 +573,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   finalizingRef.current=true;setExpired(true);submittingRef.current=true;
   try{
    await saveQueue.current.catch(()=>{});
-   const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField()})});
+   const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField(),...usageField()})});
    // Adopt the authoritative CLOSED/finalized state through the SHARED hydration path: invalidate the save
    // context (epoch bump), cancel any pending autosave debounce, reset revision/savedRevision/dirtyAttempt/
    // dirtyGeneration and save flags, and take the server's finalized draft (NEVER upload post-deadline local
@@ -622,7 +631,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   exitSentRef.current=true;rememberStrictExit(assignment.assignmentId,ctx);
   if(mountedRef.current)setStrictEnded(true);
   // The page's single authenticated submission client, with keepalive so the request outlives the page.
-  void api<{result?:Result|null;state?:State}>({method:"POST",keepalive:true,body:JSON.stringify({action:"finalizeIntegrityExit",...failureField(),...identityOf(ctx)})})
+  void api<{result?:Result|null;state?:State}>({method:"POST",keepalive:true,body:JSON.stringify({action:"finalizeIntegrityExit",...failureField(),...usageField(),...identityOf(ctx)})})
    .then(j=>{clearStrictExit(assignment.assignmentId);if(mountedRef.current&&j.state){applyServerAttemptState(j.state);setResult(j.result||j.state.latestResult);setStarted(false)}})
    .catch(e=>{if(e instanceof ApiError&&e.status===409)clearStrictExit(assignment.assignmentId)/* else: best effort — completed on return (confirmStrictExit) */});
  }
@@ -632,7 +641,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(!ctx)return;
   exitSentRef.current=true;if(mountedRef.current)setStrictEnded(true);
   try{
-   const r=await api<{result:Result|null;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeIntegrityExit",...failureField(),...identityOf(ctx)})});
+   const r=await api<{result:Result|null;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeIntegrityExit",...failureField(),...usageField(),...identityOf(ctx)})});
    clearStrictExit(assignment.assignmentId);
    if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("")}
   }catch(e){
@@ -675,7 +684,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   try{
    await saveQueue.current.catch(()=>{});
    const snapshot=answersRef.current,ctx=attemptId(stateRef.current);
-   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...failureField(),...identityOf(ctx),...draftBaseField()})});
+   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...failureField(),...usageField(),...identityOf(ctx),...draftBaseField()})});
    applyServerAttemptState(r.state);                                // paused: bookkeeping reset → no unsaved-changes warning
    onBack();
   }catch(e){
@@ -837,7 +846,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
   if(draftMergedRef.current){await settleMergedDraft();return}   // QA-8: another device's answers were merged in — the student reviews before submitting
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField(),submitKey})});
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...usageField(),...identity,...draftBaseField(),submitKey})});
   // The attempt is over on the server. Disarm the strict exit NOW, not at the next render: `submittingRef` is released
   // in `finally` below, before React re-renders, and a hide in that instant would send an exit for a submitted attempt.
   strictArmedRef.current=false;
@@ -1049,7 +1058,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   </QuestionErrorBoundary>
   {/* Phase T2 — the teacher-allowed tools, only while the attempt is writable. Outside the exam's error boundary and render-failure
       accounting on purpose: the dock has its own containment, and a tool can never mark a question as failed. */}
-  {writable&&exam.studentTools!=null&&<ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={exam.studentTools} sectionId={currentPage?.section?String(currentPage.section.id??""):undefined}/></Suspense></ToolDockBoundary>}
+  {writable&&exam.studentTools!=null&&<ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={exam.studentTools} onToolOpen={onToolOpen} sectionId={currentPage?.section?String(currentPage.section.id??""):undefined}/></Suspense></ToolDockBoundary>}
   {confirmDialog}
  </div></QuestionRecoveryContext.Provider>)
 }

@@ -417,7 +417,8 @@ describe("UX-7b-1 — source guards", () => {
     expect(p.match(/Date\.now\(\)/g)?.length).toBe(1);                                                  // the pre-existing serverNow fallback only
     expect(p).toContain("const est=serverAnchorMs.current+elapsed;const rem=effEndMs.current-est;");
     // Review Fix 4 (21E.3 P1): the timeout finalize carries the render-failure report (never answers — the server grades its own draft)
-    expect(p).toContain('body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField()})');
+    // Phase T8: it also carries the attempt's tool-opening counts (teacher information, never answers — the next line still guards that)
+    expect(p).toContain('body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField(),...usageField()})');
     expect(p).not.toMatch(/action:"finalizeTimedOutAttempt"[^}]*answers/);
     expect(code(RAW_TS["./examTimer.ts"])).toContain("export function countdownTone");
   });

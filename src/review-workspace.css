@@ -96,6 +96,9 @@
 .rv-technical strong{ font-weight:var(--eb-fw-bold); }
 .rv-technical-reason{ color:inherit; opacity:.9; }
 .review-summary .rv-summary-technical strong{ color:var(--eb-danger-tx); }
+/* Phase T8 — the tools the student opened: a list of names, so it spans two cells and reads at body size. */
+.review-summary .rv-summary-tools{ grid-column:span 2; }
+.review-summary .rv-summary-tools strong{ font-size:13px; font-weight:600; line-height:1.6; }
 
 /* Phase 21G.5 — moving between students without leaving the review (the same guard as closing; keys ] [ N). */
 .rv-student-nav{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin-inline-start:auto; }

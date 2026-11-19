@@ -437,6 +437,72 @@ already offers the teacher's tools exactly like an exam (T2): nothing to add.
 - `CourseToolDock` directly: the course's set, and nothing for a course without one.
 - Mutation M65–M70: 6 / 6 KILLED, including the deployment-recovery wrapper (M70, killed by the inventory test).
 
+## 15. T8 — the tool usage record
+
+The owner approved recording which tools a student opened during an attempt, for the teacher. It is new data about students, so its
+shape is deliberately small: per tool, how many times it was opened, and when the server first and last saw it. Nothing about what the
+student typed into a tool is ever recorded.
+
+### No new route, no new document
+
+The record rides on the requests the exam page already sends, exactly like the render-failure report of 21E.3:
+
+| Request | What happens to `toolUsage` |
+|---|---|
+| `saveDraft`, `pauseAttempt` | kept with the draft as `draftToolUsage` |
+| `submit`, `finalizeTimedOutAttempt`, `finalizeIntegrityExit` | the draft record merged with the request's own report becomes `attempt.toolUsage`; the draft record is cleared |
+| the teacher's `endActiveAttempt` | the draft record, as saved, becomes `attempt.toolUsage` |
+| `startAttempt` of a new attempt | starts with no record |
+
+It lives inside the submission document that already holds the answers. No storage migration, no new container, no new route.
+
+### The server owns the record (`api/src/lib/student-tool-usage.js`)
+
+- **Untrusted input.** The client sends `{ <toolId>: <opens> }`, the attempt's cumulative count. `normalizeToolUsage` keeps only tools
+  the published exam offers (the frozen `examSnapshot.studentTools`, canonical form) with an integer count of 1 to 999. Anything else is
+  dropped, and nothing malformed is ever stored.
+- **A count never goes down.** `mergeToolUsage` keeps the larger of the stored and the reported count. A retried or duplicated request,
+  a second device or an older tab changes nothing. The times are the server's (`firstSeenAt`, `lastSeenAt`), never the device's.
+- **Teacher information only.** The record never reaches grading, a score, the student's result projection (`pub`), an analytic or an
+  audit event. The worst a forged report can do is show the teacher a wrong count, and the record is not presented as proof of
+  anything.
+- **Resume, not restart.** The student's own state carries `draftToolUsage` (counts only), so a reload or a second device continues the
+  count. A client that never sends the field (an older bundle) and an exam without tools are byte-for-byte unchanged.
+
+### Client
+
+- `StudentToolDock` takes an optional `onToolOpen`, called when a tool opens. Re-selecting the tool already open is not a new opening.
+  The book reader passes nothing, so the books record nothing.
+- `StudentExamPage` keeps the counts for the current attempt (`src/studentTools/toolUsage.ts`), seeded from the server's counts. It
+  sends them with every save, pause, submit, timeout and strict exit. The field is absent while nothing was opened.
+- The teacher's review shows one line in the summary, «أدوات استخدمها الطالب»: each tool with its count, for example
+  «آلة حاسبة (مرتان)، ورقة مسودة (مرة واحدة)» (`src/studentTools/toolUsageSummary.ts`). An attempt without the record shows nothing new.
+
+### Evidence for T8
+
+- `api/tests/student-tool-usage-t8.test.js` (real handlers, in-memory store, real grader):
+  - the normalizer refuses tools the exam does not offer, malformed counts, prototype keys and exams without tools;
+  - the merge is monotonic and owns the times;
+  - save, pause and resume, submit, timeout and teacher end all carry the record;
+  - a new attempt starts empty;
+  - the student's result and state never carry the attempt record;
+  - the review returns it in the spec's order.
+- `src/StudentExamPage.toolUsage.t8.test.tsx`: in the real exam page, openings are counted, a re-selection is not, the submit carries
+  the counts, an attempt without tool use sends no field, and a reload resumes from the server's counts.
+- `src/studentTools/toolUsage.t8.test.tsx`: the helpers and the teacher's line in the real review screen.
+- Mutation M71–M85: 15 / 15 KILLED. The planted defects:
+  - an unoffered tool kept;
+  - a count lowered;
+  - the 999 bound removed;
+  - the record leaked into the student's result;
+  - the draft record left behind after a submit, or inherited by a new attempt;
+  - the teacher end, the timeout or the pause dropping it;
+  - the resume counts missing, or the review hiding the record;
+  - a re-selection counted, or a reload restarting the count;
+  - an empty field sent, or the submit omitting the counts.
+
+  M85 (the inheritance guard) survived the first run and is killed by the leftover-record test added for it.
+
 ## 17. T10 — the periodic table up to Z 118
 
 The owner approved extending the student periodic table beyond the curriculum's Z 1–36.
