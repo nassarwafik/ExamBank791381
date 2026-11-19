@@ -33,7 +33,24 @@ export type GbGradebook = {
   warnings: { itemId: string; code: string }[];
   /** GB5 — the teacher's stored entries per column and student (a typed score or a decision); absent on an older API. */
   entries?: Record<string, Record<string, GbEntryValue>>;
+  /** GB6 — what is approved (with its drift since) and whether each part / the final may be approved now; absent on an older API. */
+  approvals?: GbApprovals;
+  readiness?: GbReadiness;
 };
+
+/** GB6 — how the gradebook differs from an approval: `students` null = unknown (a column this teacher may not see). */
+export type GbDrift = { structure: boolean; students: number | null };
+export type GbApprovalEntry = { action: "part.approve" | "part.reopen" | "final.approve" | "final.reopen" | string; categoryId?: string; at: string; reason?: string };
+export type GbApprovals = {
+  revision: number;
+  parts: Record<string, { approvedAt: string; schemeRevision: number; drift: GbDrift }>;
+  final: { approvedAt: string; drift: GbDrift } | null;
+  history: GbApprovalEntry[];
+};
+export type GbIssue = { code: string; message: string; cells?: number; students?: number; itemIds?: string[]; categoryIds?: string[] };
+export type GbReadinessEntry = { ready: boolean; issues: GbIssue[] };
+export type GbReadiness = { parts: Record<string, GbReadinessEntry>; final: GbReadinessEntry };
+export type GbApprovalSaved = { ok: true; revision: number; unchanged?: true; approvedAt?: string };
 
 /** A stored teacher entry: a manual column's score, or an excused / zero decision. */
 export type GbEntryValue = { score: number } | { decision: "excused" | "zero" };

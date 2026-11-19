@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB5 and GB7 merged; GB6 opened by the owner on 2026-11-18 (§4.8): GB6a (server) in review, GB6b (the pages) next.
+**Status:** GB0–GB5, GB7 and GB6a merged; GB6b (the pages, §4.8) in review — the last phase of this record.
 
 | Phase | Pull request |
 |---|---|
@@ -11,8 +11,8 @@
 | GB4 — table of marks | nassarwafik/ExamBank791381#669 |
 | GB5 — manual marks and decisions | nassarwafik/ExamBank791381#671 |
 | GB7 — performance and final review | nassarwafik/ExamBank791381#672 |
-| GB6a — approval, lock, reopen, the student read (server) | `feature/gb6a-gradebook-approval` |
-| GB6b — approval buttons for the teacher, «علاماتي» for the student | planned |
+| GB6a — approval, lock, reopen, the student read (server) | nassarwafik/ExamBank791381#675 |
+| GB6b — approval buttons for the teacher, «علاماتي» for the student | `feature/gb6b-gradebook-approval-ui` |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -352,6 +352,35 @@ button is disabled.
 approvals + the scheme's assignments). The student read: per class, the class and its approvals, plus the approved parts'
 assignments for the release check.
 
+**The pages (GB6b).**
+- **The teacher: «اعتماد العلامات»**, under the table (`src/gradebook/GradebookApprovals.tsx`). One row per part and one for the final
+  mark, with the reasons and the actions below. The server's `readiness` and `approvals` are only put in words
+  (`approvalsView.ts`); nothing is decided on the page.
+  - **Approved:** «✓ معتمد» with the date, and any change since, in words: «تغيّرت علامات N من الطلاب بعد الاعتماد … يرى الطلاب
+    العلامات المعتمدة». A change that cannot be checked is said too, never shown as «unchanged».
+  - **Not approved:** «جاهز للاعتماد», or «غير جاهز للاعتماد» with what to fix. For example: incomplete cells and how many students
+    they concern, results not yet released by column title, or the parts still to approve.
+  - **«اعتماد الجزء» / «اعتماد العلامة النهائية»** asks first, saying what students will see and what gets locked. It sends the scheme
+    revision the teacher saw.
+  - **«إعادة الفتح»** opens a dialog that needs a reason (3–300 characters). While the final is approved, a part's reopen waits for the
+    final («أعد فتح العلامة النهائية أولًا»).
+  - **«سجل الاعتماد»:** newest first, with the reason of each reopen.
+  - **When the actions pause:** unsaved mark edits pause them, because an approval takes the stored values, not the unsaved ones.
+  - **Who sees no action:** a teacher without `assignments.results.release` and an archived class see the statuses with no action.
+- **The lock on the page.**
+  - In «تعديل العلامات», an approved part's columns offer no decision, score or column menu, and its band says «✓ معتمد». The edit
+    button disappears once every part is approved.
+  - The scheme builder names the locked parts. An approved final opens it read-only.
+  - The server refuses all of these on its own (409).
+- **The student: «علاماتي»**, in the «التقدم» view after «تقدّمي» (`src/student/StudentGradebook.tsx`).
+  - **Each approved part:** its title, its share of the final mark, its total, and each item's mark in words (the number, «0» for the
+    teacher's zero, «معفى»). A state that is not a mark is never shown as a number.
+  - **The final:** shown once approved; otherwise «العلامة النهائية لم تُعتمد بعد».
+  - **Several classes:** each is named.
+  - **When nothing shows:** nothing approved, a failed read or an expired session shows no section, like the project panel.
+  - **When it reads:** once when the portal opens, like every other section (UX-S2: switching views reads nothing). The portal's
+    opening reads are six instead of five, pinned in `StudentPortal.ux7a.test.tsx` and `StudentPortal.learningMaterials.test.tsx`.
+
 ## 5. Phases
 
 | Phase | Scope | Specific evidence |
@@ -441,14 +470,31 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
   - G6-18 (one of the two idempotency guards removed) survived because the atomic guard inside the write answers the same. Removing
     both (G6-18+) is killed.
 
+**GB6b mutation proof** (the pages): 12 planted, 12 KILLED.
+- **Planted:**
+  - a non-mark shown as «0» to a student;
+  - an approved part's columns left editable;
+  - approving without asking;
+  - unsaved edits not pausing the actions;
+  - an empty reason accepted;
+  - a part reopenable under an approved final;
+  - approval offered on a part that is not ready;
+  - an empty answer shown as a section;
+  - drift hidden;
+  - unknown drift shown as unchanged;
+  - an approved final's scheme left editable;
+  - approval offered without `assignments.results.release`.
+- **Restore:** files restored byte-for-byte, SHA-256 checked.
+
 **What the teacher has:** in «الصفوف والطلاب» → the selected class → «سجل العلامات»:
 - **The scheme:** parts and weights, and the assignments, projects and manual columns in each part.
 - **The table:** every state written in words, each part's total, and the final mark with its status.
 - **Navigation and export:** a drill to an assignment's review, and Excel / CSV / print.
 - **Editing:** manual marks and «معفى» / «صفر» decisions, with column actions limited to non-submitters.
+- **Approval (GB6):** each part, then the final mark, once complete and released. The part is then locked, and reopening it needs a
+  reason. Students see the approved parts in «التقدم» → «علاماتي».
 
 **Postponed or open, for the owner:**
-- **GB6:** opened on 2026-11-18 and designed in §4.8 (GB6a server, GB6b pages).
 - **Scheme templates (D7):** copying one class's scheme to another class.
 - **Repository follow-ups met on the way, outside this feature:**
   - **The Exam Studio's step circles** render a few edge pixels two ways from one capture to the next, on `main` itself; this once

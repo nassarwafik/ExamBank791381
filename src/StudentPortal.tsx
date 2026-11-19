@@ -19,6 +19,7 @@ import StudentKpiStrip from "./student/StudentKpiStrip";
 import "./student/student-portal-v2.css";
 import NowSection from "./student/NowSection";
 import StudentProgressSection from "./student/StudentProgressSection";
+import StudentGradebook from "./student/StudentGradebook";
 import StudentLearningMaterials, { type StudentLearningCourse } from "./student/StudentLearningMaterials";
 import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
@@ -558,6 +559,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
             <div {...viewProps("progress")}>
               <StudentProgressSection medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized}
                 nextStep={{ actionable: now_.actionable.length, onOpenTasks: () => goView("tasks"), onOpenLearning: () => goView("learning") }} />
+              <StudentGradebook token={token} />
               <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
             </div>
             <div {...viewProps("projects")}>

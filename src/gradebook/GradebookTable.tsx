@@ -27,7 +27,7 @@ export type TableEdit = {
   onScore: (itemId: string, studentId: string, text: string) => void;
   onColumnAction: (itemId: string, studentIds: string[], action: ColumnAction) => void;
 };
-const editableColumn = (gb: GbGradebook, col: GbColumn) => !(col.source.kind === "project" && gb.withheld.includes("projects"));
+const editableColumn = (gb: GbGradebook, col: GbColumn, locked?: Set<string>) => !(col.source.kind === "project" && gb.withheld.includes("projects")) && !(locked && locked.has(col.categoryId));
 const columnName = (col: GbColumn) => col.title || (col.source.kind === "manual" ? col.source.title : "عنصر غير متاح");
 /** View text with the evidence under a zero decision (the result that arrived after it), so the conflict is visible. */
 function viewText(cell: GbCell | undefined): string {
@@ -35,7 +35,8 @@ function viewText(cell: GbCell | undefined): string {
   return cell && cell.state === "zero" && cell.evidence ? t + " · " + (cell.evidence.kind === "final" ? "تسليم " + Math.round(cell.evidence.percent * 10) / 10 : "تسليم بانتظار التصحيح") : t;
 }
 
-export default function GradebookTable({ gradebook: gb, onOpenAssignment, edit }: { gradebook: GbGradebook; onOpenAssignment?: (target: AssignmentDrillTarget) => void; edit?: TableEdit }) {
+/** GB6b — `locked`: the approved parts; their columns are never editable, and their band says «معتمد». */
+export default function GradebookTable({ gradebook: gb, onOpenAssignment, edit, locked }: { gradebook: GbGradebook; onOpenAssignment?: (target: AssignmentDrillTarget) => void; edit?: TableEdit; locked?: Set<string> }) {
   const [filter, setFilter] = useState<RowFilter>("all");
   const groups = useMemo(() => columnGroups(gb), [gb]);
   const counts = useMemo(() => filterCounts(gb.rows), [gb.rows]);
@@ -81,7 +82,7 @@ export default function GradebookTable({ gradebook: gb, onOpenAssignment, edit }
           <thead>
             <tr>
               <th scope="col" rowSpan={2} className="eb-gb-sticky">الطالب</th>
-              {groups.map(g => <th key={g.categoryId} scope="colgroup" colSpan={g.columns.length + 1} className="eb-gb-band">{g.title} <span className="eb-gb-weight-tag">{g.weight}%</span></th>)}
+              {groups.map(g => <th key={g.categoryId} scope="colgroup" colSpan={g.columns.length + 1} className="eb-gb-band">{g.title} <span className="eb-gb-weight-tag">{g.weight}%</span>{locked && locked.has(g.categoryId) && <span className="eb-gb-locked-tag">✓ معتمد</span>}</th>)}
               <th scope="col" rowSpan={2} className="eb-gb-final-head">العلامة النهائية</th>
             </tr>
             <tr>
@@ -89,7 +90,7 @@ export default function GradebookTable({ gradebook: gb, onOpenAssignment, edit }
                 ...g.columns.map(col => (
                   <th key={col.itemId} scope="col">
                     {columnName(col)} <span className="eb-gb-weight-tag">{col.weight}%</span>
-                    {edit && editableColumn(gb, col) && (
+                    {edit && editableColumn(gb, col, locked) && (
                       <ActionMenu label={"إجراءات العمود " + columnName(col)}>
                         {(Object.keys(COLUMN_ACTION_LABEL) as ColumnAction[]).map(a => (
                           <button key={a} type="button" className="eb-menu-item" onClick={() => edit.onColumnAction(col.itemId, rows.map(r => r.studentId), a)}>{COLUMN_ACTION_LABEL[a]}</button>
@@ -114,7 +115,7 @@ export default function GradebookTable({ gradebook: gb, onOpenAssignment, edit }
                     ...g.columns.map(col => {
                       const cell = r.cells[col.itemId];
                       const text = viewText(cell);
-                      if (edit && editableColumn(gb, col)) return <EditCell key={col.itemId} gb={gb} col={col} cell={cell} studentId={r.studentId} name={name} edit={edit} />;
+                      if (edit && editableColumn(gb, col, locked)) return <EditCell key={col.itemId} gb={gb} col={col} cell={cell} studentId={r.studentId} name={name} edit={edit} />;
                       const canOpen = onOpenAssignment && col.source.kind === "assignment" && cell && cell.state !== "missingSource" && cell.state !== "unclassified";
                       return (
                         <td key={col.itemId} className={"eb-gb-cell is-" + (cell ? cell.state : "unclassified")}>

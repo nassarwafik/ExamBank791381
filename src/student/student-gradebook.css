@@ -1,0 +1,15 @@
+/* Class gradebook GB6b — «علاماتي» in the student's «التقدم» view (approved parts only). Defined tokens only. */
+.eb-sp-grades{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-grades-class{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-sp-grades-class-title{ margin:0; font-size:var(--eb-fs-16); overflow-wrap:anywhere; }
+.eb-sp-grades-parts{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-sp-grades-part{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); min-width:0; }
+.eb-sp-grades-part-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); }
+.eb-sp-grades-part-head > strong{ overflow-wrap:anywhere; }
+.eb-sp-grades-weight{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.eb-sp-grades-total{ margin-inline-start:auto; font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-16); }
+.eb-sp-grades-items{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-sp-grades-items li{ display:flex; justify-content:space-between; gap:var(--eb-space-2); padding-block:var(--eb-space-1); border-block-end:1px solid var(--eb-line); }
+.eb-sp-grades-items li > span:first-child{ overflow-wrap:anywhere; min-width:0; }
+.eb-sp-grades-mark{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+.eb-sp-grades-final{ margin:0; }
