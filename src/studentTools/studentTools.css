@@ -87,6 +87,8 @@
 .stt-plot-at .stt-label { margin: 0; white-space: nowrap; }
 /* Phase T5 — formula sheet and scratch pad. */
 .stt-sheet .xp-rich { font-size: var(--eb-fs-14); }
+/* Phase T9 — a sheet image never overflows the panel. */
+.stt-sheet img { max-width: 100%; height: auto; }
 .stt-notes { min-height: 8em; padding: var(--eb-space-2) var(--eb-space-3); font-family: var(--eb-font); resize: vertical; }
 .stt-draw { margin-block-start: var(--eb-space-3); }
 .stt-draw-tools { flex-wrap: wrap; margin-block-end: var(--eb-space-2); }

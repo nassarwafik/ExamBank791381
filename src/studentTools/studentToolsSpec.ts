@@ -38,9 +38,15 @@ export const MAX_SECTION_ID_LENGTH = 120;
 /** Phase T5 — formula sheet bounds: a short title and a light document (it travels inside every delivered exam). */
 export const FORMULA_SHEET_TITLE_MAX = 80;
 export const FORMULA_SHEET_MAX_BYTES = 65536;
-/** The rich-content blocks a formula sheet may use: text, maths and tables only. Images (which need signed delivery), charts, graphs and
- *  3D scenes are refused in version 1 — a sheet is reference text, and every allowed block renders without network or heavy engines. */
-export const FORMULA_SHEET_BLOCKS: readonly RichBlockType[] = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "math", "callout", "keyValueGrid", "divider", "code", "quote", "columns"] as RichBlockType[]);
+/** The rich-content blocks a formula sheet may use: text, maths, tables and (Phase T9) images. Charts, graphs and 3D scenes stay refused —
+ *  a sheet is reference material, and every allowed block renders without heavy engines. */
+export const FORMULA_SHEET_BLOCKS: readonly RichBlockType[] = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "math", "callout", "keyValueGrid", "divider", "code", "quote", "columns", "image", "figure"] as RichBlockType[]);
+/** Phase T9 — a sheet's images have their own budget, apart from the 64 KiB of text: at most 4 images, each an uploaded raster of at
+ *  most ~1 MB (its data URL length) or a bank image (a durable reference, delivered through a signed URL), ~2 MB in all. The text
+ *  bound is measured with the images' data left out, so an image never eats into the text. */
+export const FORMULA_SHEET_MAX_IMAGES = 4;
+export const FORMULA_SHEET_IMAGE_MAX_CHARS = 1400000;
+export const FORMULA_SHEET_IMAGES_MAX_CHARS = 2800000;
 
 export type CalculatorToolV1 = { id: "calculator"; variant: "basic" | "scientific"; angleUnit: "deg" | "rad" };
 export type BaseConverterToolV1 = { id: "baseConverter"; bases: NumberBase[]; showSteps: boolean };
@@ -120,6 +126,25 @@ function utf8Length(s: string): number {
   }
   return n;
 }
+/** Every image / figure asset of a document, columns included, in reading order. */
+function sheetImageAssets(content: RichContentV1): { dataUrl?: string; origin?: string }[] {
+  const out: { dataUrl?: string; origin?: string }[] = [];
+  const walk = (blocks: readonly RichContentV1["blocks"][number][]) => {
+    for (const b of blocks) {
+      if (b.type === "image" || b.type === "figure") out.push(b.asset);
+      else if (b.type === "columns") for (const c of b.columns) walk(c.blocks);
+    }
+  };
+  walk(content.blocks);
+  return out;
+}
+/** The document with every image's data left out (the text the 64 KiB bound measures). */
+function sheetTextOnly(content: RichContentV1): unknown {
+  const strip = (blocks: readonly RichContentV1["blocks"][number][]): unknown[] => blocks.map(b =>
+    b.type === "image" || b.type === "figure" ? { ...b, asset: { ...b.asset, dataUrl: "" } }
+      : b.type === "columns" ? { ...b, columns: b.columns.map(c => ({ ...c, blocks: strip(c.blocks) })) } : b);
+  return { ...content, blocks: strip(content.blocks) };
+}
 /** Every block type used by a document, columns included. */
 function blockTypes(content: RichContentV1): RichBlockType[] {
   const out: RichBlockType[] = [];
@@ -183,13 +208,21 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
       const title = raw.title;
       if (typeof title !== "string" || !title.trim() || title.length > FORMULA_SHEET_TITLE_MAX || hasControlOrBidi(title))
         add("STUDENT_TOOLS_INVALID_VALUE", path + ".title", "عنوان ورقة القوانين مطلوب، بلا محارف تحكم، وبحد أقصى " + FORMULA_SHEET_TITLE_MAX + " محرفًا.");
+      // An outer bound first (text + the whole image budget), so a huge value is refused before it is walked.
       let size = Infinity;
       try { size = utf8Length(JSON.stringify(raw.content) ?? ""); } catch { /* cyclic → refused */ }
-      if (size > FORMULA_SHEET_MAX_BYTES) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "ورقة القوانين أكبر من الحد المسموح."); break; }
+      if (size > FORMULA_SHEET_MAX_BYTES + FORMULA_SHEET_IMAGES_MAX_CHARS) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "ورقة القوانين أكبر من الحد المسموح."); break; }
       const rc = validateRichContent(raw.content, path + ".content");
       if (!rc.ok || !rc.value) { for (const i of rc.issues.slice(0, 5)) add("STUDENT_TOOLS_INVALID_CONTENT", i.path, "ورقة القوانين: " + i.message); break; }
       const refused = [...new Set(blockTypes(rc.value).filter(t => !FORMULA_SHEET_BLOCKS.includes(t)))];
-      if (refused.length) { add("STUDENT_TOOLS_BLOCK_NOT_ALLOWED", path + ".content", "ورقة القوانين لا تقبل هذا النوع من المحتوى: " + refused.join("، ") + " (المسموح نصوص ومعادلات وجداول)."); break; }
+      if (refused.length) { add("STUDENT_TOOLS_BLOCK_NOT_ALLOWED", path + ".content", "ورقة القوانين لا تقبل هذا النوع من المحتوى: " + refused.join("، ") + " (المسموح نصوص ومعادلات وجداول وصور)."); break; }
+      // T9 — the text bound (images' data left out), then the image budget.
+      if (utf8Length(JSON.stringify(sheetTextOnly(rc.value))) > FORMULA_SHEET_MAX_BYTES) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "نص ورقة القوانين أكبر من الحد المسموح."); break; }
+      const images = sheetImageAssets(rc.value);
+      if (images.length > FORMULA_SHEET_MAX_IMAGES) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "ورقة القوانين تقبل " + FORMULA_SHEET_MAX_IMAGES + " صور على الأكثر."); break; }
+      const imageChars = images.map(a => (a.origin === "bank" ? 0 : (a.dataUrl ?? "").length));
+      if (imageChars.some(n => n > FORMULA_SHEET_IMAGE_MAX_CHARS)) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "صورة في ورقة القوانين أكبر من الحد المسموح (نحو 1 ميغابايت للصورة)."); break; }
+      if (imageChars.reduce((n, c) => n + c, 0) > FORMULA_SHEET_IMAGES_MAX_CHARS) { add("STUDENT_TOOLS_TOO_LARGE", path + ".content", "صور ورقة القوانين أكبر من الحد المسموح (نحو 2 ميغابايت معًا)."); break; }
       if (typeof title === "string") value = { id, title: title.trim(), content: rc.value };
       break;
     }
