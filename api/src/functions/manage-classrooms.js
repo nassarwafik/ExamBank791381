@@ -18,6 +18,8 @@ const { getClassProgramCodes, normalizeProgramCodes, validateProgramCodes } = re
 // and which of its modules are currently published to students. Normalization + validation live in the lib; the
 // handler only wires auth, lifecycle, CAS persistence and audit.
 const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse, getVisibleLearningModuleIds, setClassLearningCourseReleases, getReleasedLearningModuleIds } = require("../lib/class-learning-materials");
+const { setClassLearningCourseTools, getClassLearningCourseTools } = require("../lib/class-learning-materials");   // Phase T11
+const { validateBookStudentTools } = require("../lib/shared-finalization/studentTools/studentToolsSpec");   // Phase T11
 const { recordEventSafely } = require("../lib/notification-events");
 const { validateLearningModuleIds, findLearningCourse, courseHasSolutionRelease } = require("../lib/learning-materials-registry");
 // Classes & Students hardening — the classId is a blob-name segment: only the safe-id alphabet is accepted (a value such
@@ -484,6 +486,49 @@ async function handler(request, deps = {}, obs = null) {
         const learningMaterials = getClassLearningMaterials(updated);
         await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.setReleases", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""),
           details: { courseId, moduleIds: after, opened: after.filter(id => !before.includes(id)), closed: before.filter(id => !after.includes(id)) } });
+        return { status: 200, jsonBody: { ok: true, classId, learningMaterials } };
+      } catch (mutateError) {
+        if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+        if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+        throw mutateError;
+      }
+    }
+
+    // Phase T11 — setLearningCourseTools: the student tools the BOOK offers this class's students (docs/enterprise-student-tools-t.md §18).
+    // `studentTools` is a version-1 spec checked by validateBookStudentTools (no sections, no formula sheet; [] = tools off), or null to go
+    // back to the book's built-in set. Only for an ATTACHED course the teacher may use (P5-A). CAS-protected; archived class → 403. Audited
+    // with the tool ids only. Same capability as publishing (learning.module.release). Nothing about any student is stored or read.
+    if (action === "setlearningcoursetools") {
+      const classId = String(body?.classId || "").trim();
+      const courseId = String(body?.courseId || "").trim();
+      if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
+      if (!courseId) return { status: 400, jsonBody: { ok: false, error: "courseId is required." } };
+      const raw = body ? body.studentTools : undefined;
+      if (raw === undefined) return { status: 400, jsonBody: { ok: false, error: "studentTools is required (null restores the book's tools)." } };
+      let spec = null;
+      if (raw !== null) {
+        const v = validateBookStudentTools(raw);
+        if (!v.ok) return { status: 400, jsonBody: { ok: false, code: "STUDENT_TOOLS_INVALID", error: v.issues[0] ? v.issues[0].message : "إعدادات أدوات الكتاب غير صالحة.", issues: v.issues.slice(0, 10) } };
+        spec = v.value;
+      }
+      const courseDecision = await teacherCourseDecision(container, auth.user, courseId, deps);
+      if (!courseDecision.ok) return courseRefusal(courseDecision, { teacher: true });
+      try {
+        let before, after;
+        const updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
+          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+          if (!learningMaterialsChangeAllowed(current)) { const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مواده التعليمية."); blocked.httpStatus = 403; throw blocked; }
+          if (!getClassLearningMaterials(current).some(e => e.courseId === courseId)) { const unattached = new Error("أضف المادة إلى الصف أولًا."); unattached.httpStatus = 400; throw unattached; }
+          before = getClassLearningCourseTools(current, courseId);
+          const next = setClassLearningCourseTools(current, courseId, spec);
+          after = getClassLearningCourseTools(next, courseId);
+          next.updatedAt = new Date().toISOString();
+          return next;
+        });
+        const learningMaterials = getClassLearningMaterials(updated);
+        const ids = t => (t ? t.tools.map(x => x.id) : null);   // null = the book's built-in set
+        await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.setTools", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""),
+          details: { courseId, before: ids(before), after: ids(after) } });
         return { status: 200, jsonBody: { ok: true, classId, learningMaterials } };
       } catch (mutateError) {
         if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };

@@ -420,6 +420,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       <Suspense fallback={<p className="eb-muted eb-sp-status" role="status">جارٍ فتح المادة التعليمية...</p>}>
         <StudentReader
           courseId={readerCourse.courseId}
+          bookTools={readerCourse.studentTools}
           allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
           token={token}
           initialPageId={readerInitialPageId}

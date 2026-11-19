@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { Suspense, lazy, useId, useState } from "react";
 import { useCan } from "../shell/teacherAccessContext";   // Tadris+ P8-B1
 import SectionHeader from "../ui/SectionHeader";
 import EmptyState from "../ui/EmptyState";
@@ -7,6 +7,9 @@ import Dialog from "../ui/Dialog";
 import { IconBook, IconPlus } from "../icons";
 import { classLearningMaterials, classLearningReleaseSummary } from "./classLearningMaterials";
 import { SOLUTION_RELEASE_COURSES, classReleasedModuleIds } from "./classSolutionsRelease";
+import { classBookTools, bookToolsLine } from "./classBookTools";   // Phase T11
+import type { StudentToolsSpecV1 } from "../studentTools/studentToolsSpec";
+const BookToolsDialog = lazy(() => import("./BookToolsDialog"));
 import type { Classroom, ClassLearningMaterial, LearningCatalogCourse } from "./types";
 import { arabicCountParts, ADDED_MATERIALS, HIDDEN_MODULES, PUBLISHED_MODULES, type ArabicCountForms } from "../learning/arabicCount";
 
@@ -32,6 +35,8 @@ export type ClassLearningMaterialsPanelProps = {
   /** 899371 P13 (D1) — open / close the BOOK solutions and output tracers of one module for the class. */
   onToggleRelease?: (classroom: Classroom, courseId: string, moduleId: string, open: boolean) => void;
   onRemoveCourse: (classroom: Classroom, courseId: string) => void;
+  /** Phase T11 — set the student tools of the class's book (null = the book's built-in set). */
+  onSetTools?: (classroom: Classroom, courseId: string, spec: StudentToolsSpecV1 | null) => void;
 };
 
 export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPanelProps) {
@@ -95,7 +100,7 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
       )}
       {classroom && materials.length > 0 && (
         <ul className="eb-lm-class-list" aria-label="المواد التعليمية المضافة">
-          {materials.map(entry => <CourseCard key={entry.courseId} classroom={classroom} entry={entry} course={(p.catalog || []).find(c => c.courseId === entry.courseId) || null} editable={editable} busy={p.busy} onToggleModule={p.onToggleModule} onToggleRelease={p.onToggleRelease} onRemoveCourse={p.onRemoveCourse} />)}
+          {materials.map(entry => <CourseCard key={entry.courseId} classroom={classroom} entry={entry} course={(p.catalog || []).find(c => c.courseId === entry.courseId) || null} editable={editable} busy={p.busy} onToggleModule={p.onToggleModule} onToggleRelease={p.onToggleRelease} onRemoveCourse={p.onRemoveCourse}  onSetTools={p.onSetTools}/>)}
         </ul>
       )}
       {classroom && (
@@ -113,11 +118,16 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
   );
 }
 
-function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, onToggleRelease, onRemoveCourse }: {
+function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, onToggleRelease, onRemoveCourse, onSetTools }: {
   classroom: Classroom; entry: ClassLearningMaterial; course: LearningCatalogCourse | null; editable: boolean; busy: boolean;
   onToggleModule: ClassLearningMaterialsPanelProps["onToggleModule"]; onToggleRelease?: ClassLearningMaterialsPanelProps["onToggleRelease"]; onRemoveCourse: ClassLearningMaterialsPanelProps["onRemoveCourse"];
+  onSetTools?: ClassLearningMaterialsPanelProps["onSetTools"];
 }) {
   const can = useCan();
+  // Phase T11 — the book's student tools for this class: the teacher's choice, else the book's built-in set.
+  const chosenTools = classBookTools(classroom, entry.courseId);
+  const toolsLine = bookToolsLine(chosenTools, entry.courseId);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const headingId = "eb-lm-class-course-" + entry.courseId;
   const modules = course ? course.modules.slice().sort((a, b) => a.order - b.order) : [];
   const visible = new Set(entry.visibleModuleIds);
@@ -166,6 +176,16 @@ function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, 
               );
             })}
           </ul>
+        )}
+        <div className="eb-lm-class-tools" data-testid={"book-tools-" + entry.courseId}>
+          <p className="eb-muted"><strong>أدوات الطالب في الكتاب{toolsLine.source === "builtIn" ? " (أدوات الكتاب)" : toolsLine.source === "chosen" ? " (اختيارك)" : ""}:</strong> {toolsLine.text}</p>
+          {editable && onSetTools && <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => setToolsOpen(true)}>تعديل الأدوات</button>}
+        </div>
+        {toolsOpen && onSetTools && (
+          <Suspense fallback={null}>
+            <BookToolsDialog open courseId={entry.courseId} courseTitle={course ? course.title : "الكتاب"} className={classroom.name} chosen={chosenTools} busy={busy}
+              onClose={() => setToolsOpen(false)} onSave={spec => { setToolsOpen(false); onSetTools(classroom, entry.courseId, spec); }} />
+          </Suspense>
         )}
         {editable && (
           <div className="eb-lm-class-card-foot">

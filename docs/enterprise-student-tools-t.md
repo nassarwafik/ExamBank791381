@@ -565,3 +565,95 @@ An outer bound (text + the whole image budget) refuses a huge value before it is
   - columns escaping the count;
   - delivery not signing, or not walking columns;
   - a bank image charged to the budget.
+
+## 18. T11 — the course book's tools, chosen by the teacher
+
+At T7 the owner chose a fixed set per course, defined in code. T11 lets the teacher choose the tools of a book for each of their
+classes. The fixed set stays as the default.
+
+### Storage: the class's book settings, nothing new
+
+The choice lives in the class document's existing `learningMaterials` entry for the course, the same field that holds the publication
+and the solutions release (P13). `studentTools` is written only when the teacher chooses:
+
+| Stored | Meaning |
+|---|---|
+| absent | the book's built-in set (`src/studentTools/courseTools.ts`, T7) |
+| `{ version: 1, tools: [...] }` | the teacher's set, canonical |
+| `{ version: 1, tools: [] }` | the teacher turned the book's tools off |
+
+- **A class that never chose** keeps its exact earlier document shape.
+- **A stored value that is no longer valid** reads as absent (the built-in set), never as a partial spec.
+- **Other book settings keep it.** Publishing, hiding and releasing keep the choice; removing the course drops it with the course
+  (`api/src/lib/class-learning-materials.js`).
+
+### The rule (`validateBookStudentTools`, shared build)
+
+A book set is a valid version-1 spec with:
+- **no section overrides:** a book has no sections;
+- **no formula sheet:** the book is the reference text, and a sheet (up to 64 KiB of text plus images) would make every class
+  document heavy.
+
+All or nothing, like the exam's validator.
+
+### The action
+
+`POST /api/classrooms`, action `setLearningCourseTools` (`api/src/functions/manage-classrooms.js`):
+
+| Rule | Detail |
+|---|---|
+| request | `{ classId, courseId, studentTools }`; `null` restores the built-in set |
+| capability | `learning.module.release`, declared in `route-capabilities.js`, the same as publishing and releasing |
+| class and course | the teacher's own class (the dispatch point's tenancy check); a course the teacher may use (P5-A); the course attached to the class |
+| storage | an archived class is refused; CAS write |
+| audit | `class.learningMaterials.setTools`, with the tool ids before and after only |
+
+### Delivery
+
+- **The student endpoint.** `buildStudentLearningMaterials` adds the course's `studentTools` when the teacher chose. Both paths of
+  `/api/student-learning-materials` use it: one class, and shared classes (one class per course).
+- **The tool bar.** The portal passes it through `StudentReader` → `LearningReaderWithTraining` → `LearningReader` → `CourseToolDock`.
+  The dock:
+  - shows the chosen set;
+  - shows nothing for an empty list or an invalid value;
+  - shows the built-in set when there is no choice.
+- **Teacher previews.** The teacher's own reader keeps the built-in set.
+
+### The teacher's control
+
+«المواد التعليمية لهذا الصف» shows, on each book card, «أدوات الطالب في الكتاب»: the current tools and where they come from («أدوات
+الكتاب» or «اختيارك»).
+
+«تعديل الأدوات» opens `BookToolsDialog`:
+- **The editor.** The exam's «أدوات الطالب» editor (lazy), without sections and without the formula sheet (`excludeTools`). It starts
+  from the current set.
+- **Saving.** «حفظ التغييرات» (the shared `SAVE_LABELS.saveChanges`) saves the selection; an empty selection turns the tools off.
+- **Restoring.** «استعادة أدوات الكتاب» sends `null`.
+
+An archived class shows the tools without the edit button.
+
+### Evidence for T11
+
+- `api/tests/book-student-tools-t11.test.js` (real handlers, in-memory store):
+  - **The rule.** Sections and sheets are refused; an empty list is valid.
+  - **Storage.** Canonical, stored only when chosen; an invalid stored value reads as the built-in set; publication and release keep
+    it; removal drops it.
+  - **The student catalog** carries it.
+  - **The action.** Set, turn off and restore; audited with ids only. Refused: a sheet, sections, a malformed spec, a missing field, no
+    course, a course not attached. An archived class gets 403, an unknown class 404.
+  - **The student endpoint** delivers it.
+- `src/studentTools/bookTools.t11.test.tsx`:
+  - **The tool bar.** The chosen set, the built-in set, tools off, an invalid value, and the real reader passing it.
+  - **The teacher's card and dialog.** The source shown; no formula sheet offered; the edit saved canonical; all off saves `[]`;
+    restore sends `null`; archived is read-only.
+- The route-capability and certification route sweeps pass with the new action.
+- Mutation M101–M112: 12 / 12 KILLED. The planted defects:
+  - a sheet or sections allowed (the contract mutants regenerate and restore the shared build);
+  - the choice forgotten by the normalizer, or dropped by publishing;
+  - an invalid value kept;
+  - an unattached course accepted;
+  - the student catalog omitting it;
+  - the capability undeclared;
+  - the dock ignoring it, or falling back when tools are off;
+  - the dialog offering the sheet;
+  - the reader not passing it.
