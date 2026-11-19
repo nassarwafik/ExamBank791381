@@ -10,12 +10,12 @@
         "start": "func start"
     },
     "dependencies": {
-        "@azure/functions": "^4.17.0",
+        "@azure/functions": "^4.17.1",
         "@azure/storage-blob": "^12.34.0",
         "mammoth": "^1.13.0",
-        "openai": "^7.53.0",
+        "openai": "^7.56.0",
         "pdf-parse": "^1.1.4",
-        "sanitize-html": "^2.17.7",
+        "sanitize-html": "^2.18.2",
         "sharp": "^0.35.4",
         "web-push": "^3.6.7"
     }
