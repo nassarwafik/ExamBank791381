@@ -68,3 +68,19 @@
 .eb-gb-edit-note{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
 .eb-gb-edit-note.is-error{ color:var(--eb-danger-tx); }
 .eb-gb-edit-note.is-stale{ color:var(--eb-warn-tx); }
+
+/* GB6b — «اعتماد العلامات» (approvals) and the lock marks */
+.eb-gb-locked-tag{ margin-inline-start:var(--eb-space-2); font-size:var(--eb-fs-12); color:var(--eb-success-tx); font-weight:var(--eb-fw-bold); }
+.eb-gb-approvals{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding-block-start:var(--eb-space-3); border-block-start:1px solid var(--eb-line); min-width:0; }
+.eb-gb-approvals-title{ margin:0; font-size:var(--eb-fs-16); }
+.eb-gb-approval-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-gb-approval{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); min-width:0; }
+.eb-gb-approval-head{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-gb-approval-head > strong{ overflow-wrap:anywhere; }
+.eb-gb-approval-state{ font-weight:var(--eb-fw-bold); }
+.eb-gb-approval-state.is-ok{ color:var(--eb-success-tx); }
+.eb-gb-approval-state.is-off{ color:var(--eb-warn-tx); }
+.eb-gb-approval-head .eb-button{ margin-inline-start:auto; }
+.eb-gb-approval-reasons{ margin:0; padding-inline-start:var(--eb-space-4); color:var(--eb-warn-tx); }
+.eb-gb-approval-history ul{ margin:var(--eb-space-2) 0 0; padding-inline-start:var(--eb-space-4); }
+.eb-gb-reason{ width:100%; min-height:5rem; resize:vertical; }

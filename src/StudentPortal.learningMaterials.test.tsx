@@ -97,7 +97,7 @@ describe("placement, card, empty state, degrade", () => {
     expect(await screen.findByRole("region", { name: "مشاريعي" })).toBeTruthy();
     await openStudentView("التقدم");
     expect(await screen.findByRole("region", { name: "إنجازات الصف" })).toBeTruthy();
-    await waitFor(() => expect(calls.filter(c => c.method === "GET").length).toBe(5));   // still 5: switching views reads nothing   // + the Phase 5D unread-messages summary GET
+    await waitFor(() => expect(calls.filter(c => c.method === "GET").length).toBe(6));   // still 6: switching views reads nothing   // + the Phase 5D unread-messages summary GET + the GB6b approved-marks GET (read once on mount)
     expect(materialGets()).toBe(1);
     expect(calls.filter(c => c.method === "POST")).toEqual([]);
   });

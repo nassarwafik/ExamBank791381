@@ -25,6 +25,8 @@ export type SchemeBuilderDialogProps = {
   gradebook: GbGradebook;
   /** False for an archived class or a teacher without assignments.grading.grade: everything is shown read-only. */
   editable: boolean;
+  /** GB6b — what the approvals lock (approved parts, or the whole scheme once the final is approved), shown at the top. */
+  lockNote?: string;
   onClose: () => void;
   onSaved: (saved: GbSchemeSaved) => void;
   /** Reload the gradebook (after a stale save); the dialog reopens on the new version. */
@@ -92,7 +94,8 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
           قسّم العلامة النهائية إلى أقسام (مثل الشهري والفصل الأول والفصل الثاني) ولكل قسم نسبته. ثم اختر ما يُحسب في كل قسم ووزن كل عنصر داخله.
           مجموع نسب الأقسام 100، ومجموع أوزان العناصر في كل قسم 100.
         </p>
-        {readOnly && <p className="eb-muted" role="status">{p.gradebook.readOnly ? "للعرض فقط: هذا الصف في الأرشيف." : "للعرض فقط: تعديل المخطط يحتاج صلاحية التصحيح."}</p>}
+        {p.lockNote && <p className="eb-gb-warning" role="status">{p.lockNote}</p>}
+        {readOnly && !p.lockNote && <p className="eb-muted" role="status">{p.gradebook.readOnly ? "للعرض فقط: هذا الصف في الأرشيف." : "للعرض فقط: تعديل المخطط يحتاج صلاحية التصحيح."}</p>}
         {error && (
           <div className="platform-error" role="alert">
             {error}

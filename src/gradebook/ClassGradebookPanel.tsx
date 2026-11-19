@@ -5,10 +5,12 @@ import { useCan } from "../shell/teacherAccessContext";
 import SectionHeader from "../ui/SectionHeader";
 import EmptyState from "../ui/EmptyState";
 import { IconEdit, IconPlus } from "../icons";
-import { loadGradebook, saveEntries } from "./gradebookApi";
+import { approve, loadGradebook, reopen, saveEntries } from "./gradebookApi";
 import { type EntriesDraft, afterSave, applyColumnAction, invalidEdits, rebase, setDecision, setScoreText, toItems } from "./entriesDraft";
 import SchemeBuilderDialog from "./SchemeBuilderDialog";
 import GradebookTable from "./GradebookTable";
+import GradebookApprovals from "./GradebookApprovals";
+import { approvedCategoryIds, finalApproved } from "./approvalsView";
 import type { AssignmentDrillTarget } from "../assignments/drillTarget";
 import type { GbGradebook } from "./types";
 import "./gradebook.css";
@@ -23,6 +25,10 @@ import "./gradebook.css";
  * each with the value the teacher saw. The unsaved edits belong to their class (a class switch keeps them for when the teacher comes
  * back); leaving the edit mode or the page with unsaved edits asks first. After a save the gradebook is read again: applied edits leave
  * the draft, and an edit whose cell changed elsewhere stays, shown with the server's value.
+ *
+ * GB6b — «اعتماد العلامات» under the table (GradebookApprovals): approving a part or the final mark asks first, reopening asks for a
+ * reason; after either the gradebook is read again. An approved part's columns are not editable in the table, and an approved final
+ * opens the scheme read-only. The server enforces every one of these on its own (assignments.results.release, 409 PART_APPROVED …).
  */
 type Load = { classId: string; status: "loading" } | { classId: string; status: "ready"; data: GbGradebook } | { classId: string; status: "error"; error: string };
 
@@ -38,6 +44,7 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
   const [editFor, setEditFor] = useState("");
   const [drafts, setDrafts] = useState<Record<string, EntriesDraft>>({});
   const [saving, setSaving] = useState(false);
+  const [approving, setApproving] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
   const editing = editFor !== "" && editFor === classId;
   const draft = drafts[classId] || {};
@@ -70,6 +77,10 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
   const current = load && load.classId === classId ? load : null;
   const data = current && current.status === "ready" ? current.data : null;
   const editable = classActive && !(data && data.readOnly) && can("assignments.grading.grade");
+  const approvable = classActive && !(data && data.readOnly) && can("assignments.results.release");
+  const locked = data ? approvedCategoryIds(data) : new Set<string>();
+  const finalLocked = data ? finalApproved(data) : false;
+  const allLocked = Boolean(data && data.scheme && data.scheme.categories.length && data.scheme.categories.every(c => locked.has(c.categoryId)));
   const scheme = data?.scheme || null;
   const setDraft = (fn: (d: EntriesDraft) => EntriesDraft) => setDrafts(all => ({ ...all, [classId]: fn(all[classId] || {}) }));
   const invalid = data ? new Set(invalidEdits(draft, data)) : new Set<string>();
@@ -98,6 +109,42 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
     } catch { /* the table keeps the last read; the notice says what happened */ }
     setNoticeFor({ classId: id, text });
     setSaving(false);
+  }
+  /** Reads the gradebook again in place (the table stays on screen meanwhile); the notice says what happened. */
+  async function reloadWith(id: string, text: string) {
+    try {
+      const fresh = await loadGradebook(token, id);
+      setLoad({ classId: id, status: "ready", data: fresh });
+      setDrafts(all => ({ ...all, [id]: rebase(all[id] || {}, fresh) }));
+    } catch { /* the page keeps the last read */ }
+    setNoticeFor({ classId: id, text });
+  }
+  async function approveOne(categoryId: string | null, title: string) {
+    if (!data || !data.scheme || approving) return;
+    const id = classId, revision = data.scheme.revision;
+    const message = categoryId === null
+      ? "سيرى الطلاب علاماتهم النهائية كما هي الآن، ويُقفل المخطط كله حتى تعيد فتحها."
+      : "سيرى الطلاب علاماتهم في «" + title + "» ومجموعه كما هي الآن، ويُقفل الجزء فلا تُعدَّل خاناته ولا أعمدته حتى تعيد فتحه.";
+    if (!(await confirm({ title: categoryId === null ? "اعتماد العلامة النهائية؟" : "اعتماد «" + title + "»؟", message, confirmLabel: "اعتماد", cancelLabel: "إلغاء" }))) return;
+    setApproving(true);
+    let text = "";
+    try {
+      const r = await approve(token, id, categoryId, revision);
+      text = r.unchanged ? "«" + title + "» معتمد من قبل." : "✓ اعتُمد «" + title + "». يراه الطلاب الآن.";
+    } catch (e) { text = e instanceof Error ? e.message : "تعذر الاعتماد."; }
+    await reloadWith(id, text);
+    setApproving(false);
+  }
+  async function reopenOne(categoryId: string | null, title: string, reason: string): Promise<boolean> {
+    if (approving) return false;
+    const id = classId;
+    setApproving(true);
+    let ok = false, text = "";
+    try { await reopen(token, id, categoryId, reason); ok = true; text = "أُعيد فتح «" + title + "». لم يعد يظهر للطلاب حتى تعتمده من جديد."; }
+    catch (e) { text = e instanceof Error ? e.message : "تعذرت إعادة الفتح."; }
+    await reloadWith(id, text);
+    setApproving(false);
+    return ok;
   }
   const action = data && (editable || scheme) ? (
     <button type="button" className={"eb-button is-small" + (scheme ? "" : " is-primary")} onClick={() => setBuilderFor(classId)}>
@@ -135,7 +182,7 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
           </ul>
           {data.warnings.length > 0 && <p className="eb-gb-warning" role="status">{"مصدر مفقود في " + data.warnings.length + " من الأعمدة: لا يُحسب صفرًا، راجع المخطط."}</p>}
           {data.readOnly && <p className="eb-muted">للعرض فقط: هذا الصف في الأرشيف.</p>}
-          {editable && !editing && <button type="button" className="eb-button is-small" onClick={() => setEditFor(classId)}><IconEdit size={16} aria-hidden="true" />تعديل العلامات</button>}
+          {editable && !editing && !allLocked && <button type="button" className="eb-button is-small" onClick={() => setEditFor(classId)}><IconEdit size={16} aria-hidden="true" />تعديل العلامات</button>}
           {editing && (
             <div className="eb-gb-savebar" role="group" aria-label="حفظ العلامات">
               <p className="eb-muted">اكتب علامات الأعمدة اليدوية، أو اختر «معفى» أو «صفر» لأي خانة. لا يُحفظ شيء قبل «حفظ العلامات».</p>
@@ -145,16 +192,20 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
               {invalid.size > 0 && <span className="eb-gb-edit-note is-error" role="alert">{"صحّح " + invalid.size + " من العلامات قبل الحفظ."}</span>}
             </div>
           )}
-          <GradebookTable gradebook={data} onOpenAssignment={editing ? undefined : onOpenAssignment} edit={editing ? {
+          <GradebookTable gradebook={data} onOpenAssignment={editing ? undefined : onOpenAssignment} locked={locked} edit={editing ? {
             draft, invalid,
             onDecision: (itemId, studentId, d) => setDraft(x => setDecision(x, data, itemId, studentId, d)),
             onScore: (itemId, studentId, t) => setDraft(x => setScoreText(x, data, itemId, studentId, t)),
             onColumnAction: (itemId, ids, a) => setDraft(x => applyColumnAction(x, data, itemId, ids, a))
           } : undefined} />
+          <GradebookApprovals gradebook={data} canApprove={approvable} busy={approving}
+            pausedReason={editing && dirtyCount ? "احفظ تعديلات العلامات أو تجاهلها قبل الاعتماد أو إعادة الفتح." : ""}
+            onApprove={(id, title) => void approveOne(id, title)} onReopen={reopenOne} />
         </>
       )}
       {data && builderOpen && (
-        <SchemeBuilderDialog key={classId + ":" + (data.etags.scheme || "new")} open token={token} gradebook={data} editable={editable}
+        <SchemeBuilderDialog key={classId + ":" + (data.etags.scheme || "new")} open token={token} gradebook={data} editable={editable && !finalLocked}
+          lockNote={finalLocked ? "العلامة النهائية معتمدة: المخطط للعرض فقط حتى تعيد فتحها." : locked.size ? "الأجزاء المعتمدة لا تُعدَّل أعمدتها ولا أوزانها ولا تُحذف حتى تعيد فتحها: " + (scheme ? scheme.categories.filter(c => locked.has(c.categoryId)).map(c => "«" + c.title + "»").join("، ") : "") + "." : ""}
           onClose={() => setBuilderFor("")}
           onSaved={saved => { setBuilderFor(""); setNoticeFor({ classId, text: saved.status === "active" ? "✓ حُفظ مخطط العلامات." : "حُفظ المخطط مسودة: أكمل النسب حتى يصبح مجموعها 100." }); refresh(classId); }}
           onReload={() => { setBuilderFor(""); refresh(classId); }} />
