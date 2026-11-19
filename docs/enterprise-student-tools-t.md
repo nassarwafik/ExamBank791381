@@ -1,8 +1,8 @@
 # Phase T — Student Exam Tools (design record; T0 – T7)
 
-> STATUS: T0 – T7 are merged to `main` and deployed: T0 – T4 in #659, T5 in #665, T6 in #667, T7 in #670. An exam without
-> `studentTools` looks, is delivered and is graded exactly as before. Every tool in the contract has a student UI. The owner approved
-> four further phases (T8 – T11, §7); each one adds its own section to this record when it is built.
+> STATUS: T0 – T11 are complete. T0 – T4 merged in #659, T5 in #665, T6 in #667, T7 in #670, T8 in #674, T9 in #677 and T11 in
+> #678, all deployed; T10 is #676. An exam without `studentTools` looks, is delivered and is graded exactly as before. Every tool in
+> the contract has a student UI.
 
 ## 1. Goal
 
@@ -124,10 +124,10 @@ converter answers conversion questions. The catalog records this for each tool (
 | T5 | formula sheet (rich content, strict projection) and scratch pad | merged (#665) |
 | T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table Z 1 – 36) | merged (#667) |
 | T7 | tools in the course books (learning materials), a fixed set per course | merged (#670) |
-| T8 | tool usage record: which tool a student opened during an attempt, shown to the teacher | planned (owner approved) |
-| T9 | images in the formula sheet, served through the protected image path | planned (owner approved) |
-| T10 | periodic table extended to Z 1 – 118 | planned (owner approved) |
-| T11 | the course books' tool set chosen by the teacher instead of fixed in code | planned (owner approved) |
+| T8 | tool usage record: which tool a student opened during an attempt, shown to the teacher (§15) | merged (#674) |
+| T9 | images in the formula sheet, served through the protected image path (§16) | merged (#677) |
+| T10 | periodic table extended to Z 1 – 118 (§17) | this PR (#676) |
+| T11 | the course books' tool set chosen by the teacher instead of fixed in code (§18) | merged (#678) |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
@@ -565,6 +565,57 @@ An outer bound (text + the whole image budget) refuses a huge value before it is
   - columns escaping the count;
   - delivery not signing, or not walking columns;
   - a bank image charged to the budget.
+
+## 17. T10 — the periodic table up to Z 118
+
+The owner approved extending the student periodic table beyond the curriculum's Z 1–36.
+
+### The chemistry catalog stays as it is
+
+`src/chemistry/elements.ts` (Z 1–36) is a grading authority of the chemistry simulations, compiled into the server build. T10 does not
+touch it.
+
+The tool reads `src/studentTools/periodicTableData.ts`:
+- **Z 1–36** are copied field by field from the verified catalog; a test pins them as identical.
+- **Z 37–118** are listed in that file. It is display data only: never compiled into the server build, never read by grading.
+
+| Field | Source |
+|---|---|
+| atomic weight | CIAAW "Abridged Standard Atomic Weights 2024" (https://www.ciaaw.org/abridged-atomic-weights.htm), the printed decimal, read for this phase on 2026-11-18. Where the table gives none (Tc, Pm, Po–Ac, Np–Og), the tool says «لا كتلة ذرية قياسية» instead of inventing a number. |
+| period, group | IUPAC 18-column table. The lanthanides (La–Lu) and actinides (Ac–Lr) sit in their own two rows with no group number, the classroom layout. |
+| category | the common classroom classification. Mt–Og are «خواص غير معروفة بعد»: too few atoms were ever made to classify them. |
+| electron configuration | Z 1–36 only, through the verified engine. Heavier atoms have many exceptions, so the tool shows a note rather than an unverified configuration. |
+
+### Contract: `range`, additive within version 1
+
+- **The new key.** `periodicTable` gains an optional `range`.
+- **Old exams unchanged.** An absent key (or `"curriculum"`) is Z 1–36, the table every exam published before T10 shows. The
+  canonical form drops it, so an older spec keeps its exact shape.
+- **The full table.** `"all"` is Z 1–118 and is kept in the canonical form. Any other value refuses the whole spec.
+- **The new default.** Switching the tool on in the Builder now gives `range: "all"`.
+- **The teacher's choice.** The Builder offers «العناصر المعروضة»: «الجدول كاملًا (1–118)» or «نطاق المنهاج (1–36)».
+
+### Evidence for T10
+
+- `src/studentTools/periodicTable.t10.test.tsx`:
+  - **The data.**
+    - Z 1–118 each appear once, with unique symbols and names.
+    - Z 1–36 are identical to the chemistry catalog.
+    - Each position is derived independently from Z alone.
+    - Exactly the expected elements lack a weight.
+    - A typo check: weights rise with Z except the four known inversions (K, Ni, I, Pa).
+  - **The contract.** An old shape is kept, `"curriculum"` is canonicalized away, other values are refused, and the default is the full
+    table.
+  - **The tool.** It shows 36 elements without `range` and 118 with `"all"`, the series rows, a heavy element's data without an
+    invented configuration, and an element without a standard weight.
+  - **The Builder.** The range choice.
+- Mutation M86–M91: 6 / 6 KILLED. The planted defects:
+  - the canonical form keeping `"curriculum"`;
+  - any range accepted;
+  - an exam without `range` showing the full table;
+  - a configuration computed above Z 36;
+  - an empty weight shown;
+  - the curriculum range widened.
 
 ## 18. T11 — the course book's tools, chosen by the teacher
 

@@ -58,7 +58,9 @@ export type AsciiTableToolV1 = { id: "asciiTable"; range: "printable" | "full" }
 export type BitwiseCalculatorToolV1 = { id: "bitwiseCalculator"; width: 8 | 16 | 32 };
 export type TruthTableToolV1 = { id: "truthTable"; maxVariables: number };
 export type UnitConverterToolV1 = { id: "unitConverter"; categories: UnitCategoryId[] };
-export type PeriodicTableToolV1 = { id: "periodicTable"; showMass: boolean; showConfiguration: boolean };
+/** Phase T10 — `range` is additive within version 1: absent (or "curriculum") is Z 1–36, the table every exam published before T10
+ *  shows; "all" is Z 1–118. The canonical form carries the key only for "all", so an older spec keeps its exact shape. */
+export type PeriodicTableToolV1 = { id: "periodicTable"; showMass: boolean; showConfiguration: boolean; range?: "all" };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1;
 
@@ -97,7 +99,7 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "bitwiseCalculator": return { id, width: 8 };
     case "truthTable": return { id, maxVariables: 4 };
     case "unitConverter": return { id, categories: [...UNIT_CATEGORY_IDS] };
-    case "periodicTable": return { id, showMass: true, showConfiguration: true };
+    case "periodicTable": return { id, showMass: true, showConfiguration: true, range: "all" };
   }
 }
 
@@ -113,7 +115,7 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   bitwiseCalculator: ["id", "width"],
   truthTable: ["id", "maxVariables"],
   unitConverter: ["id", "categories"],
-  periodicTable: ["id", "showMass", "showConfiguration"]
+  periodicTable: ["id", "showMass", "showConfiguration", "range"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -256,7 +258,8 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
       break;
     }
     case "periodicTable":
-      value = { id, showMass: bool("showMass"), showConfiguration: bool("showConfiguration") };
+      if ("range" in raw && raw.range !== "curriculum" && raw.range !== "all") add("STUDENT_TOOLS_INVALID_VALUE", path + ".range", "نطاق الجدول الدوري يجب أن يكون نطاق المنهاج (1–36) أو الجدول كاملًا (1–118).");
+      value = { id, showMass: bool("showMass"), showConfiguration: bool("showConfiguration"), ...(raw.range === "all" ? { range: "all" as const } : {}) };
       break;
   }
   return issues.length === before ? value : null;

@@ -106,3 +106,8 @@
 .stt-pt-cell.is-selected { outline: 2px solid var(--eb-primary); outline-offset: 0; }
 .stt-pt-cell:focus-visible { outline: none; box-shadow: var(--eb-focus-ring); }
 .stt-pt-empty { min-height: 34px; }
+/* Phase T10 — the full table: the f-block series in their own rows, and the elements whose properties are not known yet. */
+.stt-pt-cell.is-lanthanide, .stt-pt-cell.is-actinide { background: var(--eb-danger-bg); }
+.stt-pt-cell.is-unknownProperties { background: var(--eb-surface); border-style: dashed; }
+.stt-pt-series { display: flex; align-items: center; justify-content: center; min-height: 34px; font-size: 9px; color: var(--eb-muted); border: 1px dashed var(--eb-border); border-radius: var(--eb-r-sm); }
+.stt-pt-row:not(.is-series) + .stt-pt-row.is-series { margin-top: 6px; }

@@ -1890,6 +1890,16 @@
       "page": "learning-reader",
       "viewport": "all",
       "reason": "Course book reader — Phase T7 (the owner's decision: a fixed set of student tools per course): the floating «الأدوات» button of the exam's tool bar now appears at the reader's lower edge (the networks book's set). Nothing else on the page moves; the tool panels open only when pressed."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "all",
+      "reason": "Exam Studio setup step — Phase T10: the «الجدول الدوري» row's one-line description in the «أدوات الطالب» panel now names both ranges (1–118 or 1–36); the tool stays off for the captured exam, so only that line's wording (and possibly its wrap) changes."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Classic builder — the same Phase T10 wording of the «الجدول الدوري» description in the «أدوات الطالب» panel (1–118 or 1–36); the tool is off for the captured exam."
     }
   ]
 }
