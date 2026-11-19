@@ -22,6 +22,10 @@ const {stampLateAttempt,lateInfo,lateMarks,latePolicyOf}=require("../lib/late-po
 // VERIFIED here: only an unanswered question of the published exam is held for the teacher (score 0 / manualReview, pendingReview) —
 // never an automatic zero, never a raised score. The report rides with the draft so the timeout / strict-exit paths honour it too.
 const {normalizeRenderFailures,draftRenderFailuresPatch,applyRenderFailureHolds,technicalHoldsField}=require("../lib/render-failures");
+// Phase T8 — which student tools the student opened. The count rides with the draft like the render-failure report; the record is the
+// teacher's information only (never grading, never the student's result projection). See lib/student-tool-usage.js.
+const {draftToolUsagePatch,attemptToolUsage,draftToolUsageCounts}=require("../lib/student-tool-usage");
+const toolUsageField=u=>u?{toolUsage:u}:{};
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // QA-8 — the same attempt open on two devices (or two tabs). Every write of the server draft (saveDraft, pause with answers)
@@ -55,7 +59,7 @@ function state(a,s,nowMs=Date.now()){
  const ts=timerState(a,s,nowMs),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
  return {attemptsUsed:ts.attemptsUsed,allowedAttempts:ts.allowedAttempts,canAttempt:ts.canAttempt,dueClosed:ts.isClosed,availability:ts.availability,...(ts.inLateWindow||(latePolicyOf(a)&&!ts.isClosed)?{lateWindow:{active:!!ts.inLateWindow,until:ts.lateUntil,deductionPercent:latePolicyOf(a).deductionPercent}}:{}),openAt:ts.openAt,effectiveDueAt:ts.effectiveDueAt,
   durationMinutes:ts.durationMinutes,timed:ts.timed,attemptModelVersion:ts.attemptModelVersion,attemptPolicy:ts.attemptPolicy,requiresStart:ts.requiresStart,attemptStatus:ts.attemptStatus,serverNow:new Date(nowMs).toISOString(),activeAttempt:ts.activeAttempt,effectiveAttemptEndsAt:ts.effectiveAttemptEndsAt,attemptExpired:ts.attemptExpired,canStartAttempt:ts.canStartAttempt,canWrite:ts.canWrite,
-  draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",draftRevision:draftRevisionOf(s),latestResult:latest?pub(latest,a,nowMs):null,attempts:attempts.map(x=>pub(x,a,nowMs))}}
+  draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",draftRevision:draftRevisionOf(s),...(Object.keys(draftToolUsageCounts(s)).length?{draftToolUsage:draftToolUsageCounts(s)}:{}),latestResult:latest?pub(latest,a,nowMs):null,attempts:attempts.map(x=>pub(x,a,nowMs))}}
 function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,studentId:student.userId,classId:student.classId,studentCode:student.code,studentName:student.displayName,allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // Roadmap #10/#11 stale-attempt guard. For a MODERN attempt (timed OR attemptModelVersion>=2) a write MUST
 // carry the identity (attemptNumber + startedAt) of the attempt it was composed under — this FAILS CLOSED:
@@ -170,6 +174,7 @@ async function handler(request,deps={},obs=null){
      created={attemptNumber,startedAt:doc.activeAttempt.startedAt};
      // Phase 7A: a model-3 attempt starts at epoch 1 (pause/resume advance it) with no pauses yet.
      if(attemptModelVersion(a)>=3){doc.activeAttempt.attemptEpoch=1;doc.activeAttempt.pauseCount=0}
+     delete doc.draftToolUsage;                                                       // T8: a new attempt starts with no tool record
      doc.updatedAt=new Date(startMs).toISOString();
      resultState=state(a,doc,startMs);
      return doc;
@@ -211,6 +216,7 @@ async function handler(request,deps={},obs=null){
      savedAt=new Date().toISOString();
      doc.draftAnswers=answers;doc.draftSavedAt=savedAt;doc.updatedAt=savedAt;doc.draftRevision=draftRevisionOf(doc)+1;savedRevision=doc.draftRevision;
      if(renderFailures!==undefined)draftRenderFailuresPatch(doc,renderFailures);
+     draftToolUsagePatch(doc,b.toolUsage,a.examSnapshot||null,savedAt);              // T8 — absent: the stored record is left alone
      // Lifecycle (B2A #10): a timed or untimed-v2 active attempt is marked "draft" and stamped with a
      // server lastSavedAt; the attemptNumber is never changed by a save.
      if(doc.activeAttempt&&doc.activeAttempt.startedAt){doc.activeAttempt.status="draft";doc.activeAttempt.lastSavedAt=savedAt}
@@ -267,11 +273,11 @@ async function handler(request,deps={},obs=null){
      const holds=applyRenderFailureHolds(g,submitFailures||normalizeRenderFailures(doc.draftRenderFailures,a.examSnapshot||null),answers,a.examSnapshot,now);   // 21E.3 — verified technical holds, never a zero
      // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
      // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.
-     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{}),...(submitKey?{submitKey}:{})};
+     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{}),...toolUsageField(attemptToolUsage(doc,b.toolUsage,a.examSnapshot||null,now)),...(submitKey?{submitKey}:{})};
      stampLateAttempt(attempt,a,ts.dueMs,Date.parse(now));                       // D5 — submit time vs the effective due date
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;delete doc.draftToolUsage;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
      return doc;
     }));
@@ -315,11 +321,11 @@ async function handler(request,deps={},obs=null){
      // extendedEndsAt), NOT this offline finalization moment. submittedAt stays the real server
      // finalization timestamp. The teacher extension is preserved on the completed attempt (extendedEndsAt).
      const endedAt=ts.effectiveAttemptEndsAt||active.endsAt||now;
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{})};
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{}),...toolUsageField(attemptToolUsage(doc,b.toolUsage,a.examSnapshot||null,now))};
      stampLateAttempt(attempt,a,ts.dueMs,Date.parse(endedAt));                   // D5 — the authoritative end, not this finalization moment
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;delete doc.draftToolUsage;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
      return doc;
     }));
@@ -375,6 +381,7 @@ async function handler(request,deps={},obs=null){
      const ts=timerState(a,doc,nowMs),nowIso=new Date(nowMs).toISOString();
      if(answers&&draftStale(doc,b))throw draftStaleError();                          // QA-8: the pause's answers replace the draft too
      if(answers){doc.draftAnswers=answers;doc.draftSavedAt=nowIso;act.lastSavedAt=nowIso;doc.draftRevision=draftRevisionOf(doc)+1;if(b.renderFailures!==undefined)draftRenderFailuresPatch(doc,normalizeRenderFailures(b.renderFailures,a.examSnapshot||null))}   // 21E.3 — the report travels with the saved answers
+     draftToolUsagePatch(doc,b.toolUsage,a.examSnapshot||null,nowIso);               // T8 — kept with the paused draft
      if(ts.timed)act.pausedRemainingMs=Math.max(0,toMs(ts.attemptDurationEndsAt)-nowMs);   // server budget, unclipped by due
      act.status="paused";act.pausedAt=nowIso;act.attemptEpoch=ep+1;act.pauseCount=Math.max(0,Number(act.pauseCount)||0)+1;
      doc.updatedAt=nowIso;
@@ -440,11 +447,11 @@ async function handler(request,deps={},obs=null){
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(a.examSnapshot,serverAnswers,parametricGenerationContext(id,student.userId,active.attemptNumber)),timedOut=!!ts.attemptExpired;
      const holds=applyRenderFailureHolds(g,normalizeRenderFailures(b.renderFailures!==undefined?b.renderFailures:doc.draftRenderFailures,a.examSnapshot||null),serverAnswers,a.examSnapshot,now);   // 21E.3 — the record saved with the draft; Review Fix 4 (P1): the finalizing client's own report wins (a report the autosave could not persist offline), verified the same way — toward the teacher only, never an answer
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{})};
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{}),...toolUsageField(attemptToolUsage(doc,b.toolUsage,a.examSnapshot||null,now))};
      stampLateAttempt(attempt,a,ts.dueMs,Date.parse(attempt.endedAt));          // D5
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;delete doc.draftToolUsage;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
      resultAttempt=attempt;finalState=state(a,doc,nowMs);
      return doc;
     }));
