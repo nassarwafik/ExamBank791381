@@ -27,7 +27,8 @@ const PeriodicTableTool = lazy(() => import("./PeriodicTableTool"));
 // • The panel is non-modal (the student keeps reading and answering the question). Escape closes it and returns focus to the button.
 // • A failure inside a tool stays inside the tool (its own error boundary): it never reaches the exam's answer / render-failure state.
 
-type Props = { studentTools: unknown; sectionId?: string };
+/** `onToolOpen` (Phase T8) is told each time the student opens a tool, for the attempt's usage record; the book reader passes nothing. */
+type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void };
 const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable"]);
 
 class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -59,7 +60,7 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
 const toolTitle = (t: StudentToolConfigV1): string =>
   t.id === "calculator" ? (t.variant === "basic" ? "آلة حاسبة" : "آلة حاسبة علمية") : t.id === "formulaSheet" ? t.title : studentToolCatalogEntry(t.id).label;
 
-export default function StudentToolDock({ studentTools, sectionId }: Props) {
+export default function StudentToolDock({ studentTools, sectionId, onToolOpen }: Props) {
   const baseId = useId();
   const spec = useMemo(() => projectStudentToolsForStudent(studentTools), [studentTools]);
   const all = useMemo(() => (spec ? spec.tools.filter(t => studentToolHasUi(t.id)) : []), [spec]);
@@ -125,6 +126,7 @@ export default function StudentToolDock({ studentTools, sectionId }: Props) {
 
   const open = (id: StudentToolId) => {
     setMounted(prev => (prev.has(id) ? prev : new Set([...prev, id])));
+    if (openTool !== id) onToolOpen?.(id);   // T8: re-selecting the tool already open is not a new opening
     setOpenTool(id);
     setMenuOpen(false);
   };
