@@ -26,6 +26,8 @@ type Props = {
   sections: readonly SectionRef[];
   onChange: (next: StudentToolsSpecV1 | undefined) => void;
   disabled?: boolean;
+  /** Phase T11 — tools this place cannot offer (a course book takes no formula sheet); they are not listed. */
+  excludeTools?: readonly StudentToolId[];
 };
 
 /** Emits the canonical spec; returns the first refusal message (nothing is emitted then), or "" on success. */
@@ -43,7 +45,7 @@ function emit(tools: StudentToolConfigV1[], overrides: Record<string, StudentToo
   return v.issues[0]?.message ?? "تعذّر حفظ إعدادات الأدوات.";
 }
 
-export default function StudentToolsEditor({ value, sections, onChange, disabled }: Props) {
+export default function StudentToolsEditor({ value, sections, onChange, disabled, excludeTools = [] }: Props) {
   const baseId = useId();
   const present = value !== undefined && value !== null;
   const parsed = present ? validateStudentTools(value) : null;
@@ -94,7 +96,7 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
 
       {!invalid && (
         <ul className="sb-tools-list">
-          {STUDENT_TOOL_IDS.map(id => {
+          {STUDENT_TOOL_IDS.filter(id => !excludeTools.includes(id)).map(id => {
             const entry = studentToolCatalogEntry(id);
             const tool = tools.find(t => t.id === id);
             const on = !!tool;

@@ -4,7 +4,7 @@ import EmptyState from "../ui/EmptyState";
 import { IconBook } from "../icons";
 
 /** One released course as GET /api/student-learning-materials returns it (published modules only). */
-export type StudentLearningCourse = { courseId: string; title: string; modules: { moduleId: string; title: string; order: number }[] };
+export type StudentLearningCourse = { courseId: string; title: string; modules: { moduleId: string; title: string; order: number }[]; /** T11 — the teacher's book tools (absent ⇒ built-in) */ studentTools?: unknown };
 type Props = {
   token: string;
   /** Open the Reader on a course — at a chosen unit (`moduleId`) or, without one, where the student left off. */

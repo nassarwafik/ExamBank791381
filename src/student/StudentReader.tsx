@@ -23,8 +23,10 @@ export const READ_DWELL_MS = 1500;
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId, progressClient, annotationsClient }: {
+export default function StudentReader({ courseId, bookTools, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId, progressClient, annotationsClient }: {
   courseId: string;
+  /** Phase T11 — the tools this class's teacher chose for the book (from /api/student-learning-materials); absent ⇒ built-in set. */
+  bookTools?: unknown;
   allowedModuleIds: string[];
   token: string;
   onExit: () => void;
@@ -96,6 +98,7 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   return (
     <LearningReaderWithTraining
       courseId={courseId}
+      bookTools={bookTools}
       api={api}
       onExit={onExit}
       exitLabel="العودة إلى موادي التعليمية"
