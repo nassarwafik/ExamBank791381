@@ -1,8 +1,8 @@
 # Phase T — Student Exam Tools (design record; T0 – T7)
 
-> STATUS: T0 – T7 are merged to `main` and deployed: T0 – T4 in #659, T5 in #665, T6 in #667, T7 in #670. An exam without
-> `studentTools` looks, is delivered and is graded exactly as before. Every tool in the contract has a student UI. The owner approved
-> four further phases (T8 – T11, §7); each one adds its own section to this record when it is built.
+> STATUS: T0 – T11 are complete. T0 – T4 merged in #659, T5 in #665, T6 in #667, T7 in #670, T8 in #674, T9 in #677 and T11 in
+> #678, all deployed; T10 is #676. An exam without `studentTools` looks, is delivered and is graded exactly as before. Every tool in
+> the contract has a student UI.
 
 ## 1. Goal
 
@@ -124,10 +124,10 @@ converter answers conversion questions. The catalog records this for each tool (
 | T5 | formula sheet (rich content, strict projection) and scratch pad | merged (#665) |
 | T6 | subject tools (ASCII table, bitwise calculator, truth tables, unit converter, periodic table Z 1 – 36) | merged (#667) |
 | T7 | tools in the course books (learning materials), a fixed set per course | merged (#670) |
-| T8 | tool usage record: which tool a student opened during an attempt, shown to the teacher | planned (owner approved) |
-| T9 | images in the formula sheet, served through the protected image path | planned (owner approved) |
-| T10 | periodic table extended to Z 1 – 118 | planned (owner approved) |
-| T11 | the course books' tool set chosen by the teacher instead of fixed in code | planned (owner approved) |
+| T8 | tool usage record: which tool a student opened during an attempt, shown to the teacher (§15) | merged (#674) |
+| T9 | images in the formula sheet, served through the protected image path (§16) | merged (#677) |
+| T10 | periodic table extended to Z 1 – 118 (§17) | this PR (#676) |
+| T11 | the course books' tool set chosen by the teacher instead of fixed in code (§18) | merged (#678) |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
