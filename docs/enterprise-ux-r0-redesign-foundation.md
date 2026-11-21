@@ -4785,4 +4785,11 @@ attempt) fixed `studio-publish` but not `studio-review`: one capture of eight st
 pointer and focus step was dropped.
 
 **A gate of `main` against itself, with the flags.** `BASE_DIST` and `HEAD_DIST` are the same build, on all three viewports in
-both themes; the result is in the pull request.
+both themes:
+
+| Theme | Captures | Changes | Failures | Flake notes |
+|---|---|---|---|---|
+| dark | 237 / 237 clean on each side | 0 | 0 | 0 |
+| light | 237 / 237 clean on each side | 0 | 0 | 0 |
+
+Both runs: GATE PASS.
