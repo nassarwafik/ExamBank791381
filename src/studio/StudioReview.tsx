@@ -25,6 +25,8 @@ type Props = {
   onOpenIssue: (target: IssueTarget, issue: StructuredIssue) => void;
   onPreview: () => void;
   onStep: (step: StudioStepKey) => void;
+  /** Phase T12 — what the student will find in the exam's tool bar, and the way back to its panel (the setup step). */
+  studentTools?: { text: string; onEdit: () => void };
 };
 
 const STATE_TEXT: Record<ReadinessState, { title: string; note: string }> = {
@@ -38,7 +40,7 @@ const RING_R = 70, RING_C = 2 * Math.PI * RING_R;
 const qCount = (n: number) => (n === 1 ? "سؤال واحد" : n === 2 ? "سؤالان" : n >= 3 && n <= 10 ? n + " أسئلة" : n + " سؤالًا");
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
-export default function StudioReview({ exam, decision, issuesOfQuestion, targets, tools, onOpenIssue, onPreview, onStep }: Props) {
+export default function StudioReview({ exam, decision, issuesOfQuestion, targets, tools, onOpenIssue, onPreview, onStep, studentTools }: Props) {
   const sections = exam.sections;
   const readiness = useMemo(() => questionReadiness(sections, issuesOfQuestion, decision.canFinalize), [sections, issuesOfQuestion, decision.canFinalize]);
   const state = readinessState(readiness, decision);
@@ -134,6 +136,15 @@ export default function StudioReview({ exam, decision, issuesOfQuestion, targets
             {charts.difficulty ? <Bars rows={charts.difficulty} label="الصعوبة" teal />
               : <p className="st-sub">لم تُحدَّد صعوبة الأسئلة بعد.</p>}
           </section>
+          {studentTools && (
+            <section className="st-panel" aria-labelledby="st-review-student-tools" data-review-panel="student-tools">
+              <h3 id="st-review-student-tools">أدوات الطالب</h3>
+              <p className="st-sub">{studentTools.text}</p>
+              <div className="st-row-actions">
+                <button type="button" className="st-btn is-small" onClick={studentTools.onEdit}>تعديل أدوات الطالب</button>
+              </div>
+            </section>
+          )}
           <section className="st-panel" aria-labelledby="st-review-tools">
             <h3 id="st-review-tools">أدوات المراجعة</h3>
             {charts.unclassified > 0 && <p className="st-sub">{qCount(charts.unclassified)} بلا موضوع رئيسي في المخطط.</p>}

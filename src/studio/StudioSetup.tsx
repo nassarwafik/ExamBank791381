@@ -12,6 +12,8 @@ type Props = {
   exam: StructuredExam;
   onTitle: (title: string) => void;
   coverEditor: ReactNode;
+  /** Phase T12 — the «أدوات الطالب» panel (the builder's own StudentToolsEditor), shown as its own titled panel of this step. */
+  studentTools?: ReactNode;
   tools: readonly ToolbarItem[];
   disabled: boolean;
   onStep: (step: StudioStepKey) => void;
@@ -26,7 +28,7 @@ const SETUP_TOOLS: readonly { key: string; note: string }[] = [
 ];
 const titleId = "st-setup-title";
 
-export default function StudioSetup({ exam, onTitle, coverEditor, tools, disabled, onStep }: Props) {
+export default function StudioSetup({ exam, onTitle, coverEditor, studentTools, tools, disabled, onStep }: Props) {
   const questions = exam.sections.reduce((n, s) => n + s.questions.length, 0);
   const available = SETUP_TOOLS.map(t => ({ ...t, item: tools.find(i => i.key === t.key) })).filter((t): t is { key: string; note: string; item: ToolbarItem } => !!t.item);
   return (
@@ -35,7 +37,7 @@ export default function StudioSetup({ exam, onTitle, coverEditor, tools, disable
         <header className="st-step-head">
           <div>
             <h2>إعداد الامتحان</h2>
-            <p>العنوان والغلاف والتعليمات العامة، وأدوات التصميم قبل كتابة الأسئلة.</p>
+            <p>العنوان، وأدوات الطالب أثناء الامتحان، والغلاف والتعليمات العامة، وأدوات التصميم قبل كتابة الأسئلة.</p>
           </div>
           <div className="st-row-actions">
             <button type="button" className="st-btn is-primary" onClick={() => onStep("content")}>متابعة إلى المحتوى<IconChevronBack size={16} aria-hidden="true" /></button>
@@ -67,6 +69,11 @@ export default function StudioSetup({ exam, onTitle, coverEditor, tools, disable
               : <p className="st-sub">لا توجد أدوات تصميم متاحة.</p>}
           </section>
         </div>
+        {studentTools && (
+          <section className="st-panel st-setup-student-tools" aria-label="أدوات الطالب أثناء الامتحان" data-setup-panel="student-tools">
+            {studentTools}
+          </section>
+        )}
         <section className="st-panel st-setup-cover" aria-label="الغلاف والتعليمات العامة">
           {coverEditor}
         </section>

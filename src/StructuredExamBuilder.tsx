@@ -23,6 +23,7 @@ import { withQualityPolicy } from "./assessmentQualityPolicy";
 import ExamSectionEditor from "./ExamSectionEditor";
 import ExamCoverEditor from "./ExamCoverEditor";
 import StudentToolsEditor from "./studentTools/StudentToolsEditor";
+import { studentToolsBuilderSummary } from "./studentTools/studentToolsBuilderSummary";
 import ExamPreview from "./ExamPreview";
 import Dialog from "./ui/Dialog";
 import { useConfirm } from "./ui/useConfirm";
@@ -61,7 +62,7 @@ const StudioSetup = lazy(() => import("./studio/StudioSetup"));
 const StudioPublish = lazy(() => import("./studio/StudioPublish"));
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
-import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers, IconPrint } from "./icons";
+import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers, IconPrint, IconSliders } from "./icons";
 import { printExam, type ExamPrintMode } from "./print/examPrint";   // D5 (item 9) — student paper / answer key
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
@@ -469,6 +470,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   //    shows, the inspector tab. Reset for another exam; an active question that left the exam (deleted, undone) is let go.
   const studio = layout === "studio";
   type StudioUi = { examId: string; step: StudioStepKey; activeId: string | null; sectionId: string | null; tab: InspectorTab };
+  // Phase T12 — a pending «bring the student tools panel into view» request (cleared by the panel once it has focused its heading).
+  const [studentToolsFocus, setStudentToolsFocus] = useState(false);
   const [studioUiState, setStudioUi] = useState<StudioUi>(() => ({ examId: exam.examId, step: "content", activeId: null, sectionId: null, tab: "question" }));
   let studioUi = studioUiState;
   if (studioUi.examId !== exam.examId) { studioUi = { examId: exam.examId, step: "content", activeId: null, sectionId: null, tab: "question" }; setStudioUi(studioUi); }
@@ -1274,6 +1277,13 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           ...(aiAuthor?.composeExam ? [{ key: "ai-composer", label: "المؤلف الذكي للامتحان", icon: <IconSparkles size={16} />, onSelect: () => setComposerOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
         ];
   const printFor = (mode: ExamPrintMode) => { if (!printExam(exam, mode)) showToast({ tone: "warn", message: "تعذّر فتح نافذة الطباعة في هذا المتصفح." }); };
+  // Phase T12 — «أدوات الطالب» is reachable from every step: the menu item / summary buttons open the setup step (Studio) and ask the
+  // panel to scroll to its heading and take focus (the classic workspace shows the panel above the questions).
+  const studentToolsLine = studentToolsBuilderSummary(exam.studentTools);
+  const openStudentTools = () => {
+    if (studio) setStudioUi(prev => ({ ...prev, step: "setup" }));
+    setStudentToolsFocus(true);
+  };
   const toolMenuItems: ToolbarItem[] = [
           { key: "explorer", label: "مستكشف الأسئلة", icon: <IconCompass size={16} />, onSelect: () => setNavOpen(v => !v), pressed: navOpen },
           { key: "blueprint", label: "مخطط الامتحان", icon: <IconBuilder size={16} />, onSelect: () => setBlueprintOpen(true), dialog: true, badge: blueprintIssueCount > 0 ? <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span> : undefined },
@@ -1283,6 +1293,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           ...(governance ? [{ key: "governance", label: "إدارة النشر والإصدارات", icon: <IconHistory size={16} />, onSelect: () => setGovernanceOpen(true), dialog: true }] : []),
           ...(presets ? [{ key: "presets", label: "القوالب الأكاديمية", icon: <IconCopy size={16} />, onSelect: () => setPresetsOpen(true), dialog: true }] : []),
           { key: "studio", label: "العرض والتصميم", icon: <IconImage size={16} />, onSelect: () => setStudioOpen(true), disabled: saving, dialog: true },
+          { key: "student-tools", label: "أدوات الطالب", icon: <IconSliders size={16} />, onSelect: openStudentTools,
+            badge: studentToolsLine.state === "invalid" ? "غير صالحة" : studentToolsLine.count ? studentToolsLine.count + " مفعّلة" : undefined },
           { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
           ...(onLayoutChange ? [{ key: "layout", label: studio ? "العودة إلى الواجهة الكلاسيكية" : "تجربة استوديو الامتحان (جديد)", icon: <IconLayers size={16} />, onSelect: () => onLayoutChange(studio ? "classic" : "studio") }] : []),
           // D5 (item 9) — a paper copy of the exam as it stands in the builder: the student paper, or the teacher's answer key. Last in the menu, so every
@@ -1422,6 +1434,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   // Phase T2 — «أدوات الطالب»: the same controlled panel in the Studio setup step and the classic workspace. `undefined` removes the key.
   const studentToolsEditor = (
     <StudentToolsEditor value={exam.studentTools} sections={(exam.sections || []).map(sec => ({ id: String(sec.id), title: sec.title, questions: sec.questions }))} disabled={!!saving}
+      focusRequest={studentToolsFocus} onFocusHandled={() => setStudentToolsFocus(false)}
       onChange={next => update(prev => { const out = { ...prev }; if (next) out.studentTools = next; else delete out.studentTools; return out; })} />
   );
 
@@ -1430,20 +1443,22 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
     setup: (
       <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل الإعداد…</p>}>
         <StudioSetup exam={exam} onTitle={title => update(prev => ({ ...prev, title }))} tools={toolMenuItems} disabled={!!saving} onStep={step => setStudioUi(prev => ({ ...prev, step }))}
-          coverEditor={<><ExamCoverEditor cover={exam.coverPage} onChange={cover => update(prev => ({ ...prev, coverPage: cover }))} onPreviewCover={() => setPreview(exam)} disabled={saving} />{studentToolsEditor}</>} />
+          coverEditor={<ExamCoverEditor cover={exam.coverPage} onChange={cover => update(prev => ({ ...prev, coverPage: cover }))} onPreviewCover={() => setPreview(exam)} disabled={saving} />}
+          studentTools={studentToolsEditor} />
       </Suspense>
     ),
     publish: (
       <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل النشر…</p>}>
         <StudioPublish exam={exam} decision={decision} saveState={saveState} saving={!!saving} mediaPending={mediaPending} mediaWait={MEDIA_WAIT}
           onSaveDraft={onSave ? () => onSave("draft") : undefined} onFinalize={onSave ? requestFinalSave : undefined} onAssign={onOpenAssignments ? () => { void openAssignments(); } : undefined}
-          tools={toolMenuItems} onStep={step => setStudioUi(prev => ({ ...prev, step }))} />
+          tools={toolMenuItems} onStep={step => setStudioUi(prev => ({ ...prev, step }))} studentTools={{ text: studentToolsLine.text, onEdit: openStudentTools }} />
       </Suspense>
     ),
     review: (
       <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المراجعة…</p>}>
         <StudioReview exam={exam} decision={decision} issuesOfQuestion={stableIssues.byQuestion} targets={summaryTargets} tools={toolMenuItems}
-          onOpenIssue={openIssue} onPreview={() => setPreview(exam)} onStep={step => setStudioUi(prev => ({ ...prev, step }))} />
+          onOpenIssue={openIssue} onPreview={() => setPreview(exam)} onStep={step => setStudioUi(prev => ({ ...prev, step }))}
+          studentTools={{ text: studentToolsLine.text, onEdit: openStudentTools }} />
         <QualityNotes exam={exam} onOpenQuestion={revealComposerQuestion(exam.examId)} onFixWithAi={fixNotesWithAi} />
       </Suspense>
     )
