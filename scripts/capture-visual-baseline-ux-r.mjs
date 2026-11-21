@@ -728,7 +728,16 @@ const PAGES = part === "gallery" ? [] : [...TEACHER_PAGES.map(([id, nav]) => ({ 
 const VIEWPORTS = [["desktop", { width: 1440, height: 900 }, false], ["tablet", { width: 1024, height: 768 }, false], ["phone", { width: 390, height: 844 }, true]]
   .filter(([n]) => !onlyVp.length || onlyVp.includes(n));
 
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ["--no-sandbox"] });
+// Hotfix (visual-studio-steps-settle) — the same build captured in two browser sessions differed by 2–4 pixels on the studio steps'
+// round badges (desktop/studio-review, desktop/studio-publish): their layout was identical in every session (badge at x 718.75 in
+// every run), but a shape drawn at a fractional position was rasterized differently from one session to the next. The gate captures
+// the base and the head in separate sessions, so that showed up as an undeclared change on pull requests that never touched those
+// pages. These flags make Chromium's painting deterministic: rasterize whole tiles on one thread, use the plain (non-SIMD-tuned) Skia
+// paths, and render in a fixed sRGB colour profile. Measured on one build, 12 captures each of studio-review and studio-publish:
+// with them, 0 captures differed from the first; without them (8 captures each), one studio-review capture differed by 2 pixels and
+// the first studio-publish capture differed from the other seven by 4 pixels. Base and head are both captured with these flags.
+const DETERMINISTIC_RASTER_ARGS = ["--disable-partial-raster", "--num-raster-threads=1", "--disable-skia-runtime-opts", "--force-color-profile=srgb"];
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ["--no-sandbox", ...DETERMINISTIC_RASTER_ARGS] });
 const record = { label, dist, theme, generatedAt: new Date().toISOString(), pages: {} }, checks = [];
 for (const [vpName, viewport, touch] of VIEWPORTS) {
   fs.mkdirSync(path.join(out, vpName), { recursive: true });
