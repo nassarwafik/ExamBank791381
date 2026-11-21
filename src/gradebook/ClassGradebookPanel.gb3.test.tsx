@@ -72,7 +72,7 @@ describe("GB3 — the first scheme", () => {
     expect(within(picker).queryByRole("option", { name: "الوظيفة 1" })).toBeNull();
     type(within(dialog).getByLabelText("العنوان"), "امتحان ورقي");
     type(within(dialog).getByLabelText("العلامة القصوى"), "٢٠");
-    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة عمود يدوي" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة علامة يرصدها المعلم" }));
     expect(within(dialog).getByRole("rowheader", { name: "امتحان ورقي (من 20)" })).toBeTruthy();
   });
 });

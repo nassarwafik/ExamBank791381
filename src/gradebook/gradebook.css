@@ -93,3 +93,13 @@
 .eb-gb-copy-row select{ max-inline-size:100%; }
 .eb-gb-copy-summary{ margin:0; }
 .eb-gb-copy-missing{ margin:var(--eb-space-1) 0 0; padding-inline-start:var(--eb-space-4); }
+
+/* GB9 — the two ways to add a column, side by side and equally visible */
+.eb-gb-add{ align-items:stretch; }
+.eb-gb-add-source, .eb-gb-manual{ flex:1 1 18rem; min-width:0; margin:0; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-gb-add-row{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-2); }
+.eb-gb-manual-help{ margin:0; }
+.eb-gb-suggest{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
+/* the boxes' rows and fields may shrink to the box (a text input's own width never widens the dialog on a phone) */
+.eb-gb-add-source > *, .eb-gb-manual > *, .eb-gb-add-row > *{ min-width:0; }
+.eb-gb-add .eb-gb-field input, .eb-gb-add .eb-gb-field select{ inline-size:100%; min-width:0; box-sizing:border-box; }

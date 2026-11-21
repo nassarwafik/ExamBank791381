@@ -162,6 +162,9 @@ function TotalLine({ label, total, ok, empty, action }: { label: string; total: 
 
 type Titles = (s: GbSource) => { label: string; kind: string };
 
+/** Titles a teacher often gives a mark they enter themselves; a click only fills the title field. */
+const MANUAL_SUGGESTIONS = ["الحضور والمشاركة", "الحضور", "المشاركة", "امتحان ورقي"] as const;
+
 function CategoryCard({ category: c, index, readOnly, titles, sources, used, total, issues, onChange, onRemove }: {
   category: DraftCategory; index: number; readOnly: boolean; titles: Titles; sources: GbSources | null; used: Set<string>;
   total: { total: number | null; ok: boolean }; issues: { at: string; message: string }[];
@@ -231,13 +234,16 @@ function CategoryCard({ category: c, index, readOnly, titles, sources, used, tot
               })}
             </tbody>
           </table>
-        ) : <p className="eb-muted">لا توجد عناصر في هذا القسم بعد.</p>}
+        ) : <p className="eb-muted">لا توجد عناصر في هذا القسم بعد. أضف واجبًا أو امتحانًا من المنصة، أو علامة يرصدها المعلم بنفسه مثل الحضور والمشاركة.</p>}
 
         <TotalLine label="مجموع الأوزان في القسم" total={total.total} ok={total.ok} empty={!c.items.length}
           action={!readOnly && c.items.length > 1 ? <button type="button" className="eb-button is-quiet is-small" onClick={() => onChange(d => equalizeItems(d, c.key))}>توزيع بالتساوي</button> : null} />
 
         {!readOnly && c.items.length < LIMITS.itemsPerCategory && (
           <div className="eb-gb-add">
+            <fieldset className="eb-gb-add-source">
+              <legend>من المنصة: واجب أو امتحان أو مشروع</legend>
+              <div className="eb-gb-add-row">
             <label className="eb-gb-field">
               <span>إضافة واجب أو امتحان أو مشروع</span>
               <select value={pick} onChange={e => setPick(e.target.value)} disabled={!sources}>
@@ -249,14 +255,22 @@ function CategoryCard({ category: c, index, readOnly, titles, sources, used, tot
               </select>
             </label>
             <button type="button" className="eb-button is-small" disabled={!pick} onClick={addPicked}><IconPlus size={16} aria-hidden="true" />إضافة</button>
+              </div>
+            </fieldset>
             <fieldset className="eb-gb-manual">
-              <legend>عمود يدوي (امتحان ورقي مثلًا)</legend>
-              <label className="eb-gb-field"><span>العنوان</span><input type="text" value={manualTitle} maxLength={LIMITS.manualTitle} onChange={e => setManualTitle(e.target.value)} /></label>
-              <label className="eb-gb-field is-weight"><span>العلامة القصوى</span><input type="text" inputMode="numeric" value={manualMax} onChange={e => setManualMax(e.target.value)} placeholder="20" /></label>
-              <button type="button" className="eb-button is-small" disabled={!manualOk} onClick={() => {
-                onChange(d => addItem(d, c.key, { kind: "manual", title: manualTitle.trim(), maxScore: manualMaxNumber }));
-                setManualTitle(""); setManualMax("");
-              }}><IconPlus size={16} aria-hidden="true" />إضافة عمود يدوي</button>
+              <legend>علامة يرصدها المعلم (بلا واجب على المنصة)</legend>
+              <p className="eb-muted eb-gb-manual-help">للحضور والمشاركة والامتحان الورقي، وكل علامة تضعها بنفسك. ترصدها بعد الحفظ من «تعديل العلامات».</p>
+              <div className="eb-gb-suggest" role="group" aria-label="عناوين مقترحة">
+                {MANUAL_SUGGESTIONS.map(s => <button key={s} type="button" className="eb-button is-small is-quiet" onClick={() => setManualTitle(s)}>{s}</button>)}
+              </div>
+              <div className="eb-gb-add-row">
+                <label className="eb-gb-field"><span>العنوان</span><input type="text" value={manualTitle} maxLength={LIMITS.manualTitle} placeholder="مثل: الحضور والمشاركة" onChange={e => setManualTitle(e.target.value)} /></label>
+                <label className="eb-gb-field is-weight"><span>العلامة القصوى</span><input type="text" inputMode="numeric" value={manualMax} onChange={e => setManualMax(e.target.value)} placeholder="10" /></label>
+                <button type="button" className="eb-button is-small" disabled={!manualOk} onClick={() => {
+                  onChange(d => addItem(d, c.key, { kind: "manual", title: manualTitle.trim(), maxScore: manualMaxNumber }));
+                  setManualTitle(""); setManualMax("");
+                }}><IconPlus size={16} aria-hidden="true" />إضافة علامة يرصدها المعلم</button>
+              </div>
             </fieldset>
           </div>
         )}
@@ -273,7 +287,7 @@ function sourceTitles(gradebook: GbGradebook, sources: GbSources | null): Titles
   for (const a of sources?.assignments || []) byKey.set("assignment:" + a.assignmentId, a.title);
   for (const x of sources?.projects || []) byKey.set("project:" + x.projectCode, x.title);
   return s => {
-    if (s.kind === "manual") return { label: s.title + " (من " + s.maxScore + ")", kind: "يدوي" };
+    if (s.kind === "manual") return { label: s.title + " (من " + s.maxScore + ")", kind: "يرصدها المعلم" };
     const k = sourceKey(s) as string;
     return { label: byKey.get(k) || (s.kind === "project" ? "مشروع غير متاح" : "واجب غير متاح"), kind: s.kind === "project" ? "مشروع" : "واجب / امتحان" };
   };

@@ -34,8 +34,8 @@ const MESSAGES = Object.freeze({
   PROJECT_CODE: "رمز المشروع غير صالح.",
   PROJECT_NOT_IN_CLASS: "المشروع غير مفعّل في هذا الصف.",
   SOURCE_DUPLICATE: "هذا المصدر مستخدم مرة أخرى في المخطط.",
-  MANUAL_TITLE: "عنوان العمود اليدوي مطلوب، و" + LIMITS.manualTitle + " حرفًا على الأكثر.",
-  MANUAL_MAX: "العلامة القصوى للعمود اليدوي يجب أن تكون رقمًا صحيحًا من 1 إلى " + LIMITS.manualMaxScore + ".",
+  MANUAL_TITLE: "عنوان العلامة التي يرصدها المعلم مطلوب، و" + LIMITS.manualTitle + " حرفًا على الأكثر.",
+  MANUAL_MAX: "العلامة القصوى للعلامة التي يرصدها المعلم يجب أن تكون رقمًا صحيحًا من 1 إلى " + LIMITS.manualMaxScore + ".",
   CONTEXT: "تعذر التحقق من مصادر المخطط."
 });
 
