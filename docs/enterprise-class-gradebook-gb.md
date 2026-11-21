@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB7, GB6a and GB6b merged (the last, #679, on 2026-11-19). GB8 (copying a scheme from another class, D7, §4.9) in review.
+**Status:** complete. Every phase (GB0–GB8, GB6a, GB6b) is merged; the last was GB8, #685, on 2026-11-21.
 
 | Phase | Pull request |
 |---|---|
@@ -13,7 +13,7 @@
 | GB7 — performance and final review | nassarwafik/ExamBank791381#672 |
 | GB6a — approval, lock, reopen, the student read (server) | nassarwafik/ExamBank791381#675 |
 | GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
-| GB8 — copy a scheme from another class (D7) | `feature/gb8-scheme-copy` |
+| GB8 — copy a scheme from another class (D7) | nassarwafik/ExamBank791381#685 |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -575,5 +575,5 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
       redundant once #681 was merged.
   - **The Static Web App's preview-environment limit** refused the PR previews of #666, #669, #675 and #679. A slot was free again on
     2026-11-21 (#680's preview was created). Closing stale PRs or removing old preview environments frees one.
-  - **`web-push` 4.0** (Dependabot #655, still open) is ESM-only. It fails `api/tests/student-push-6b.test.js` («Cannot spy on export
-    "sendNotification"»), so the upgrade needs its own change to the push code and its tests. The minor updates of #654 are merged.
+  - **`web-push` 4.0** (Dependabot #655) is ESM-only, and its upgrade failed the push test. It is done in its own change
+    (`feature/web-push-4`), recorded in `docs/enterprise-breakdown-push-d4.md` §7. The minor updates of #654 are merged.

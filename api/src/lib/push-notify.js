@@ -17,7 +17,18 @@
 //    handed to the sender; an entry that is not canonical is never sent to.
 //  - Configuration comes only from environment variables; the private key is never logged or sent to clients.
 
-const webpush = require("web-push");
+// web-push 4 is an ES module. It is loaded with import() the first time a notification is really sent: that works from this
+// CommonJS module on every Node version the Functions runtime may run (require() of an ES module needs Node 22.12+), and a request
+// that never sends (no configuration, no subscription, a test with its own sender) never loads it. `defaultSender` is the one
+// object the real send goes through, so a test can watch it (an ES module's own exports cannot be spied on).
+let webPushModule = null;
+const loadWebPush = () => (webPushModule ||= import("web-push"));
+const defaultSender = {
+  async sendNotification(subscription, payload, options) {
+    const webpush = await loadWebPush();
+    return webpush.sendNotification(subscription, payload, options);
+  }
+};
 const { pseudonym } = require("./observability");
 const { listStudentSubscriptions, ownerRecord, removeExpiredSubscriptions, canonicalEndpoint } = require("./push-subscriptions");
 
@@ -79,7 +90,7 @@ async function notifyStudent(container, studentId, notification, deps = {}, log 
     const stale = subs.filter((s, i) => owners[i] !== undefined && !eligible(s, i)).map(s => ({ id: s.id, claim: s.claim || "" }));
     if (!deliver.length && !stale.length) return { ...summary, status: "no-subscriptions" };
 
-    const send = deps.sendNotification || ((sub, payload, options) => webpush.sendNotification(sub, payload, options));
+    const send = deps.sendNotification || ((sub, payload, options) => defaultSender.sendNotification(sub, payload, options));
     const payload = JSON.stringify(notification);
     const options = {
       vapidDetails: { subject: config.subject, publicKey: config.publicKey, privateKey: config.privateKey },
@@ -129,5 +140,5 @@ async function notifyWithTimeout(promise, ms = NOTIFY_TIME_BUDGET_MS) {
 
 module.exports = {
   ENV_PUBLIC, ENV_PRIVATE, ENV_SUBJECT, MESSAGE_NOTIFICATION, ASSIGNMENT_NOTIFICATIONS, NOTIFY_TIME_BUDGET_MS, PUSH_REQUEST_TIMEOUT_MS,
-  pushConfig, notifyStudentOfNewMessage, notifyStudentOfAssignmentEvent, notifyWithTimeout
+  pushConfig, notifyStudentOfNewMessage, notifyStudentOfAssignmentEvent, notifyWithTimeout, defaultSender
 };

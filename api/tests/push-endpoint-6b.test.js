@@ -7,7 +7,7 @@ import { canonicalEndpoint, normalizeSubscription, endpointId, studentDocName, e
 import { notifyStudentOfNewMessage, pushConfig } from "../src/lib/push-notify.js";
 
 // Phase 6B follow-up — ONE canonical endpoint: what is validated is exactly what is stored, hashed, owned and sent.
-// The last block drives the REAL web-push@3.6.7 sender (real VAPID signing + aes128gcm encryption, disposable keys
+// The last block drives the REAL web-push@4 sender (real VAPID signing + aes128gcm encryption, disposable keys
 // generated in-process, nothing written to disk). Its HTTPS request is captured at `https.request` and answered locally,
 // so no external push service is ever contacted — and we can see exactly which host/port/path it tried to reach.
 
@@ -107,7 +107,7 @@ describe("the canonical endpoint is what is stored, hashed, owned and unsubscrib
   });
 });
 
-describe("REAL web-push@3.6.7 sender — the host it contacts is exactly the host that was validated", () => {
+describe("REAL web-push@4 sender — the host it contacts is exactly the host that was validated", () => {
   let requests;
   beforeEach(() => {
     requests = [];
@@ -133,10 +133,16 @@ describe("REAL web-push@3.6.7 sender — the host it contacts is exactly the hos
   const browserKeys = () => { const ecdh = crypto.createECDH("prime256v1"); ecdh.generateKeys(); return { p256dh: b64(ecdh.getPublicKey()), auth: b64(crypto.randomBytes(16)) }; };
   const config = keys => pushConfig({ WEB_PUSH_VAPID_PUBLIC_KEY: keys.publicKey, WEB_PUSH_VAPID_PRIVATE_KEY: keys.privateKey, WEB_PUSH_VAPID_SUBJECT: "mailto:review@example.com" });
 
-  it("the harness is real: sending a RAW parser-confusion string would reach a different host (why canonicalization matters)", async () => {
+  it("the harness is real: the sender's request is captured, and web-push 4 reads the endpoint with the WHATWG URL parser (the validator's)", async () => {
+    // web-push 3 parsed endpoints with the legacy url.parse: this raw string reached a different host (none = localhost) than the
+    // WHATWG parser reads in it — the reason only the canonical endpoint is ever sent. web-push 4 uses new URL(), the parser the
+    // validator uses, so the two now agree; the canonical endpoint is still the only one handed to the sender (block above).
     const keys = vapid();
-    await webpush.sendNotification({ endpoint: "https:fcm.googleapis.com/fcm/send/x", keys: browserKeys() }, "x", { vapidDetails: { subject: "mailto:a@b.c", ...keys } });
-    expect(requests[0].hostname).not.toBe("fcm.googleapis.com");               // legacy url.parse → no host (= localhost)
+    const raw = "https:fcm.googleapis.com/fcm/send/x";
+    await webpush.sendNotification({ endpoint: raw, keys: browserKeys() }, "x", { vapidDetails: { subject: "mailto:a@b.c", ...keys } });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].hostname).toBe(new URL(raw).hostname);
+    expect(requests[0].hostname).toBe("fcm.googleapis.com");
   });
 
   it("for every validator-accepted spelling, the real sender contacts the validated host on the default port and path", async () => {
@@ -154,7 +160,7 @@ describe("REAL web-push@3.6.7 sender — the host it contacts is exactly the hos
       const sent = requests[requests.length - 1];
       expect(sent.hostname, input).toBe(validated.hostname);
       expect(isAllowedPushHost(sent.hostname)).toBe(true);
-      expect(sent.port ?? null).toBeNull();                                   // no explicit port → 443
+      expect([undefined, ""]).toContain(sent.port);                            // no explicit port → 443 (web-push 4 passes "", which https.request reads as the default)
       expect(sent.path).toBe(validated.pathname + validated.search);
       expect(sent.method).toBe("POST");
     }

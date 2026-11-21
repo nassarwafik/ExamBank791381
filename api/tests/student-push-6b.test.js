@@ -12,10 +12,9 @@ import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 6B — student Web Push: subscription API (real hardened student session; only the stateless token check is
 // stubbed), the teacher sendDirect trigger, failure isolation and expired-subscription cleanup. The push service is
-// ALWAYS a mock (deps.sendNotification, and the web-push module itself is spied so a real send would be caught):
+// ALWAYS a mock (deps.sendNotification, and the module's default sender — the one path to web-push — is spied so a real send would be caught):
 // no network, no real VAPID keys (the "keys" below are fixed dummy bytes of the right length), no real students.
 
-const webpush = createRequire(import.meta.url)("web-push");
 
 const S1 = "11111111-1111-1111-1111-111111111111";
 const S2 = "22222222-2222-2222-2222-222222222222";
@@ -70,8 +69,11 @@ const log = () => { const warns = []; return { warns, logWarn: (e, f) => warns.p
 
 let realSend;
 beforeEach(() => {
-  // Belt and braces: the real web-push sender must never run in these tests.
-  realSend = vi.spyOn(webpush, "sendNotification").mockImplementation(async () => { throw new Error("REAL web-push send attempted in a test"); });
+  // Belt and braces: the real web-push sender must never run in these tests. web-push 4 is an ES module (its exports cannot be
+  // spied on); every real send goes through push-notify's `defaultSender`, which is watched instead.
+  // It is taken from the CommonJS copy of push-notify: the one the functions under test require (Vitest's own import of the same file
+  // is a separate module instance).
+  realSend = vi.spyOn(createRequire(import.meta.url)("../src/lib/push-notify.js").defaultSender, "sendNotification").mockImplementation(async () => { throw new Error("REAL web-push send attempted in a test"); });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 

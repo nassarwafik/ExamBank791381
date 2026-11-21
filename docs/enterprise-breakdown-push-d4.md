@@ -106,3 +106,29 @@ The reminder is the ordinary personal «assignment_reminder» event: it appears 
 ## 6. Evidence
 
 See the PR: fail-first on the baseline, the D4 tests, the mutation campaign and exact-head CI.
+
+## 7. The Web Push library moves to `web-push` 4.0 (2026-11-21)
+
+Dependabot proposed `web-push` 3.6.7 → 4.0.0 (#655). Version 4 is an **ES module**, and that pull request failed the root
+suite: `api/tests/student-push-6b.test.js` spied on the module's own `sendNotification`, which an ES module's exports do not
+allow («Cannot spy on export "sendNotification"», 22 of 22 tests).
+
+**What changed:**
+- **Loading:** `api/src/lib/push-notify.js` no longer `require`s the library at load time. Its one real send goes through an
+  exported `defaultSender`, which loads `web-push` with `import()` the first time a notification is actually sent.
+  - `require()` of an ES module needs Node 22.12+. `import()` works from this CommonJS module on every Node version the Functions
+    runtime may run.
+  - A request that never sends (no configuration, no subscription) never loads the library.
+- **The test's guard:** the «no real send in a test» guard now watches `defaultSender.sendNotification`, on the CommonJS copy of
+  `push-notify` that the functions load, and is as strong as before.
+- **The real-sender test** (`push-endpoint-6b`) records what version 4 does:
+  - **URL parsing:** endpoints are read with the WHATWG `URL` parser, the validator's own, instead of the legacy `url.parse`. The
+    parser-confusion case that made canonicalization necessary under version 3 no longer reaches another host. Only the canonical
+    endpoint is still ever sent.
+  - **The port:** with no explicit port, version 4 passes `port: ""`, which `https.request` reads as the default port, 443.
+  - **Kept as it was:** «the host contacted is exactly the validated host, on the default port and path».
+
+**Evidence.**
+- **Fail-first:** with 4.0.0 installed and the old test, 22 / 22 fail with that error.
+- **After the change:** the four push suites pass, 87 / 87, including the end-to-end send through the real default sender.
+- **Mutants:** the real send bypassing `defaultSender`, and the default sender not sending, are both **KILLED**.
