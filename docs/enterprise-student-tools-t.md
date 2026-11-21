@@ -128,6 +128,7 @@ converter answers conversion questions. The catalog records this for each tool (
 | T9 | images in the formula sheet, served through the protected image path (§16) | merged (#677) |
 | T10 | periodic table extended to Z 1 – 118 (§17) | this PR (#676) |
 | T11 | the course books' tool set chosen by the teacher instead of fixed in code (§18) | merged (#678) |
+| T13 | the owner's binary-conversion aids: place-value boxes and the hex → binary list (§20) | this PR |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
@@ -708,3 +709,38 @@ An archived class shows the tools without the edit button.
   - the dock ignoring it, or falling back when tools are off;
   - the dialog offering the sheet;
   - the reader not passing it.
+
+## 20. T13 — conversion boxes and the hex → binary list
+
+The owner sent a short document with two tools for number-base lessons. Both join version 1 additively, after every earlier id, so
+every earlier spec keeps its validity, its shape and its meaning.
+
+| Tool | Contract | What the student gets |
+|---|---|---|
+| «صناديق التحويل» | `placeValueBoxes`, `width: 4 \| 8 \| 16` (default 8) | the place values (8 → 128 … 1; 16 → two bytes, 32768 … 1) above empty boxes. The student writes 0 or 1 in each box and works the value out alone: **nothing is added, converted or checked, and no total is shown** («بدون حسابات»). A typed digit moves to the next box, Backspace on an empty box goes back, «مسح الصناديق» empties them. Any other character is ignored |
+| «قائمة التحويل من السادس عشر إلى الثنائي» | `hexBinaryTable`, `showDecimal: boolean` (default true) | the list 0 – F: the hex digit, its 4-bit binary form and, as the teacher chose, its decimal value, laid out as in the document (عشري · ثنائي · Hex) |
+
+- **Engine.** `src/studentTools/placeValueBoxes.ts` holds the place values, the 0 / 1 keystroke filter, the rows of eight and the
+  list 0 – F. It has no arithmetic beyond the powers of two shown as headers.
+- **State.** What the student typed stays while the tool is closed (the dock keeps a tool mounted for the attempt) and is discarded
+  with the page; nothing is stored or sent. T8's usage record counts their openings like any other tool.
+- **Answer-risk notes.** The hex list names a question about hexadecimal digits (السادس عشر، hex، `0x2A`، `(3F)16`): it answers
+  single-digit conversions outright. The boxes never name a question: they compute nothing.
+- **Builder options.** The number of boxes (4 · 8 · 16) and «إظهار العمود العشري».
+- **Course books.** Both may be chosen for a book (T11): neither carries content.
+
+### Evidence for T13
+
+- `src/studentTools/binaryTools.t13.test.tsx` (14 tests): the contract (defaults, the allowed widths and nothing else, closed keys,
+  the boolean, an earlier spec unchanged), the API's generated copy deciding the same, the helpers, the catalog names, the risk
+  terms (hex named, the boxes never), the boxes end to end in the real dock (the document's example `01111011`, no total, focus
+  moving, refusals, Backspace, clearing, two bytes, state kept on reopening), the list with and without the decimal column, and the
+  builder options.
+- This is a new feature, not a defect fix: there is no fail-first run.
+- **Mutation M120–M132: 13 / 13 KILLED.** The planted defects:
+  - the contract: any box count accepted, the boolean unchecked, the closed key set widened, the API copy left stale;
+  - a box keeping any digit, a total shown, focus not moving, Backspace not going back;
+  - the hex binary not padded, the decimal column ignoring the teacher;
+  - the risk notes inverted for either tool;
+  - the dock not rendering the boxes.
+- **Visual gate** (light, 237 captures × 3 viewports): no change to declare; the new rows are below the captured part of the panel.
