@@ -30,6 +30,16 @@ describe("UX-R19a — determinism", () => {
     expect(harness).toMatch(/const NOW = "2026-10-20T08:30:00\.000Z";/);
   });
 
+  it("UX-R19b-fix3 — the Exam Studio's stepper is captured on its own layer, on every page of every run (base and head alike)", () => {
+    expect(harness).toContain('const CAPTURE_CSS = ".st-studio .st-steps { will-change: transform; }";');
+    expect(harness).toMatch(/await ctx\.addInitScript\(css => \{[\s\S]{0,400}\}, CAPTURE_CSS\);/);
+    // applied right after the frozen clock, in the one context every page and scene is captured in
+    const clock = harness.indexOf("await ctx.clock.setFixedTime(new Date(NOW));");
+    expect(clock).toBeGreaterThan(0);
+    expect(harness.indexOf("}, CAPTURE_CSS);", clock)).toBeGreaterThan(clock);
+    expect(harness.indexOf("}, CAPTURE_CSS);", clock) - clock).toBeLessThan(600);
+  });
+
   it("no scripted scene picks a row by position (only the exam navigator's question index)", () => {
     const picks = [...harness.matchAll(/(\S+)\.nth\(/g)].map(m => m[1]);
     expect(picks.length).toBeGreaterThan(0);

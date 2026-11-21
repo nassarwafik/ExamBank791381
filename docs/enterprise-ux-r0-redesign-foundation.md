@@ -4714,3 +4714,62 @@ On the head's tree:
   **3 / 3** alone on this tree. Not patched here.
 - `npm run lint`: 0 errors. `git diff --check`: clean. `npm run build` is unaffected and runs in CI.
 - **Not run:** the Runner suites (nothing under `runner/` changed).
+
+# Phase UX-R19b-fix3 — The Exam Studio's stepper draws the same pixels in every session
+
+Branched from `main` `e46d2fd4` (#679) as `hotfix/visual-studio-step-noise`. The third harness hotfix; the capture only.
+
+## R19b-fix3.1 What went wrong, measured
+
+- **The failures:** the gate failed on `desktop/studio-review` (dark) with no change to the Exam Studio on #669 and #679. Each time
+  it reported 2 pixels moved by more than 12 levels. A re-run passed.
+- **Where:** the changed pixels are only the top of the arc of two step circles: the current step's and the next one's (x 619–636 and
+  720–737, y 23–27 at 1440 px).
+- **Reproduced locally on one production build of `main`:** `studio-review` and `studio-publish` (desktop, dark), captured 6, 10 and
+  12 times. Each page comes out in **exactly two forms**, about half the runs each, 29 levels apart on those pixels.
+- **What it is not:**
+  - **the layout:** it is identical in every run (the circles at y 19.5 and x 618.219 / 718.75; the top bar's 1 px border centres the
+    42 px stepper at y 8.5);
+  - **hover:** parking the mouse after the click changes nothing;
+  - **transitions:** turning off every transition and animation changes nothing;
+  - **the raster path:** `--num-raster-threads=1`, `--disable-gpu`, and turning off GPU rasterization and compositing each give the
+    same two forms;
+  - **the border width:** a 1 px border gives the same two forms (1.5 px is already drawn as 1 px);
+  - **the digits:** removing them leaves the circles bistable;
+  - **the position alone:** moving the stepper to a whole-pixel y is still bistable.
+- **What cures it:** with the stepper on a compositing layer of its own (`will-change: transform`), 10 of 10 captures of both pages
+  are byte-identical.
+- **Reading:** Chromium draws a rounded shape at a fractional offset inside a large shared paint layer in one of two ways from one
+  session to the next. A layer of its own is drawn from its own origin, the same way every time.
+
+## R19b-fix3.2 The fix
+
+- **The rule:** the harness adds one capture-only stylesheet to every page of every run, `CAPTURE_CSS =
+  ".st-studio .st-steps { will-change: transform; }"`. It is injected with `ctx.addInitScript` right after the frozen clock.
+- **What it does:** it only gives the stepper its own layer. It changes no colour, size or position.
+- **Why the gate still sees changes:** the gate captures the base and the head with the head's harness, so both sides get the rule, and a
+  real change to the stepper still shows.
+- **No product change:** the visual difference is two edge pixels nobody can see.
+
+## R19b-fix3.3 Edit set
+
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** `CAPTURE_CSS` and its injection.
+- **`scripts/ux-r19a-scenes.test.mjs`:** the determinism guard (the rule, and its injection right after the frozen clock).
+- **This record**, and the follow-up line of `docs/enterprise-class-gradebook-gb.md` §8.
+
+## R19b-fix3.4 Evidence
+
+- **Before (fail-first, the real harness on `main`'s build):**
+  - `studio-review`: 5 + 1 of 6 runs in two forms, and 5 + 5 of 10 in another set;
+  - `studio-publish`: 5 + 1 of 6, and 6 + 4 of 10.
+- **After (the real harness with the fix, the same build):** `studio-review` 10 / 10 identical, `studio-publish` 10 / 10 identical.
+- **Every Exam Studio page and scene:** `studio-home`, `studio-setup`, `studio-content`, `studio-review`, `studio-publish` and five
+  `state-*` scenes, at 3 viewports × 2 themes × 3 runs.
+  - **No difference above the gate's threshold:** every capture is clean (30 / 30 per run).
+  - **Sub-threshold differences:** four other captures still differ between runs by at most 12 levels: `studio-home` desktop
+    (light and dark) and tablet (dark), and `studio-setup` and `state-ai-composer` on the phone (dark). The gate does not count
+    these as changes.
+- **Guard:** `scripts/ux-r19a-scenes.test.mjs` passes. Mutants: the injection removed, the rule's text changed: both **KILLED**, the
+  file restored byte-for-byte (SHA-256) each time.
+- **The gate, same build on both sides** (desktop, dark: the failing job): 79 / 79 compared, 0 changed, **GATE PASS**.
+- **The proof against the flake is CI:** this hotfix's own six visual jobs, then every later pull request.

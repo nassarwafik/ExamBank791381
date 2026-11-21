@@ -54,6 +54,13 @@ fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive:
 
 // ---- fixtures (the shapes of the Vitest fixtures of the same components; demo names only) ----
 const NOW = "2026-10-20T08:30:00.000Z";
+// UX-R19b-fix3 — capture-only CSS that makes a page draw the same pixels in every session. The Exam Studio's step circles sit on a
+// fractional position inside the top bar's shared paint layer (y 19.5, x 618.219 at 1440 px); Chromium then draws the top of their
+// arc in one of two ways from one session to the next (measured: 2 forms, about half the runs each, with the same layout, the mouse
+// parked, transitions off, one raster thread, GPU off — and 10 of 10 identical once the stepper has a layer of its own). It made the
+// gate fail on studio-review / studio-publish with no change (#669, #679). The rule only gives the stepper its own compositing layer;
+// it is applied to the base and the head alike (one harness), so a change to the stepper still shows.
+const CAPTURE_CSS = ".st-studio .st-steps { will-change: transform; }";
 const CLASSES = [
   { classId: "c1", name: "العاشر – أ", grade: "10", schoolYear: "2026", active: true, status: "active", studentCount: 6, createdAt: NOW },
   { classId: "c2", name: "الحادي عشر – ب", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 4, createdAt: NOW },
@@ -738,6 +745,10 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
     const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
     if (pg.role) await ctx.addInitScript(r => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "teacher" ? "أ. محمد" : "أحمد الحسن"); }, pg.role);
     await ctx.clock.setFixedTime(new Date(NOW));                 // UX-R19a — relative times ("منذ 3 ساعات") never move between runs
+    await ctx.addInitScript(css => {                               // UX-R19b-fix3 — see CAPTURE_CSS
+      const add = () => { const st = document.createElement("style"); st.dataset.harness = "capture"; st.textContent = css; document.head.appendChild(st); };
+      if (document.head) add(); else document.addEventListener("DOMContentLoaded", add, { once: true });
+    }, CAPTURE_CSS);
     if (theme === "dark") await ctx.addInitScript(() => {
       try { localStorage.setItem("examBankTheme", "dark"); } catch {}
       const set = () => document.documentElement.setAttribute("data-theme", "dark");     // <html> may not exist yet when this runs

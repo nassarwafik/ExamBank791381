@@ -497,7 +497,8 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
 **Postponed or open, for the owner:**
 - **Scheme templates (D7):** copying one class's scheme to another class.
 - **Repository follow-ups met on the way, outside this feature:**
-  - **The Exam Studio's step circles** render a few edge pixels two ways from one capture to the next, on `main` itself; this once
-    failed the visual gate on #669. A harness-only fix (no transition while capturing) would remove it.
+  - **The Exam Studio's step circles** rendered a few edge pixels two ways from one capture to the next, on `main` itself. This
+    failed the visual gate on #669 and #679. The cause was not a transition: Chromium drew the circles at a fractional offset in a
+    shared layer. Fixed in the harness by UX-R19b-fix3 (`docs/enterprise-ux-r0-redesign-foundation.md`).
   - **The Static Web App's preview-environment limit** refused the PR previews of #666 and #669. Closing stale PRs or removing old
     preview environments frees a slot.
