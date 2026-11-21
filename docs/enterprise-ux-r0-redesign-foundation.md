@@ -4714,3 +4714,75 @@ On the head's tree:
   **3 / 3** alone on this tree. Not patched here.
 - `npm run lint`: 0 errors. `git diff --check`: clean. `npm run build` is unaffected and runs in CI.
 - **Not run:** the Runner suites (nothing under `runner/` changed).
+
+# Phase UX-R19b-fix3 — The capture browser paints deterministically
+
+Branched from `main` `e46d2fd4` (#679) as `hotfix/visual-studio-steps-settle`. A governance hotfix: the capture harness only.
+
+## R19b-fix3.1 What went wrong, measured
+
+Between #667 and #678 the gate failed again and again on pages the pull requests never touched. Each time it was one undeclared
+change of 2 or 4 pixels:
+
+| Pull request | Viewport | Page | Pixels |
+|---|---|---|---|
+| #667 | desktop | `studio-review` | 2 |
+| #678 | desktop | `studio-publish` | 4 |
+| #677 | desktop | `studio-review` | 2 |
+| #678 | desktop, dark | `studio-review` | 2 |
+| #676 | desktop, dark | `studio-review` | 2 |
+
+A local gate of `main` against a pull request head on those pages was clean. So the change was not in the pages: it came from the
+capture.
+
+**Reproduced on one build.** The same `main` build was captured eight times, desktop and dark, each in a new browser session:
+
+| Page | Result |
+|---|---|
+| `studio-review` | one capture differed from the first by 2 pixels |
+| `studio-publish` | the first capture differed from the other seven by 4 pixels |
+
+Every differing pixel sits on row 23, on the left and right edges of the round step badges in the studio's top bar (the
+«المراجعة» check, the current step's number). The text next to them never changes.
+
+**Cause.** The layout is identical in every session. The current step's badge is at x 718.75, y 19.5, 20 × 20, in all five probed
+sessions, with every font loaded and the same save status. What changes is how Chromium rasterizes a circle drawn at a fractional
+position, from one session to the next.
+
+The gate captures the base and the head in two separate sessions. So that rasterization difference showed up as an undeclared
+change on unrelated pull requests. The settled capture of R19b-fix (two identical shots in a row) cannot see it, because inside
+one session the paint is stable.
+
+## R19b-fix3.2 The fix
+
+`scripts/capture-visual-baseline-ux-r.mjs` launches Chromium with deterministic rasterization (`DETERMINISTIC_RASTER_ARGS`):
+
+| Flag | What it does |
+|---|---|
+| `--disable-partial-raster` | rasterizes whole tiles, never a partial update |
+| `--num-raster-threads=1` | one raster thread, so no ordering differences |
+| `--disable-skia-runtime-opts` | the plain Skia paths, not the CPU-tuned ones |
+| `--force-color-profile=srgb` | a fixed colour profile |
+
+The same harness captures both builds, so the gate still compares like with like, and a real change is still a change.
+
+## R19b-fix3.3 Edit set
+
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the flags, with the measurement that motivates them.
+- **`scripts/visual-capture-determinism.test.mjs`:** a pin. The flag list is declared, and every `chromium.launch` passes it.
+- **This record.**
+
+## R19b-fix3.4 Evidence
+
+**Fail-first.**
+- **The capture.** On `main`'s harness, the eight-capture repeat above differs, on both pages. With the fix, twelve captures each of
+  `studio-review` and `studio-publish` are identical to the first: **0 differing captures**.
+- **The pin test.** On `main`'s harness, both tests fail (`expected null not to be null`); with the fix they pass. The harness file
+  was swapped and restored byte-for-byte (sha256 checked).
+
+**Ruled out.** Moving the pointer off the page, blurring the focus and waiting for every animation before the shot (a first
+attempt) fixed `studio-publish` but not `studio-review`: one capture of eight still differed. The flags alone fix both, so the
+pointer and focus step was dropped.
+
+**A gate of `main` against itself, with the flags.** `BASE_DIST` and `HEAD_DIST` are the same build, on all three viewports in
+both themes; the result is in the pull request.
