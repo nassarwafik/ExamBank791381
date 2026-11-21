@@ -6,7 +6,7 @@
 // classic workspace's «المزيد» menu reaches the same panel. Everything runs through the REAL builder + history hook.
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { useEffect, useRef } from "react";
-import { render, cleanup, fireEvent, screen, act, within } from "@testing-library/react";
+import { render, cleanup, fireEvent, screen, act, within, waitFor } from "@testing-library/react";
 import StructuredExamBuilder from "../StructuredExamBuilder";
 import { useStructuredExamHistory } from "../useStructuredExamHistory";
 import { examSaveState } from "../examHistory";
@@ -37,10 +37,19 @@ async function studio(start: StructuredExam) {
   render(<Host start={start} layout="studio" />);
   await screen.findByRole("tree", { name: "الأقسام والأسئلة" });
 }
+// The setup, review and publish steps are lazy chunks: wait for the step's own heading, never for a fixed delay.
+const STEP_HEADING = { setup: "إعداد الامتحان", review: "مراجعة الامتحان", publish: "النشر" } as const;
 const goTo = async (step: "setup" | "review" | "publish") => {
   await act(async () => { fireEvent.click(document.querySelector('.st-topbar [data-step="' + step + '"]')!); });
+  await screen.findByRole("heading", { level: 2, name: STEP_HEADING[step] });
   await settle();
 };
+const panelOf = (step: "review" | "publish") => waitFor(() => {
+  const el = document.querySelector('[data-' + step + '-panel="student-tools"]') as HTMLElement | null;
+  if (!el) throw new Error("no «أدوات الطالب» panel in " + step);
+  return el;
+});
+const focusedHeading = () => waitFor(() => { expect(heading()).not.toBeNull(); expect(document.activeElement).toBe(heading()); });
 
 describe("T12 the builder summary line", () => {
   it("no tools · tools by their start-screen names · section limits · an invalid spec", () => {
@@ -61,9 +70,7 @@ describe("T12 the Studio", () => {
     expect(item.textContent).toContain("2 مفعّلة");
     await act(async () => { fireEvent.click(item); });
     await screen.findByRole("heading", { name: "إعداد الامتحان" });
-    await settle();
-    expect(heading()).not.toBeNull();
-    expect(document.activeElement).toBe(heading());
+    await focusedHeading();
   });
 
   it("«الإعداد» shows the panel as its own region, before the cover, no longer inside it", async () => {
@@ -80,8 +87,7 @@ describe("T12 the Studio", () => {
     await studio(exam());
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "أدوات الامتحان" })); });
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^أدوات الطالب/ })); });
-    await settle();
-    expect(document.activeElement).toBe(heading());
+    await focusedHeading();
     await goTo("review");
     await goTo("setup");
     expect(heading()).not.toBeNull();
@@ -92,19 +98,18 @@ describe("T12 the Studio", () => {
     it("«" + (step === "review" ? "المراجعة" : "النشر") + "» says what the student will find; «تعديل أدوات الطالب» goes back to the panel", async () => {
       await studio(exam(TWO_TOOLS));
       await goTo(step);
-      const panel = document.querySelector('[data-' + step + '-panel="student-tools"]') as HTMLElement;
+      const panel = await panelOf(step);
       expect(panel.textContent).toContain("يجد الطالب: آلة حاسبة بسيطة، الجدول الدوري.");
       await act(async () => { fireEvent.click(within(panel).getByRole("button", { name: "تعديل أدوات الطالب" })); });
       await screen.findByRole("heading", { name: "إعداد الامتحان" });
-      await settle();
-      expect(document.activeElement).toBe(heading());
+      await focusedHeading();
     });
   }
 
   it("an exam without tools says so in review (nothing is invented)", async () => {
     await studio(exam());
     await goTo("review");
-    expect((document.querySelector('[data-review-panel="student-tools"]') as HTMLElement).textContent).toContain("لا توجد أدوات للطالب في هذا الامتحان.");
+    expect((await panelOf("review")).textContent).toContain("لا توجد أدوات للطالب في هذا الامتحان.");
   });
 });
 
@@ -114,7 +119,6 @@ describe("T12 the classic workspace", () => {
     await screen.findByTestId("student-tools-editor");
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: MORE_MENU_LABEL })); });
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: /^أدوات الطالب/ })); });
-    await settle();
-    expect(document.activeElement).toBe(heading());
+    await focusedHeading();
   });
 });
