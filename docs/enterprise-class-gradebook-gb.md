@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB5, GB7 and GB6a merged; GB6b (the pages, §4.8) in review — the last phase of this record.
+**Status:** complete. Every phase (GB0–GB7, GB6a, GB6b) is merged; the last was GB6b, #679, on 2026-11-19.
 
 | Phase | Pull request |
 |---|---|
@@ -12,7 +12,7 @@
 | GB5 — manual marks and decisions | nassarwafik/ExamBank791381#671 |
 | GB7 — performance and final review | nassarwafik/ExamBank791381#672 |
 | GB6a — approval, lock, reopen, the student read (server) | nassarwafik/ExamBank791381#675 |
-| GB6b — approval buttons for the teacher, «علاماتي» for the student | `feature/gb6b-gradebook-approval-ui` |
+| GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -454,9 +454,21 @@ survived the first run and was killed after the test recorded a non-roster submi
 | A stale write never overwrites | GB2 G5, G6; GB5 U4, U5 |
 | Project data only with `projects.tracker.view` | GB2 G7, G8, G13; GB5 U8 |
 | Reads limited to the scheme's assignments and the roster | GB2 G11; GB7 P1, P2 |
+| GB6: a part is approved only when complete, never with a result awaiting review or a missing cell | GB6a G6-1, G6-2, G6-20; GB6b U6-7 |
+| GB6: a student never sees a mark withheld by its results release; a corrupt approvals document is a 503 | GB6a G6-3, G6-9, G6-11, G6-22, G6-23 |
+| GB6: a student sees only their own frozen approved row, never a live value or another row | GB6a G6-10; GB6b U6-1, U6-8 |
+| GB6: an approved part is locked; reopening is explicit, with a reason | GB6a G6-5–G6-8, G6-17; GB6b U6-2, U6-5, U6-6, U6-11 |
+| GB6: a change after the approval is reported, never hidden | GB6a G6-13, G6-14, G6-16, G6-24; GB6b U6-9, U6-10 |
 
 **Mutation total:** 18 (GB1) + 16 (GB2) + 8 (GB5) + 3 (GB7) = **45 planted defects, 45 KILLED**. Four survived a first run (GB2 G7, GB5 U3,
 GB7 P2, and none in GB1). Each was killed by a stronger test, and none was declared equivalent.
+
+**With GB6:** 45 + 26 (GB6a) + 12 (GB6b) = **83 planted defects**.
+- **81 KILLED.**
+- **G6-12, equivalent:** it survived because the same columns and cells always give the same mark, so the comparison it removed was
+  redundant. That comparison was deleted from the code.
+- **G6-18, a double guard:** it removes one of two idempotency guards, and the other guard still answers the same, so it survives.
+  Removing both (G6-18+) is killed.
 
 **GB6a mutation proof** (`api/src/lib/gradebook/approval.js`, `class-gradebook.js`, `student-gradebook.js`, the capability registry).
 - **Planted:** 26 defects (G6-1 … G6-25, plus G6-18+). Among them: a pending or missing cell counted as final, the release check
@@ -497,7 +509,13 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
 **Postponed or open, for the owner:**
 - **Scheme templates (D7):** copying one class's scheme to another class.
 - **Repository follow-ups met on the way, outside this feature:**
-  - **The Exam Studio's step circles** render a few edge pixels two ways from one capture to the next, on `main` itself; this once
-    failed the visual gate on #669. A harness-only fix (no transition while capturing) would remove it.
-  - **The Static Web App's preview-environment limit** refused the PR previews of #666 and #669. Closing stale PRs or removing old
-    preview environments frees a slot.
+  - **The Exam Studio's step circles — fixed.** They rendered a few edge pixels two ways from one capture to the next, on `main`
+    itself, and failed the visual gate with no change on #669, #679 and others. The cause was Chromium drawing a round badge at a
+    fractional position differently from one session to the next. Fixed in the capture harness by #681 (UX-R19b-fix3:
+    deterministic-raster flags), which was measured stable.
+    - **#680 closed unmerged:** it was a parallel fix for the same defect, giving the stepper its own compositing layer, and became
+      redundant once #681 was merged.
+  - **The Static Web App's preview-environment limit** refused the PR previews of #666, #669, #675 and #679. A slot was free again on
+    2026-11-21 (#680's preview was created). Closing stale PRs or removing old preview environments frees one.
+  - **`web-push` 4.0** (Dependabot #655, still open) is ESM-only. It fails `api/tests/student-push-6b.test.js` («Cannot spy on export
+    "sendNotification"»), so the upgrade needs its own change to the push code and its tests. The minor updates of #654 are merged.

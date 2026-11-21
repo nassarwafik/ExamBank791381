@@ -1,7 +1,8 @@
-# Phase T — Student Exam Tools (design record; T0 – T7)
+# Phase T — Student Exam Tools (design record; T0 – T13)
 
-> STATUS: T0 – T11 are complete. T0 – T4 merged in #659, T5 in #665, T6 in #667, T7 in #670, T8 in #674, T9 in #677 and T11 in
-> #678, all deployed; T10 is #676. An exam without `studentTools` looks, is delivered and is graded exactly as before. Every tool in
+> STATUS: T0 – T12 are complete. T0 – T4 merged in #659, T5 in #665, T6 in #667, T7 in #670, T8 in #674, T9 in #677, T10 in #676,
+> T11 in #678 and T12 (the builder panel made reachable from every step, §19) in #682, all deployed. T13 (the conversion boxes and the
+> hex → binary list, §20) is #684. An exam without `studentTools` looks, is delivered and is graded exactly as before. Every tool in
 > the contract has a student UI.
 
 ## 1. Goal
@@ -126,9 +127,10 @@ converter answers conversion questions. The catalog records this for each tool (
 | T7 | tools in the course books (learning materials), a fixed set per course | merged (#670) |
 | T8 | tool usage record: which tool a student opened during an attempt, shown to the teacher (§15) | merged (#674) |
 | T9 | images in the formula sheet, served through the protected image path (§16) | merged (#677) |
-| T10 | periodic table extended to Z 1 – 118 (§17) | this PR (#676) |
+| T10 | periodic table extended to Z 1 – 118 (§17) | merged (#676) |
 | T11 | the course books' tool set chosen by the teacher instead of fixed in code (§18) | merged (#678) |
-| T13 | the owner's binary-conversion aids: place-value boxes and the hex → binary list (§20) | this PR |
+| T12 | the «أدوات الطالب» panel reachable from every builder step: a menu item, its own setup panel, a summary in review and publish (§19) | merged (#682) |
+| T13 | the owner's binary-conversion aids: place-value boxes and the hex → binary list (§20) | this PR (#684) |
 
 Each phase is one branch and one PR and follows AGENTS.md §3.
 
@@ -149,7 +151,8 @@ Each phase is one branch and one PR and follows AGENTS.md §3.
 
 ### Builder: «أدوات الطالب»
 
-`src/studentTools/StudentToolsEditor.tsx` appears under the cover panel in both the Studio setup step and the classic workspace.
+`src/studentTools/StudentToolsEditor.tsx` appears in the Studio setup step and in the classic workspace above the questions. Until
+T12 it sat under the cover panel of the setup step only; §19 records why that was not enough and where it is now.
 
 - One row per contract tool: a switch, the description, and, once the tool is on, its answer-risk note (`answerRisk`) and its options
   (calculator: scientific / basic, degrees / radians; IPv4: binary view, subnet split).
@@ -709,6 +712,43 @@ An archived class shows the tools without the edit button.
   - the dock ignoring it, or falling back when tools are off;
   - the dialog offering the sheet;
   - the reader not passing it.
+
+## 19. T12 — the panel can be found
+
+### The defect
+
+The owner opened the builder to set the tools of an exam and did not find them. The Studio opens on «المحتوى», and the panel was
+placed in «الإعداد», under the cover editor, with no entry in the «أدوات» menu and no mention in «المراجعة» or «النشر». A teacher who
+does not open the setup step and scroll past the cover never meets it. Nothing was wrong with the tools themselves.
+
+### What changes (presentation only)
+
+- **The «أدوات» menu** (the Studio's and the classic «المزيد») has «أدوات الطالب», right after «العرض والتصميم». Its badge says how
+  many tools are on («2 مفعّلة») or that the stored value is invalid («غير صالحة»). In the Studio it opens «الإعداد»; in both layouts
+  it scrolls the panel to its heading and moves focus there.
+- **The focus request is spent once.** The builder holds one pending request; the panel clears it after focusing its heading, so
+  returning to «الإعداد» later does not pull focus again.
+- **«الإعداد»** shows the panel as its own titled region («أدوات الطالب أثناء الامتحان»), before the cover, no longer inside it.
+- **«المراجعة» and «النشر»** each have a «أدوات الطالب» panel: one line naming what the student will find (the start screen's names,
+  `studentToolsSummary`), a note when some tools are closed in some sections, and «تعديل أدوات الطالب», which goes back to the panel.
+  The line comes from `src/studentTools/studentToolsBuilderSummary.ts`, which reads the same `validateStudentTools` result as the
+  panel: no tools, the tools, or an invalid value. It decides nothing.
+
+The contract, the server, the quality gate and the student side are unchanged.
+
+### Evidence for T12
+
+- `src/studentTools/toolsDiscoverability.t12.test.tsx` (the real builder and history hook, 8 tests): the summary line; the Studio
+  opening on «المحتوى» without the panel, the menu item opening «الإعداد» and focusing the heading; the panel as its own region before
+  the cover; the request spent once; review and publish naming the tools and going back to the panel; an exam without tools; the
+  classic «المزيد» item.
+- **Fail-first.** On `main` at `88264fed`, with only the new summary helper copied so the file loads, 7 of the 8 tests fail (no menu
+  item, no setup region, no summary panels); the helper's own test passes, as a new file must.
+- **Mutation M113–M119: 7 / 7 KILLED.** The planted defects: the menu item not switching to setup; the panel never clearing the
+  request; the panel ignoring it; the panel back inside the cover; the section note dropped; an invalid value summarised as no tools;
+  the publish summary missing.
+- **Visual gate.** The changed captures are declared in `docs/ux-r/visual-changes.json` (studio setup, review and publish, and the
+  classic builder).
 
 ## 20. T13 — conversion boxes and the hex → binary list
 

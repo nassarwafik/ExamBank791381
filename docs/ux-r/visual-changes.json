@@ -1900,6 +1900,26 @@
       "page": "state-classic-builder",
       "viewport": "all",
       "reason": "Classic builder — the same Phase T10 wording of the «الجدول الدوري» description in the «أدوات الطالب» panel (1–118 or 1–36); the tool is off for the captured exam."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "all",
+      "reason": "Phase T12 (the owner could not find the student tools): «أدوات الطالب» becomes its own titled panel of the setup step, placed before the cover panel instead of folded under it, and the step's lead sentence names it. The cover panel moves down below it."
+    },
+    {
+      "page": "studio-review",
+      "viewport": "all",
+      "reason": "Phase T12: a «أدوات الطالب» panel joins the review step — one line naming what the student will find (no tools for the captured exam) and «تعديل أدوات الطالب»; the page is one panel taller."
+    },
+    {
+      "page": "studio-publish",
+      "viewport": "all",
+      "reason": "Phase T12: the same «أدوات الطالب» panel in the publish step's side column, above «الإصدارات والمراجعة»; the column is one panel taller."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Phase T12: the scene switches to the classic layout through the Studio's «أدوات» menu, which now has «أدوات الطالب» above «العودة إلى الواجهة الكلاسيكية»; the click lands one row lower, so the pointer rests elsewhere and the hover underline of the issue link «السؤال 1 في القسم 1» is drawn differently (about 80 pixels). The page itself does not change."
     }
   ]
 }

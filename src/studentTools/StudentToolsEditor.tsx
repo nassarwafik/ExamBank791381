@@ -1,4 +1,4 @@
-import { Suspense, lazy, useId, useState } from "react";
+import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
   type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX, FORMULA_SHEET_MAX_IMAGES,
@@ -28,6 +28,10 @@ type Props = {
   disabled?: boolean;
   /** Phase T11 — tools this place cannot offer (a course book takes no formula sheet); they are not listed. */
   excludeTools?: readonly StudentToolId[];
+  /** Phase T12 — the builder asks the panel to come into view (its «أدوات الطالب» menu item / summary buttons): the panel scrolls to
+   *  its heading, moves focus there, then reports back so a later remount does not steal focus again. */
+  focusRequest?: boolean;
+  onFocusHandled?: () => void;
 };
 
 /** Emits the canonical spec; returns the first refusal message (nothing is emitted then), or "" on success. */
@@ -45,8 +49,18 @@ function emit(tools: StudentToolConfigV1[], overrides: Record<string, StudentToo
   return v.issues[0]?.message ?? "تعذّر حفظ إعدادات الأدوات.";
 }
 
-export default function StudentToolsEditor({ value, sections, onChange, disabled, excludeTools = [] }: Props) {
+export default function StudentToolsEditor({ value, sections, onChange, disabled, excludeTools = [], focusRequest, onFocusHandled }: Props) {
   const baseId = useId();
+  const headingRef = useRef<HTMLElement>(null);
+  const handled = useRef(onFocusHandled);
+  handled.current = onFocusHandled;
+  useEffect(() => {
+    if (!focusRequest) return;
+    const heading = headingRef.current;
+    heading?.scrollIntoView?.({ block: "start" });
+    heading?.focus({ preventScroll: true });
+    handled.current?.();
+  }, [focusRequest]);
   const present = value !== undefined && value !== null;
   const parsed = present ? validateStudentTools(value) : null;
   const invalid = !!parsed && !parsed.ok;
@@ -76,8 +90,8 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
   };
 
   return (
-    <div className="sb-cover-panel sb-student-tools" dir="rtl" data-testid="student-tools-editor">
-      <div className="sb-row-between"><strong>🧰 أدوات الطالب</strong></div>
+    <div className="sb-cover-panel sb-student-tools" dir="rtl" data-testid="student-tools-editor" role="group" aria-labelledby={baseId + "-heading"}>
+      <div className="sb-row-between"><strong ref={headingRef} tabIndex={-1} id={baseId + "-heading"} data-student-tools-heading="">🧰 أدوات الطالب</strong></div>
       <p className="sb-hint">أدوات يفتحها الطالب متى شاء أثناء الامتحان. لا تظهر أي أداة إلا إذا فعّلتها هنا، وتُثبَّت مع الواجب عند إسناده.</p>
 
       {invalid && (
