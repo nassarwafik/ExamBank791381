@@ -533,3 +533,7 @@
 .st-home .st-exam-card { border-radius: var(--eb-r); border-block-start: 1px solid var(--eb-line); }
 .st-home .st-exam-actions .st-btn.is-primary, .st-home .st-exam-actions .st-btn.is-primary:hover:not(:disabled) { background: var(--eb-surface); border-color: var(--eb-line-2); color: var(--eb-text-heading); }
 .st-home .st-filter[aria-pressed="true"] { background: var(--eb-chrome-active); border-color: transparent; color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
+
+/* Phase T12 — «أدوات الطالب» as its own setup panel: the editor fills it edge to edge, like the cover panel. */
+.st-studio .st-setup-student-tools { padding: 0; overflow: hidden; }
+.st-studio .st-setup-student-tools > * { margin: 0; border: 0; border-radius: 0; }

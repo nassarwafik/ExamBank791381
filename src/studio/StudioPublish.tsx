@@ -24,6 +24,8 @@ type Props = {
   onAssign?: () => void;
   tools: readonly ToolbarItem[];
   onStep: (step: StudioStepKey) => void;
+  /** Phase T12 — what the student will find in the exam's tool bar, and the way back to its panel (the setup step). */
+  studentTools?: { text: string; onEdit: () => void };
 };
 
 const STAGE_TEXT: Record<PublishStageKey, { title: string; done: string; todo: string }> = {
@@ -33,7 +35,7 @@ const STAGE_TEXT: Record<PublishStageKey, { title: string; done: string; todo: s
   assigned: { title: "إسناد للطلاب", done: "", todo: "أنشئ واجبًا من هذا الامتحان في مساحة الواجبات." }
 };
 
-export default function StudioPublish({ exam, decision, saveState, saving, mediaPending, mediaWait, onSaveDraft, onFinalize, onAssign, tools, onStep }: Props) {
+export default function StudioPublish({ exam, decision, saveState, saving, mediaPending, mediaWait, onSaveDraft, onFinalize, onAssign, tools, onStep, studentTools }: Props) {
   const timeline = publishTimeline({ saveState: saving ? "saving" : saveState, canFinalize: decision.canFinalize, final: exam.status === "final" });
   const governance = tools.find(t => t.key === "governance" && !t.disabled);
   const busy = saving || mediaPending;
@@ -83,6 +85,15 @@ export default function StudioPublish({ exam, decision, saveState, saving, media
                 {onFinalize && <button type="button" className={"st-btn is-primary" + (decision.canFinalize ? "" : " is-gated")} onClick={onFinalize} disabled={busy} aria-disabled={!decision.canFinalize || undefined}><IconCheck size={16} aria-hidden="true" />{SAVE_LABELS.finalizeExam}</button>}
               </div>
             </section>
+            {studentTools && (
+              <section className="st-panel" aria-labelledby="st-publish-student-tools" data-publish-panel="student-tools">
+                <h3 id="st-publish-student-tools">أدوات الطالب</h3>
+                <p className="st-sub">{studentTools.text}</p>
+                <div className="st-row-actions">
+                  <button type="button" className="st-btn" onClick={studentTools.onEdit}>تعديل أدوات الطالب</button>
+                </div>
+              </section>
+            )}
             {governance && (
               <section className="st-panel" aria-labelledby="st-publish-gov">
                 <h3 id="st-publish-gov">الإصدارات والمراجعة</h3>
