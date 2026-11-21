@@ -42,7 +42,7 @@ export default function SchemeCopyPanel({ token, classId, onCopied }: { token: s
       {list.status === "ready" && !list.classes.length && <p className="eb-muted">لا يوجد صف آخر له مخطط علامات.</p>}
       {list.status === "ready" && list.classes.length > 0 && (
         <>
-          <p className="eb-muted">تُنسخ الأقسام ونسبها والأعمدة اليدوية كما هي، ويُطابَق كل واجب بواجب هذا الصف المأخوذ من الامتحان نفسه. ما لا يُطابَق يُذكر لك لتختار بديله. لا يُحفظ شيء قبل «حفظ».</p>
+          <p className="eb-muted">تُنسخ الأقسام ونسبها والعلامات التي يرصدها المعلم كما هي، ويُطابَق كل واجب بواجب هذا الصف المأخوذ من الامتحان نفسه. ما لا يُطابَق يُذكر لك لتختار بديله. لا يُحفظ شيء قبل «حفظ».</p>
           <div className="eb-gb-copy-row">
             <label className="eb-gb-field">
               <span>الصف المصدر</span>

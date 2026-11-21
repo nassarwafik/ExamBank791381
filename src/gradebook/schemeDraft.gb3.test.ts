@@ -78,8 +78,8 @@ describe("GB3 — the guidance (mirrors the server; the server decides)", () => 
     expect(messages).toContain("أضف عنصرًا واحدًا على الأقل إلى «ب»");
     expect(messages).toContain("مستخدم مرة أخرى");
     expect(messages).toContain("وزن كل عنصر في «ج»");
-    expect(messages).toContain("عنوان العمود اليدوي مطلوب");
-    expect(messages).toContain("العلامة القصوى للعمود اليدوي");
+    expect(messages).toContain("عنوان العلامة التي يرصدها المعلم مطلوب");
+    expect(messages).toContain("العلامة القصوى للعلامة التي يرصدها المعلم");
   });
   it("an unparseable weight leaves its total unknown, never a guessed number", () => {
     const d = build([["أ", "100", [[a("m1"), "50"], [a("m2"), "؟"]]]]);

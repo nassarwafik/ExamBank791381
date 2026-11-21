@@ -352,7 +352,7 @@ function checkEntryItem(raw, index, itemsById, roster, projectsAllowed) {
   const keys = Object.keys(v);
   if (keys.length === 1 && keys[0] === "decision") return DECISIONS.includes(v.decision) ? null : err("VALUE_INVALID", "القرار غير معروف.");
   if (keys.length === 1 && keys[0] === "score") {
-    if (item.source.kind !== "manual") return err("SCORE_NOT_MANUAL", "تُكتب العلامة في الأعمدة اليدوية فقط.");
+    if (item.source.kind !== "manual") return err("SCORE_NOT_MANUAL", "تُكتب العلامة فقط في الأعمدة التي يرصدها المعلم.");
     const s = v.score;
     if (typeof s !== "number" || !Number.isFinite(s) || s < 0 || s > item.source.maxScore || !twoDecimals(s)) return err("SCORE_INVALID", "العلامة يجب أن تكون بين 0 و" + item.source.maxScore + "، بمنزلتين عشريتين على الأكثر.");
     return null;

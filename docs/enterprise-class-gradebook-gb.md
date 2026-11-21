@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** complete. Every phase (GB0–GB8, GB6a, GB6b) is merged; the last was GB8, #685, on 2026-11-21.
+**Status:** GB0–GB8, GB6a and GB6b merged (GB8, #685, on 2026-11-21). GB9 (a mark the teacher enters, made clear in the builder, §4.10) in review.
 
 | Phase | Pull request |
 |---|---|
@@ -14,6 +14,7 @@
 | GB6a — approval, lock, reopen, the student read (server) | nassarwafik/ExamBank791381#675 |
 | GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
 | GB8 — copy a scheme from another class (D7) | nassarwafik/ExamBank791381#685 |
+| GB9 — «علامة يرصدها المعلم» made clear in the builder | `feature/gb9-teacher-mark-clarity` |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -421,6 +422,25 @@ assignments for the release check.
 - **Saving:** nothing is saved before «حفظ».
 - **When the copy is not offered:** on a read-only scheme (an archived class, no grading access) or a locked one (an approved part).
 
+### 4.10 GB9 — a part with no exam: «علامة يرصدها المعلم» (owner feedback 2026-11-21)
+
+**What the owner met.** Building a «الحضور والمشاركة» part, the builder seemed to require an exam.
+- **Why it seemed so:** the first control in a part was «إضافة واجب أو امتحان أو مشروع». The way to add a mark the teacher enters,
+  the manual column, sat below it under «عمود يدوي (امتحان ورقي مثلًا)», which reads as «a paper exam» only.
+- **What already worked:** the server and the computation already supported a part made only of manual columns. This was a wording and
+  layout problem.
+
+**The change (presentation only; storage and rules unchanged):**
+- **One term everywhere:** the manual column is now «علامة يرصدها المعلم». It is used in the builder, the item type («يرصدها المعلم»),
+  the save messages (client and server), the edit bar and the copy panel.
+- **Two equal boxes:** each part offers «من المنصة: واجب أو امتحان أو مشروع» and «علامة يرصدها المعلم (بلا واجب على المنصة)» side by
+  side; on a phone they stack.
+  - **The help line:** «للحضور والمشاركة والامتحان الورقي، وكل علامة تضعها بنفسك. ترصدها بعد الحفظ من «تعديل العلامات»».
+  - **Suggested titles:** «الحضور والمشاركة», «الحضور», «المشاركة», «امتحان ورقي». A click only fills the title field.
+- **The empty part says it:** «… أضف واجبًا أو امتحانًا من المنصة، أو علامة يرصدها المعلم بنفسه مثل الحضور والمشاركة».
+- **A phone layout fix met on the way:** the text input's own width could make the box wider than the dialog (measured 325 px of
+  content in a 298 px box at 390 px). The boxes' rows and fields now shrink to the box.
+
 ## 5. Phases
 
 | Phase | Scope | Specific evidence |
@@ -433,6 +453,7 @@ assignments for the release check.
 | **GB5** | Manual columns, the excused / zero decisions, the column actions | stale guard; audit; **mutation proof** on «no zero without a decision» |
 | **GB6a** | Approval per part and of the final, lock, reopen with a reason, the student read (§4.8) | tests that an incomplete or unreleased part is never approved and that a student sees only their frozen approved row; **mutation proof** (§8) |
 | **GB6b** | The teacher's approval buttons and locked display; the student's «علاماتي» | component tests; the bundle guard |
+| **GB9** | «علامة يرصدها المعلم» made clear in the builder (§4.10) | a part with no assignment built and saved through the real builder; layout measured at 390 px and 1440 px |
 | **GB8** | Copying a scheme from another class (D7, §4.9) | tenancy (another teacher's class never read); match by the same exam; nothing rescaled; new ids; **mutation proof** (§8) |
 | **GB7** | Performance (a class of 40 students × 30 columns) and the final review | measured read count and time |
 

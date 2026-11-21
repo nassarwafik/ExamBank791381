@@ -185,7 +185,7 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
           {editable && !editing && !allLocked && <button type="button" className="eb-button is-small" onClick={() => setEditFor(classId)}><IconEdit size={16} aria-hidden="true" />تعديل العلامات</button>}
           {editing && (
             <div className="eb-gb-savebar" role="group" aria-label="حفظ العلامات">
-              <p className="eb-muted">اكتب علامات الأعمدة اليدوية، أو اختر «معفى» أو «صفر» لأي خانة. لا يُحفظ شيء قبل «حفظ العلامات».</p>
+              <p className="eb-muted">اكتب العلامات التي ترصدها بنفسك (مثل الحضور والمشاركة)، أو اختر «معفى» أو «صفر» لأي خانة. لا يُحفظ شيء قبل «حفظ العلامات».</p>
               <button type="button" className="eb-button is-primary is-small" disabled={saving || !dirtyCount || invalid.size > 0} onClick={() => void saveMarks()}>{saving ? "جارٍ الحفظ..." : "حفظ العلامات (" + dirtyCount + ")"}</button>
               <button type="button" className="eb-button is-small" disabled={saving || !dirtyCount} onClick={() => setDrafts(all => ({ ...all, [classId]: {} }))}>تجاهل التغييرات</button>
               <button type="button" className="eb-button is-quiet is-small" disabled={saving} onClick={() => void leaveEditing()}>إنهاء التعديل</button>

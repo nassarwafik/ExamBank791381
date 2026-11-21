@@ -150,8 +150,8 @@ export function summarize(d: Draft): DraftSummary {
       if (k) usedSources.add(k);
       if (i.source.kind === "manual") {
         const t = i.source.title.trim();
-        if (!t || Array.from(t).length > LIMITS.manualTitle) blocking.push({ at: i.key, message: "عنوان العمود اليدوي مطلوب، و" + LIMITS.manualTitle + " حرفًا على الأكثر." });
-        if (!Number.isInteger(i.source.maxScore) || i.source.maxScore < 1 || i.source.maxScore > LIMITS.manualMaxScore) blocking.push({ at: i.key, message: "العلامة القصوى للعمود اليدوي رقم صحيح من 1 إلى " + LIMITS.manualMaxScore + "." });
+        if (!t || Array.from(t).length > LIMITS.manualTitle) blocking.push({ at: i.key, message: "عنوان العلامة التي يرصدها المعلم مطلوب، و" + LIMITS.manualTitle + " حرفًا على الأكثر." });
+        if (!Number.isInteger(i.source.maxScore) || i.source.maxScore < 1 || i.source.maxScore > LIMITS.manualMaxScore) blocking.push({ at: i.key, message: "العلامة القصوى للعلامة التي يرصدها المعلم رقم صحيح من 1 إلى " + LIMITS.manualMaxScore + "." });
       }
     }
     const total = sumOf(c.items.map(i => i.weightText));
