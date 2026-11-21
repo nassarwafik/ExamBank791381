@@ -62,3 +62,14 @@ export type GbProjectSource = { projectCode: string; title: string };
 export type GbSources = { ok: true; classId: string; assignments: GbAssignmentSource[]; projects: GbProjectSource[]; withheld: string[] };
 
 export type GbSchemeSaved = { ok: true; etag: string | null; revision: number; status: "active" | "draft"; sumIssues: { path: string; sum: number }[] };
+
+/** GB8 — a class whose scheme can be copied («نسخ من صف آخر»). */
+export type GbCopyClass = { classId: string; name: string; schoolYear: string; archived: boolean; categories: number; items: number; updatedAt: string };
+export type GbCopyClasses = { ok: true; classId: string; classes: GbCopyClass[] };
+/** GB8 — another class's scheme proposed for this class: no ids (the page gives new ones); what could not be copied is listed. */
+export type GbCopyUnmatched = { category: string; title: string; weight: number; kind: GbSource["kind"]; code: string; reason: string; candidates?: string[] };
+export type GbCopyProposal = {
+  ok: true; classId: string; from: { classId: string; name: string }; copied: number;
+  categories: { title: string; weight: number; items: { weight: number; source: GbSource; title: string }[] }[];
+  unmatched: GbCopyUnmatched[];
+};

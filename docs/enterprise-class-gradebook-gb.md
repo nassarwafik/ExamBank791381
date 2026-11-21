@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** complete. Every phase (GB0–GB7, GB6a, GB6b) is merged; the last was GB6b, #679, on 2026-11-19.
+**Status:** GB0–GB7, GB6a and GB6b merged (the last, #679, on 2026-11-19). GB8 (copying a scheme from another class, D7, §4.9) in review.
 
 | Phase | Pull request |
 |---|---|
@@ -13,6 +13,7 @@
 | GB7 — performance and final review | nassarwafik/ExamBank791381#672 |
 | GB6a — approval, lock, reopen, the student read (server) | nassarwafik/ExamBank791381#675 |
 | GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
+| GB8 — copy a scheme from another class (D7) | `feature/gb8-scheme-copy` |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -55,7 +56,7 @@ This example becomes a fixture of the GB1 tests, with its numbers worked by hand
 | D4 | **Teacher only at first.** Students do not see the gradebook. Showing it to students is a later, optional phase (GB6), and it must respect each assignment's results release. | GB2, GB6 |
 | D5 | ~~Two new capabilities, `grades.book.view` and `grades.scheme.manage`.~~ **Superseded by O1 (2026-11-18): no new capability.** Reading the gradebook needs `assignments.assignment.view`; editing the scheme, the manual marks and the excused / zero decisions needs `assignments.grading.grade`; project columns also need `projects.tracker.view` (§4.5, §6). | GB2 |
 | D6 | **Rounding at display only.** Every value is computed at full precision. The table shows one decimal, the precision the assignment and report averages already use (`toFixed(1)`). An integer final mark is not adopted now. | GB1, GB4 |
-| D7 | **Scheme templates** (copy one class's scheme to another class) are a later feature, after GB4. | after GB4 |
+| D7 | **Scheme templates** (copy one class's scheme to another class) are a later feature, after GB4. Designed in GB8 (§4.9): a copy from one of the teacher's classes, assignments matched by the same exam. | GB8 |
 
 ## 3. What already exists (read from the code before planning)
 
@@ -381,6 +382,45 @@ assignments for the release check.
   - **When it reads:** once when the portal opens, like every other section (UX-S2: switching views reads nothing). The portal's
     opening reads are six instead of five, pinned in `StudentPortal.ux7a.test.tsx` and `StudentPortal.learningMaterials.test.tsx`.
 
+### 4.9 GB8 — copying a scheme from another class (D7; owner decisions 2026-11-21)
+
+**The owner's decisions.**
+- **Copy from a class, not saved templates.** In a class's scheme builder, «نسخ من صف آخر» offers the teacher's other classes that
+  have a scheme, archived ones included (last year's scheme is a good start). There is no new stored document.
+- **An assignment column is matched by the same exam.** It maps to the target class's assignment made from the same exam
+  (`sourceExamId`).
+
+**The reads** (`GET /api/class-gradebook`; reading needs `assignments.assignment.view`; saving is the existing `scheme.save`):
+- **`resource=copy-classes`:** the teacher's other classes with a scheme: name, school year, archived or not, part and column counts,
+  newest scheme first. Another teacher's class is never listed.
+- **`resource=copy&from=<classId>`:** the proposal (`api/src/lib/gradebook/copy.js`, pure). Nothing is written.
+  - **A source the teacher may not see:** another teacher's class is `404 SOURCE_NOT_FOUND`, and nothing of it is read.
+  - **Bad requests:** a class without a scheme is `404 SOURCE_HAS_NO_SCHEME`; the same class or a malformed id is `400`.
+
+**The mapping.**
+- **Parts:** titles and weights are copied as they are.
+- **Manual columns:** title and maximum are copied as they are.
+- **An assignment column** maps to the ONE reportable assignment of the target class with the same non-empty `sourceExamId`.
+  Otherwise it is not copied and is listed with why:
+  - `NO_MATCH`: none;
+  - `AMBIGUOUS`: several, with the candidates named;
+  - `SOURCE_MISSING`: the source assignment is gone, or does not belong to the source class;
+  - `DUPLICATE`: the match is already used by another column.
+- **Only the two classes' own assignments are used:** never a third class's, never another teacher's.
+- **A project column** is copied when the target class has that project and the teacher holds `projects.tracker.view`. Otherwise
+  it is listed (`PROJECT_NOT_IN_CLASS` / `WITHHELD`).
+- **Nothing is rescaled (invariant 3):** a part that lost a column keeps the other weights. The scheme is then a draft until the
+  teacher adds the replacement.
+- **No ids travel with the proposal:** the page gives every part and column a new id, so a copied column never inherits marks stored
+  under an id of the target's older scheme.
+
+**The page.** «نسخ من صف آخر» sits at the top of the builder.
+- **Flow:** pick a class → «نسخ». Replacing a scheme already in the builder asks first.
+- **After the copy:** the builder shows the copied scheme and a notice: «نُسخ مخطط «…»: N من الأعمدة», with each column that was not
+  copied, its part, weight and reason.
+- **Saving:** nothing is saved before «حفظ».
+- **When the copy is not offered:** on a read-only scheme (an archived class, no grading access) or a locked one (an approved part).
+
 ## 5. Phases
 
 | Phase | Scope | Specific evidence |
@@ -393,6 +433,7 @@ assignments for the release check.
 | **GB5** | Manual columns, the excused / zero decisions, the column actions | stale guard; audit; **mutation proof** on «no zero without a decision» |
 | **GB6a** | Approval per part and of the final, lock, reopen with a reason, the student read (§4.8) | tests that an incomplete or unreleased part is never approved and that a student sees only their frozen approved row; **mutation proof** (§8) |
 | **GB6b** | The teacher's approval buttons and locked display; the student's «علاماتي» | component tests; the bundle guard |
+| **GB8** | Copying a scheme from another class (D7, §4.9) | tenancy (another teacher's class never read); match by the same exam; nothing rescaled; new ids; **mutation proof** (§8) |
 | **GB7** | Performance (a class of 40 students × 30 columns) and the final review | measured read count and time |
 
 Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`, `npx tsc -b`, `npm run build` and
@@ -470,6 +511,22 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
 - **G6-18, a double guard:** it removes one of two idempotency guards, and the other guard still answers the same, so it survives.
   Removing both (G6-18+) is killed.
 
+**GB8 mutation proof:** 11 planted, 11 KILLED (one, M8-4, after a new test).
+- **Planted:**
+  - an ambiguous match taken as the first;
+  - the source class's tenancy removed, and the list's tenancy removed;
+  - a source column's assignment from another class accepted;
+  - a duplicate match allowed;
+  - withheld project columns copied;
+  - target assignments not limited to the class;
+  - copied ids reused;
+  - a replace without asking;
+  - the copy offered on a locked scheme;
+  - a weight changed.
+- **The survivor:** M8-4 survived the first run. It is now killed by «a stored source column pointing at another class's assignment
+  is «gone»».
+- **Restore:** files restored byte-for-byte, SHA-256 checked.
+
 **GB6a mutation proof** (`api/src/lib/gradebook/approval.js`, `class-gradebook.js`, `student-gradebook.js`, the capability registry).
 - **Planted:** 26 defects (G6-1 … G6-25, plus G6-18+). Among them: a pending or missing cell counted as final, the release check
   dropped, each lock removed, the reason not required, a student shown a hidden-release part or another student's row, a corrupt
@@ -505,9 +562,10 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
 - **Editing:** manual marks and «معفى» / «صفر» decisions, with column actions limited to non-submitters.
 - **Approval (GB6):** each part, then the final mark, once complete and released. The part is then locked, and reopening it needs a
   reason. Students see the approved parts in «التقدم» → «علاماتي».
+- **Copying a scheme (GB8):** «نسخ من صف آخر» in the builder. Assignments are matched by the same exam, and what cannot be copied is
+  listed.
 
 **Postponed or open, for the owner:**
-- **Scheme templates (D7):** copying one class's scheme to another class.
 - **Repository follow-ups met on the way, outside this feature:**
   - **The Exam Studio's step circles — fixed.** They rendered a few edge pixels two ways from one capture to the next, on `main`
     itself, and failed the visual gate with no change on #669, #679 and others. The cause was Chromium drawing a round badge at a

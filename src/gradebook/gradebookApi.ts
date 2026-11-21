@@ -1,7 +1,7 @@
 // Class gradebook — the teacher UI's calls to /api/class-gradebook. Errors are TeacherHttpError (status + server code) from the shared
 // teacher fetch; the caller decides what a 409 STALE_SCHEME means for the page.
 import { teacherFetchJson } from "../teacherFetch";
-import type { GbGradebook, GbSchemeSaved, GbSources, GbCategory, GbEntryItem, GbEntriesSaved, GbApprovalSaved } from "./types";
+import type { GbGradebook, GbSchemeSaved, GbSources, GbCategory, GbEntryItem, GbEntriesSaved, GbApprovalSaved, GbCopyClasses, GbCopyProposal } from "./types";
 
 const URL_BASE = "/api/class-gradebook";
 
@@ -35,4 +35,13 @@ export function approve(token: string, classId: string, categoryId: string | nul
 export function reopen(token: string, classId: string, categoryId: string | null, reason: string): Promise<GbApprovalSaved> {
   const body = categoryId === null ? { action: "final.reopen", classId, reason } : { action: "part.reopen", classId, categoryId, reason };
   return teacherFetchJson<GbApprovalSaved>(token, URL_BASE, { method: "POST", body: JSON.stringify(body) }, "تعذرت إعادة الفتح.");
+}
+
+/** GB8 — this teacher's other classes that have a scheme (archived ones too). */
+export function loadCopyClasses(token: string, classId: string): Promise<GbCopyClasses> {
+  return teacherFetchJson<GbCopyClasses>(token, URL_BASE + "?classId=" + encodeURIComponent(classId) + "&resource=copy-classes", {}, "تعذر تحميل الصفوف.");
+}
+/** GB8 — another class's scheme proposed for this class (nothing is saved). */
+export function loadCopy(token: string, classId: string, fromClassId: string): Promise<GbCopyProposal> {
+  return teacherFetchJson<GbCopyProposal>(token, URL_BASE + "?classId=" + encodeURIComponent(classId) + "&resource=copy&from=" + encodeURIComponent(fromClassId), {}, "تعذر نسخ المخطط.");
 }
