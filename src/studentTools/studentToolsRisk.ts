@@ -41,6 +41,8 @@ const GRAPH_TYPES = new Set(["functionGraphSelection", "functionStudy2d"]);
 const ASCII_TERMS = /\bascii\b|آسكي|أسكي|اسكي/i;
 const BITWISE_TERMS = /bitwise|إزاحة|على مستوى البت|عمليات? (?:منطقية )?على البتات|\b[01]{4,}\s*(?:AND|OR|XOR|NAND|NOR)\s*[01]{4,}\b/i;
 const TRUTH_TERMS = /جدول\s*(?:ال)?حقيقة|truth\s*table|بوابات?\s*(?:ال)?منطقية|(?:ال)?دارة\s*(?:ال)?منطقية|logic\s*gates?/i;
+// Phase T13 — the hex ↔ binary list answers a question about hexadecimal digits outright.
+const HEX_TERMS = /الست\s*عشري|السادس\s*عشر|السداسي\s*عشر|hexadecimal|\bhex\b|\b0x[0-9a-f]+\b|\(\s*[0-9A-F]+\s*\)\s*(?:₁₆|_?16\b)/i;
 const PERIODIC_TERMS = /العدد\s*الذري|الكتلة\s*الذرية|التوزيع\s*الإلكتروني|الجدول\s*الدوري|atomic\s*(?:number|mass)|electron\s*configuration/i;
 
 function questionType(q: Record<string, unknown>): string {
@@ -62,6 +64,8 @@ export function questionRiskFor(tool: StudentToolId, q: unknown): boolean {
     case "truthTable": return TRUTH_TERMS.test(text);
     case "unitConverter": return false;   // unit changes appear in most physics questions: too broad to name
     case "periodicTable": return PERIODIC_TERMS.test(text);
+    case "placeValueBoxes": return false; // computes nothing: the student does the arithmetic
+    case "hexBinaryTable": return HEX_TERMS.test(text);
   }
 }
 

@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
   type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX, FORMULA_SHEET_MAX_IMAGES,
-  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId,
+  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, PLACE_VALUE_WIDTH_OPTIONS,
   BIT_WIDTH_OPTIONS, UNIT_CATEGORY_IDS, TRUTH_MAX_VARIABLES_RANGE
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
@@ -222,6 +222,24 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                       <select className="sb-input" value={tool.width} disabled={disabled} onChange={e => patchTool(id, { width: Number(e.target.value) } as Partial<BitwiseCalculatorToolV1>)}>
                         {BIT_WIDTH_OPTIONS.map(w => <option key={w} value={w}>{w} بت</option>)}
                       </select>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "placeValueBoxes" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-field">
+                      <span className="sb-field-label">عدد الصناديق</span>
+                      <select className="sb-input" value={tool.width} disabled={disabled} onChange={e => patchTool(id, { width: Number(e.target.value) } as Partial<PlaceValueBoxesToolV1>)}>
+                        {PLACE_VALUE_WIDTH_OPTIONS.map(w => <option key={w} value={w}>{w === 4 ? "4 صناديق (8، 4، 2، 1)" : w === 8 ? "8 صناديق (128 … 1)" : "16 صندوقًا (32768 … 1)"}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                )}
+                {tool?.id === "hexBinaryTable" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.showDecimal} disabled={disabled} onChange={e => patchTool(id, { showDecimal: e.target.checked } as Partial<HexBinaryTableToolV1>)} />
+                      <span>إظهار العمود العشري</span>
                     </label>
                   </div>
                 )}

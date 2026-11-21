@@ -111,3 +111,11 @@
 .stt-pt-cell.is-unknownProperties { background: var(--eb-surface); border-style: dashed; }
 .stt-pt-series { display: flex; align-items: center; justify-content: center; min-height: 34px; font-size: 9px; color: var(--eb-muted); border: 1px dashed var(--eb-border); border-radius: var(--eb-r-sm); }
 .stt-pt-row:not(.is-series) + .stt-pt-row.is-series { margin-top: 6px; }
+/* Phase T13 — conversion boxes: the place value above a one-digit box, centred; the hex list shown whole (16 short rows). */
+.stt-pv-table { table-layout: fixed; }
+.stt-pv-table th, .stt-pv-table td { text-align: center; padding: var(--eb-space-1); }
+.stt-pv-box { width: 100%; min-width: 0; max-width: 44px; height: 36px; padding: 0; text-align: center; font-family: var(--eb-font-mono); font-size: var(--eb-fs-16); }
+.stt-table-wrap + .stt-table-wrap { margin-top: var(--eb-space-2); }
+.stt-hexbin-wrap { max-height: none; }
+.stt-hexbin-table th, .stt-hexbin-table td { text-align: center; }
+.stt-hexbin-table td.stt-mono { font-family: var(--eb-font-mono); letter-spacing: 0.08em; }

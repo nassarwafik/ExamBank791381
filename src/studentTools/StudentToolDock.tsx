@@ -9,6 +9,8 @@ import AsciiTableTool from "./AsciiTableTool";
 import BitwiseTool from "./BitwiseTool";
 import TruthTableTool from "./TruthTableTool";
 import UnitConverterTool from "./UnitConverterTool";
+import PlaceValueBoxesTool from "./PlaceValueBoxesTool";
+import HexBinaryTableTool from "./HexBinaryTableTool";
 import "./studentTools.css";
 // Phase T4 — the plotter carries the graph engine: its own chunk, fetched the first time the student opens it.
 const GraphPlotterTool = lazy(() => import("./GraphPlotterTool"));
@@ -51,6 +53,8 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
     case "bitwiseCalculator": return <BitwiseTool config={tool} />;
     case "truthTable": return <TruthTableTool config={tool} />;
     case "unitConverter": return <UnitConverterTool config={tool} />;
+    case "placeValueBoxes": return <PlaceValueBoxesTool config={tool} />;
+    case "hexBinaryTable": return <HexBinaryTableTool config={tool} />;
     case "periodicTable": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل الجدول الدوري…</p>}><PeriodicTableTool config={tool} /></Suspense>;
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
     default: return null;
