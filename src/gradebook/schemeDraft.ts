@@ -5,7 +5,7 @@
 //   - a structural problem (empty title, invalid weight, a column without a source, too many parts) blocks the save;
 //   - sums that are not 100 do NOT block it: the scheme is saved as a draft, with no final mark, and the page says so.
 // Weights are never changed silently: «توزيع بالتساوي» is a button the teacher presses.
-import type { GbCategory, GbScheme, GbSource } from "./types";
+import type { GbCategory, GbCopyProposal, GbScheme, GbSource } from "./types";
 
 export const LIMITS = { categories: 10, itemsPerCategory: 40, categoryTitle: 80, manualTitle: 120, manualMaxScore: 1000 } as const;
 const SUM_TOLERANCE = 0.01;
@@ -51,6 +51,17 @@ export function fromScheme(scheme: GbScheme | null): Draft {
     categories: scheme.categories.map(c => ({
       key: newKey(), categoryId: c.categoryId, title: c.title, weightText: weightText(c.weight),
       items: c.items.map(i => ({ key: newKey(), itemId: i.itemId, weightText: weightText(i.weight), source: i.source }))
+    }))
+  };
+}
+
+/** GB8 — a draft from another class's proposal: every part and column gets a NEW id (a copied column never inherits marks stored
+ *  under an id of this class's older scheme); the weights are kept as they are (a part that lost a column stays a draft). */
+export function fromCopy(p: GbCopyProposal): Draft {
+  return {
+    categories: p.categories.map(c => ({
+      key: newKey(), categoryId: newId("c"), title: c.title, weightText: weightText(c.weight),
+      items: c.items.map(i => ({ key: newKey(), itemId: newId("i"), weightText: weightText(i.weight), source: i.source }))
     }))
   };
 }
@@ -166,4 +177,12 @@ export function toPayload(d: Draft): { categories: GbCategory[] } {
 export function isDirty(d: Draft, original: Draft): boolean {
   const shape = (x: Draft) => JSON.stringify(x.categories.map(c => [c.categoryId, c.title, c.weightText, c.items.map(i => [i.itemId, i.weightText, i.source])]));
   return shape(d) !== shape(original);
+}
+
+/** What the copy did, in words: how many columns were copied, and each one that was not, with why (and the candidates, if several). */
+export function copyReport(p: GbCopyProposal): { summary: string; missing: string[] } {
+  const summary = "نُسخ مخطط «" + p.from.name + "»: " + p.copied + " من الأعمدة." + (p.unmatched.length ? " لم يُنسخ " + p.unmatched.length + "، أضف بديلها ثم احفظ:" : " راجعه ثم احفظ.");
+  const missing = p.unmatched.map(u => "«" + u.category + "» · " + (u.title || (u.kind === "project" ? "مشروع" : "واجب")) + " (" + u.weight + "%) — " + u.reason
+    + (u.candidates && u.candidates.length ? " المرشحون: " + u.candidates.map(c => "«" + c + "»").join("، ") + "." : ""));
+  return { summary, missing };
 }

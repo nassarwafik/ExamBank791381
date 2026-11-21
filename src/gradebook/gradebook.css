@@ -84,3 +84,12 @@
 .eb-gb-approval-reasons{ margin:0; padding-inline-start:var(--eb-space-4); color:var(--eb-warn-tx); }
 .eb-gb-approval-history ul{ margin:var(--eb-space-2) 0 0; padding-inline-start:var(--eb-space-4); }
 .eb-gb-reason{ width:100%; min-height:5rem; resize:vertical; }
+
+/* GB8 — «نسخ من صف آخر» in the scheme builder */
+.eb-gb-copy-open{ align-self:flex-start; }
+.eb-gb-copy{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface-2); min-width:0; }
+.eb-gb-copy-title{ margin:0; font-size:var(--eb-fs-16); }
+.eb-gb-copy-row{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-2); }
+.eb-gb-copy-row select{ max-inline-size:100%; }
+.eb-gb-copy-summary{ margin:0; }
+.eb-gb-copy-missing{ margin:var(--eb-space-1) 0 0; padding-inline-start:var(--eb-space-4); }

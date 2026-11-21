@@ -4,9 +4,10 @@ import { useConfirm } from "../ui/useConfirm";
 import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from "../icons";
 import { TeacherHttpError } from "../teacherFetch";
 import { loadSources, saveScheme } from "./gradebookApi";
+import SchemeCopyPanel from "./SchemeCopyPanel";
 import type { GbGradebook, GbSchemeSaved, GbSource, GbSources } from "./types";
 import {
-  type Draft, type DraftCategory, fromScheme, summarize, toPayload, isDirty, addCategory, removeCategory, setCategoryTitle, setCategoryWeight,
+  type Draft, type DraftCategory, fromScheme, fromCopy, copyReport, summarize, toPayload, isDirty, addCategory, removeCategory, setCategoryTitle, setCategoryWeight,
   addItem, removeItem, setItemWeight, moveItem, equalizeCategories, equalizeItems, sourceKey, normalizeDigits, LIMITS
 } from "./schemeDraft";
 
@@ -43,6 +44,7 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
   const [showIssues, setShowIssues] = useState(false);
+  const [copied, setCopied] = useState<{ summary: string; missing: string[] } | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const classId = p.gradebook.classId;
 
@@ -95,6 +97,18 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
           مجموع نسب الأقسام 100، ومجموع أوزان العناصر في كل قسم 100.
         </p>
         {p.lockNote && <p className="eb-gb-warning" role="status">{p.lockNote}</p>}
+        {!readOnly && !p.lockNote && (
+          <SchemeCopyPanel token={p.token} classId={classId} onCopied={async proposal => {
+            if (draft.categories.length && !(await confirm({ title: "استبدال المخطط؟", message: "سيحلّ مخطط «" + proposal.from.name + "» محلّ المخطط في هذه النافذة. لا يُحفظ شيء قبل «حفظ».", confirmLabel: "استبدال", cancelLabel: "إلغاء" }))) return;
+            setDraft(fromCopy(proposal)); setShowIssues(true); setCopied(copyReport(proposal));
+          }} />
+        )}
+        {copied && (
+          <div className={copied.missing.length ? "eb-gb-warning" : "platform-notice"} role="status">
+            <p className="eb-gb-copy-summary">{copied.summary}</p>
+            {copied.missing.length > 0 && <ul className="eb-gb-copy-missing">{copied.missing.map((m, i) => <li key={i}>{m}</li>)}</ul>}
+          </div>
+        )}
         {readOnly && !p.lockNote && <p className="eb-muted" role="status">{p.gradebook.readOnly ? "للعرض فقط: هذا الصف في الأرشيف." : "للعرض فقط: تعديل المخطط يحتاج صلاحية التصحيح."}</p>}
         {error && (
           <div className="platform-error" role="alert">

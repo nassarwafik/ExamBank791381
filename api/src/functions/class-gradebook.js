@@ -2,6 +2,8 @@
 //
 //   GET  /api/class-gradebook?classId=…                    the scheme, the columns, the rows (computed by lib/gradebook/compute.js)
 //   GET  /api/class-gradebook?classId=…&resource=sources   the class's assignments and projects a scheme may pick
+//   GET  /api/class-gradebook?classId=…&resource=copy-classes          GB8: this teacher's other classes that have a scheme
+//   GET  /api/class-gradebook?classId=…&resource=copy&from=<classId>   GB8: that class's scheme proposed for this class (nothing saved)
 //   POST { action: "scheme.save",  classId, etag, scheme }  validate and save the scheme (If-Match: a stale etag is 409)
 //   POST { action: "entries.save", classId, items }         manual marks and the teacher's excused / zero decisions (stale guard per cell)
 //   POST { action: "part.approve",  classId, categoryId, schemeRevision }   GB6: approve one complete part (frozen snapshot, locked)
@@ -36,6 +38,7 @@ const { getSupportedClassProgramCodes, classHasProject } = require("../lib/proje
 const { isSupportedProject, getProjectMeta } = require("../lib/project-tracker/registry");
 const svc = require("../lib/project-tracker/service");
 const { validateScheme } = require("../lib/gradebook/scheme");
+const { proposeCopy } = require("../lib/gradebook/copy");
 const { assignmentEvidence, MISSING_SOURCE, UNCLASSIFIED } = require("../lib/gradebook/evidence");
 const { projectEvidenceFromProgress } = require("../lib/gradebook/project-source");
 const { computeGradebook, roundForDisplay, DECISIONS } = require("../lib/gradebook/compute");
@@ -225,6 +228,45 @@ async function readGradebook(c, classroom, auth, grants, deps) {
     schemeStatus: result.status, columns, rows, warnings: result.warnings, entries,
     ...approvalsSummary(g)
   });
+}
+
+// ------------------------------------------------------------------------------------------------------------------- GB8 copy
+/** This teacher's other classes (archived ones too: last year's scheme is a good start) that have a scheme, newest first. */
+async function readCopyClasses(c, classroom, auth, deps) {
+  const tenant = tenantOf(auth.user);
+  const classes = (await (deps.loadDocs || loadDocs)(c, CLASS_PREFIX))
+    .filter(d => d && isSafeId(String(d.classId || "")) && d.classId !== classroom.classId && canAccessDocument(d, tenant));
+  const dl = deps.downloadJsonOrNull || storage.downloadJsonOrNull;
+  const schemes = await (deps.mapConcurrent || storage.mapConcurrent)(classes, (deps.getReadConcurrency || storage.getReadConcurrency)(), d => dl(c, schemeName(d.classId)));
+  const out = classes.map((d, i) => ({ d, s: schemes[i] }))
+    .filter(({ s }) => isPlainObject(s) && Array.isArray(s.categories) && s.categories.length)
+    .map(({ d, s }) => ({
+      classId: String(d.classId), name: String(d.name || ""), schoolYear: String(d.schoolYear || ""), archived: normalizeClassStatus(d) === "archived",
+      categories: s.categories.length, items: s.categories.reduce((n, cat) => n + (isPlainObject(cat) && Array.isArray(cat.items) ? cat.items.length : 0), 0),
+      updatedAt: String(s.updatedAt || "")
+    }))
+    .sort((x, y) => y.updatedAt.localeCompare(x.updatedAt));
+  return reply(200, { ok: true, classId: classroom.classId, classes: out });
+}
+
+/** Another class's scheme mapped onto this class (lib/gradebook/copy.js). The source is read only if this teacher may see it. */
+async function readCopy(c, classroom, auth, grants, fromId, deps) {
+  const dl = deps.downloadJsonOrNull || storage.downloadJsonOrNull;
+  if (!isSafeId(fromId) || fromId === classroom.classId) return bad("الصف المصدر غير صالح.");
+  const source = await loadClass(c, dl, fromId, tenantOf(auth.user));
+  if (!source) return reply(404, { ok: false, code: "SOURCE_NOT_FOUND", error: "الصف المصدر غير موجود." });
+  const scheme = await dl(c, schemeName(fromId));
+  if (!isPlainObject(scheme) || !Array.isArray(scheme.categories) || !scheme.categories.length) return reply(404, { ok: false, code: "SOURCE_HAS_NO_SCHEME", error: "لا يوجد مخطط علامات في الصف المصدر." });
+  const sourceIds = [...new Set(scheme.categories.flatMap(cat => (isPlainObject(cat) && Array.isArray(cat.items) ? cat.items : []))
+    .filter(i => isPlainObject(i) && isPlainObject(i.source) && i.source.kind === "assignment" && isSafeId(i.source.assignmentId)).map(i => i.source.assignmentId))];
+  const docs = await (deps.mapConcurrent || storage.mapConcurrent)(sourceIds, (deps.getReadConcurrency || storage.getReadConcurrency)(), id => dl(c, ASSIGN_PREFIX + id + ".json"));
+  const sourceAssignments = new Map(sourceIds.map((id, i) => [id, docs[i] && String(docs[i].classId || "") === fromId ? docs[i] : undefined]));
+  const targetAssignments = (await (deps.loadDocs || loadDocs)(c, ASSIGN_PREFIX))
+    .filter(a => a && String(a.classId || "") === classroom.classId && isReportableAssessment(a) && isSafeId(String(a.assignmentId || "")));
+  const projectsAllowed = grants.has(PROJECTS_CAPABILITY);
+  const proposal = proposeCopy({ scheme, sourceAssignments, targetAssignments, targetProjects: new Set(projectsAllowed ? getSupportedClassProgramCodes(classroom) : []), projectsAllowed });
+  for (const cat of proposal.categories) for (const item of cat.items) if (item.source.kind === "project") item.title = getProjectMeta(item.source.projectCode).title;
+  return reply(200, { ok: true, classId: classroom.classId, from: { classId: fromId, name: String(source.name || "") }, ...proposal });
 }
 
 async function readSources(c, classroom, grants, deps) {
@@ -497,7 +539,13 @@ async function handler(request, deps = {}, obs = null) {
     const grants = await (deps.sessionGrants || sessionGrants)(auth.user, deps, obs);
     if (!grants.ok) return grants.response;
 
-    if (isGet) return params.get("resource") === "sources" ? await readSources(c, classroom, grants, deps) : await readGradebook(c, classroom, auth, grants, deps);
+    if (isGet) {
+      const resource = params.get("resource");
+      if (resource === "sources") return await readSources(c, classroom, grants, deps);
+      if (resource === "copy-classes") return await readCopyClasses(c, classroom, auth, deps);
+      if (resource === "copy") return await readCopy(c, classroom, auth, grants, String(params.get("from") || ""), deps);
+      return await readGradebook(c, classroom, auth, grants, deps);
+    }
     if (normalizeClassStatus(classroom) === "archived") return reply(409, { ok: false, code: "CLASS_ARCHIVED", error: "الصف مؤرشف؛ سجل علاماته للقراءة فقط." });
     if (action === "scheme.save") return await saveScheme(c, classroom, body, auth, grants, deps);
     if (action === "part.approve" || action === "final.approve") return await approve(c, classroom, body, auth, grants, deps, action);
