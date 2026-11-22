@@ -60,7 +60,7 @@ const FAIL_RETRY = process.env.FAIL_RETRY === "1";
 const STRICT = process.env.STRICT === "1";
 
 function mockFor() {
-  const s = { started: false, startedAt: "", endsAt: 0, saves: 0, submits: 0, starts: 0, chunkFailures: new Map(), chunkRequests: [], assetLog: [], actions: [], submitted: null };
+  const s = { started: false, startedAt: "", endsAt: 0, saves: 0, saveBodies: [], submits: 0, starts: 0, chunkFailures: new Map(), chunkRequests: [], assetLog: [], actions: [], submitted: null };
   const summary = { ...(STRICT ? { attemptPolicy: "strict" } : {}), assignmentId: "asg-21e3", title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: "2026-12-01T10:30:00.000Z", effectiveDueAt: "", questionCount: questions.length, totalMarks: 10, durationMinutes: 10, availability: "open", attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, attemptStatus: "notStarted", hasActiveAttempt: false, latestScore: null, latestPercentage: null, latestResult: null, createdAt: "2026-10-01T08:00:00.000Z" };
   const result = () => ({ attemptNumber: 1, submittedAt: new Date().toISOString(), score: 7, totalMarks: 10, percentage: 70, manualReviewMarks: 2, finalized: false, gradingStatus: "pendingReview" });
   const state = () => ({ ...(STRICT ? { attemptPolicy: "strict" } : {}), attemptsUsed: s.submitted ? 1 : 0, allowedAttempts: 1, canAttempt: !s.submitted, canWrite: s.started && !s.submitted, dueClosed: false, availability: "open", draftAnswers: {}, draftSavedAt: "",
@@ -82,7 +82,7 @@ function mockFor() {
       let j = {}; try { j = JSON.parse(body || "{}"); } catch { /* malformed body → treated as no action */ }
       s.actions.push(j.action || "?");
       if (j.action === "startAttempt") { s.starts++; if (!s.started) { s.started = true; s.startedAt = new Date().toISOString(); s.endsAt = Date.now() + TIMER_MS; } return send(200, { ok: true, state: state() }); }
-      if (j.action === "saveDraft") { s.saves++; return send(200, { ok: true, savedAt: new Date().toISOString() }); }
+      if (j.action === "saveDraft") { s.saves++; s.saveBodies.push(j); return send(200, { ok: true, savedAt: new Date().toISOString() }); }
       if (j.action === "submit") { s.submits++; s.submitted = result(); return send(200, { ok: true, result: s.submitted, state: state() }); }
       return send(200, { ok: true, state: state() });
     }
@@ -253,7 +253,10 @@ async function run(name, viewport, mobile, dsf) {
     return { rendered: true, rounds, canvasPosition, chunkRequests: mock.s.chunkRequests.slice(), focus: await focusInfo(page) };
   });
   await shot("07-q2-recovered");
-  await step(rec, "no-extra-requests-from-failure", () => ({ savesBefore: savesBeforeFailure, savesAfter: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts }));
+  // A5 (review of §16): the bodies of the saves made since the failure, beside the last answers saved before it.
+  await step(rec, "no-extra-requests-from-failure", () => ({ savesBefore: savesBeforeFailure, savesAfter: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts,
+    answersBefore: savesBeforeFailure ? mock.s.saveBodies[savesBeforeFailure - 1].answers : {},
+    extraSaves: mock.s.saveBodies.slice(savesBeforeFailure).map(b => ({ answers: b.answers, renderFailures: b.renderFailures })) }));
   await step(rec, "answer-q2-hotspot", async () => {
     if (!(await page.$(".vq-overlay"))) return { skipped: true };
     await page.locator(".vq-image").evaluate(i => i.complete && i.naturalWidth > 0 ? null : new Promise(r => { i.onload = r; i.onerror = r; }));
@@ -435,7 +438,15 @@ else for (const [vp, r] of Object.entries(record.viewports)) {
   if (!depMode) ck(vp, "A4 retry renders the question", s.retry?.rendered === true, s.retry?.chunkRequests);
   else ck(vp, "A4d shared dependency under the CSP: the card stays with the safe options; no remapped script requested", s.retry?.rendered === false && (s.retry?.rounds || []).length > 0 && s.retry.rounds.every(x => /ما زال التحميل متعذّرًا/.test(x.text) && /iex-q-recovery-retry/.test(x.focus || "")) && !(r.requests?.assets || []).some(a => /\.js\?r=/.test(a.url)), { rounds: s.retry?.rounds, chunkRequests: s.retry?.chunkRequests });
   ck(vp, "A5b the recovered question has its stylesheet (visual canvas laid out)", s.retry?.rendered !== true || s.retry?.canvasPosition === "relative", s.retry?.canvasPosition);
-  ck(vp, "A5 no save / submit / start caused by the failure", s["no-extra-requests-from-failure"]?.savesAfter === s["no-extra-requests-from-failure"]?.savesBefore && s["no-extra-requests-from-failure"]?.submits === 0 && s["no-extra-requests-from-failure"]?.starts === 1, s["no-extra-requests-from-failure"]);
+  // A5 — the failure changes no answer and starts / submits nothing. Since the assessment-integrity fix
+  // (docs/enterprise-ux-premium-21e3.md §16.2) the page syncs the failure with ONE ordinary saveDraft of the same answers that
+  // carries `renderFailures` (the server holds the question for the teacher instead of grading the blank as 0). So a save after the
+  // failure is allowed only when it is that sync: answers byte-for-byte the last answers saved before the failure, plus a report.
+  const nf = s["no-extra-requests-from-failure"], stable = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x);
+  const extra = nf?.extraSaves || [];
+  ck(vp, "A5 the failure changes no answer and starts / submits nothing (a save after it is only the §16 report sync)", !!nf && nf.submits === 0 && nf.starts === 1 && extra.every(b => stable(b.answers) === stable(nf.answersBefore) && Array.isArray(b.renderFailures)), nf);
+  // A5r — §16.2: while the recovery card is shown, the failing question (h1, the second question) is reported to the server.
+  if (s["next-to-failing-q2"]?.recoveryCard) ck(vp, "A5r the failing question is reported to the server (renderFailures carries h1)", extra.some(b => (b.renderFailures || []).some(f => f && f.questionId === "h1" && ["chunk-load", "runtime"].includes(f.code))), extra.map(b => b.renderFailures));
   ck(vp, "A6 no page reload at any point", r.noReload === true, r.noReload);
   // CSP-1 — the recovery never asks the browser for something the application's own policy forbids (no inline import map).
   ck(vp, "I1 no Content-Security-Policy violation during the whole journey (recovery included)", Array.isArray(r.csp) && r.csp.length === 0, r.csp);
