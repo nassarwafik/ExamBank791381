@@ -75,10 +75,12 @@ the safe options, and no remapped script is requested.
 | this phase | entry | desktop, 150 %, 200 %, phone | PASS | A4 PASS | PASS |
 | this phase | dependency | desktop, 150 %, 200 %, phone | PASS | A4d PASS | PASS |
 
-Two harness checks are reported, not changed:
-- **A5** fails in every run on this branch because its fix is in #689, which is not merged yet.
-- **E3** (phone, label touch targets) fails in dependency mode on the baseline and on this phase alike. The label-diagram
-  question shares the failed `VisualCanvas` chunk, so it cannot render in that mode. That is the limit recorded in §1.
+After the reconciliation with `main` (`ea96c4e`, which brought #689's A5 fix), the head build passes **84 / 84** in entry mode
+and **83 / 84** in dependency mode, at all four viewports. The merge changed no application source, only the harness and a doc.
+
+One harness check is reported, not changed: **E3** (phone, label touch targets) fails in dependency mode on the baseline and on
+this phase alike. The label-diagram question shares the failed `VisualCanvas` chunk, so it cannot render in that mode. That is
+the limit recorded in §1.
 
 ## 5. What remains
 
