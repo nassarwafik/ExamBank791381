@@ -7,12 +7,14 @@ exports.validateStudentTools = validateStudentTools;
 exports.projectStudentToolsForStudent = projectStudentToolsForStudent;
 exports.projectStudentToolsForPreStart = projectStudentToolsForPreStart;
 exports.enabledToolsForSection = enabledToolsForSection;
+exports.csharpRunAllowedInExam = csharpRunAllowedInExam;
+exports.csharpRunAllowedInBook = csharpRunAllowedInBook;
 exports.studentToolsUnknownSectionIssues = studentToolsUnknownSectionIssues;
 exports.validateBookStudentTools = validateBookStudentTools;
 const richContentModel_1 = require("../richContent/richContentModel");
 exports.STUDENT_TOOLS_VERSION = 1;
 exports.STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
-    "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable"];
+    "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor"];
 exports.NUMBER_BASES = [2, 8, 10, 16];
 exports.GRAPH_MAX_FUNCTIONS_LIMIT = 3;
 exports.BIT_WIDTH_OPTIONS = [8, 16, 32];
@@ -58,6 +60,7 @@ function defaultStudentToolConfig(id) {
         case "periodicTable": return { id, showMass: true, showConfiguration: true, range: "all" };
         case "placeValueBoxes": return { id, width: 8 };
         case "hexBinaryTable": return { id, showDecimal: true };
+        case "csharpEditor": return { id, allowRun: false };
     }
 }
 const TOOL_KEYS = {
@@ -73,7 +76,8 @@ const TOOL_KEYS = {
     unitConverter: ["id", "categories"],
     periodicTable: ["id", "showMass", "showConfiguration", "range"],
     placeValueBoxes: ["id", "width"],
-    hexBinaryTable: ["id", "showDecimal"]
+    hexBinaryTable: ["id", "showDecimal"],
+    csharpEditor: ["id", "allowRun"]
 };
 const hasControlOrBidi = (s) => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
 function utf8Length(s) {
@@ -289,6 +293,9 @@ function readTool(raw, path, add, issues) {
         case "hexBinaryTable":
             value = { id, showDecimal: bool("showDecimal") };
             break;
+        case "csharpEditor":
+            value = { id, allowRun: bool("allowRun") };
+            break;
     }
     return issues.length === before ? value : null;
 }
@@ -400,6 +407,16 @@ function enabledToolsForSection(spec, sectionId) {
     const disabled = sectionId !== undefined && spec.sectionOverrides && Object.prototype.hasOwnProperty.call(spec.sectionOverrides, sectionId)
         ? spec.sectionOverrides[sectionId].disabled : [];
     return spec.tools.filter(t => !disabled.includes(t.id));
+}
+function csharpRunAllowedInExam(spec) {
+    const tool = spec?.tools.find(t => t.id === "csharpEditor");
+    if (!tool || tool.id !== "csharpEditor" || tool.allowRun !== true)
+        return false;
+    return !Object.values(spec?.sectionOverrides || {}).some(o => o.disabled.includes("csharpEditor"));
+}
+function csharpRunAllowedInBook(spec) {
+    const tool = spec?.tools.find(t => t.id === "csharpEditor");
+    return !!tool && tool.id === "csharpEditor" && tool.allowRun === true;
 }
 function studentToolsUnknownSectionIssues(spec, sectionIds) {
     const known = new Set(sectionIds);

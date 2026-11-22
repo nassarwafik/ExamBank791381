@@ -45,6 +45,9 @@ const REGISTRY = {
     // 899371 P8 — «جرّب الكود»: runs a book program of a platform course in the isolated runner; nothing stored per teacher is read,
     // and the only write is the caller's own rate-limit bucket (keyed by the verified session subject).
     "learning-run.js",
+    // T14 — «محرر C#» of the student tool bar: runs the caller's own code in the isolated runner (a teacher: books only, as
+    // «جرّب الكود»); nothing stored per teacher is read, and the only write is the caller's own rate-limit bucket.
+    "student-tool-run.js",
     // 899371 P13 — «شاهد التنفيذ»: the recorded traces of a platform course (a private store under api/data); it reads only the
     // caller's class and the caller's OWN study record (keyed by the verified session subject) and writes nothing.
     "learning-trace.js",

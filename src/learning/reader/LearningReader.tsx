@@ -775,7 +775,7 @@ export default function LearningReader({
       )}
       {/* Phase T7 — the book's student tools. Owner request: they stay available in presentation mode (full screen) too, and the dock
           stays MOUNTED across entering / leaving it (inside the overlay, so inside its focus trap), so an open tool keeps its state. */}
-      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} /></Suspense></ToolDockBoundary>
+      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} runHeaders={codeRun?.headers} /></Suspense></ToolDockBoundary>
     </div>
   );
 }

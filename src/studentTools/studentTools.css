@@ -76,7 +76,8 @@
 .stt-head-actions { display: inline-flex; gap: var(--eb-space-1); }
 @media (max-width: 640px) { .stt-panel-head { cursor: default; touch-action: auto; } }
 /* Phase T4 — function plotter. */
-.stt-panel.is-wide { width: min(560px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(85vh, 860px); }
+/* Wide panels on wider screens only: on a phone every panel is the full-width bottom sheet (T14: these rules used to override it). */
+@media (min-width: 641px) { .stt-panel.is-wide { width: min(560px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(85vh, 860px); } }
 .stt-plot-field + .stt-plot-field { margin-block-start: var(--eb-space-2); }
 .stt-plot-field .stt-error { margin-block: var(--eb-space-1) 0; }
 .stt-window { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--eb-space-2); margin-block-start: var(--eb-space-2); }
@@ -119,3 +120,21 @@
 .stt-hexbin-wrap { max-height: none; }
 .stt-hexbin-table th, .stt-hexbin-table td { text-align: center; }
 .stt-hexbin-table td.stt-mono { font-family: var(--eb-font-mono); letter-spacing: 0.08em; }
+
+/* Phase T14 — «محرر C#»: the editor is the shared CodingEditor (its own styles, LTR monospace); the input box, the output and the
+   compiler / runtime message use the code tokens (dark in both themes), as the book's «جرّب الكود». */
+@media (min-width: 641px) { .stt-panel.is-xwide { width: min(760px, calc(100vw - 2 * var(--eb-space-4))); } }
+.stt-cs { display: grid; gap: var(--eb-space-2); min-width: 0; }
+.stt-cs-field { display: grid; gap: var(--eb-space-1); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
+.stt-cs-field small { font-weight: var(--eb-fw-medium); color: var(--eb-muted); }
+.stt-cs-input, .stt-cs-out { box-sizing: border-box; inline-size: 100%; margin: 0; padding: var(--eb-space-2) var(--eb-space-3); font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: var(--eb-fs-13); color: var(--eb-code-fg); background: var(--eb-code-bg); border: 1px solid var(--eb-code-control); border-radius: var(--eb-r); text-align: left; tab-size: 4; }
+.stt-cs-input { resize: vertical; white-space: pre; overflow-x: auto; }
+.stt-cs-out { white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 16em; overflow-y: auto; }
+.stt-cs-out.is-error { border-color: var(--eb-danger); }
+.stt-cs-actions { flex-wrap: wrap; }
+.stt-cs-status { margin: 0; min-block-size: 1.4em; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
+.stt-cs-status.is-success { color: var(--eb-success-tx); }
+.stt-cs-status.is-compile-error, .stt-cs-status.is-runtime-error, .stt-cs-status.is-timeout, .stt-cs-status.is-error { color: var(--eb-danger-tx); }
+.stt-cs-hint { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
+.stt-cs-result { display: grid; gap: var(--eb-space-1); }
+.stt-cs-label { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-bold); }

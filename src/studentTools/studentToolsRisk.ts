@@ -43,6 +43,9 @@ const BITWISE_TERMS = /bitwise|إزاحة|على مستوى البت|عمليا�
 const TRUTH_TERMS = /جدول\s*(?:ال)?حقيقة|truth\s*table|بوابات?\s*(?:ال)?منطقية|(?:ال)?دارة\s*(?:ال)?منطقية|logic\s*gates?/i;
 // Phase T13 — the hex ↔ binary list answers a question about hexadecimal digits outright.
 const HEX_TERMS = /الست\s*عشري|السادس\s*عشر|السداسي\s*عشر|hexadecimal|\bhex\b|\b0x[0-9a-f]+\b|\(\s*[0-9A-F]+\s*\)\s*(?:₁₆|_?16\b)/i;
+// Phase T14 — a C# editor that RUNS code answers «what does this program print?» / tracing questions outright.
+const CODE_OUTPUT_TERMS = /Console\s*\.\s*Write|ما\s*(?:هو\s*)?(?:ناتج|مخرجات?|خرج)|ماذا\s*(?:يطبع|تطبع|سيطبع|ستطبع)|تتبّ?ع\s*(?:ال)?(?:برنامج|كود|شيفرة|مقطع)|\boutput\b|\btrace\b/i;
+const CODE_TYPES = new Set(["coding"]);
 const PERIODIC_TERMS = /العدد\s*الذري|الكتلة\s*الذرية|التوزيع\s*الإلكتروني|الجدول\s*الدوري|atomic\s*(?:number|mass)|electron\s*configuration/i;
 
 function questionType(q: Record<string, unknown>): string {
@@ -66,6 +69,7 @@ export function questionRiskFor(tool: StudentToolId, q: unknown): boolean {
     case "periodicTable": return PERIODIC_TERMS.test(text);
     case "placeValueBoxes": return false; // computes nothing: the student does the arithmetic
     case "hexBinaryTable": return HEX_TERMS.test(text);
+    case "csharpEditor": return CODE_TYPES.has(questionType(q as Record<string, unknown>)) || CODE_OUTPUT_TERMS.test(text);
   }
 }
 
@@ -75,6 +79,7 @@ export function studentToolAnswerRisks(exam: ExamLike, spec: StudentToolsSpecV1 
   const sections = Array.isArray(exam.sections) ? exam.sections : [];
   const risks: ToolRisk[] = [];
   for (const tool of spec.tools) {
+    if (tool.id === "csharpEditor" && !tool.allowRun) continue;   // T14: a write-only editor runs nothing, so it answers nothing
     const hits: ToolRiskHit[] = [];
     sections.forEach((s, si) => {
       const sid = String(s?.id ?? "");

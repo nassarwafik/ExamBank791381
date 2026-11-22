@@ -29,6 +29,7 @@ import ExamReviewScreen from "./student/exam/ExamReviewScreen";
 import StructuredExamCover from "./StructuredExamCover";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import {StudentAttemptContext,type StudentAttemptApi} from "./questionTypes/studentAttemptContext";
+import {examCSharpRunner} from "./studentTools/csharpToolRun";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
 import {projectStudentToolsForStudent} from "./studentTools/studentToolsSpec";
 import {studentToolsSummary} from "./studentTools/studentToolsCatalog";
@@ -240,6 +241,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Phase 17B — the generic attempt seam for registered renderers (coding practice runs): same-origin /api/ paths only; the
  // token is added HERE and never handed to the renderer, the Answer, storage or the builder.
  const attemptApi=useMemo<StudentAttemptApi>(()=>({assignmentId:assignment.assignmentId,request:(path,init={})=>{if(!path.startsWith("/api/")||path.includes("//"))return Promise.reject(new Error("path"));const h=new Headers(init.headers||{});h.set("x-student-token",token);h.set("Authorization","Bearer "+token);return fetch(path,{...init,headers:h})}}),[assignment.assignmentId,token]);
+ // Phase T14 — the tool bar's C# editor runs through the same attempt seam (student token); the server decides whether it may.
+ const csharpRunner=useMemo(()=>examCSharpRunner(attemptApi.request,attemptApi.assignmentId),[attemptApi]);
  // Re-anchor the local countdown clock to a fresh server state (serverNow + effectiveAttemptEndsAt).
  const anchorClock=useCallback((st:State)=>{
   const end=st.effectiveAttemptEndsAt?Date.parse(st.effectiveAttemptEndsAt):0;
@@ -1058,7 +1061,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   </QuestionErrorBoundary>
   {/* Phase T2 — the teacher-allowed tools, only while the attempt is writable. Outside the exam's error boundary and render-failure
       accounting on purpose: the dock has its own containment, and a tool can never mark a question as failed. */}
-  {writable&&exam.studentTools!=null&&<ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={exam.studentTools} onToolOpen={onToolOpen} sectionId={currentPage?.section?String(currentPage.section.id??""):undefined}/></Suspense></ToolDockBoundary>}
+  {writable&&exam.studentTools!=null&&<ToolDockBoundary><Suspense fallback={null}><StudentToolDock studentTools={exam.studentTools} onToolOpen={onToolOpen} csharpRunner={csharpRunner} sectionId={currentPage?.section?String(currentPage.section.id??""):undefined}/></Suspense></ToolDockBoundary>}
   {confirmDialog}
  </div></QuestionRecoveryContext.Provider>)
 }
