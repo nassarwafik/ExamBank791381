@@ -113,3 +113,7 @@ artifacts/phase-21e2/
 .harness-p9b1/
 # Owner teacher dashboard, phase 5 — real-Chromium E2E output (scripts/check-owner-dashboard-e2e.mjs), produced per run
 .harness-owner-dashboard/
+
+# Hand-made backup copies of source files (e.g. App.tsx.bak-v2-phase-c) — git history is the backup
+*.bak
+*.bak-*
