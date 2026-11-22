@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import CodingEditor from "../coding/CodingEditor";
 import type { CodeExecutionResult } from "../codingContract";
-import type { CSharpEditorToolV1 } from "./studentToolsSpec";
 import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 
-// Phase T14 (docs/enterprise-student-tools-csharp-editor-design.md) — «محرر C#» in the student tool bar: a C# scratch editor (the one
-// reusable CodingEditor: syntax colours, line numbers, brackets, no autocomplete) with, when the teacher allows it, ONE-CLICK RUNNING on
-// the isolated Coding Runner: the program's output, the compiler's messages (with the learner's own line numbers), runtime errors,
-// time-outs. Its own lazy chunk. The code lives in this page only (the dock keeps the tool mounted for the whole attempt); it is never
+// Phase T14 (docs/enterprise-student-tools-csharp-editor-design.md) — «محرر C#» in the student tool bar: a C# editor (the one reusable
+// CodingEditor: syntax colours, line numbers, brackets, no autocomplete) with «نسخ الكود» to paste into the answer.
+// Owner decision: in exams and assignments it is a WRITING aid only (no runner is ever passed there); in a course book, when its tools
+// allow it, ONE-CLICK RUNNING on the isolated Coding Runner: the output, the compiler's messages (with the learner's own line numbers),
+// runtime errors, time-outs. Its own lazy chunk. The code lives in this page only (the dock keeps the tool mounted for the whole attempt); it is never
 // stored, never the answer and never graded. The server decides whether a run is allowed; this panel only shows what it says.
 
 const STARTER = "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Console.WriteLine(\"مرحبا\");\n    }\n}\n";
@@ -27,20 +27,22 @@ const DOWN_CODES = new Set(["EXECUTION_UNAVAILABLE", "LANGUAGE_UNAVAILABLE"]);
 type State = { kind: "idle" } | { kind: "running" } | { kind: "done"; result: CodeExecutionResult } | { kind: "error"; message: string };
 
 type Props = {
-  config: CSharpEditorToolV1;
-  /** Present only when running is allowed HERE (the dock applies the exam / book rule); absent → write only. */
+  /** Present only when running is allowed HERE: a book whose tools allow it (the dock applies the rule). Absent → write only. */
   runner?: CSharpToolRunner;
-  /** Why running is off although the teacher allowed it (preview, a section switch-off), shown instead of the button. */
-  runOffReason?: string;
 };
 
-export default function CSharpEditorTool({ config, runner, runOffReason }: Props) {
+export default function CSharpEditorTool({ runner }: Props) {
   const [source, setSource] = useState(STARTER);
   const [stdin, setStdin] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => () => ctrl.current?.abort(), []);
-  const canRun = config.allowRun && !!runner;
+  const canRun = !!runner;
+  const [copied, setCopied] = useState<"" | "ok" | "failed">("");
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(source); setCopied("ok"); }
+    catch { setCopied("failed"); }
+  };
   const [availability, setAvailability] = useState<Availability>("checking");
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
@@ -78,7 +80,11 @@ export default function CSharpEditorTool({ config, runner, runOffReason }: Props
   return (
     <div className="stt-cs" data-testid="csharp-editor-tool">
       <p className="stt-hint">مسودة برمجية للتجربة: لا تُحفظ ولا تُصحّح، وليست إجابتك. انسخ ما تحتاجه إلى مكان الإجابة.</p>
-      <CodingEditor value={source} onChange={setSource} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={10} />
+      <CodingEditor value={source} onChange={v => { setSource(v); setCopied(""); }} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={10} />
+      <div className="stt-row stt-cs-actions">
+        <button type="button" className="stt-btn" onClick={copy} disabled={!source.trim()}>نسخ الكود</button>
+        <span className="stt-hint" role="status" data-testid="csharp-copy-status">{copied === "ok" ? "نُسخ الكود. الصقه في مكان الإجابة (Ctrl+V)." : copied === "failed" ? "تعذّر النسخ تلقائيًا؛ حدّد الكود وانسخه بـ Ctrl+C." : ""}</span>
+      </div>
       {canRun && availability === "down" ? (
         <div className="stt-row stt-cs-actions">
           <p className="stt-hint" role="note" data-testid="csharp-runner-down">تشغيل الكود متوقف حاليًا؛ يمكنك الكتابة في المحرر فقط.</p>
@@ -111,7 +117,7 @@ export default function CSharpEditorTool({ config, runner, runOffReason }: Props
           )}
         </>
       ) : (
-        <p className="stt-hint" role="note">{config.allowRun ? (runOffReason || "التشغيل غير متاح هنا.") : "التشغيل غير مفعّل لهذه الأداة: محرر كتابة فقط."}</p>
+        <p className="stt-hint" role="note">محرر لكتابة الكود فقط، بلا تشغيل: اكتب الكود هنا ثم انسخه إلى مكان الإجابة.</p>
       )}
     </div>
   );

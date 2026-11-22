@@ -28,6 +28,8 @@ type Props = {
   disabled?: boolean;
   /** Phase T11 — tools this place cannot offer (a course book takes no formula sheet); they are not listed. */
   excludeTools?: readonly StudentToolId[];
+  /** Phase T14 — where the tools are offered. Only a "book" may let the C# editor run (owner decision); an exam's editor writes only. */
+  place?: "exam" | "book";
   /** Phase T12 — the builder asks the panel to come into view (its «أدوات الطالب» menu item / summary buttons): the panel scrolls to
    *  its heading, moves focus there, then reports back so a later remount does not steal focus again. */
   focusRequest?: boolean;
@@ -49,7 +51,7 @@ function emit(tools: StudentToolConfigV1[], overrides: Record<string, StudentToo
   return v.issues[0]?.message ?? "تعذّر حفظ إعدادات الأدوات.";
 }
 
-export default function StudentToolsEditor({ value, sections, onChange, disabled, excludeTools = [], focusRequest, onFocusHandled }: Props) {
+export default function StudentToolsEditor({ value, sections, onChange, disabled, excludeTools = [], place = "exam", focusRequest, onFocusHandled }: Props) {
   const baseId = useId();
   const headingRef = useRef<HTMLElement>(null);
   const handled = useRef(onFocusHandled);
@@ -243,15 +245,16 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                     </label>
                   </div>
                 )}
-                {tool?.id === "csharpEditor" && (
+                {tool?.id === "csharpEditor" && (place === "book" ? (
                   <div className="sb-tool-options">
                     <label className="sb-check">
                       <input type="checkbox" checked={tool.allowRun} disabled={disabled} onChange={e => patchTool(id, { allowRun: e.target.checked } as Partial<CSharpEditorToolV1>)} />
-                      <span>السماح بتشغيل الكود (يعرض الناتج وأخطاء الترجمة والتشغيل)</span>
+                      <span>السماح بتشغيل الكود للتدريب (يعرض الناتج وأخطاء الترجمة والتشغيل)</span>
                     </label>
-                    <p className="sb-hint">بلا تشغيل: محرر كتابة فقط. مع التشغيل: إذا عطّلت المحرر في أي قسم يتوقف التشغيل في الامتحان كله، لأن الخادم لا يعرف القسم الذي يحلّه الطالب.</p>
                   </div>
-                )}
+                ) : (
+                  <p className="sb-hint">في الامتحانات والوظائف: محرر لكتابة الكود فقط، ينسخ منه الطالب إلى مكان الإجابة. لا تشغيل.</p>
+                ))}
                 {tool?.id === "truthTable" && (
                   <div className="sb-tool-options">
                     <label className="sb-field">

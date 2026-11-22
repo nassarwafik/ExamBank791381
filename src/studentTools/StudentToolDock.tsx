@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { projectStudentToolsForStudent, enabledToolsForSection, csharpRunAllowedInExam, csharpRunAllowedInBook, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
+import { projectStudentToolsForStudent, enabledToolsForSection, csharpRunAllowedInBook, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
 import type { CSharpToolRunner } from "./csharpToolRun";
 import { studentToolCatalogEntry, studentToolHasUi } from "./studentToolsCatalog";
 import CalculatorTool from "./CalculatorTool";
@@ -33,9 +33,10 @@ const CSharpEditorTool = lazy(() => import("./CSharpEditorTool"));
 // • A failure inside a tool stays inside the tool (its own error boundary): it never reaches the exam's answer / render-failure state.
 
 /** `onToolOpen` (Phase T8) is told each time the student opens a tool, for the attempt's usage record; the book reader passes nothing. */
-/** `csharpRunner` (Phase T14): the host's run transport for the C# editor (the exam page / the book reader); absent → write only. */
+/** `csharpRunner` (Phase T14): the BOOK reader's run transport for the C# editor. An exam page never passes one (owner decision: in an exam
+ *  the editor is a writing aid only); absent → write only. */
 type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner };
-type CSharpRun = { runner?: CSharpToolRunner; offReason?: string };
+type CSharpRun = { runner?: CSharpToolRunner };
 const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor"]);
 const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor"]);
 
@@ -63,7 +64,7 @@ function ToolBody({ tool, csharp }: { tool: StudentToolConfigV1; csharp: CSharpR
     case "hexBinaryTable": return <HexBinaryTableTool config={tool} />;
     case "periodicTable": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل الجدول الدوري…</p>}><PeriodicTableTool config={tool} /></Suspense>;
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
-    case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool config={tool} runner={csharp.runner} runOffReason={csharp.offReason} /></Suspense>;
+    case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} /></Suspense>;
     default: return null;
   }
 }
@@ -74,12 +75,8 @@ const toolTitle = (t: StudentToolConfigV1): string =>
 export default function StudentToolDock({ studentTools, sectionId, onToolOpen, csharpRunner }: Props) {
   const baseId = useId();
   const spec = useMemo(() => projectStudentToolsForStudent(studentTools), [studentTools]);
-  // T14 — running from the C# editor: the same rule the server applies (it checks again on every run).
-  const csharp = useMemo<CSharpRun>(() => {
-    if (!csharpRunner) return { offReason: "التشغيل غير متاح في المعاينة." };
-    const allowed = csharpRunner.context === "exam" ? csharpRunAllowedInExam(spec) : csharpRunAllowedInBook(spec);
-    return allowed ? { runner: csharpRunner } : { offReason: "التشغيل غير متاح في هذا الامتحان لأن المحرر معطّل في بعض أقسامه." };
-  }, [csharpRunner, spec]);
+  // T14 — running from the C# editor: books only, by the same rule the server applies (it checks again on every run).
+  const csharp = useMemo<CSharpRun>(() => (csharpRunner && csharpRunAllowedInBook(spec) ? { runner: csharpRunner } : {}), [csharpRunner, spec]);
   const all = useMemo(() => (spec ? spec.tools.filter(t => studentToolHasUi(t.id)) : []), [spec]);
   const enabled = useMemo(() => enabledToolsForSection(spec, sectionId).filter(t => studentToolHasUi(t.id)), [spec, sectionId]);
   const [menuOpen, setMenuOpen] = useState(false);

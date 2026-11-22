@@ -7,7 +7,6 @@ exports.validateStudentTools = validateStudentTools;
 exports.projectStudentToolsForStudent = projectStudentToolsForStudent;
 exports.projectStudentToolsForPreStart = projectStudentToolsForPreStart;
 exports.enabledToolsForSection = enabledToolsForSection;
-exports.csharpRunAllowedInExam = csharpRunAllowedInExam;
 exports.csharpRunAllowedInBook = csharpRunAllowedInBook;
 exports.studentToolsUnknownSectionIssues = studentToolsUnknownSectionIssues;
 exports.validateBookStudentTools = validateBookStudentTools;
@@ -407,12 +406,6 @@ function enabledToolsForSection(spec, sectionId) {
     const disabled = sectionId !== undefined && spec.sectionOverrides && Object.prototype.hasOwnProperty.call(spec.sectionOverrides, sectionId)
         ? spec.sectionOverrides[sectionId].disabled : [];
     return spec.tools.filter(t => !disabled.includes(t.id));
-}
-function csharpRunAllowedInExam(spec) {
-    const tool = spec?.tools.find(t => t.id === "csharpEditor");
-    if (!tool || tool.id !== "csharpEditor" || tool.allowRun !== true)
-        return false;
-    return !Object.values(spec?.sectionOverrides || {}).some(o => o.disabled.includes("csharpEditor"));
 }
 function csharpRunAllowedInBook(spec) {
     const tool = spec?.tools.find(t => t.id === "csharpEditor");
