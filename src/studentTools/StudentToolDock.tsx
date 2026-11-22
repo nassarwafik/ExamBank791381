@@ -1,5 +1,6 @@
 import { Component, Suspense, lazy, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { projectStudentToolsForStudent, enabledToolsForSection, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
+import { projectStudentToolsForStudent, enabledToolsForSection, csharpRunAllowedInExam, csharpRunAllowedInBook, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
+import type { CSharpToolRunner } from "./csharpToolRun";
 import { studentToolCatalogEntry, studentToolHasUi } from "./studentToolsCatalog";
 import CalculatorTool from "./CalculatorTool";
 import Ipv4CalculatorTool from "./Ipv4CalculatorTool";
@@ -18,6 +19,8 @@ const GraphPlotterTool = lazy(() => import("./GraphPlotterTool"));
 const FormulaSheetTool = lazy(() => import("./FormulaSheetTool"));
 // Phase T6 — the periodic table carries the chemistry catalog: its own chunk.
 const PeriodicTableTool = lazy(() => import("./PeriodicTableTool"));
+// Phase T14 — the C# editor carries the code editor (and, on demand, its rich engine): its own chunk.
+const CSharpEditorTool = lazy(() => import("./CSharpEditorTool"));
 
 // Phase T2 — the student's tool bar inside a running exam.
 //
@@ -30,8 +33,11 @@ const PeriodicTableTool = lazy(() => import("./PeriodicTableTool"));
 // • A failure inside a tool stays inside the tool (its own error boundary): it never reaches the exam's answer / render-failure state.
 
 /** `onToolOpen` (Phase T8) is told each time the student opens a tool, for the attempt's usage record; the book reader passes nothing. */
-type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void };
-const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable"]);
+/** `csharpRunner` (Phase T14): the host's run transport for the C# editor (the exam page / the book reader); absent → write only. */
+type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner };
+type CSharpRun = { runner?: CSharpToolRunner; offReason?: string };
+const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor"]);
+const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor"]);
 
 class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -42,7 +48,7 @@ class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 
-function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
+function ToolBody({ tool, csharp }: { tool: StudentToolConfigV1; csharp: CSharpRun }) {
   switch (tool.id) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
@@ -57,6 +63,7 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
     case "hexBinaryTable": return <HexBinaryTableTool config={tool} />;
     case "periodicTable": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل الجدول الدوري…</p>}><PeriodicTableTool config={tool} /></Suspense>;
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
+    case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool config={tool} runner={csharp.runner} runOffReason={csharp.offReason} /></Suspense>;
     default: return null;
   }
 }
@@ -64,9 +71,15 @@ function ToolBody({ tool }: { tool: StudentToolConfigV1 }) {
 const toolTitle = (t: StudentToolConfigV1): string =>
   t.id === "calculator" ? (t.variant === "basic" ? "آلة حاسبة" : "آلة حاسبة علمية") : t.id === "formulaSheet" ? t.title : studentToolCatalogEntry(t.id).label;
 
-export default function StudentToolDock({ studentTools, sectionId, onToolOpen }: Props) {
+export default function StudentToolDock({ studentTools, sectionId, onToolOpen, csharpRunner }: Props) {
   const baseId = useId();
   const spec = useMemo(() => projectStudentToolsForStudent(studentTools), [studentTools]);
+  // T14 — running from the C# editor: the same rule the server applies (it checks again on every run).
+  const csharp = useMemo<CSharpRun>(() => {
+    if (!csharpRunner) return { offReason: "التشغيل غير متاح في المعاينة." };
+    const allowed = csharpRunner.context === "exam" ? csharpRunAllowedInExam(spec) : csharpRunAllowedInBook(spec);
+    return allowed ? { runner: csharpRunner } : { offReason: "التشغيل غير متاح في هذا الامتحان لأن المحرر معطّل في بعض أقسامه." };
+  }, [csharpRunner, spec]);
   const all = useMemo(() => (spec ? spec.tools.filter(t => studentToolHasUi(t.id)) : []), [spec]);
   const enabled = useMemo(() => enabledToolsForSection(spec, sectionId).filter(t => studentToolHasUi(t.id)), [spec, sectionId]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -146,7 +159,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen }:
         const titleId = baseId + "-" + t.id + "-title";
         const visible = openTool === t.id && openAllowed;
         return (
-          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (WIDE_TOOLS.has(t.id) ? " is-wide" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
+          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (WIDE_TOOLS.has(t.id) ? " is-wide" : "") + (XWIDE_TOOLS.has(t.id) ? " is-xwide" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
             hidden={!visible} tabIndex={-1} data-testid={"tool-panel-" + t.id}
             style={moved ? { transform: "translate(" + offset.x + "px, " + offset.y + "px)" } : undefined}>
             <header className="stt-panel-head" onPointerDown={onHeadPointerDown} onPointerMove={onHeadPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}
@@ -157,7 +170,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen }:
                 <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
               </span>
             </header>
-            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} /></ToolBoundary></div>
+            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} /></ToolBoundary></div>
           </section>
         );
       })}

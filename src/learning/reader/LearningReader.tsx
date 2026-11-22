@@ -438,6 +438,8 @@ export default function LearningReader({
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isEditableTarget(e.target) || nestedDialogOpen()) return;
+      // The student tool bar owns its own keys (a focused tool button never turns the page or toggles presentation).
+      if (e.target instanceof Element && e.target.closest(".stt-dock")) return;
       if (e.key === "f" || e.key === "F" || e.code === "KeyF") { e.preventDefault(); togglePresentation(); return; }
       if (e.key === "Escape" && focusMode && !presentation) { e.preventDefault(); setFocusMode(false); return; }
       // Normal reading pages only while focus rests on the reading surface itself (the content root, which a click on
@@ -771,10 +773,9 @@ export default function LearningReader({
           </div>
         </div>
       )}
-      {/* Phase T7 — the book's student tools; not in presentation mode (the teacher projects the page to the class). */}
-      {!presentation && (
-        <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} /></Suspense></ToolDockBoundary>
-      )}
+      {/* Phase T7 — the book's student tools. Owner request: they stay available in presentation mode (full screen) too, and the dock
+          stays MOUNTED across entering / leaving it (inside the overlay, so inside its focus trap), so an open tool keeps its state. */}
+      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} runHeaders={codeRun?.headers} /></Suspense></ToolDockBoundary>
     </div>
   );
 }

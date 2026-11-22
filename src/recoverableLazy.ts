@@ -30,6 +30,11 @@
 //      (`firstCss`, 3 s): a stylesheet that stalls must not hold an unrelated part back for the whole stylesheet bound. Such a
 //      late first load, like one that took the recovery path, appears only once no press is in progress, and the presses that
 //      start just after it are guarded (`settleLate`): the content it pushes down may be what the student is aiming at.
+//   4b. CSP-1: under a Content-Security-Policy that refuses inline scripts (the application's own, D2) the browser refuses the
+//      import map of step 3. The remap then happens only when it needs no map (the entry alone, reaching no recovered module),
+//      by importing `<entry>?r=<g>.` directly; any other remap is refused at once (`recovery-blocked`) and the card keeps the
+//      safe options. A shared dependency that failed is therefore not recoverable in place in production; the question is
+//      reported to the server (docs/enterprise-ux-premium-21e3.md §16), never graded as a blank.
 //   5. The remap and the stylesheet re-links are bounded in time. A recovery that stalls stops blocking the queue; until it
 //      settles, its modules are "in flight" and any other recovery that would need one of them is refused (never a second copy).
 //      The retry's first step re-calls the original factory, which is the browser's own import: it is not bounded here (the
@@ -73,6 +78,28 @@ export const NEVER_REMAP: ReadonlySet<string> = new Set([
 ]);
 
 const HASHED = /^([A-Za-z0-9_-]+)-[0-9a-z]{8}\.(js|css)$/;
+
+/** CSP-1 — whether a Content-Security-Policy `<meta>` of this document refuses inline scripts (an inline import map is one). The
+ *  directive is the one the browser applies to a <script> element: script-src-elem, else script-src, else default-src.
+ *  'unsafe-inline' allows them only when no hash, nonce or 'strict-dynamic' is listed (CSP 3 ignores it otherwise). Every
+ *  policy is enforced, so one refusal is enough. The application delivers its policy as a meta in the built index.html
+ *  (scripts/content-security-policy.ts); a policy sent only as an HTTP header is not visible here. */
+export function inlineScriptsBlockedByCsp(doc: Document | null): boolean {
+  if (!doc) return false;
+  for (const meta of doc.querySelectorAll<HTMLMetaElement>("meta[http-equiv]")) {
+    if ((meta.getAttribute("http-equiv") || "").trim().toLowerCase() !== "content-security-policy") continue;
+    const directives = new Map<string, string[]>();
+    for (const part of (meta.getAttribute("content") || "").split(";")) {
+      const [name, ...sources] = part.trim().split(/\s+/);
+      if (name && !directives.has(name.toLowerCase())) directives.set(name.toLowerCase(), sources.map(s => s.toLowerCase()));
+    }
+    const list = directives.get("script-src-elem") ?? directives.get("script-src") ?? directives.get("default-src");
+    if (!list) continue;
+    const inlineAllowed = list.includes("'unsafe-inline'") && !list.some(s => /^'(sha256|sha384|sha512|nonce)-/.test(s) || s === "'strict-dynamic'");
+    if (!inlineAllowed) return true;
+  }
+  return false;
+}
 
 /** The canonical absolute URL of an application asset, or null. Accepts only `<origin><base>assets/<name>-<hash>.<ext>` with no
  *  credentials, query or fragment; `name`, when given, must match exactly. */
@@ -272,6 +299,14 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");
     // A stalled earlier recovery may still evaluate these modules under its own generation: never start a second copy.
     if (set.some(u => inflight.has(u))) throw new Error("recovery-busy");
+    // CSP-1 — the application's policy allows inline scripts only by hash, so the browser refuses a runtime import map. A retry
+    // whose graph needs no redirect (the entry alone, reaching no recovered module) is imported directly; one that needs a
+    // redirect cannot work under such a policy and is refused before anything is imported or marked in flight.
+    const blocked = inlineScriptsBlockedByCsp(env.doc);
+    if (blocked) {
+      const reachesRecovered = (await Promise.all(set.map(edgesOf))).some(edges => edges.some(e => settled.has(e)));
+      if (set.some(u => u !== entry) || reachesRecovered) throw new Error("recovery-blocked");
+    }
     const g = ++generation, url = (u: string) => u + "?r=" + g + ".";
     const imports: Record<string, string> = {};
     settled.forEach((v, k) => { imports[k] = v; });
@@ -279,7 +314,7 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     const scopes: Record<string, Record<string, string>> = {};
     for (const u of set) scopes[url(u)] = imports;
     const supports = (globalThis as { HTMLScriptElement?: { supports?: (t: string) => boolean } }).HTMLScriptElement?.supports;
-    if (!supports || supports("importmap")) {
+    if (!blocked && (!supports || supports("importmap"))) {
       const script = env.doc.createElement("script");
       script.type = "importmap";
       script.textContent = JSON.stringify({ scopes });

@@ -53,13 +53,41 @@ describe("T7 — the tool bar in the book reader", () => {
     expect(within(panel).getByTestId("ipv4-result").textContent).toContain("10.255.255.255");
     expect(within(panel).getByText("تقسيم الشبكة")).toBeTruthy();                       // subnetting is on in the book
   });
-  it("is hidden in presentation mode and comes back after it", async () => {
+  // Owner request (fullscreen toolbox fix): the tool bar stays available in presentation mode («وضع العرض» / full screen), and it
+  // stays MOUNTED across entering and leaving it, so an open tool keeps its state.
+  it("stays available in presentation mode, and an open tool keeps its state across entering and leaving it", async () => {
     mount();
-    await screen.findByTestId("student-tools-button");
+    fireEvent.click(await screen.findByTestId("student-tools-button"));
+    fireEvent.click(within(screen.getByRole("group", { name: "الأدوات المسموحة" })).getByRole("button", { name: "حاسبة الشبكات IPv4" }));
+    const field = () => within(screen.getByRole("dialog", { name: "حاسبة الشبكات IPv4" })).getByLabelText("العنوان مع البادئة أو القناع") as HTMLInputElement;
+    fireEvent.change(field(), { target: { value: "10.1.2.3/8" } });
+    const dock = screen.getByTestId("student-tool-dock");
     fireEvent.click(screen.getByRole("button", { name: "وضع العرض" }));
-    await waitFor(() => expect(screen.queryByTestId("student-tools-button")).toBeNull());
+    await waitFor(() => expect(document.querySelector(".learning-reader")!.classList.contains("is-presentation")).toBe(true));
+    expect(screen.getByTestId("student-tool-dock")).toBe(dock);                          // the same dock: never unmounted
+    expect(document.querySelector(".learning-reader")!.contains(dock)).toBe(true);        // inside the overlay (its focus trap)
+    expect(screen.getByTestId("student-tools-button")).toBeTruthy();
+    expect(field().value).toBe("10.1.2.3/8");
     fireEvent.click(screen.getByRole("button", { name: "خروج من وضع العرض" }));
-    expect(await screen.findByTestId("student-tools-button")).toBeTruthy();
+    await waitFor(() => expect(document.querySelector(".learning-reader")!.classList.contains("is-presentation")).toBe(false));
+    expect(screen.getByTestId("student-tool-dock")).toBe(dock);
+    expect(field().value).toBe("10.1.2.3/8");
+  });
+  it("keys pressed inside the tool bar never turn the page or toggle presentation (only the reading surface owns them)", async () => {
+    mount();
+    await screen.findByRole("heading", { level: 2, name: "صفحة غنية" });
+    fireEvent.click(screen.getByRole("button", { name: "وضع العرض" }));
+    await waitFor(() => expect(document.querySelector(".learning-reader")!.classList.contains("is-presentation")).toBe(true));
+    const fab = screen.getByTestId("student-tools-button");
+    fab.focus();
+    fireEvent.keyDown(fab, { key: "ArrowLeft" });
+    fireEvent.keyDown(fab, { key: "PageDown" });
+    fireEvent.keyDown(fab, { key: "f" });
+    expect(screen.getByRole("heading", { level: 2, name: "صفحة غنية" })).toBeTruthy();   // same page
+    expect(document.querySelector(".learning-reader")!.classList.contains("is-presentation")).toBe(true);
+    // the reading surface still pages in presentation
+    fireEvent.keyDown(document.body, { key: "ArrowLeft" });
+    expect(await screen.findByRole("heading", { level: 2, name: "صفحة ٢" })).toBeTruthy();
   });
 });
 
