@@ -34,10 +34,21 @@ decorative `--eb-faint`. Guard: `src/notifications/notificationTimeContrast.a11y
 
 ## Reported, not changed here
 
-- **Check A5 of the 21E.3 harness fails on the baseline build and on this head.** A5 is "no save / submit / start caused by the
-  failure". One extra `saveDraft` is recorded after the student moves to the question whose renderer fails, at every viewport.
-  The run is the same with and without the axe scan. It needs its own root cause, which may be harness timing or a real extra
-  save. Until then it is a real failure, not a flake.
+- **Check A5 of the 21E.3 harness: root-caused and fixed in the harness (not a product defect).** A5 ("no save / submit / start
+  caused by the failure") failed at every viewport on the baseline. The probe recorded every `saveDraft` body. The extra save
+  carries the **same answers** as the last save before the failure, plus `renderFailures: [{questionId: "h1", code: "chunk-load"}]`.
+  That is the sync the owner's assessment-integrity decision requires (`docs/enterprise-ux-premium-21e3.md` §16.2): the server
+  holds the question for the teacher instead of grading the blank as 0. A5 was written before §16 and was never updated.
+  The check now says exactly that. **A5**: no submit, one start, and every save after the failure has answers byte-for-byte equal
+  to the last answers saved before it, plus a `renderFailures` array. **A5r** (new): while the recovery card is shown, a save
+  reports `h1`.
+  - Head build: 80 / 80, A5 and A5r PASS at all four viewports.
+  - Mutations in `src/StudentExamPage.tsx`, restored byte-for-byte (hash verified):
+
+    | Mutant | Planted defect | A5 | A5r |
+    |---|---|---|---|
+    | M1 | the `saveDraft` body without `renderFailures` | KILLED | KILLED |
+    | M2 | the sync save sends `{}` as answers | KILLED | not targeted, passes |
 - **The chunk recovery's import map is blocked by the Content-Security-Policy.** When a shared dependency chunk fails, the 21E.3
   recovery (`src/recoverableLazy.ts`) inserts a `<script type="importmap">`. The D2 policy (`script-src 'self' 'sha256-…'`)
   blocks it, and the browser logs a CSP violation, which reaches `client.csp_violation` in production. The question still
