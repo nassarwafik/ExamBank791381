@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB9, GB6a and GB6b merged (GB9, #687). GB10 (building the scheme from a description with AI, §4.11) in review.
+**Status:** GB0–GB10, GB6a and GB6b merged (GB10, #690, on 2026-11-22). GB10 layout follow-up (§4.11, «Measured in a real browser») in review.
 
 | Phase | Pull request |
 |---|---|
@@ -15,7 +15,8 @@
 | GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
 | GB8 — copy a scheme from another class (D7) | nassarwafik/ExamBank791381#685 |
 | GB9 — «علامة يرصدها المعلم» made clear in the builder | nassarwafik/ExamBank791381#687 |
-| GB10 — «بناء المخطط بالذكاء الاصطناعي» (§4.11) | `claude/inspiring-knuth-ub53oi` |
+| GB10 — «بناء المخطط بالذكاء الاصطناعي» (§4.11) | nassarwafik/ExamBank791381#690 |
+| GB10 layout follow-up — measured in a real browser, a field gap fixed | `claude/inspiring-knuth-ub53oi` |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -521,6 +522,16 @@ reviews it and saves with the existing «حفظ» (`scheme.save`: its validation
   - the notes and assumptions.
   A weight still to type is an empty field.
 - **On a refusal:** «لم أفهم من الوصف…», a rate limit or a provider failure keeps the window open with the server's message.
+
+**Measured in a real browser** (follow-up after #690; harness `browser-harness/gradebook-scheme-ai-gb10.html`: the production panel,
+builder and window with the App's stylesheets, over TEST data and no network):
+- **Widths:** 390 px and 1440 px light, and 390 px dark (`data-theme="dark"`). The page never scrolls sideways. Nothing in the window
+  or in the filled builder leaves the dialog, except the screen-reader-only labels, which are clipped on purpose. No console error.
+- **A defect found and fixed:** below the description field, the window showed 42 px of empty space before the help line.
+  - **Cause:** the builder's `.eb-gb-field` rule (`flex: 1 1 220px`) is meant for a field in a row. Inside the window's vertical
+    column, the 220 px became a height, so the field was 220 px tall for 178 px of content.
+  - **Fix:** `.eb-gb-ai-field { flex: 0 0 auto; }`, for this window only; the builder's own fields are unchanged.
+  - **Fail-first measurement:** the field was 220 px on `main` `849a4c02`, and is 178 px after the fix (label 24 + gap 4 + field 150).
 
 ## 5. Phases
 
