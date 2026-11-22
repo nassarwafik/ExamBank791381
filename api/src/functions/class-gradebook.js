@@ -39,6 +39,7 @@ const { isSupportedProject, getProjectMeta } = require("../lib/project-tracker/r
 const svc = require("../lib/project-tracker/service");
 const { validateScheme } = require("../lib/gradebook/scheme");
 const { proposeCopy } = require("../lib/gradebook/copy");
+const { listClassSources } = require("../lib/gradebook/class-sources");
 const { assignmentEvidence, MISSING_SOURCE, UNCLASSIFIED } = require("../lib/gradebook/evidence");
 const { projectEvidenceFromProgress } = require("../lib/gradebook/project-source");
 const { computeGradebook, roundForDisplay, DECISIONS } = require("../lib/gradebook/compute");
@@ -270,14 +271,7 @@ async function readCopy(c, classroom, auth, grants, fromId, deps) {
 }
 
 async function readSources(c, classroom, grants, deps) {
-  const docs = await (deps.loadDocs || loadDocs)(c, ASSIGN_PREFIX);
-  const assignments = docs
-    .filter(a => a && String(a.classId || "") === classroom.classId && isReportableAssessment(a) && isSafeId(String(a.assignmentId || "")))
-    .map(a => ({ assignmentId: String(a.assignmentId), title: String(a.title || ""), status: String(a.status || ""), totalMarks: Number(a.totalMarks) || 0, publishedAt: String(a.publishedAt || a.createdAt || "") }))
-    .sort((x, y) => String(y.publishedAt).localeCompare(String(x.publishedAt)));
-  const projects = grants.has(PROJECTS_CAPABILITY)
-    ? getSupportedClassProgramCodes(classroom).map(code => ({ projectCode: code, title: getProjectMeta(code).title }))
-    : [];
+  const { assignments, projects } = await listClassSources(c, classroom, grants.has(PROJECTS_CAPABILITY), deps);
   return reply(200, { ok: true, classId: classroom.classId, assignments, projects, withheld: grants.has(PROJECTS_CAPABILITY) ? [] : ["projects"] });
 }
 

@@ -104,6 +104,9 @@ const ROUTE_CAPABILITIES = Object.freeze({
   "class-gradebook.js": { GET: "assignments.assignment.view", "scheme.save": "assignments.grading.grade", "entries.save": "assignments.grading.grade",
     "part.approve": "assignments.results.release", "part.reopen": "assignments.results.release", "final.approve": "assignments.results.release", "final.reopen": "assignments.results.release",
     "*": "assignments.grading.grade" },
+  // GB10 (owner decisions 2026-11-22): the AI proposal of a scheme needs BOTH capabilities — grading (changing the scheme, O1) and AI
+  // authoring (the owner's switch for AI). The route asks "*" then "ai.use", one after the other (a list here would mean «any of»).
+  "gradebook-scheme-ai.js": { "*": "assignments.grading.grade", "ai.use": "examBuilder.ai.use" },
   "assignment-review.js": { "*": "assignments.grading.grade" },
   "coding-grading.js": { "*": "assignments.grading.grade" },
   "coding-grading-recovery.js": { "*": "assignments.grading.grade" },
