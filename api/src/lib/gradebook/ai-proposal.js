@@ -230,6 +230,7 @@ function proposalIsSaveable(proposal, context) {
 }
 
 module.exports = {
+  isPlainObject, clip, schemaParts: { str, obj, arr, nullable, WEIGHT },
   AI_SCHEME_LIMITS, AI_SCHEME_INSTRUCTIONS, REASONS, MESSAGES, WEIGHT_SOURCES,
   buildSourceRefs, buildAiSchemePrompt, buildAiSchemeSchema, resolveWeights, normalizeAiScheme, proposalIsSaveable
 };
