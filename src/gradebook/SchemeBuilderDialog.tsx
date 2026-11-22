@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import Dialog from "../ui/Dialog";
 import { useConfirm } from "../ui/useConfirm";
-import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from "../icons";
+import { IconPlus, IconTrash, IconArrowUp, IconArrowDown, IconSparkles } from "../icons";
 import { TeacherHttpError } from "../teacherFetch";
 import { loadSources, saveScheme } from "./gradebookApi";
 import SchemeCopyPanel from "./SchemeCopyPanel";
-import type { GbGradebook, GbSchemeSaved, GbSource, GbSources } from "./types";
+import type { GbAiProposal, GbGradebook, GbSchemeSaved, GbSource, GbSources } from "./types";
 import {
-  type Draft, type DraftCategory, fromScheme, fromCopy, copyReport, summarize, toPayload, isDirty, addCategory, removeCategory, setCategoryTitle, setCategoryWeight,
+  type Draft, type DraftCategory, fromScheme, fromCopy, copyReport, fromAiProposal, aiReport, summarize, toPayload, isDirty, addCategory, removeCategory, setCategoryTitle, setCategoryWeight,
   addItem, removeItem, setItemWeight, moveItem, equalizeCategories, equalizeItems, sourceKey, normalizeDigits, LIMITS
 } from "./schemeDraft";
+
+// GB10 — the AI window is loaded on its first opening only.
+const SchemeAiDialog = lazy(() => import("./SchemeAiDialog"));
 
 /**
  * Class gradebook GB3 — «مخطط العلامات»: the teacher defines the class's parts (each with its share of the final mark) and, in each part,
@@ -32,6 +35,8 @@ export type SchemeBuilderDialogProps = {
   onSaved: (saved: GbSchemeSaved) => void;
   /** Reload the gradebook (after a stale save); the dialog reopens on the new version. */
   onReload: () => void;
+  /** GB10 — whether this teacher may use AI authoring (presentation only: the server asks the capability again). */
+  aiAllowed?: boolean;
 };
 
 type SourcesState = { status: "loading" } | { status: "ready"; data: GbSources } | { status: "error"; error: string };
@@ -44,7 +49,8 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
   const [showIssues, setShowIssues] = useState(false);
-  const [copied, setCopied] = useState<{ summary: string; missing: string[] } | null>(null);
+  const [copied, setCopied] = useState<{ summary: string; missing: string[]; notes?: string[] } | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
   const classId = p.gradebook.classId;
 
@@ -98,15 +104,31 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
         </p>
         {p.lockNote && <p className="eb-gb-warning" role="status">{p.lockNote}</p>}
         {!readOnly && !p.lockNote && (
-          <SchemeCopyPanel token={p.token} classId={classId} onCopied={async proposal => {
-            if (draft.categories.length && !(await confirm({ title: "استبدال المخطط؟", message: "سيحلّ مخطط «" + proposal.from.name + "» محلّ المخطط في هذه النافذة. لا يُحفظ شيء قبل «حفظ».", confirmLabel: "استبدال", cancelLabel: "إلغاء" }))) return;
-            setDraft(fromCopy(proposal)); setShowIssues(true); setCopied(copyReport(proposal));
-          }} />
+          <div className="eb-gb-builder-tools">
+            {p.aiAllowed && (
+              <button type="button" className="eb-button is-small eb-gb-ai-open" onClick={() => setAiOpen(true)}>
+                <IconSparkles size={16} aria-hidden="true" />بناء المخطط بالذكاء الاصطناعي
+              </button>
+            )}
+            <SchemeCopyPanel token={p.token} classId={classId} onCopied={async proposal => {
+              if (draft.categories.length && !(await confirm({ title: "استبدال المخطط؟", message: "سيحلّ مخطط «" + proposal.from.name + "» محلّ المخطط في هذه النافذة. لا يُحفظ شيء قبل «حفظ».", confirmLabel: "استبدال", cancelLabel: "إلغاء" }))) return;
+              setDraft(fromCopy(proposal)); setShowIssues(true); setCopied(copyReport(proposal));
+            }} />
+          </div>
+        )}
+        {aiOpen && (
+          <Suspense fallback={null}>
+            <SchemeAiDialog open token={p.token} classId={classId} onClose={() => setAiOpen(false)} onProposal={async (proposal: GbAiProposal) => {
+              if (draft.categories.length && !(await confirm({ title: "استبدال المخطط؟", message: "سيحلّ المخطط المقترح محلّ المخطط في هذه النافذة. لا يُحفظ شيء قبل «حفظ».", confirmLabel: "استبدال", cancelLabel: "إلغاء" }))) return;
+              setDraft(fromAiProposal(proposal)); setShowIssues(true); setCopied(aiReport(proposal)); setAiOpen(false);
+            }} />
+          </Suspense>
         )}
         {copied && (
           <div className={copied.missing.length ? "eb-gb-warning" : "platform-notice"} role="status">
             <p className="eb-gb-copy-summary">{copied.summary}</p>
             {copied.missing.length > 0 && <ul className="eb-gb-copy-missing">{copied.missing.map((m, i) => <li key={i}>{m}</li>)}</ul>}
+            {copied.notes && copied.notes.length > 0 && <ul className="eb-gb-ai-notes" aria-label="ملاحظات على المخطط المقترح">{copied.notes.map((m, i) => <li key={i}>{m}</li>)}</ul>}
           </div>
         )}
         {readOnly && !p.lockNote && <p className="eb-muted" role="status">{p.gradebook.readOnly ? "للعرض فقط: هذا الصف في الأرشيف." : "للعرض فقط: تعديل المخطط يحتاج صلاحية التصحيح."}</p>}

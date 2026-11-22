@@ -1,7 +1,7 @@
 // Class gradebook — the teacher UI's calls to /api/class-gradebook. Errors are TeacherHttpError (status + server code) from the shared
 // teacher fetch; the caller decides what a 409 STALE_SCHEME means for the page.
 import { teacherFetchJson } from "../teacherFetch";
-import type { GbGradebook, GbSchemeSaved, GbSources, GbCategory, GbEntryItem, GbEntriesSaved, GbApprovalSaved, GbCopyClasses, GbCopyProposal } from "./types";
+import type { GbGradebook, GbSchemeSaved, GbSources, GbCategory, GbEntryItem, GbEntriesSaved, GbApprovalSaved, GbCopyClasses, GbCopyProposal, GbAiProposalReply } from "./types";
 
 const URL_BASE = "/api/class-gradebook";
 
@@ -44,4 +44,9 @@ export function loadCopyClasses(token: string, classId: string): Promise<GbCopyC
 /** GB8 — another class's scheme proposed for this class (nothing is saved). */
 export function loadCopy(token: string, classId: string, fromClassId: string): Promise<GbCopyProposal> {
   return teacherFetchJson<GbCopyProposal>(token, URL_BASE + "?classId=" + encodeURIComponent(classId) + "&resource=copy&from=" + encodeURIComponent(fromClassId), {}, "تعذر نسخ المخطط.");
+}
+
+/** GB10 — the AI's proposal of a scheme from the teacher's description (nothing is saved). `ok: false` = the description held no scheme. */
+export function proposeSchemeWithAi(token: string, classId: string, description: string): Promise<GbAiProposalReply> {
+  return teacherFetchJson<GbAiProposalReply>(token, "/api/gradebook-scheme-ai", { method: "POST", body: JSON.stringify({ classId, description }) }, "تعذر بناء المخطط بالذكاء الاصطناعي.");
 }

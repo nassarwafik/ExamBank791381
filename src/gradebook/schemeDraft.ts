@@ -5,7 +5,7 @@
 //   - a structural problem (empty title, invalid weight, a column without a source, too many parts) blocks the save;
 //   - sums that are not 100 do NOT block it: the scheme is saved as a draft, with no final mark, and the page says so.
 // Weights are never changed silently: «توزيع بالتساوي» is a button the teacher presses.
-import type { GbCategory, GbCopyProposal, GbScheme, GbSource } from "./types";
+import type { GbAiProposal, GbCategory, GbCopyProposal, GbScheme, GbSource } from "./types";
 
 export const LIMITS = { categories: 10, itemsPerCategory: 40, categoryTitle: 80, manualTitle: 120, manualMaxScore: 1000 } as const;
 const SUM_TOLERANCE = 0.01;
@@ -64,6 +64,27 @@ export function fromCopy(p: GbCopyProposal): Draft {
       items: c.items.map(i => ({ key: newKey(), itemId: newId("i"), weightText: weightText(i.weight), source: i.source }))
     }))
   };
+}
+
+/** GB10 — a draft from the AI's proposal: like a copy, every part and column gets a NEW id; a weight the teacher still has to type
+ *  (null) is an empty field, which the builder then asks for — never a number filled in by the page. */
+export function fromAiProposal(p: GbAiProposal): Draft {
+  const text = (w: number | null) => (w === null ? "" : weightText(w));
+  return {
+    categories: p.categories.map(c => ({
+      key: newKey(), categoryId: newId("c"), title: c.title, weightText: text(c.weight),
+      items: c.items.map(i => ({ key: newKey(), itemId: newId("i"), weightText: text(i.weight), source: i.source }))
+    }))
+  };
+}
+
+/** GB10 — what the AI built, in words: the summary, the server's notes and the model's assumptions, and each mention not built, with why. */
+export function aiReport(p: GbAiProposal): { summary: string; notes: string[]; missing: string[] } {
+  const summary = "بنى الذكاء الاصطناعي " + p.categories.length + " من الأقسام و" + p.built + " من العناصر."
+    + (p.unmatched.length ? " لم يُبنَ " + p.unmatched.length + "، أضفه بنفسك ثم احفظ:" : " راجعه ثم احفظ.");
+  const missing = p.unmatched.map(u => (u.category ? "«" + u.category + "» · " : "") + (u.title || "عنصر") + (u.weight === null ? "" : " (" + weightText(u.weight) + "%)") + " — " + u.reason
+    + (u.candidates && u.candidates.length ? " ربما تقصد: " + u.candidates.map(c => "«" + c + "»").join("، ") + "." : ""));
+  return { summary, notes: [...p.notes, ...p.assumptions], missing };
 }
 
 const mapCategory = (d: Draft, key: string, fn: (c: DraftCategory) => DraftCategory): Draft => ({ categories: d.categories.map(c => (c.key === key ? fn(c) : c)) });

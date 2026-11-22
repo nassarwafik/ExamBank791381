@@ -103,3 +103,11 @@
 /* the boxes' rows and fields may shrink to the box (a text input's own width never widens the dialog on a phone) */
 .eb-gb-add-source > *, .eb-gb-manual > *, .eb-gb-add-row > *{ min-width:0; }
 .eb-gb-add .eb-gb-field input, .eb-gb-add .eb-gb-field select{ inline-size:100%; min-width:0; box-sizing:border-box; }
+
+/* GB10 — «بناء المخطط بالذكاء الاصطناعي»: the button beside «نسخ من صف آخر», and its window */
+.eb-gb-builder-tools{ display:flex; flex-wrap:wrap; align-items:flex-start; gap:var(--eb-space-2); min-width:0; }
+.eb-gb-builder-tools > .eb-gb-copy{ flex:1 1 100%; }
+.eb-gb-ai-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-gb-ai-intro, .eb-gb-ai-help{ margin:0; }
+.eb-gb-ai-field textarea{ inline-size:100%; max-inline-size:100%; box-sizing:border-box; resize:vertical; min-block-size:8rem; font:inherit; }
+.eb-gb-ai-notes{ margin:var(--eb-space-1) 0 0; padding-inline-start:var(--eb-space-4); }
