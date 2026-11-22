@@ -8,7 +8,7 @@ import { Suspense, type ComponentType } from "react";
 import { render, screen, act, cleanup } from "@testing-library/react";
 import {
   trustedAssetUrl, failedEntryUrl, failedCssUrl, parseStaticImports, remapSet, createRecoveryRuntime, assetName, NEVER_REMAP, pickShared,
-  STATIC_IMPORT_HEADER_SOURCE, type RecoveryEnv,
+  STATIC_IMPORT_HEADER_SOURCE, inlineScriptsBlockedByCsp, type RecoveryEnv,
 } from "./recoverableLazy";
 
 const O = "https://exam.example";
@@ -341,4 +341,95 @@ describe("createRecoveryRuntime — the measured model (v3)", () => {
     expect(screen.getByText("one")).toBeTruthy(); expect(screen.getByText("two")).toBeTruthy();
     expect(f.imported.sort()).toEqual([E1 + "?r=1.", E2 + "?r=2."].sort());
   });
+});
+
+// CSP-1 — the application's Content-Security-Policy (D2, scripts/content-security-policy.ts) allows inline scripts only by hash,
+// so the browser refuses the runtime import map (measured in Chromium on the production build: a `client.csp_violation` for every
+// remapped retry, and a shared-dependency failure that never recovers in place). Under such a policy the runtime never inserts an
+// import map: a retry that needs none (the entry alone) imports `<entry>?r=<g>.` directly; a retry that needs one fails at once
+// with `recovery-blocked` — no futile import, nothing marked in flight — and the card keeps offering only the safe options.
+describe("CSP-1 — inlineScriptsBlockedByCsp reads the page's own policy", () => {
+  const withMeta = (content: string | null, run: () => void) => {
+    const meta = content === null ? null : Object.assign(document.createElement("meta"), { httpEquiv: "Content-Security-Policy", content });
+    if (meta) document.head.appendChild(meta);
+    try { run(); } finally { meta?.remove(); }
+  };
+  it.each([
+    ["the application's policy (self + hash)", "default-src 'self'; script-src 'self' 'sha256-1dbjLO75spiPvYNU+DS8IIa2fl9UkCH/JXhcy/z3MvY='", true],
+    ["self only", "script-src 'self'", true],
+    ["default-src only", "default-src 'self'", true],
+    ["unsafe-inline ignored beside a hash (CSP 3)", "script-src 'self' 'unsafe-inline' 'sha256-abc='", true],
+    ["unsafe-inline ignored beside a nonce", "script-src 'unsafe-inline' 'nonce-xyz'", true],
+    ["unsafe-inline ignored with strict-dynamic", "script-src 'unsafe-inline' 'strict-dynamic'", true],
+    ["script-src-elem wins over script-src", "script-src 'unsafe-inline'; script-src-elem 'self'", true],
+    ["plain unsafe-inline", "script-src 'self' 'unsafe-inline'", false],
+    ["no script directive at all", "img-src 'self'", false],
+  ])("%s → blocked = %s", (_label, content, blocked) => {
+    withMeta(content as string, () => expect(inlineScriptsBlockedByCsp(document)).toBe(blocked));
+  });
+  it("no policy, or no document: not blocked (the measured model applies unchanged)", () => {
+    withMeta(null, () => expect(inlineScriptsBlockedByCsp(document)).toBe(false));
+    expect(inlineScriptsBlockedByCsp(null)).toBe(false);
+  });
+});
+
+describe("CSP-1 — under a policy that blocks inline scripts the runtime never inserts an import map", () => {
+  const POLICY = "default-src 'self'; script-src 'self' 'sha256-1dbjLO75spiPvYNU+DS8IIa2fl9UkCH/JXhcy/z3MvY='";
+  const underPolicy = async (run: () => Promise<void>) => {
+    const meta = Object.assign(document.createElement("meta"), { httpEquiv: "Content-Security-Policy", content: POLICY });
+    document.head.appendChild(meta);
+    try { await run(); } finally { meta.remove(); }
+  };
+
+  it("entry failure: recovered in place by importing <entry>?r=1. directly — no import map", () => underPolicy(async () => {
+    cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const E = A("HotspotResponse"), V = A("HotspotView");
+    f.modules.set(E, Ok("hotspot")); f.sources.set(E, 'import{t as e}from"./HotspotView-abcd1234.js";export{e as default};'); f.sources.set(V, "var x=1;");
+    const C = rt.lazyComponent<object>("HotspotResponse", viteFactory(E, [V], () => Promise.reject(chunkError(E))));
+    await renderLazy(C); fire(V, "load");
+    expect(rt.rearmFailed()).toBe(1);
+    cleanup(); await renderLazy(C);
+    expect(screen.getByText("hotspot")).toBeTruthy();
+    expect(f.imported).toEqual([E + "?r=1."]);
+    expect(document.querySelectorAll('script[type="importmap"]').length).toBe(0);
+    expect(rt.snapshot().settled).toEqual({ [E]: E + "?r=1." });
+  }));
+
+  it("dependency failure: refused at once (recovery-blocked) — no import map, no remapped import, the card stays", () => underPolicy(async () => {
+    cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const E = A("HotspotResponse"), V = A("HotspotView"), C2 = A("VisualCanvas");
+    f.modules.set(E, Ok("hotspot"));
+    f.sources.set(E, 'import{t as e}from"./HotspotView-abcd1234.js";export{e as default};');
+    f.sources.set(V, 'import{a}from"./VisualCanvas-abcd1234.js";var v=1;'); f.sources.set(C2, "var c=1;");
+    const factory = vi.fn(viteFactory(E, [V, C2], () => Promise.reject(chunkError(E))));
+    const C = rt.lazyComponent<object>("HotspotResponse", factory);
+    await renderLazy(C); fire(V, "load"); fire(C2, "error");
+    rt.rearmFailed(); cleanup(); await renderLazy(C);
+    expect(screen.getByText("failed")).toBeTruthy();
+    expect(factory).toHaveBeenCalledTimes(2);                          // the original is still re-called first
+    expect(f.imported).toEqual([]);                                     // no futile ?r= import
+    expect(document.querySelectorAll('script[type="importmap"]').length).toBe(0);
+    expect(rt.snapshot().settled).toEqual({});
+    // nothing is left in flight: the same retry is refused the same way again (never "recovery-busy")
+    await expect(rt.retryFailed()).resolves.toBe(false);
+    expect(f.imported).toEqual([]);
+  }));
+
+  it("a later graph that would need a recovered module mapped is refused too; one that does not still recovers", () => underPolicy(async () => {
+    cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const E = A("HotspotResponse"), L = A("LabelDiagramResponse"), K = A("CodingResponse");
+    f.modules.set(E, Ok("hotspot")); f.modules.set(L, Ok("label")); f.modules.set(K, Ok("coding"));
+    f.sources.set(E, "var e=1;"); f.sources.set(L, 'import"./HotspotResponse-abcd1234.js";'); f.sources.set(K, "var k=1;");
+    const H = rt.lazyComponent<object>("HotspotResponse", viteFactory(E, [], () => Promise.reject(chunkError(E))));
+    await renderLazy(H); rt.rearmFailed(); cleanup(); await renderLazy(H); cleanup();
+    expect(rt.snapshot().settled[E]).toBe(E + "?r=1.");                // entry-only recovery: no map needed
+    const Lab = rt.lazyComponent<object>("LabelDiagramResponse", viteFactory(L, [], () => Promise.reject(chunkError(L))));
+    await renderLazy(Lab); cleanup();                                   // imports the recovered E: would need E → E?r=1.
+    expect(screen.queryByText("label")).toBeNull();
+    const Cod = rt.lazyComponent<object>("CodingResponse", viteFactory(K, [], () => Promise.reject(chunkError(K))));
+    await renderLazy(Cod);                                              // shares nothing with E: imported directly
+    expect(screen.getByText("coding")).toBeTruthy();
+    expect(f.imported).toEqual([E + "?r=1.", K + "?r=2."]);
+    expect(document.querySelectorAll('script[type="importmap"]').length).toBe(0);
+  }));
 });
