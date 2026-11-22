@@ -159,6 +159,9 @@ async function run(name, viewport, mobile, dsf) {
     sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", "student"); sessionStorage.setItem("examBankSessionDisplayName", "سارة");
     // Record every text change of an aria-live / role=status|alert region (what a screen reader would be offered).
     window.__live = [];
+    // CSP-1 — every Content-Security-Policy violation of the run (the browser refuses, and reports, what the policy forbids).
+    window.__csp = [];
+    document.addEventListener("securitypolicyviolation", e => window.__csp.push({ directive: e.effectiveDirective || e.violatedDirective, blocked: e.blockedURI || "" }));
     const t0 = performance.now();
     const seen = new WeakMap();
     const scan = () => { document.querySelectorAll("[aria-live],[role=status],[role=alert]").forEach(el => { const txt = (el.textContent || "").trim(); if (seen.get(el) !== txt) { seen.set(el, txt); if (txt) window.__live.push({ t: Math.round(performance.now() - t0), cls: String(el.className || "").slice(0, 40), live: el.getAttribute("aria-live") || el.getAttribute("role"), text: txt.slice(0, 120) }); } }); };
@@ -300,6 +303,7 @@ async function run(name, viewport, mobile, dsf) {
   rec.live = await announcements(page);
   rec.noReload = await page.evaluate(() => window.__noReload === "same-document").catch(() => false);
   rec.evals = await page.evaluate(() => globalThis.__evals || {});
+  rec.csp = await page.evaluate(() => window.__csp || []).catch(() => null);
   rec.requests = { saves: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts, chunkRequests: mock.s.chunkRequests, actions: mock.s.actions, assets: mock.s.assetLog };
   await ctx.close();
 }
@@ -424,10 +428,17 @@ else for (const [vp, r] of Object.entries(record.viewports)) {
   ck(vp, "A1 failing renderer keeps the exam mounted", s["next-to-failing-q2"]?.examStillMounted && !s["next-to-failing-q2"]?.rootBoundary, s["next-to-failing-q2"]);
   ck(vp, "A2 recovery card shown, no internals", s["next-to-failing-q2"]?.recoveryCard && !s["next-to-failing-q2"]?.leaksInternals, s["next-to-failing-q2"]?.recoveryText);
   ck(vp, "A3 other question keeps its answer", s["previous-keeps-q1-answer"]?.q1CheckedIndex === 0, s["previous-keeps-q1-answer"]);
-  ck(vp, "A4 retry renders the question", s.retry?.rendered === true, s.retry?.chunkRequests);
+  // CSP-1 — a failed SHARED dependency (any failing JS chunk other than the question's own entry stub) can only be recovered in
+  // place through an import map, which the application's CSP refuses (src/recoverableLazy.ts, step 4b). In that mode the retry
+  // must fail closed: the card stays with the safe options and no remapped (?r=) script is requested at all.
+  const depMode = FAIL.some(f => f.ext === ".js" && f.prefix !== "HotspotResponse-");
+  if (!depMode) ck(vp, "A4 retry renders the question", s.retry?.rendered === true, s.retry?.chunkRequests);
+  else ck(vp, "A4d shared dependency under the CSP: the card stays with the safe options; no remapped script requested", s.retry?.rendered === false && (s.retry?.rounds || []).length > 0 && s.retry.rounds.every(x => /ما زال التحميل متعذّرًا/.test(x.text) && /iex-q-recovery-retry/.test(x.focus || "")) && !(r.requests?.assets || []).some(a => /\.js\?r=/.test(a.url)), { rounds: s.retry?.rounds, chunkRequests: s.retry?.chunkRequests });
   ck(vp, "A5b the recovered question has its stylesheet (visual canvas laid out)", s.retry?.rendered !== true || s.retry?.canvasPosition === "relative", s.retry?.canvasPosition);
   ck(vp, "A5 no save / submit / start caused by the failure", s["no-extra-requests-from-failure"]?.savesAfter === s["no-extra-requests-from-failure"]?.savesBefore && s["no-extra-requests-from-failure"]?.submits === 0 && s["no-extra-requests-from-failure"]?.starts === 1, s["no-extra-requests-from-failure"]);
   ck(vp, "A6 no page reload at any point", r.noReload === true, r.noReload);
+  // CSP-1 — the recovery never asks the browser for something the application's own policy forbids (no inline import map).
+  ck(vp, "I1 no Content-Security-Policy violation during the whole journey (recovery included)", Array.isArray(r.csp) && r.csp.length === 0, r.csp);
   const assets = r.requests?.assets || [];
   const retryUrls = assets.map(a => a.url).filter(x => x.includes("?"));
   ck(vp, "A7 every recovery request is a same-origin /assets/<name>-<hash>.(js|css)?r=<n>. URL", retryUrls.every(x => /^\/assets\/[A-Za-z0-9_-]+-[0-9a-z]{8}\.(js|css)\?r=\d+\.$/.test(x)), retryUrls);
