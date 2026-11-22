@@ -115,7 +115,7 @@ const OWN_LIMITER = { "ai-exam-composer.js": /reserveComposerCall/ };
 const EXPECTED_POLICY = {
   "ai-question-author.js": "ai-general", "ai-scenario-author.js": "ai-general", "analyze-global-exam-instruction.js": "ai-general",
   "classify-bank-batch.js": "ai-bulk", "classify-question-preview.js": "ai-general", "exam-quality-fix.js": "ai-general",
-  "generate-question-image.js": "ai-image", "import-analyze.js": "ai-bulk", "interpret-exam-request.js": "ai-general",
+  "generate-question-image.js": "ai-image", "gradebook-scheme-ai.js": "ai-general", "import-analyze.js": "ai-bulk", "interpret-exam-request.js": "ai-general",
   "question-ai-action.js": "ai-general", "structured-exam-ai-fix.js": "ai-general", "teacher-analytics-ai.js": "ai-general"
 };
 

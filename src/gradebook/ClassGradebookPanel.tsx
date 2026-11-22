@@ -204,7 +204,7 @@ export default function ClassGradebookPanel({ token, classroom, classActive, onO
         </>
       )}
       {data && builderOpen && (
-        <SchemeBuilderDialog key={classId + ":" + (data.etags.scheme || "new")} open token={token} gradebook={data} editable={editable && !finalLocked}
+        <SchemeBuilderDialog key={classId + ":" + (data.etags.scheme || "new")} open token={token} gradebook={data} editable={editable && !finalLocked} aiAllowed={can("examBuilder.ai.use")}
           lockNote={finalLocked ? "العلامة النهائية معتمدة: المخطط للعرض فقط حتى تعيد فتحها." : locked.size ? "الأجزاء المعتمدة لا تُعدَّل أعمدتها ولا أوزانها ولا تُحذف حتى تعيد فتحها: " + (scheme ? scheme.categories.filter(c => locked.has(c.categoryId)).map(c => "«" + c.title + "»").join("، ") : "") + "." : ""}
           onClose={() => setBuilderFor("")}
           onSaved={saved => { setBuilderFor(""); setNoticeFor({ classId, text: saved.status === "active" ? "✓ حُفظ مخطط العلامات." : "حُفظ المخطط مسودة: أكمل النسب حتى يصبح مجموعها 100." }); refresh(classId); }}

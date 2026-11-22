@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB8, GB6a and GB6b merged (GB8, #685, on 2026-11-21). GB9 (a mark the teacher enters, made clear in the builder, §4.10) in review.
+**Status:** GB0–GB9, GB6a and GB6b merged (GB9, #687). GB10 (building the scheme from a description with AI, §4.11) in review.
 
 | Phase | Pull request |
 |---|---|
@@ -14,7 +14,8 @@
 | GB6a — approval, lock, reopen, the student read (server) | nassarwafik/ExamBank791381#675 |
 | GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
 | GB8 — copy a scheme from another class (D7) | nassarwafik/ExamBank791381#685 |
-| GB9 — «علامة يرصدها المعلم» made clear in the builder | `feature/gb9-teacher-mark-clarity` |
+| GB9 — «علامة يرصدها المعلم» made clear in the builder | nassarwafik/ExamBank791381#687 |
+| GB10 — «بناء المخطط بالذكاء الاصطناعي» (§4.11) | `claude/inspiring-knuth-ub53oi` |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -441,6 +442,86 @@ assignments for the release check.
 - **A phone layout fix met on the way:** the text input's own width could make the box wider than the dialog (measured 325 px of
   content in a 298 px box at 390 px). The boxes' rows and fields now shrink to the box.
 
+### 4.11 GB10 — «بناء المخطط بالذكاء الاصطناعي» (owner request and decisions 2026-11-22)
+
+**The request.** A button in the scheme builder opens a window. The teacher describes the distribution of the final mark in words, and
+AI builds the scheme: the parts and their shares, the columns of each part and their weights, chosen from the class's assignments.
+
+**The plan** was reported before any code and approved on 2026-11-22 with all its recommendations:
+- **Capabilities:** `assignments.grading.grade` (changing the scheme, O1) **and** `examBuilder.ai.use` (the owner's switch for AI
+  authoring). No new capability.
+- **Provider:** the configured OpenAI client (`quality-fix-ai-client.js`, strict structured output, no SDK retries), as for the
+  question author. No new provider and no new key.
+- **An assignment the teacher names that the class does not have** is listed («ما لم يُعثر عليه»). It is never turned into a manual
+  column by itself. A manual column is proposed only for what the teacher describes as one (attendance, participation, a paper exam).
+- **A proposal replaces the builder's draft** after the teacher confirms, like a GB8 copy. Editing the current scheme by a description
+  («اجعل الفصل الثاني 50%») is a later phase (GB10c), designed after the owner has tried this one.
+
+**The rule: the AI proposes, the teacher saves.** Nothing is written by the AI route. The proposal fills the builder; the teacher
+reviews it and saves with the existing «حفظ» (`scheme.save`: its validation, its stale guard and its audit).
+
+**The route** — `POST /api/gradebook-scheme-ai` `{ classId, description }` (`api/src/functions/gradebook-scheme-ai.js`):
+- **Order of the checks, all before any provider call:**
+  1. the teacher session;
+  2. `assignments.grading.grade`, then `examBuilder.ai.use`, asked one after the other (a list in the registry means «any of»);
+  3. the input: a safe `classId`, a description of 1–2000 characters;
+  4. tenancy (another teacher's class is `404 CLASS_NOT_FOUND`, and nothing of it is read);
+  5. an archived class is `409 CLASS_ARCHIVED`;
+  6. a scheme an approval locks (an approved part or final) is `409 SCHEME_LOCKED`; a corrupt approvals document is `503`.
+- **Rate limit:** `withAiRateLimit("gradebook-scheme-ai", "ai-general", …)` at registration (D3), so a refused request takes one
+  token from the caller's own bucket and nothing else.
+- **Answers:** `200 { ok: true, proposal }`; `200 { ok: false, code: "AI_NO_SCHEME" | "AI_RESPONSE_MALFORMED", message }`;
+  `502 AI_PROVIDER_FAILED` (the provider's own text never reaches the teacher); `504 AI_TIMEOUT` (25 s); `502 AI_RESPONSE_INVALID`
+  (below). The description is never logged.
+
+**What the model is shown** (`api/src/lib/gradebook/ai-proposal.js`, pure):
+- the teacher's description, inside delimiters, as text and not as instructions;
+- the class's sources — the ONE list the builder offers (`api/src/lib/gradebook/class-sources.js`, shared with
+  `resource=sources`):
+  - each under an opaque reference: `A1`, `A2`… for the assignments and exams, the oldest first, so «الامتحان الأول» reads naturally;
+    `P1`… for the projects, listed only when the session holds `projects.tracker.view`;
+  - with its title, total marks and publication date;
+  - at most the 150 newest assignments, and the prompt says when some were left out.
+- **Never:** an assignment id, a project code, a student, a mark, the class's name, or anything of another class.
+
+**What the server does with the answer** (strict JSON schema; every value judged again here):
+- **Sources:** an item's reference must be one of the references shown, used once in the scheme. An invented one is listed
+  (`UNKNOWN_SOURCE`), a second use is listed (`DUPLICATE`). Only a shown reference can become a column.
+- **Manual columns:** title cleaned (120 characters at most). The maximum is only the one the teacher stated (1–1000); a missing one
+  is listed (`MANUAL_MAX_MISSING`) and never invented, because a wrong maximum would give every mark typed later a wrong percentage.
+- **Weights** (invariant 3: nothing is rescaled):
+  - `stated` — the teacher's number is kept as it is, even when the list does not reach 100 (the scheme is then a draft and the
+    builder says so);
+  - `equalShare` — «بالتساوي», «الباقي بالتساوي», or no weight given: computed HERE, in hundredths, from what the valid stated weights
+    leave of 100, the remainder going to the first ones (the builder's «توزيع بالتساوي» rule). The model's own arithmetic is ignored.
+    Nothing left → no weight;
+  - `suggested` — a weight the model chose because the teacher asked it to; named in the notes.
+  - An invalid weight (0, over 100, more than two decimals) becomes **no weight**: an empty field the teacher must fill, which blocks
+    «حفظ». It is never coerced.
+  - The shares are computed over every column the model listed, so a column that could not be built keeps its weight in the list,
+    and the others are not redistributed (the GB8 rule).
+- **Limits:** ten parts and forty columns a part, like the builder; the rest is dropped with a note.
+- **What the model could not find** is listed with the titles of the candidates it named, and only of references that exist.
+- **Notes:** the server adds its own notes (equal shares, suggested weights, no remainder, a part without a title) to the model's
+  assumptions (six at most).
+- **Defence in depth:** before answering, the proposal (with temporary ids) must pass the server's own `validateScheme` for this
+  class. Otherwise it is `502 AI_RESPONSE_INVALID`: the AI can never propose what «حفظ» would refuse for a structural reason.
+- **No ids travel** with the proposal: the page gives every part and column a new one, as for a GB8 copy.
+
+**The page** (`src/gradebook/SchemeAiDialog.tsx`, loaded on its first opening):
+- **The button:** «بناء المخطط بالذكاء الاصطناعي» sits beside «نسخ من صف آخر». It is not offered on a read-only scheme, a locked one,
+  or to a teacher without `examBuilder.ai.use` (presentation only: the server asks again).
+- **The window:**
+  - a help text, three example descriptions (a click fills the field), and the field (2000 characters, with a counter);
+  - the privacy line: only the description and this class's assignment titles are sent, no student names and no marks;
+  - «اقترح المخطط».
+- **On success:** replacing a non-empty draft asks first. The builder then shows the proposal and a notice:
+  - «بنى الذكاء الاصطناعي N من الأقسام وM من العناصر»;
+  - each mention not built, with why and «ربما تقصد: …»;
+  - the notes and assumptions.
+  A weight still to type is an empty field.
+- **On a refusal:** «لم أفهم من الوصف…», a rate limit or a provider failure keeps the window open with the server's message.
+
 ## 5. Phases
 
 | Phase | Scope | Specific evidence |
@@ -456,6 +537,7 @@ assignments for the release check.
 | **GB9** | «علامة يرصدها المعلم» made clear in the builder (§4.10) | a part with no assignment built and saved through the real builder; layout measured at 390 px and 1440 px |
 | **GB8** | Copying a scheme from another class (D7, §4.9) | tenancy (another teacher's class never read); match by the same exam; nothing rescaled; new ids; **mutation proof** (§8) |
 | **GB7** | Performance (a class of 40 students × 30 columns) and the final review | measured read count and time |
+| **GB10** | «بناء المخطط بالذكاء الاصطناعي» (§4.11): the pure proposal module, the route, its two capabilities and rate limit, the window | what the model is shown (no id, student, mark or other class); every refusal before any provider call; nothing written; weights never rescaled; **mutation proof** (§8) |
 
 Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`, `npx tsc -b`, `npm run build` and
 `git diff --check`. No phase touches the Runner or the official grading path. The gradebook only **reads** grading results.
@@ -547,6 +629,21 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
 - **The survivor:** M8-4 survived the first run. It is now killed by «a stored source column pointing at another class's assignment
   is «gone»».
 - **Restore:** files restored byte-for-byte, SHA-256 checked.
+
+**GB10 mutation proof** (`ai-proposal.js`, `gradebook-scheme-ai.js`, `class-sources.js`, the builder and the draft): 24 planted,
+23 KILLED, 1 equivalent.
+- **Planted:**
+  - in the proposal: an invented reference accepted as an id; stated weights rescaled to 100; the model's arithmetic trusted for an
+    equal share; a missing manual maximum invented; equal shares over the built columns only; a duplicate source allowed; an
+    unknown candidate kept; a real id shown to the model; the defence-in-depth validation bypassed;
+  - in the route: either capability not asked; tenancy removed; an archived class accepted; a locked scheme accepted; a corrupt
+    approvals document read as «nothing approved»; projects shown without `projects.tracker.view`; the description not bounded; the
+    sources not limited to the class; the rate limit removed;
+  - in the page: a missing weight filled in; a replace without asking; the button offered without AI authoring; the ids reused.
+- **The equivalent mutant:** M10-15 removes the explicit `if (!approvals)` check. The next line then reads a property of `null`, and
+  the route's catch answers the same 503, so the answer cannot change. The defect it stands for, a corrupt document READ as
+  «nothing approved» (M10-15b, `|| { final: null, parts: {} }`), is killed. The explicit check is kept: it says the rule.
+- **Restore:** files restored byte-for-byte, SHA-256 checked; `git status` clean after the campaign.
 
 **GB6a mutation proof** (`api/src/lib/gradebook/approval.js`, `class-gradebook.js`, `student-gradebook.js`, the capability registry).
 - **Planted:** 26 defects (G6-1 … G6-25, plus G6-18+). Among them: a pending or missing cell counted as final, the release check

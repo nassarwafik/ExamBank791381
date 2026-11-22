@@ -73,3 +73,15 @@ export type GbCopyProposal = {
   categories: { title: string; weight: number; items: { weight: number; source: GbSource; title: string }[] }[];
   unmatched: GbCopyUnmatched[];
 };
+
+/** GB10 — the AI's proposal of a scheme for this class («بناء المخطط بالذكاء الاصطناعي»): no ids (the page gives new ones); a null weight
+ *  is one the teacher still has to type; what could not be built is listed; `notes` are the server's own, `assumptions` the model's. */
+export type GbAiUnmatched = { category: string; title: string; weight: number | null; code: string; reason: string; candidates?: string[] };
+export type GbAiProposal = {
+  categories: { title: string; weight: number | null; items: { weight: number | null; source: GbSource; title: string }[] }[];
+  unmatched: GbAiUnmatched[];
+  notes: string[];
+  assumptions: string[];
+  built: number;
+};
+export type GbAiProposalReply = { ok: true; classId: string; proposal: GbAiProposal } | { ok: false; code: string; message: string };
