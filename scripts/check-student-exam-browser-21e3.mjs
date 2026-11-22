@@ -132,6 +132,24 @@ async function tabTo(page, selector, max = 30) {
   for (let i = 0; i < max; i++) { await page.keyboard.press("Tab"); if (await page.evaluate(s => !!document.activeElement && document.activeElement.matches(s), selector)) return true; }
   return false;
 }
+// A11Y-1 — optional axe-core WCAG 2.1 A/AA scan at every stage the run photographs (AXE_PATH = a local axe.min.js, for example
+// from `npm install --prefix /tmp/pw axe-core@4.10.2`; never fetched by this script). Each stage records its violations by rule;
+// the check "H1" then requires none at any stage. Without AXE_PATH nothing changes.
+const AXE_PATH = process.env.AXE_PATH || "";
+const AXE_SOURCE = AXE_PATH ? fs.readFileSync(AXE_PATH, "utf8") : "";
+const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
+async function axeScan(page, rec, stage) {
+  if (!AXE_PATH) return;
+  try {
+    // Evaluated through the DevTools protocol, not as an inline <script>: the page keeps its real Content-Security-Policy.
+    if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(AXE_SOURCE);
+    const v = await page.evaluate(async tags => {
+      const r = await window.axe.run(document, { runOnly: { type: "tag", values: tags }, resultTypes: ["violations"] });
+      return r.violations.map(x => ({ id: x.id, impact: x.impact, nodes: x.nodes.length, targets: x.nodes.slice(0, 4).map(n => n.target.join(" ")), summary: (x.nodes[0]?.failureSummary || "").slice(0, 240) }));
+    }, AXE_TAGS);
+    (rec.axe = rec.axe || {})[stage] = v;
+  } catch (e) { (rec.axe = rec.axe || {})[stage] = [{ id: "axe-error", impact: "critical", nodes: 0, targets: [], summary: String(e && e.message || e).slice(0, 240) }]; }
+}
 const step = async (rec, name, fn) => { try { const v = await fn(); rec.steps.push({ step: name, ok: true, ...(v && typeof v === "object" ? v : { value: v }) }); return v; } catch (e) { rec.steps.push({ step: name, ok: false, error: String(e && e.message || e).slice(0, 300) }); return undefined; } };
 
 async function run(name, viewport, mobile, dsf) {
@@ -148,10 +166,10 @@ async function run(name, viewport, mobile, dsf) {
   });
   const page = await ctx.newPage();
   page.on("pageerror", e => errors.push(name + ": " + e)); page.on("console", m => { if (m.type() === "error" && !/503|Failed to (load resource|fetch dynamically)/.test(m.text())) errors.push(name + " console: " + m.text()); });
-  const shot = (n, full = false) => page.screenshot({ path: path.join(out, name + "-" + n + ".png"), fullPage: full });
+  const shot = async (n, full = false) => { await page.screenshot({ path: path.join(out, name + "-" + n + ".png"), fullPage: full }); await axeScan(page, rec, n); };
   const rec = record.viewports[name] = { steps: [] };
 
-  await page.goto(origin + "/", { waitUntil: "networkidle" });
+  await page.goto(origin + "/#/s/tasks", { waitUntil: "networkidle" });   // UX-S2: the task cards live in the «الواجبات» view
   await page.waitForSelector(".eb-sp-task-action", { timeout: 20000 });
   await shot("01-portal");
   // Notification panel (touch targets + grade string direction) — opened from the portal bell.
@@ -318,7 +336,7 @@ async function runPointer(name, viewport, mobile, dsf, motion) {
   page.on("pageerror", e => errors.push(name + "/" + motion + ": " + e));
   const key = name + "/" + motion, rec = record.viewports[key] = { steps: [], motion };
   const shot = n => page.screenshot({ path: path.join(out, name + "-" + motion + "-" + n + ".png") });
-  await page.goto(origin + "/", { waitUntil: "networkidle" });
+  await page.goto(origin + "/#/s/tasks", { waitUntil: "networkidle" });   // UX-S2: the task cards live in the «الواجبات» view
   await page.waitForSelector(".eb-sp-task-action", { timeout: 20000 });
   await page.click(".eb-sp-task-action");
   await page.waitForSelector(".iex-start-actions .is-primary", { timeout: 20000 });
@@ -432,6 +450,10 @@ else for (const [vp, r] of Object.entries(record.viewports)) {
     ck(vp, "E2 cloze controls ≥ 44×44", min44(s["q4-cloze"]?.input) && min44(s["q4-cloze"]?.select), s["q4-cloze"]);
     ck(vp, "E3 label chips / selects ≥ 44×44", min44(s["q5-label"]?.chips) && min44(s["q5-label"]?.selects), s["q5-label"]);
     ck(vp, "E4 notification action ≥ 44×44", min44(s.notifications?.headAction), s.notifications?.headAction);
+  }
+  if (AXE_PATH) {
+    const found = Object.entries(r.axe || {}).flatMap(([stage, v]) => v.map(x => ({ stage, ...x })));
+    ck(vp, "H1 axe-core WCAG 2.1 A/AA: no violation at any photographed stage (" + Object.keys(r.axe || {}).length + " stages)", Object.keys(r.axe || {}).length > 0 && found.length === 0, found);
   }
 }
 record.checks = checks;
