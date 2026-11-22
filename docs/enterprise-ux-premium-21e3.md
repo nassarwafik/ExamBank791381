@@ -99,6 +99,10 @@ scratch area only (it is not shipped); the real-app proof is the 21E.3 harness o
 | A CSS dependency fails | Vite throws `Error("Unable to preload CSS for <url>")` (not a chunk error); re-running the factory renders the component **without** its stylesheet; re-adding `<link rel=stylesheet href="<path>?r=1">` (validated same-origin `/assets/*.css`) restores it | handle the CSS case explicitly |
 | URL taken from the browser error | only `Failed to fetch dynamically imported module:` / `error loading dynamically imported module:` messages carry a URL; Safari's message carries none | accept the URL only when it parses, is same-origin, matches `^<BASE>assets/[A-Za-z0-9._-]+\.js$` (no sub-path, no query kept); otherwise re-run the original factory — never import anything derived from data |
 
+> **Superseded in production by CSP-1** (`docs/enterprise-csp1-chunk-recovery.md`): the application's Content-Security-Policy refuses
+> a runtime import map, so a failed shared dependency is not recoverable in place on today's build; the runtime no longer inserts
+> the map under such a policy.
+
 **Dependency recovery with a scoped import map.** A second probe (`A → mid → leaf`, plus `B → mid` and `C → leaf`, every
 module counting its evaluations) showed that Chromium 141 accepts an import map inserted after start-up when its rules are
 **scoped to referrers that have not resolved anything yet**: a `<script type="importmap">` whose scopes are the retry URLs
