@@ -206,13 +206,23 @@ describe("T14 — runner, budget, telemetry", () => {
     expect([f.status, f.jsonBody.code]).toEqual([503, "EXECUTION_UNAVAILABLE"]);
     expect(p.calls).toHaveLength(21);
   });
-  it("telemetry never carries the code, the input or the output; GET is 405", async () => {
+  it("GET answers whether the runner offers C# now, to a signed-in actor only; it runs nothing and writes nothing", async () => {
+    const ctx = seed();
+    const get = (deps) => handler(req("", "GET"), deps);
+    expect((await get(studentDeps(ctx, provider()))).jsonBody).toEqual({ ok: true, available: true });
+    expect((await get(teacherDeps(ctx, provider()))).jsonBody).toEqual({ ok: true, available: true });
+    expect((await get(studentDeps(ctx, provider({ available: false })))).jsonBody).toEqual({ ok: true, available: false });
+    expect((await get(studentDeps(ctx, provider({ languages: [{ key: "python", languageVersion: 1 }] })))).jsonBody).toEqual({ ok: true, available: false });
+    expect((await get({ ...BUILDER_NO, requireStudentAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false } } }), container: ctx.container, env: {} })).status).toBe(401);
+    expect(throttle(ctx)).toEqual([]);
+  });
+  it("telemetry never carries the code, the input or the output; PUT is 405", async () => {
     const o = logs();
     await run(studentDeps(seed(), provider()), EXAM_BODY, o);
     await run(studentDeps(seed({ a: assignment({ examSnapshot: exam(null) }) }), provider()), EXAM_BODY, o);
     const text = JSON.stringify(o.all);
     expect(o.all.map(([, name]) => name)).toEqual(["student-tool.run.completed", "student-tool.run.refused"]);
     for (const canary of ["Console", "IN-CANARY", "OUT-CANARY", S1]) expect(text).not.toContain(canary);
-    expect((await run(studentDeps(seed(), provider()), EXAM_BODY, null, "GET")).status).toBe(405);
+    expect((await run(studentDeps(seed(), provider()), EXAM_BODY, null, "PUT")).status).toBe(405);
   });
 });

@@ -20,10 +20,11 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const RUN: StudentToolsSpecV1 = { version: 1, tools: [{ id: "csharpEditor", allowRun: true }] };
 const WRITE_ONLY: StudentToolsSpecV1 = { version: 1, tools: [{ id: "csharpEditor", allowRun: false }] };
 const ok = (stdout: string, extra: Partial<CodeExecutionResult> = {}): CodeExecutionResult => ({ status: "success", stdout, stderr: "", exitCode: 0, ...extra });
-function fakeRunner(context: "exam" | "book", impl: (s: string, i: string) => Promise<CodeExecutionResult>) {
+function fakeRunner(context: "exam" | "book", impl: (s: string, i: string) => Promise<CodeExecutionResult>, up: () => Promise<boolean> = async () => true) {
   const calls: [string, string][] = [];
-  const runner: CSharpToolRunner = { context, run: (s, i) => { calls.push([s, i]); return impl(s, i); } };
-  return { runner, calls };
+  const checks: number[] = [];
+  const runner: CSharpToolRunner = { context, run: (s, i) => { calls.push([s, i]); return impl(s, i); }, available: () => { checks.push(1); return up(); } };
+  return { runner, calls, checks };
 }
 async function openEditor(spec: unknown, runner?: CSharpToolRunner, sectionId?: string) {
   render(<StudentToolDock studentTools={spec} csharpRunner={runner} sectionId={sectionId} />);
@@ -86,6 +87,7 @@ describe("T14 — the editor in the tool bar", () => {
     const panel = await openEditor(RUN, f.runner);
     fireEvent.change(code(panel), { target: { value: "Console.WriteLine(Console.ReadLine());" } });
     fireEvent.change(within(panel).getByLabelText(/المدخلات/), { target: { value: "سارة" } });
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(within(panel).getByRole("button", { name: "تشغيل" }));
     expect((await within(panel).findByTestId("csharp-output")).textContent).toBe("مرحبا سارة");
     expect(f.calls).toEqual([["Console.WriteLine(Console.ReadLine());", "سارة"]]);
@@ -100,6 +102,7 @@ describe("T14 — the editor in the tool bar", () => {
     const f = fakeRunner("book", async () => results.shift()!);
     const panel = await openEditor(RUN, f.runner);
     const go = () => fireEvent.click(within(panel).getByRole("button", { name: "تشغيل" }));
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
     go();
     await waitFor(() => expect(within(panel).getByRole("region", { name: "رسالة المترجم" }).textContent).toContain("CS1002"));
     expect(within(panel).getByRole("status").textContent).toContain("خطأ ترجمة");
@@ -113,6 +116,7 @@ describe("T14 — the editor in the tool bar", () => {
     const f = fakeRunner("exam", async () => { throw new CSharpToolRunError("RATE_LIMITED", "شغّلت كثيرًا في وقت قصير.", 30); });
     const panel = await openEditor(RUN, f.runner);
     fireEvent.change(code(panel), { target: { value: "class P { static void Main() {} }" } });
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(within(panel).getByRole("button", { name: "تشغيل" }));
     await waitFor(() => expect(within(panel).getByRole("status").textContent).toBe("شغّلت كثيرًا في وقت قصير. (بعد 30 ثانية تقريبًا)"));
     fireEvent.click(within(panel).getByRole("button", { name: "إغلاق محرر C#" }));
@@ -125,6 +129,42 @@ describe("T14 — the editor in the tool bar", () => {
     const panel = await openEditor(RUN, f.runner);
     fireEvent.change(code(panel), { target: { value: "   " } });
     expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe("T14 — a stopped runner is known up front", () => {
+  it("the runner reports itself down: no run button, «متوقف حاليًا», the editor still writes; «التحقق مرة أخرى» asks again and brings the button back", async () => {
+    let up = false;
+    const f = fakeRunner("book", async () => ok("x"), async () => up);
+    const panel = await openEditor(RUN, f.runner);
+    expect((await within(panel).findByTestId("csharp-runner-down")).textContent).toContain("متوقف حاليًا");
+    expect(within(panel).queryByRole("button", { name: "تشغيل" })).toBeNull();
+    fireEvent.change(code(panel), { target: { value: "class P {}" } });
+    expect(code(panel).value).toBe("class P {}");
+    up = true;
+    fireEvent.click(within(panel).getByRole("button", { name: "التحقق مرة أخرى" }));
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
+    expect(f.checks).toHaveLength(2);
+    expect(f.calls).toHaveLength(0);
+  });
+  it("while checking, the run button waits; a run answered EXECUTION_UNAVAILABLE switches to «متوقف حاليًا»", async () => {
+    let release: (v: boolean) => void = () => {};
+    const f = fakeRunner("exam", async () => { throw new CSharpToolRunError("EXECUTION_UNAVAILABLE", "تشغيل الكود غير متاح الآن."); }, () => new Promise<boolean>(r => { release = r; }));
+    const panel = await openEditor(RUN, f.runner);
+    expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(panel).getByRole("status").textContent).toBe("جارٍ التحقق من المشغّل…");
+    release(true);
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(panel).getByRole("button", { name: "تشغيل" }));
+    expect(await within(panel).findByTestId("csharp-runner-down")).toBeTruthy();
+  });
+  it("transport: GET on the run path; available:false → false; an unreadable answer → true (the server still decides every run)", async () => {
+    const request = vi.fn(async () => new Response(JSON.stringify({ ok: true, available: false }), { status: 200 }));
+    expect(await examCSharpRunner(request, "asg-1").available()).toBe(false);
+    expect(request.mock.calls[0]).toEqual(["/api/student-tools/csharp-run", { method: "GET" }]);
+    expect(await examCSharpRunner(vi.fn(async () => new Response(JSON.stringify({ ok: true, available: true }), { status: 200 })), "a").available()).toBe(true);
+    expect(await examCSharpRunner(vi.fn(async () => new Response("<html>", { status: 502 })), "a").available()).toBe(true);
+    expect(await examCSharpRunner(vi.fn(async () => { throw new Error("offline"); }), "a").available()).toBe(true);
   });
 });
 
@@ -156,9 +196,11 @@ describe("T14 — transports", () => {
     fireEvent.click(screen.getByTestId("student-tools-button"));
     fireEvent.click(within(screen.getByRole("group", { name: "الأدوات المسموحة" })).getByRole("button", { name: "محرر C#" }));
     const panel = screen.getByRole("dialog", { name: "محرر C#" });
-    fireEvent.click(await within(panel).findByRole("button", { name: "تشغيل" }));
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(panel).getByRole("button", { name: "تشغيل" }));
     expect((await within(panel).findByTestId("csharp-output")).textContent).toBe("BOOK\n");
-    expect(JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)).context).toBe("book");
+    const post = fetchMock.mock.calls.map(c => c as unknown as [string, RequestInit]).find(([, init]) => init.method === "POST")!;
+    expect(JSON.parse(String(post[1].body)).context).toBe("book");
   });
 });
 

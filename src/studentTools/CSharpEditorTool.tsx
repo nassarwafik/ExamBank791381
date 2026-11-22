@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CodingEditor from "../coding/CodingEditor";
 import type { CodeExecutionResult } from "../codingContract";
 import type { CSharpEditorToolV1 } from "./studentToolsSpec";
@@ -21,6 +21,9 @@ const VERDICT: Record<CodeExecutionResult["status"], string> = {
   "internal-error": "تعذّر التشغيل لسبب في المشغّل. حاول مرة أخرى.",
 };
 const READS_INPUT = /Console\s*\.\s*Read(Line)?\s*\(/;
+/** Whether the runner is up (asked once when the editor opens; a run answered «unavailable» turns it down; «التحقق مرة أخرى» asks again). */
+type Availability = "checking" | "up" | "down";
+const DOWN_CODES = new Set(["EXECUTION_UNAVAILABLE", "LANGUAGE_UNAVAILABLE"]);
 type State = { kind: "idle" } | { kind: "running" } | { kind: "done"; result: CodeExecutionResult } | { kind: "error"; message: string };
 
 type Props = {
@@ -38,6 +41,15 @@ export default function CSharpEditorTool({ config, runner, runOffReason }: Props
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => () => ctrl.current?.abort(), []);
   const canRun = config.allowRun && !!runner;
+  const [availability, setAvailability] = useState<Availability>("checking");
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const check = useCallback(() => {
+    if (!runner) return;
+    setAvailability("checking");
+    runner.available().then(up => { if (alive.current) setAvailability(up ? "up" : "down"); }, () => { if (alive.current) setAvailability("up"); });
+  }, [runner]);
+  useEffect(() => { if (canRun) check(); }, [canRun, check]);
 
   const run = async () => {
     if (!runner) return;
@@ -50,6 +62,7 @@ export default function CSharpEditorTool({ config, runner, runOffReason }: Props
       if (!c.signal.aborted) setState({ kind: "done", result });
     } catch (e) {
       if (c.signal.aborted) return;
+      if (e instanceof CSharpToolRunError && DOWN_CODES.has(e.code)) { setAvailability("down"); setState({ kind: "idle" }); return; }
       const message = e instanceof CSharpToolRunError
         ? e.message + (e.code === "RATE_LIMITED" && e.retryAfterSeconds ? " (بعد " + e.retryAfterSeconds + " ثانية تقريبًا)" : "")
         : "تعذّر تشغيل الكود الآن. حاول مرة أخرى.";
@@ -59,21 +72,26 @@ export default function CSharpEditorTool({ config, runner, runOffReason }: Props
 
   const result = state.kind === "done" ? state.result : null;
   const needsInput = !!result && result.status === "runtime-error" && !stdin.trim() && READS_INPUT.test(source);
-  const status = state.kind === "running" ? "جارٍ التشغيل…" : state.kind === "error" ? state.message : result ? VERDICT[result.status] : "";
+  const status = availability === "checking" ? "جارٍ التحقق من المشغّل…" : state.kind === "running" ? "جارٍ التشغيل…" : state.kind === "error" ? state.message : result ? VERDICT[result.status] : "";
   const errLabel = result?.status === "compile-error" ? "رسالة المترجم" : "رسالة الخطأ";
 
   return (
     <div className="stt-cs" data-testid="csharp-editor-tool">
       <p className="stt-hint">مسودة برمجية للتجربة: لا تُحفظ ولا تُصحّح، وليست إجابتك. انسخ ما تحتاجه إلى مكان الإجابة.</p>
       <CodingEditor value={source} onChange={setSource} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={10} />
-      {canRun ? (
+      {canRun && availability === "down" ? (
+        <div className="stt-row stt-cs-actions">
+          <p className="stt-hint" role="note" data-testid="csharp-runner-down">تشغيل الكود متوقف حاليًا؛ يمكنك الكتابة في المحرر فقط.</p>
+          <button type="button" className="stt-btn" onClick={check}>التحقق مرة أخرى</button>
+        </div>
+      ) : canRun ? (
         <>
           <label className="stt-cs-field">
             <span>المدخلات <small>(كل قيمة في سطر، بترتيب قراءتها بـ <bdi dir="ltr">Console.ReadLine</bdi>)</small></span>
             <textarea className="stt-cs-input" dir="ltr" lang="en" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />
           </label>
           <div className="stt-row stt-cs-actions">
-            <button type="button" className="stt-btn is-primary" onClick={run} disabled={state.kind === "running" || !source.trim()}>تشغيل</button>
+            <button type="button" className="stt-btn is-primary" onClick={run} disabled={availability !== "up" || state.kind === "running" || !source.trim()}>تشغيل</button>
             <button type="button" className="stt-btn" onClick={() => { ctrl.current?.abort(); setState({ kind: "idle" }); }} disabled={state.kind === "idle"}>مسح الناتج</button>
             <button type="button" className="stt-btn" onClick={() => { setSource(STARTER); }} disabled={source === STARTER}>إعادة القالب</button>
           </div>

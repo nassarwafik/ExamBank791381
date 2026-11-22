@@ -3,6 +3,9 @@
 //     POST /api/student-tools/csharp-run
 //          exam: { context: "exam", assignmentId, source, stdin }   (exactly)
 //          book: { context: "book", courseId, source, stdin }       (exactly)      → { ok, result }
+//     GET  /api/student-tools/csharp-run  → { ok, available } — whether the runner offers csharp@1 right now (any signed-in actor;
+//          the same fact /api/coding/capabilities gives every student). The editor asks it once, so a stopped runner shows
+//          «متوقف حاليًا» instead of a button that cannot work. It authorises nothing: every POST is checked in full.
 // WHO / WHERE — the server decides, never the browser:
 //   • exam: an ACTIVE student only; the assignment is in one of the student's classes (not archived), published, and the attempt is
 //     writable RIGHT NOW (the same writeRejection + timerState as a draft save — no second timer). The exam's own tool spec
@@ -147,9 +150,15 @@ async function bookDecision(actor, body, deps) {
 
 async function handler(request, deps = {}, obs = null) {
   try {
-    if (String(request.method || "POST").toUpperCase() !== "POST") return refuse(405, "REQUEST_INVALID");
+    const method = String(request.method || "POST").toUpperCase();
     const actor = await resolveActor(request, deps, obs);
     if (actor.kind === "denied") return actor.response;
+    if (method === "GET") {
+      const caps = await loadCodingCapabilities(resolveCodingExecutionProvider(deps));
+      const available = caps.available && caps.languages.some(l => l.key === RUN_LANGUAGE.language && l.languageVersion === RUN_LANGUAGE.languageVersion);
+      return reply(200, { ok: true, available });
+    }
+    if (method !== "POST") return refuse(405, "REQUEST_INVALID");
     const body = parseToolRunBody(await readText(request));
     if (body.error) { obs?.logWarn("student-tool.run.refused", { code: body.error }); return refuse(body.error === "TOO_LARGE" ? 413 : 400, body.error); }
 
@@ -186,5 +195,5 @@ async function handler(request, deps = {}, obs = null) {
   }
 }
 
-app.http("studentToolCsharpRun", { methods: ["POST"], authLevel: "anonymous", route: "student-tools/csharp-run", handler: withObservability("student-tool-run", handler) });
+app.http("studentToolCsharpRun", { methods: ["GET", "POST"], authLevel: "anonymous", route: "student-tools/csharp-run", handler: withObservability("student-tool-run", handler) });
 module.exports = { handler, parseToolRunBody };

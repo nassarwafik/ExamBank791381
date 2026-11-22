@@ -9,6 +9,9 @@ export type CSharpToolRunner = {
   /** "exam" → the dock applies the exam rule (csharpRunAllowedInExam); "book" → the book rule. The server checks it again. */
   context: "exam" | "book";
   run(source: string, stdin: string, signal?: AbortSignal): Promise<CodeExecutionResult>;
+  /** Whether the runner can run C# right now (GET on the same path). Presentation only: true when the answer cannot be read, so
+   *  the server — which checks every run — has the last word. */
+  available(): Promise<boolean>;
 };
 
 /** A refused or failed run: the server's Arabic message (or a fixed one), its code, and the wait it asks for. */
@@ -23,6 +26,13 @@ type Send = (init: RequestInit) => Promise<Response>;
 function runnerOf(context: "exam" | "book", target: Record<string, string>, send: Send): CSharpToolRunner {
   return {
     context,
+    async available() {
+      try {
+        const res = await send({ method: "GET" });
+        const body = (await res.json()) as { ok?: unknown; available?: unknown };
+        return !(res.ok && body.ok === true && body.available === false);
+      } catch { return true; }
+    },
     async run(source, stdin, signal) {
       let res: Response;
       try { res = await send({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ context, ...target, source, stdin }), signal }); }
@@ -45,5 +55,5 @@ export function examCSharpRunner(request: (path: string, init?: RequestInit) => 
 
 /** The book reader: the session's auth headers (the Reader's `codeRun` access) and the course. */
 export function bookCSharpRunner(headers: Record<string, string>, courseId: string): CSharpToolRunner {
-  return runnerOf("book", { courseId }, init => fetch(PATH, { ...init, headers: { ...headers, ...(init.headers as Record<string, string>) } }));
+  return runnerOf("book", { courseId }, init => fetch(PATH, { ...init, headers: { ...headers, ...((init.headers as Record<string, string> | undefined) || {}) } }));
 }
