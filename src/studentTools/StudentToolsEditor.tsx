@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
   type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX, FORMULA_SHEET_MAX_IMAGES,
-  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, PLACE_VALUE_WIDTH_OPTIONS,
+  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, type CSharpEditorToolV1, PLACE_VALUE_WIDTH_OPTIONS,
   BIT_WIDTH_OPTIONS, UNIT_CATEGORY_IDS, TRUTH_MAX_VARIABLES_RANGE
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
@@ -241,6 +241,15 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                       <input type="checkbox" checked={tool.showDecimal} disabled={disabled} onChange={e => patchTool(id, { showDecimal: e.target.checked } as Partial<HexBinaryTableToolV1>)} />
                       <span>إظهار العمود العشري</span>
                     </label>
+                  </div>
+                )}
+                {tool?.id === "csharpEditor" && (
+                  <div className="sb-tool-options">
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.allowRun} disabled={disabled} onChange={e => patchTool(id, { allowRun: e.target.checked } as Partial<CSharpEditorToolV1>)} />
+                      <span>السماح بتشغيل الكود (يعرض الناتج وأخطاء الترجمة والتشغيل)</span>
+                    </label>
+                    <p className="sb-hint">بلا تشغيل: محرر كتابة فقط. مع التشغيل: إذا عطّلت المحرر في أي قسم يتوقف التشغيل في الامتحان كله، لأن الخادم لا يعرف القسم الذي يحلّه الطالب.</p>
                   </div>
                 )}
                 {tool?.id === "truthTable" && (

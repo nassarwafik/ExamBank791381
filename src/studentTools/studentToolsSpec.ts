@@ -21,8 +21,9 @@ export const STUDENT_TOOLS_VERSION = 1 as const;
 // Phase T5 — `formulaSheet` and `scratchPad` were added to version 1 additively: every spec that was valid stays valid and means the same.
 // Phase T6 — five subject tools, added additively in the same way.
 // Phase T13 — the owner's two binary-conversion aids (place-value boxes, the hex ↔ binary table), added additively in the same way.
+// Phase T14 — the C# editor (docs/enterprise-student-tools-csharp-editor-design.md), added additively in the same way.
 export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
-  "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable"] as const;
+  "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor"] as const;
 export type StudentToolId = (typeof STUDENT_TOOL_IDS)[number];
 
 export const NUMBER_BASES = [2, 8, 10, 16] as const;
@@ -68,8 +69,12 @@ export type PeriodicTableToolV1 = { id: "periodicTable"; showMass: boolean; show
 export type PlaceValueBoxesToolV1 = { id: "placeValueBoxes"; width: 4 | 8 | 16 };
 /** Phase T13 — the reference list 0 – F: hex, binary (4 bits) and, as the teacher chose, decimal. */
 export type HexBinaryTableToolV1 = { id: "hexBinaryTable"; showDecimal: boolean };
+/** Phase T14 — a free C# editor (a coding scratch pad: never an answer, never stored, never graded). `allowRun` lets the student RUN the
+ *  code on the isolated Coding Runner; the server re-checks it on every run (api/src/functions/student-tool-run.js). Off ⇒ write only. */
+export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
-  | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1;
+  | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
+  | CSharpEditorToolV1;
 
 export type StudentToolsSectionOverrideV1 = { disabled: StudentToolId[] };
 export type StudentToolsSpecV1 = {
@@ -109,6 +114,7 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "periodicTable": return { id, showMass: true, showConfiguration: true, range: "all" };
     case "placeValueBoxes": return { id, width: 8 };
     case "hexBinaryTable": return { id, showDecimal: true };
+    case "csharpEditor": return { id, allowRun: false };   // owner decision: in an exam the teacher switches running on explicitly
   }
 }
 
@@ -126,7 +132,8 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   unitConverter: ["id", "categories"],
   periodicTable: ["id", "showMass", "showConfiguration", "range"],
   placeValueBoxes: ["id", "width"],
-  hexBinaryTable: ["id", "showDecimal"]
+  hexBinaryTable: ["id", "showDecimal"],
+  csharpEditor: ["id", "allowRun"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -279,6 +286,9 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
     case "hexBinaryTable":
       value = { id, showDecimal: bool("showDecimal") };
       break;
+    case "csharpEditor":
+      value = { id, allowRun: bool("allowRun") };
+      break;
   }
   return issues.length === before ? value : null;
 }
@@ -377,6 +387,24 @@ export function enabledToolsForSection(spec: StudentToolsSpecV1 | undefined, sec
   const disabled = sectionId !== undefined && spec.sectionOverrides && Object.prototype.hasOwnProperty.call(spec.sectionOverrides, sectionId)
     ? spec.sectionOverrides[sectionId].disabled : [];
   return spec.tools.filter(t => !disabled.includes(t.id));
+}
+
+/**
+ * Phase T14 — whether this exam lets the student RUN code from the C# editor: the tool is on with `allowRun`, and NO section switches
+ * the editor off. The server does not know which section the student is in, so a per-section switch-off cannot be enforced for a
+ * run; rather than trust a section the browser names, running is off for the whole exam then (fail closed). The run route and the
+ * student's tool bar apply this same rule.
+ */
+export function csharpRunAllowedInExam(spec: StudentToolsSpecV1 | undefined): boolean {
+  const tool = spec?.tools.find(t => t.id === "csharpEditor");
+  if (!tool || tool.id !== "csharpEditor" || tool.allowRun !== true) return false;
+  return !Object.values(spec?.sectionOverrides || {}).some(o => o.disabled.includes("csharpEditor"));
+}
+
+/** Phase T14 — whether a BOOK tool set (no sections) lets the learner run code from the C# editor. */
+export function csharpRunAllowedInBook(spec: StudentToolsSpecV1 | undefined): boolean {
+  const tool = spec?.tools.find(t => t.id === "csharpEditor");
+  return !!tool && tool.id === "csharpEditor" && tool.allowRun === true;
 }
 
 /** Section overrides that name a section the exam does not have (a blocking quality issue: the teacher's intent cannot be applied). */
