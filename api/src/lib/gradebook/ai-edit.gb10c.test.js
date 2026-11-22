@@ -102,7 +102,8 @@ describe("GB10c — the operations, judged in order and answered by the draft's 
       { op: "addItem", categoryKey: "new_1", source: { kind: "manual", title: "المشاركة الصفية", maxScore: 5 }, weight: 100 },
       { op: "equalizeCategories" }
     ]);
-    expect(r.edit.changes[0]).toBe("قسم جديد «المشاركة» بلا نسبة؛ اكتبها.");
+    expect(r.edit.changes[0]).toBe("قسم جديد «المشاركة».");
+    expect(r.edit.notes).toEqual([]);                                                        // equalized at the end: nothing left to type
   });
   it("an invented reference, a source already used, an unknown part or column, an invalid weight and a missing manual maximum are each refused and listed", () => {
     const r = run([
@@ -135,6 +136,21 @@ describe("GB10c — the operations, judged in order and answered by the draft's 
     const r = run([op("removeItem", { category: "K1", item: "k2" }), op("addItem", { category: "K1", ref: "as_exam3", weight: 10 })]);
     expect(r.edit.ops).toEqual([]);
     expect(r.edit.unmatched.map(u => u.code)).toEqual(["ITEM_NOT_FOUND", "UNKNOWN_SOURCE"]);
+  });
+});
+
+describe("GB10c — what still needs a weight is said once, at the end, and only when it is true", () => {
+  it("a column added without a weight and then equalized needs nothing: no «اكتبه» and no note", () => {
+    const r = run([op("addItem", { category: "K1", ref: "A3", weight: null }), op("equalizeItems", { category: "K1" })]);
+    expect(r.edit.changes).toEqual(["إضافة «امتحان 2» إلى «الشهري».", "توزيع أوزان «الشهري» بالتساوي."]);
+    expect(r.edit.notes).toEqual([]);
+  });
+  it("left without a weight after every change: one note per part, at the end", () => {
+    const r = run([op("addItem", { category: "K1", ref: "A3", weight: null }), op("addItem", { category: "K1", ref: "A4", weight: null }), op("addCategory", { title: "المشاركة", weight: null })]);
+    expect(r.edit.changes).toEqual(["إضافة «امتحان 2» إلى «الشهري».", "إضافة «امتحان 3» إلى «الشهري».", "قسم جديد «المشاركة»."]);
+    expect(r.edit.notes).toEqual(["في «الشهري» عناصر بلا وزن؛ اكتب أوزانها.", "«المشاركة» بلا نسبة من العلامة النهائية؛ اكتبها."]);
+    const eq = run([op("addCategory", { title: "المشاركة", weight: null }), op("equalizeCategories")]);
+    expect(eq.edit.notes).toEqual([]);
   });
 });
 

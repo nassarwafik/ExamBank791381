@@ -35,7 +35,8 @@ const EDIT_MESSAGES = Object.freeze({
 });
 
 const weightOrNull = v => (v === null ? null : normalizeWeight(v));
-const pct = w => (w === null ? "بلا وزن" : String(w) + "%");
+const EQUAL = "=";   // in the simulation: a weight the page will compute with «توزيع بالتساوي»
+const pct = w => (w === null ? "بلا وزن" : w === EQUAL ? "بالتساوي" : String(w) + "%");
 const sourceKeyOf = s => (s.kind === "assignment" ? "assignment:" + s.assignmentId : s.kind === "project" ? "project:" + s.projectCode : null);
 
 /** The source of a current column, shape-checked only (the class check is the save's); null when malformed. */
@@ -218,7 +219,7 @@ function normalizeAiEdit(result, refs, handles, current) {
         if (v.bad) { refuse("WEIGHT_INVALID", title); break; }
         const key = "new_" + (++added);
         cats.push({ key, handle: "N" + added, title, weight: v.w, items: [] });
-        changes.push("قسم جديد «" + title + "»" + (v.w === null ? " بلا نسبة؛ اكتبها." : " بنسبة " + pct(v.w) + (v.suggested ? " (مقترحة)" : "") + "."));
+        changes.push("قسم جديد «" + title + "»" + (v.w === null ? "." : " بنسبة " + pct(v.w) + (v.suggested ? " (مقترحة)" : "") + "."));
         ops.push({ op: "addCategory", categoryKey: key, title, weight: v.w });
         break;
       }
@@ -249,7 +250,7 @@ function normalizeAiEdit(result, refs, handles, current) {
         }
         if (v.bad) notes.push("وزن «" + title + "» غير صالح؛ اكتبه بنفسك.");
         cat.items.push({ key: null, source, weight: v.bad ? null : v.w, title });
-        changes.push("إضافة «" + title + "» إلى «" + cat.title + "»" + (v.bad || v.w === null ? " بلا وزن؛ اكتبه." : " بوزن " + pct(v.w) + (v.suggested ? " (مقترح)" : "") + "."));
+        changes.push("إضافة «" + title + "» إلى «" + cat.title + "»" + (v.bad || v.w === null ? "." : " بوزن " + pct(v.w) + (v.suggested ? " (مقترح)" : "") + "."));
         ops.push({ op: "addItem", categoryKey: cat.key, source, weight: v.bad ? null : v.w });
         break;
       }
@@ -277,11 +278,13 @@ function normalizeAiEdit(result, refs, handles, current) {
       case "equalizeItems": {
         if (!cat) { refuse("CATEGORY_NOT_FOUND"); break; }
         if (!cat.items.length) { refuse("EMPTY_CATEGORY", cat.title); break; }
+        for (const i of cat.items) i.weight = EQUAL;
         changes.push("توزيع أوزان «" + cat.title + "» بالتساوي.");
         ops.push({ op: "equalizeItems", categoryKey: cat.key });
         break;
       }
       case "equalizeCategories": {
+        for (const c of cats) c.weight = EQUAL;
         changes.push("توزيع نسب الأقسام بالتساوي.");
         ops.push({ op: "equalizeCategories" });
         break;
@@ -289,6 +292,14 @@ function normalizeAiEdit(result, refs, handles, current) {
       default:
         refuse("UNKNOWN_OPERATION");
     }
+  }
+  // What still has no weight AFTER every operation (a later «بالتساوي» may have given it one): said once per part, at the end. Only
+  // what the operations touched is named; a weight the teacher had left empty before is the builder's to point out, as always.
+  const touched = new Set(ops.map(o => o.categoryKey).filter(Boolean));
+  for (const c of cats) {
+    if (!touched.has(c.key) && !ops.some(o => o.op === "equalizeCategories")) continue;
+    if (c.items.some(i => i.key === null && i.weight === null)) notes.push("في «" + c.title + "» عناصر بلا وزن؛ اكتب أوزانها.");
+    if (c.key.startsWith("new_") && c.weight === null) notes.push("«" + c.title + "» بلا نسبة من العلامة النهائية؛ اكتبها.");
   }
   for (const u of (Array.isArray(result.unmatched) ? result.unmatched : []).filter(isPlainObject).slice(0, AI_SCHEME_LIMITS.unmatched)) {
     const mention = clip(u.mention, AI_SCHEME_LIMITS.mention);
@@ -313,8 +324,9 @@ function titleOfItem(handles, categoryKey, itemKey) {
  */
 function addedAreSaveable(simulated, context) {
   let n = 0;
-  const categories = simulated.map(c => ({ categoryId: "c_" + (++n), title: c.title, weight: c.weight === null ? 1 : c.weight,
-    items: c.items.filter(i => i.key === null).map(i => ({ itemId: "i_" + (++n), weight: i.weight === null ? 1 : i.weight, source: i.source })) }))
+  const w = x => (typeof x === "number" ? x : 1);    // null or «بالتساوي»: the validator only judges the structure here
+  const categories = simulated.map(c => ({ categoryId: "c_" + (++n), title: c.title, weight: w(c.weight),
+    items: c.items.filter(i => i.key === null).map(i => ({ itemId: "i_" + (++n), weight: w(i.weight), source: i.source })) }))
     .filter(c => c.items.length);
   if (!categories.length) return true;
   return validateScheme({ categories }, context).ok;
