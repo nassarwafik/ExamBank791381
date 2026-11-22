@@ -630,6 +630,21 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
   is «gone»».
 - **Restore:** files restored byte-for-byte, SHA-256 checked.
 
+**GB10 mutation proof** (`ai-proposal.js`, `gradebook-scheme-ai.js`, `class-sources.js`, the builder and the draft): 24 planted,
+23 KILLED, 1 equivalent.
+- **Planted:**
+  - in the proposal: an invented reference accepted as an id; stated weights rescaled to 100; the model's arithmetic trusted for an
+    equal share; a missing manual maximum invented; equal shares over the built columns only; a duplicate source allowed; an
+    unknown candidate kept; a real id shown to the model; the defence-in-depth validation bypassed;
+  - in the route: either capability not asked; tenancy removed; an archived class accepted; a locked scheme accepted; a corrupt
+    approvals document read as «nothing approved»; projects shown without `projects.tracker.view`; the description not bounded; the
+    sources not limited to the class; the rate limit removed;
+  - in the page: a missing weight filled in; a replace without asking; the button offered without AI authoring; the ids reused.
+- **The equivalent mutant:** M10-15 removes the explicit `if (!approvals)` check. The next line then reads a property of `null`, and
+  the route's catch answers the same 503, so the answer cannot change. The defect it stands for, a corrupt document READ as
+  «nothing approved» (M10-15b, `|| { final: null, parts: {} }`), is killed. The explicit check is kept: it says the rule.
+- **Restore:** files restored byte-for-byte, SHA-256 checked; `git status` clean after the campaign.
+
 **GB6a mutation proof** (`api/src/lib/gradebook/approval.js`, `class-gradebook.js`, `student-gradebook.js`, the capability registry).
 - **Planted:** 26 defects (G6-1 … G6-25, plus G6-18+). Among them: a pending or missing cell counted as final, the release check
   dropped, each lock removed, the reason not required, a student shown a hidden-release part or another student's row, a corrupt

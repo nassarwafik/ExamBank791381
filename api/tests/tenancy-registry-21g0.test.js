@@ -23,6 +23,8 @@ const REGISTRY = {
     "student-profile-photo.js": TENANT, "assignment-progress.js": TENANT,
     // Class gradebook GB2 — every read and write resolves the class through canAccessDocument(classroom, tenantOf(auth.user)).
     "class-gradebook.js": TENANT,
+    // GB10 — the AI proposal reads the class through canAccessDocument(classroom, tenantOf(auth.user)) before any source or provider call.
+    "gradebook-scheme-ai.js": /canAccessDocument\(classroom, tenantOf\(auth\.user\)\)/,
     "learning-class-progress.js": /canAccessDocument\(classroom, tenantOf\(auth\.user\)\)/
   },
   teacherOwned: {
