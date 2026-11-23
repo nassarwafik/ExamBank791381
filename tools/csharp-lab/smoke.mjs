@@ -90,6 +90,8 @@ const PROGRAMS = [
     check: r => r.status === "success" && r.stdout === "مرحبا\n" },
   { name: "input (Console.ReadLine)", source: "class P { static void Main() { int a = int.Parse(Console.ReadLine()!); int b = int.Parse(Console.ReadLine()!); Console.WriteLine(a + b); } }", stdin: "2\n3\n",
     check: r => r.status === "success" && r.stdout.trim() === "5" },
+  { name: "input via Console.In and `using static System.Console`", source: "using static System.Console;\nclass P { static void Main() { var a = Console.In.ReadLine(); var b = ReadLine(); WriteLine(a + \"|\" + b + \"|\" + (Console.ReadLine() == null)); } }", stdin: "x\ny\n",
+    check: r => r.status === "success" && r.stdout === "x|y|True\n" },
   { name: "compile error keeps the writer's line", source: "class P\n{\n    static void Main()\n    {\n        int x = 1\n    }\n}\n", stdin: "",
     check: r => r.status === "compile-error" && /Program\.cs\(5,\d+\): error CS1002/.test(r.stderr) },
   { name: "runtime error", source: "class P { static void Main() { int z = 0; Console.WriteLine(1 / z); } }", stdin: "",
