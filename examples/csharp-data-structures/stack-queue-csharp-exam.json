@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 2,
+  "examId": "csharp-ds-stack-queue-test",
+  "title": "فحص محرر C# — مباني المعطيات: الراصة والدور",
+  "status": "draft",
+  "metadata": {},
+  "sections": [
+    {
+      "id": "ds-csharp",
+      "title": "مباني المعطيات بلغة C#",
+      "instructions": "السؤال الأول تتبّع لبرنامج يستخدم الراصة، والسؤال الثاني كتابة برنامج يستخدم الدور.",
+      "gradingPolicy": "all",
+      "maxMarks": null,
+      "requiredAnswers": null,
+      "stimuli": {},
+      "questions": [
+        {
+          "examQuestionId": "ds-stack-trace",
+          "displayNumber": "1",
+          "presentationType": "tableFill",
+          "text": "تتبّع تنفيذ البرنامج التالي المكتوب بلغة C# والذي يستخدم الراصة Stack<int>.\nأكمل الجدول: اكتب العنصر الموجود في قمة الراصة (Top) وعدد العناصر فيها (Count) بعد تنفيذ كل جملة.",
+          "marks": 7,
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "using System;\nusing System.Collections.Generic;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Stack<int> s = new Stack<int>();\n        s.Push(5);\n        s.Push(8);\n        s.Push(3);\n        int a = s.Pop();\n        s.Push(a * 2);\n        int b = s.Peek();\n        s.Push(b - 4);\n        Console.WriteLine(s.Count);\n        Console.WriteLine(s.Pop());\n        Console.WriteLine(s.Peek());\n    }\n}\n",
+            "label": "برنامج الراصة Stack"
+          },
+          "tableHeaders": [
+            "الجملة",
+            "العنصر في القمة",
+            "عدد العناصر Count"
+          ],
+          "tableRows": [
+            [
+              "s.Push(5);",
+              "",
+              ""
+            ],
+            [
+              "s.Push(8);",
+              "",
+              ""
+            ],
+            [
+              "s.Push(3);",
+              "",
+              ""
+            ],
+            [
+              "int a = s.Pop();",
+              "",
+              ""
+            ],
+            [
+              "s.Push(a * 2);",
+              "",
+              ""
+            ],
+            [
+              "int b = s.Peek();",
+              "",
+              ""
+            ],
+            [
+              "s.Push(b - 4);",
+              "",
+              ""
+            ]
+          ],
+          "fields": [
+            {
+              "id": "top1",
+              "row": 0,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد s.Push(5);",
+              "correct": "5"
+            },
+            {
+              "id": "cnt1",
+              "row": 0,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد s.Push(5);",
+              "correct": "1"
+            },
+            {
+              "id": "top2",
+              "row": 1,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد s.Push(8);",
+              "correct": "8"
+            },
+            {
+              "id": "cnt2",
+              "row": 1,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد s.Push(8);",
+              "correct": "2"
+            },
+            {
+              "id": "top3",
+              "row": 2,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد s.Push(3);",
+              "correct": "3"
+            },
+            {
+              "id": "cnt3",
+              "row": 2,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد s.Push(3);",
+              "correct": "3"
+            },
+            {
+              "id": "top4",
+              "row": 3,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد int a = s.Pop();",
+              "correct": "8"
+            },
+            {
+              "id": "cnt4",
+              "row": 3,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد int a = s.Pop();",
+              "correct": "2"
+            },
+            {
+              "id": "top5",
+              "row": 4,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد s.Push(a * 2);",
+              "correct": "6"
+            },
+            {
+              "id": "cnt5",
+              "row": 4,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد s.Push(a * 2);",
+              "correct": "3"
+            },
+            {
+              "id": "top6",
+              "row": 5,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد int b = s.Peek();",
+              "correct": "6"
+            },
+            {
+              "id": "cnt6",
+              "row": 5,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد int b = s.Peek();",
+              "correct": "3"
+            },
+            {
+              "id": "top7",
+              "row": 6,
+              "column": 1,
+              "kind": "text",
+              "label": "القمة بعد s.Push(b - 4);",
+              "correct": "2"
+            },
+            {
+              "id": "cnt7",
+              "row": 6,
+              "column": 2,
+              "kind": "text",
+              "label": "Count بعد s.Push(b - 4);",
+              "correct": "4"
+            }
+          ],
+          "teacherNote": "المخرجات النهائية للبرنامج: 4 ثم 2 ثم 6. a = 3 و b = 6."
+        },
+        {
+          "examQuestionId": "ds-queue-program",
+          "displayNumber": "2",
+          "presentationType": "coding",
+          "questionTypeVersion": 2,
+          "text": "اكتب برنامجًا بلغة C# يستخدم الدور Queue<int>:\n1) يقرأ من السطر الأول عددًا صحيحًا n (حيث n ≥ 1).\n2) يقرأ من السطر الثاني n أعدادًا صحيحة مفصولة بمسافات ويُدخلها إلى الدور بالترتيب (Enqueue).\n3) يُخرج العنصر الأول من الدور (Dequeue) ثم يُدخله من جديد إلى نهاية الدور (Enqueue).\n4) يطبع عناصر الدور في سطر واحد من الأول إلى الأخير مفصولة بمسافة واحدة.",
+          "marks": 10,
+          "coding": {
+            "allowedLanguages": [
+              "csharp"
+            ],
+            "defaultLanguage": "csharp",
+            "starterCode": {
+              "csharp": "using System;\nusing System.Collections.Generic;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        string[] parts = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n\n        Queue<int> q = new Queue<int>();\n\n        // اكتب الحل هنا\n\n    }\n}\n"
+            },
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 256
+            },
+            "publicTests": [
+              {
+                "id": "pub-1",
+                "title": "مثال 1",
+                "input": "4\n10 20 30 40\n",
+                "sampleOutput": "20 30 40 10\n"
+              },
+              {
+                "id": "pub-2",
+                "title": "مثال 2",
+                "input": "3\n7 1 9\n",
+                "sampleOutput": "1 9 7\n"
+              }
+            ]
+          },
+          "answer": {
+            "gradingMode": "hiddenTests",
+            "scoringPolicy": "proportional",
+            "comparator": "normalizeWhitespace",
+            "compileErrorPolicy": "manualReview",
+            "hiddenTests": [
+              {
+                "id": "h-five",
+                "title": "خمسة عناصر",
+                "input": "5\n1 2 3 4 5\n",
+                "expectedOutput": "2 3 4 5 1\n",
+                "weight": 1
+              },
+              {
+                "id": "h-one",
+                "title": "عنصر واحد",
+                "input": "1\n42\n",
+                "expectedOutput": "42\n",
+                "weight": 1
+              },
+              {
+                "id": "h-two",
+                "title": "عنصران",
+                "input": "2\n8 3\n",
+                "expectedOutput": "3 8\n",
+                "weight": 1
+              },
+              {
+                "id": "h-neg",
+                "title": "أعداد سالبة وصفر",
+                "input": "4\n-5 0 -2 6\n",
+                "expectedOutput": "0 -2 6 -5\n",
+                "weight": 1
+              },
+              {
+                "id": "h-repeat",
+                "title": "قيم مكررة",
+                "input": "6\n4 4 9 1 4 7\n",
+                "expectedOutput": "4 9 1 4 7 4\n",
+                "weight": 1
+              }
+            ],
+            "referenceSolutions": {
+              "csharp": "using System;\nusing System.Collections.Generic;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        string[] parts = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);\n\n        Queue<int> q = new Queue<int>();\n        for (int i = 0; i < n; i++)\n            q.Enqueue(int.Parse(parts[i]));\n\n        int first = q.Dequeue();\n        q.Enqueue(first);\n\n        Console.WriteLine(string.Join(\" \", q));\n    }\n}\n"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
