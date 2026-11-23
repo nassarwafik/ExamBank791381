@@ -117,3 +117,9 @@ artifacts/phase-21e2/
 # Hand-made backup copies of source files (e.g. App.tsx.bak-v2-phase-c) — git history is the backup
 *.bak
 *.bak-*
+
+# Teacher C# lab spike (tools/csharp-lab): .NET build output and the smoke report
+tools/csharp-lab/bin/
+tools/csharp-lab/obj/
+tools/csharp-lab/out/
+csharp-lab-report/

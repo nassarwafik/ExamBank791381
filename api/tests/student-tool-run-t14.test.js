@@ -13,6 +13,7 @@ import { createMemoryContainer } from "./fixtures/memory-container.js";
 //     runner absent / bucket storage failure → 503; telemetry never carries the code, the input or the output.
 const cjs = createRequire(import.meta.url);
 const { handler, parseToolRunBody } = cjs("../src/functions/student-tool-run.js");
+const require_wrap = cjs("../src/lib/learning-run.js").wrapProgram;
 
 const S1 = "11111111-1111-1111-1111-111111111111", AID = "asg-t14-run", AID2 = "asg-t14-other";
 const BOOK = "899271d";   // مبنى المعطيات: its built-in tool set has the C# editor with running on
@@ -96,6 +97,9 @@ describe("T14 — book context: the class's book tools decide", () => {
     expect(Object.keys(call).sort()).toEqual(["language", "languageVersion", "limits", "requestId", "source", "stdin"]);
     expect([call.language, call.languageVersion, call.limits, call.stdin]).toEqual(["csharp", 1, { timeMs: 2000, memoryMb: 128, outputBytes: 16384 }, "IN-CANARY\n"]);
     expect(call.source.startsWith("public class Program { static void Main()")).toBe(true);
+    // «مبنى المعطيات»: the book's classes follow the program (Stack<T> with Top / IsEmpty, Queue<T> with Insert / Remove …)
+    expect(call.source.startsWith(require_wrap(SOURCE))).toBe(true);
+    for (const h of ["public class Node<T>", "public class BinNode<T>", "public class Stack<T>", "public class Queue<T>"]) expect(call.source).toContain(h);
     expect(stored(ctx)).toBe(before);                                                     // nothing stored but the bucket
     expect(throttle(ctx)).toHaveLength(1);
     const net = seed({ classroom: room({ learningMaterials: [{ courseId: "791381", visibleModuleIds: [] }] }) });
@@ -113,6 +117,7 @@ describe("T14 — book context: the class's book tools decide", () => {
     expect(p.calls).toHaveLength(0);
     const on = seed({ classroom: room({ learningMaterials: [{ courseId: "791381", visibleModuleIds: [], studentTools: { version: 1, tools: [{ id: "csharpEditor", allowRun: true }] } }] }) });
     expect((await run(studentDeps(on, p), { ...BOOK_BODY, courseId: "791381" })).status).toBe(200);
+    expect(p.calls.at(-1).source).toBe(require_wrap(SOURCE));                          // a book without a library: the program alone
   });
   it("refused: course not attached, no class, archived class, unknown / malformed course id", async () => {
     const p = provider();
