@@ -5,6 +5,10 @@
 // INPUT: Console.In / SetIn are not supported on the browser runtime (CA1416; they throw PlatformNotSupported there), so the
 // program's own Console.ReadLine / Console.Read / Console.In uses are rebound — with Roslyn's semantic model, replaced IN PLACE on the
 // same line — to an injected reader (__LabStdin) that holds the input. Line numbers are unchanged.
+// COURSE LIBRARY: a book written against its own classes («مبنى المعطيات»: Node, Node<T>, BinNode<T>, Stack<T>, Queue<T> —
+// scripts/ds-course/unit4/Unit4.cs) passes them as `library`; they compile as a separate file of the same program (global namespace,
+// so `Stack<int>` is the book's stack, found before System.Collections.Generic), minus every class the writer declares (same name
+// and type-parameter count), exactly as the server's course-library.js does for the Runner.
 // Teacher-only by owner decision; this file is measured in CI and is not part of the web app.
 using System;
 using System.Diagnostics;
@@ -51,15 +55,30 @@ global using global::System.Threading.Tasks;
     static readonly CSharpCompilationOptions Options = new CSharpCompilationOptions(OutputKind.ConsoleApplication,
         optimizationLevel: OptimizationLevel.Release, nullableContextOptions: NullableContextOptions.Enable, concurrentBuild: false);
 
-    static CSharpCompilation Compile(SyntaxTree program) =>
-        CSharpCompilation.Create("TeacherProgram", new[] { UsingsTree, ShimTree, program }, Basic.Reference.Assemblies.Net100.References.All, Options);
+    static CSharpCompilation Compile(SyntaxTree program, SyntaxTree? library) =>
+        CSharpCompilation.Create("TeacherProgram", library == null ? new[] { UsingsTree, ShimTree, program } : new[] { UsingsTree, ShimTree, program, library },
+            Basic.Reference.Assemblies.Net100.References.All, Options);
+
+    static string TypeKey(TypeDeclarationSyntax t) => t.Identifier.Text + "/" + (t.TypeParameterList?.Parameters.Count ?? 0);
+
+    /// <summary>The course library minus every type the writer declares (null when nothing is left or there is no library).</summary>
+    static SyntaxTree? LibraryFor(string? library, SyntaxTree program)
+    {
+        if (string.IsNullOrWhiteSpace(library)) return null;
+        var own = new HashSet<string>(program.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>().Select(TypeKey));
+        var tree = CSharpSyntaxTree.ParseText(library, ParseOptions, "CourseLibrary.cs");
+        var root = tree.GetRoot();
+        var drop = root.DescendantNodes().OfType<TypeDeclarationSyntax>().Where(t => t.Parent is CompilationUnitSyntax && own.Contains(TypeKey(t))).ToList();
+        if (drop.Count > 0) root = root.RemoveNodes(drop, SyntaxRemoveOptions.KeepNoTrivia)!;
+        return root.DescendantNodes().OfType<TypeDeclarationSyntax>().Any() ? tree.WithRootAndOptions(root, ParseOptions) : null;
+    }
 
     static readonly HashSet<string> StdinMembers = new HashSet<string> { "ReadLine", "Read", "In" };
 
     /// <summary>Console.ReadLine / Read / In → __LabStdin.*, replaced in place (same line). Binding decides, not the spelling.</summary>
-    static SyntaxTree RedirectStdin(SyntaxTree program)
+    static SyntaxTree RedirectStdin(SyntaxTree program, SyntaxTree? library)
     {
-        var model = Compile(program).GetSemanticModel(program);
+        var model = Compile(program, library).GetSemanticModel(program);
         var changes = new List<TextChange>();
         foreach (var node in program.GetRoot().DescendantNodes())
         {
@@ -79,11 +98,13 @@ global using global::System.Threading.Tasks;
     }
 
     [JSExport]
-    internal static string Run(string source, string stdin)
+    internal static string Run(string source, string stdin, string library)
     {
         var total = Stopwatch.StartNew();
-        var program = RedirectStdin(CSharpSyntaxTree.ParseText(Wrap(source), ParseOptions, "Program.cs"));
-        var compilation = Compile(program);
+        var parsed = CSharpSyntaxTree.ParseText(Wrap(source), ParseOptions, "Program.cs");
+        var lib = LibraryFor(library, parsed);
+        var program = RedirectStdin(parsed, lib);
+        var compilation = Compile(program, lib);
         using var pe = new MemoryStream();
         var emit = compilation.Emit(pe);
         var compileMs = total.ElapsedMilliseconds;

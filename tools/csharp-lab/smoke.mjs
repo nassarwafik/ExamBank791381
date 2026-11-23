@@ -103,11 +103,33 @@ const PROGRAMS = [
   { name: "warm compile (a second small program)", source: "static void Main()\n{\n    Console.WriteLine(\"again\");\n}", stdin: "",
     check: r => r.status === "success" && r.stdout === "again\n" },
 ];
+// «مبنى المعطيات» — the book's own classes (scripts/ds-course/unit4/Unit4.cs), passed as the course library.
+const BOOK = fs.readFileSync(new URL("../../scripts/ds-course/unit4/Unit4.cs", import.meta.url), "utf8");
+PROGRAMS.push(
+  { name: "book Stack<T> (Push / Pop / Top / IsEmpty, ToString)", library: BOOK, stdin: "",
+    source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n    Console.WriteLine(s.Pop() + \" \" + s.Top() + \" \" + s.IsEmpty());\n    Console.WriteLine(s);\n}",
+    check: r => r.status === "success" && r.stdout === "[3,2,1]\n3 2 False\n[2,1]\n" },
+  { name: "book Queue<T> (Insert / Remove / Head / IsEmpty, ToString)", library: BOOK, stdin: "",
+    source: "static void Main()\n{\n    Queue<string> q = new Queue<string>();\n    q.Insert(\"a\"); q.Insert(\"b\"); q.Insert(\"c\");\n    Console.WriteLine(q);\n    Console.WriteLine(q.Remove() + q.Head() + q.IsEmpty());\n}",
+    check: r => r.status === "success" && r.stdout === "[a,b,c]\nabFalse\n" },
+  { name: "book Node<T> chain (GetValue / GetNext / HasNext)", library: BOOK, stdin: "",
+    source: "static void Main()\n{\n    Node<int> first = new Node<int>(1, new Node<int>(2, new Node<int>(3)));\n    Node<int> pos = first; int sum = 0;\n    while (pos != null) { sum += pos.GetValue(); pos = pos.GetNext(); }\n    Console.WriteLine(sum + \" \" + first.HasNext() + \" \" + first.GetNext().GetNext().HasNext());\n}",
+    check: r => r.status === "success" && r.stdout === "6 True False\n" },
+  { name: "book BinNode<T> tree (in-order, recursion)", library: BOOK, stdin: "",
+    source: "static void InOrder(BinNode<int> t)\n{\n    if (t == null) return;\n    InOrder(t.GetLeft()); Console.Write(t.GetValue() + \" \"); InOrder(t.GetRight());\n}\nstatic void Main()\n{\n    BinNode<int> t = new BinNode<int>(new BinNode<int>(1), 2, new BinNode<int>(new BinNode<int>(3), 4, null));\n    InOrder(t); Console.WriteLine(t.HasLeft() + \" \" + t.GetRight().HasRight());\n}",
+    check: r => r.status === "success" && r.stdout === "1 2 3 4 True False\n" },
+  { name: "writer's own Stack<T> replaces the book's (no duplicate)", library: BOOK, stdin: "",
+    source: "public class Stack<T> { private T[] a = new T[10]; private int n; public void Push(T x) { a[n++] = x; } public T Pop() { return a[--n]; } }\nclass P { static void Main() { var s = new Stack<int>(); s.Push(7); Console.WriteLine(s.Pop()); var q = new Queue<int>(); q.Insert(5); Console.WriteLine(q.Head()); } }",
+    check: r => r.status === "success" && r.stdout === "7\n5\n" },
+  { name: "book compile error keeps the writer's line (library after)", library: BOOK, stdin: "",
+    source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Peek();\n}",
+    check: r => r.status === "compile-error" && /Program\.cs\(4,\d+\): error CS1061/.test(r.stderr) },
+);
 const results = [];
 for (const p of PROGRAMS) {
   const t0 = Date.now();
   let r;
-  try { r = await page.evaluate(([s, i]) => window.csharpLab.run(s, i), [p.source, p.stdin]); }
+  try { r = await page.evaluate(([s, i, l]) => window.csharpLab.run(s, i, l), [p.source, p.stdin, p.library || ""]); }
   catch (e) { r = { status: "threw", stdout: "", stderr: String(e), compileMs: 0, runMs: 0 }; }
   const wallMs = Date.now() - t0;
   const ok = p.check(r);

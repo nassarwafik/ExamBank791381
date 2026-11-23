@@ -12,7 +12,8 @@
 // learning.course.view and the course in their entitlement (the Reader's preview, as «جرّب الكود»). Anything else is refused BEFORE
 // the runner and before the rate-limit bucket.
 // WHAT: the learner's source (≤ 16 KB, not blank) and input (≤ 4 KB); a source without a class is wrapped as the book does
-// (line numbers kept). The language (csharp@1) and the limits (2 s, 128 MB, 16 KB of output) are the server's; any other field is
+// (line numbers kept). A book written against its own classes (course-library.js — «مبنى المعطيات»: Node, Node<T>, BinNode<T>,
+// Stack<T>, Queue<T>) gets them APPENDED after the program, except a class the writer declares; line numbers are unchanged. The language (csharp@1) and the limits (2 s, 128 MB, 16 KB of output) are the server's; any other field is
 // refused. HOW: through the 17B CodingExecutionProvider only (never on this host), after the distributed rate limit (20 / 5 min per
 // actor and book, its own bucket key); a storage failure FAILS CLOSED (503). RUNNER_BUSY / no runner → 503 retryable.
 // NO RECORD: nothing is stored but the rate-limit bucket — no answer, attempt, grade or code. Telemetry carries outcome codes and
@@ -31,6 +32,7 @@ const { classroomServing, offersCourse } = require("../lib/student-classes");
 const { resolveCodingExecutionProvider, loadCodingCapabilities, runCodingExecution } = require("../lib/coding/execution-provider");
 const { reserveCodingRun } = require("../lib/coding/run-rate-limit");
 const { RUN_LANGUAGE, RUN_LIMITS, wrapProgram } = require("../lib/learning-run");
+const { withCourseLibrary } = require("../lib/course-library");
 const { utf8ByteLength } = require("../lib/shared-finalization/codingQuestion");
 const { projectStudentToolsForStudent, validateBookStudentTools, csharpRunAllowedInBook } = require("../lib/shared-finalization/studentTools/studentToolsSpec");
 const { courseStudentTools } = require("../lib/shared-finalization/studentTools/courseTools");
@@ -152,7 +154,7 @@ async function handler(request, deps = {}, obs = null) {
     const r = await runCodingExecution(provider, {
       requestId: crypto.randomBytes(16).toString("base64url"),
       language: RUN_LANGUAGE.language, languageVersion: RUN_LANGUAGE.languageVersion,
-      source: wrapProgram(body.source), stdin: body.stdin, limits: { ...RUN_LIMITS },
+      source: withCourseLibrary(body.courseId, wrapProgram(body.source), body.source), stdin: body.stdin, limits: { ...RUN_LIMITS },
     });
     if (!r.ok) { obs?.logWarn("student-tool.run.refused", { code: r.code, status: r.status }); return refuse(r.status, r.code); }
     obs?.logInfo("student-tool.run.completed", { actor: actor.kind, status: r.result.status, durationMs: Date.now() - t0 });

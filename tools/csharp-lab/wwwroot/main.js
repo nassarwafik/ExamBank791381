@@ -6,6 +6,6 @@ const runtime = await dotnet.create();
 const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
 window.csharpLab = {
   readyMs: Math.round(performance.now() - started),
-  run: (source, stdin) => JSON.parse(exports.Lab.Run(source, stdin ?? "")),
+  run: (source, stdin, library) => JSON.parse(exports.Lab.Run(source, stdin ?? "", library ?? "")),
 };
 document.getElementById("status").textContent = "ready";

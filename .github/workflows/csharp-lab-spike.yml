@@ -9,6 +9,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "tools/csharp-lab/**"
+      - "scripts/ds-course/unit4/**"
       - ".github/workflows/csharp-lab-spike.yml"
   workflow_dispatch:
 permissions:

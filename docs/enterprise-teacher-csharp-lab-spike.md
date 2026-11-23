@@ -45,3 +45,29 @@
 ## نتيجة القياس
 
 تُملأ من تقرير CI على رأس طلب الدمج: ملف `report.md` في artifact باسم `csharp-lab-spike-report`.
+
+## فئات الكتاب: Node وStack وQueue وBinNode (طلب المالك)
+
+> «يتوجب على المحررين أن يعملا على مباني المعطيات ليس كما تظهر بالمكتبة Collection التابعة لـ C#، إنما كما تظهر بالكتاب: Queue وStack وNode وTree، وجميعها generic».
+
+**المصدر:** مكتبة الكتاب موجودة ومُثبتة بالمترجم الحقيقي في `scripts/ds-course/unit4/Unit4.cs`. فيها:
+
+| الفئة | العمليات |
+|---|---|
+| `Node` و`Node<T>` | GetValue، SetValue، GetNext، SetNext، HasNext |
+| `BinNode<T>` | GetLeft، SetLeft، GetRight، SetRight، HasLeft، HasRight |
+| `Stack<T>` | Push، Pop، Top، IsEmpty |
+| `Queue<T>` | Insert، Remove، Head، IsEmpty |
+
+ولكل فئة `ToString` الكتاب، مثل `[3,2,1]`.
+
+**المحرران كلاهما يستعملانها في كتاب «مبنى المعطيات» (899271d):**
+
+- **التشغيل على المشغّل** (`student-tool-run.js` مع `api/src/lib/course-library.js`):
+  - تُلحق الفئات **بعد** برنامج الكاتب، فتبقى أرقام الأسطر كما هي.
+  - الفئة التي يكتبها الكاتب بنفسه بالاسم وعدد معاملات النوع نفسيهما (تمرين «اكتب الفئة Stack») تُستبعد، فتُترجَم نسخته هو ولا يتكرر التعريف.
+  - نسخة الخادم `api/src/data/course-libraries/899271d.cs` مطابقة بايتًا ببايت لمكتبة الكتاب المُثبتة، ويحرسها `api/tests/course-library.test.js`.
+- **مختبر المعلّم في المتصفح** (`Lab.Run(source, stdin, library)`): القاعدة نفسها، والاستبعاد هنا بـ Roslyn.
+- **لا تعارض مع مكتبة C#:** الفئات في الفضاء العام، فيُعثر عليها قبل `System.Collections.Generic`.
+  - إثبات CI: `s.Peek()` على `Stack<int>` يعطي خطأ CS1061 في سطر الكاتب، لأن مكدّس الكتاب لا `Peek` فيه.
+- **الاختبار في المتصفح:** يمرّ على Stack وQueue وNode وBinNode بناتج الكتاب، وعلى «نسخة الكاتب تحلّ محل نسخة الكتاب».
