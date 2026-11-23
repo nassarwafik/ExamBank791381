@@ -12,9 +12,18 @@
   },
   "routes": [
     { "route": "/sw.js", "headers": { "Cache-Control": "no-cache" } },
-    { "route": "/manifest.webmanifest", "headers": { "Cache-Control": "no-cache" } }
+    { "route": "/manifest.webmanifest", "headers": { "Cache-Control": "no-cache" } },
+    {
+      "route": "/csharp-lab/*",
+      "headers": {
+        "Content-Security-Policy": "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'",
+        "Cache-Control": "no-cache",
+        "X-Robots-Tag": "noindex"
+      }
+    }
   ],
   "mimeTypes": {
-    ".webmanifest": "application/manifest+json"
+    ".webmanifest": "application/manifest+json",
+    ".wasm": "application/wasm"
   }
 }

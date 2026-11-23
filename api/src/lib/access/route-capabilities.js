@@ -41,6 +41,7 @@ const ROUTE_CAPABILITIES = Object.freeze({
   "learning-exam-item.js": { "*": "learning.course.view" },
   "learning-run.js": { "*": "learning.course.view" },   // 899371 P8 — «جرّب الكود»: a teacher previewing a course may run its programs
   "student-tool-run.js": { "*": "learning.course.view" },   // T14 — «محرر C#» of the book tool bar: a teacher previewing a course may run code (books only)
+  "teacher-csharp-lab.js": { "*": "learning.course.view" },   // Teacher C# lab V1 — the book's classes for the teacher's in-browser C# lab
   "learning-trace.js": { "*": "learning.course.view" },
   "learning-solve.js": { "*": "learning.course.view" },   // 899371 P14 — «حلّ وافحص»: a teacher previewing a course may run, check and see solutions   // 899371 P13 — «شاهد التنفيذ»: a teacher previewing a course sees every trace
   "learning-class-progress.js": { "*": "learning.progress.view" },

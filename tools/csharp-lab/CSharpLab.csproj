@@ -1,5 +1,6 @@
-<!-- SPIKE (docs/enterprise-teacher-csharp-lab-spike.md): the teacher's in-browser C# compiler, built and measured in its own CI job
-     (.github/workflows/csharp-lab-spike.yml). Not part of the web app's build, never served to students, never used for grading. -->
+<!-- Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md; V1 in docs/enterprise-csharp-visual-lab-plan.md): the teacher's
+     in-browser C# compiler. Built and proven in Chromium by .github/workflows/csharp-lab.yml; published into the site's /csharp-lab/
+     by scripts/build-csharp-lab.mjs in the deploy job. Teacher only, books only, desktop only, never used for grading. -->
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -10,11 +11,16 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <!-- the same invariant globalization as the Runner's csharp@1 worker (toolchain.json); also leaves ICU out of the download -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- the spike measures the UNTRIMMED worst case: a teacher's program may call any BCL API, which trimming could remove -->
+    <!-- UNTRIMMED: a teacher's program may call any BCL API, which trimming could remove (trimming is plan phase V6, measured) -->
     <PublishTrimmed>false</PublishTrimmed>
-    <!-- plain file names, so the spike's own page can import ./_framework/dotnet.js without a build-time placeholder -->
+    <!-- plain file names, so lab-worker.js imports ./_framework/dotnet.js without a build-time placeholder; the site serves
+         /csharp-lab/* with Cache-Control: no-cache (staticwebapp.config.json), so a new deployment is never mixed with a cached one -->
     <WasmFingerprintAssets>false</WasmFingerprintAssets>
     <WasmFingerprintDotnetJs>false</WasmFingerprintDotnetJs>
+    <!-- the compiler's messages in English only (as the Runner prints them): no localized resource folders in the download -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- no pre-compressed .br / .gz copies: the site's host compresses on the fly, and the copies would double the upload -->
+    <CompressionEnabled>false</CompressionEnabled>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />

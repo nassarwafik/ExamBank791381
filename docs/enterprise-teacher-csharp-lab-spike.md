@@ -24,9 +24,9 @@
 |---|---|
 | `tools/csharp-lab/CSharpLab.csproj` | مشروع .NET 10 لـ `browser-wasm`، مع Roslyn 5.12.0 وحزمة المراجع `Basic.Reference.Assemblies.Net100` 1.8.15. بلا تقليص (Trimming)، لقياس أسوأ حالة. |
 | `tools/csharp-lab/Lab.cs` | `Lab.Run(source, stdin)`، يعمل كعامل csharp@1: الـ usings الضمنية نفسها، و`nullable` مفعّل، وأحدث إصدار للغة، وقاعدة اللفّ. |
-| `tools/csharp-lab/wwwroot/` | صفحة النموذج بسياسة أمان خاصة بها. |
+| `tools/csharp-lab/wwwroot/` | صفحة النموذج بسياسة أمان خاصة بها. في V1 صارت إطار المختبر (`bridge.js`) وعامله (`lab-worker.js`). |
 | `tools/csharp-lab/smoke.mjs` | يقيس ويثبت في Chromium حقيقي، ويكتب تقريرًا. |
-| `.github/workflows/csharp-lab-spike.yml` | عمل CI مستقل: يثبّت .NET بسكربت Microsoft الرسمي، ثم يبني، ثم يقيس. يضيف فحصًا ولا يُضعف أي فحص. |
+| `.github/workflows/csharp-lab-spike.yml` (اليوم `csharp-lab.yml`) | عمل CI مستقل: يثبّت .NET بسكربت Microsoft الرسمي، ثم يبني، ثم يقيس. يضيف فحصًا ولا يُضعف أي فحص. |
 
 **ما لا يفعله هذا الطلب:**
 - لا يغيّر الموقع، ولا سياسة أمانه (`scripts/content-security-policy.ts`)، ولا بناءه، ولا نشره.
@@ -34,6 +34,8 @@
 - `AGENTS.md` لم يُعدَّل بعد. تعديله يأتي مع طلب الدمج الذي يضع المختبر فعلًا في الموقع، حين يصبح للقاعدة ما تحكمه.
 
 ## ما بعد النموذج (بعد قراءة الأرقام)
+
+> **نُفّذ:** الأرقام قُبلت، والدمج الفعلي هو المرحلة V1 في `docs/enterprise-csharp-visual-lab-plan.md` §9. القرار الإضافي من المالك هناك: للحاسوب فقط. عمل CI صار `csharp-lab.yml`.
 
 1. **إن كانت الأرقام مقبولة:** طلب دمج للدمج الفعلي.
    - المختبر في صفحة مستقلة معزولة يفتحها محرر C# **في قارئ الكتاب عند المعلّم فقط**.

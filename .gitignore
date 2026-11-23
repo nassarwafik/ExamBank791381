@@ -123,3 +123,6 @@ tools/csharp-lab/bin/
 tools/csharp-lab/obj/
 tools/csharp-lab/out/
 csharp-lab-report/
+
+# Teacher C# lab (scripts/build-csharp-lab.mjs): the published lab the site serves, built in the deploy job — never committed
+public/csharp-lab/

@@ -158,10 +158,13 @@ describe("Web App Manifest + icons + Apple metadata", () => {
   it("Azure Static Web Apps: sw.js and the manifest are revalidated, the manifest has its MIME type", () => {
     const config = JSON.parse(read("public/staticwebapp.config.json"));
     expect(config.platform).toEqual({ apiRuntime: "node:22" });
-    expect(config.routes).toEqual([
+    // Teacher C# lab V1 (docs/enterprise-csharp-visual-lab-plan.md §9): the lab's own path-scoped route follows the two PWA routes
+    // (its policy and headers are pinned in scripts/csharp-lab-site.v1.test.mjs).
+    expect(config.routes.slice(0, 2)).toEqual([
       { route: "/sw.js", headers: { "Cache-Control": "no-cache" } },
       { route: "/manifest.webmanifest", headers: { "Cache-Control": "no-cache" } }
     ]);
+    expect(config.routes.slice(2).map((r: { route: string }) => r.route)).toEqual(["/csharp-lab/*"]);
     expect(config.mimeTypes[".webmanifest"]).toBe("application/manifest+json");
     expect(config.navigationFallback).toBeUndefined();                         // routing unchanged
   });

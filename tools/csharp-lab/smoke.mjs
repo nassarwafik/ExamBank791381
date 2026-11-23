@@ -1,10 +1,15 @@
-// SPIKE (docs/enterprise-teacher-csharp-lab-spike.md) — measure and prove the teacher's in-browser C# compiler in real Chromium.
+// Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md; V1 in docs/enterprise-csharp-visual-lab-plan.md) — measure and prove
+// the teacher's in-browser C# compiler in real Chromium, THE WAY THE SITE USES IT: a host page embeds /csharp-lab/index.html (the
+// bridge) as a hidden same-origin frame and talks to it with postMessage; the bridge runs every program in its lab worker.
 //   node tools/csharp-lab/smoke.mjs <published wwwroot>      (env: PLAYWRIGHT_CORE_DIR, CHROMIUM_PATH, optional REPORT_DIR)
-// 1. SIZE: every file the page can download, raw and Brotli (the published .br when present, else compressed here).
+// 1. SIZE: every file the lab can download, raw and Brotli.
 // 2. START: a cold load (empty cache) to "ready", then a warm reload (HTTP cache) — the teacher's first and later visits.
 // 3. BEHAVIOUR: programs the Runner's csharp@1 worker handles — output, input, compile error with the writer's line, runtime error,
-//    the book's wrap rule, collections / LINQ / string formatting — with compile and run times (first compile and warm compiles).
-// 4. POLICY: the page runs under its own strict CSP (+ 'wasm-unsafe-eval'); any violation fails the spike.
+//    the book's wrap rule, collections / LINQ / string formatting, the book's classes — with compile and run times.
+// 4. LIMITS: a loop without end → «timeout» and the next run works (fresh worker); endless printing → «output-limit»; a recursion
+//    without end → «runtime-error» and the next run works; a program cannot reach the network or storage (the worker is sealed).
+// 5. POLICY: the bridge runs under its own strict CSP (+ 'wasm-unsafe-eval'), also sent as a header as the site does; any
+//    violation fails the run.
 // Exit 1 when an expectation fails. Writes report.json and report.md to REPORT_DIR (and the job summary when GitHub provides one).
 import http from "node:http";
 import fs from "node:fs";
@@ -13,7 +18,28 @@ import zlib from "node:zlib";
 import { createRequire } from "node:module";
 
 const root = path.resolve(process.argv[2] || "");
-if (!process.argv[2] || !fs.existsSync(path.join(root, "index.html"))) { console.error("usage: smoke.mjs <published wwwroot>"); process.exit(2); }
+if (!process.argv[2] || !fs.existsSync(path.join(root, "index.html")) || !fs.existsSync(path.join(root, "bridge.js"))) { console.error("usage: smoke.mjs <published wwwroot>"); process.exit(2); }
+// The header the site sends for /csharp-lab/* (staticwebapp.config.json) — read from the config itself, so the two cannot drift.
+const SITE_CONFIG = JSON.parse(fs.readFileSync(new URL("../../public/staticwebapp.config.json", import.meta.url), "utf8"));
+const LAB_ROUTE = SITE_CONFIG.routes.find(r => r.route === "/csharp-lab/*");
+if (!LAB_ROUTE || !LAB_ROUTE.headers || !LAB_ROUTE.headers["Content-Security-Policy"]) { console.error("staticwebapp.config.json has no /csharp-lab/* policy"); process.exit(2); }
+// The host page: a stand-in for the teacher's reader (same origin), with the same protocol as src/studentTools/csharpLab.ts.
+const HOST = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>host</title></head><body>
+<iframe id="lab" src="/csharp-lab/index.html" title="C# lab" hidden></iframe>
+<script>
+  const frame = document.getElementById("lab");
+  const waiting = new Map(); let next = 1; const t0 = performance.now();
+  window.labStates = []; window.labHello = false;
+  window.addEventListener("message", e => {
+    if (e.origin !== location.origin || e.source !== frame.contentWindow) return;
+    const m = e.data || {};
+    if (m.type === "csharp-lab:hello") { window.labHello = true; frame.contentWindow.postMessage({ type: "csharp-lab:warm" }, location.origin); }
+    if (m.type === "csharp-lab:state") { window.labStates.push(m.state); if (m.state === "ready" && window.labReadyMs === undefined) window.labReadyMs = Math.round(performance.now() - t0); }
+    if (m.type === "csharp-lab:result" && waiting.has(m.id)) { waiting.get(m.id)(m.result); waiting.delete(m.id); }
+  });
+  window.lab = { run: (source, stdin, library) => new Promise(resolve => { const id = next++; waiting.set(id, resolve);
+    frame.contentWindow.postMessage({ type: "csharp-lab:run", id, source, stdin, library }, location.origin); }) };
+</script></body></html>`;
 const reportDir = path.resolve(process.env.REPORT_DIR || "csharp-lab-report");
 fs.mkdirSync(reportDir, { recursive: true });
 
@@ -28,27 +54,32 @@ const files = [];
 })(root);
 let rawBytes = 0, brBytes = 0;
 const byFile = [];
+const BROTLI = new Map();          // compressed once here, served from memory (compressing per request would dominate the timings)
 for (const f of files) {
   const raw = fs.statSync(f).size;
-  const br = fs.existsSync(f + ".br") ? fs.statSync(f + ".br").size
-    : zlib.brotliCompressSync(fs.readFileSync(f), { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 } }).length;
+  const body = zlib.brotliCompressSync(fs.readFileSync(f), { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 } });
+  BROTLI.set(f, body);
+  const br = body.length;
   rawBytes += raw; brBytes += br;
   byFile.push({ file: path.relative(root, f), raw, br });
 }
 byFile.sort((a, b) => b.br - a.br);
 const mb = n => (n / 1024 / 1024).toFixed(2) + " MB";
 
-// ── static server (application/wasm for .wasm; Brotli when the browser accepts it, as a CDN would) ──
+// ── static server: the host at /, the lab at /csharp-lab/ with the site's headers (application/wasm; Brotli when accepted) ──
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".wasm": "application/wasm", ".dll": "application/octet-stream", ".dat": "application/octet-stream", ".pdb": "application/octet-stream" };
-let servedBytes = 0;
+let servedBytes = 0, probeHits = 0;
 const server = http.createServer((req, res) => {
-  const rel = decodeURIComponent(new URL(req.url, "http://x").pathname).replace(/^\/+/, "") || "index.html";
-  const file = path.join(root, rel);
+  const pathname = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  if (pathname === "/") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(HOST); return; }
+  if (pathname === "/csharp-lab/__probe") { probeHits++; res.writeHead(200, { "Content-Type": "text/plain" }); res.end("reached"); return; }
+  if (!pathname.startsWith("/csharp-lab/")) { res.writeHead(404); res.end(); return; }
+  const file = path.join(root, pathname.slice("/csharp-lab/".length) || "index.html");
   if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
-  const headers = { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", "Cache-Control": "public, max-age=3600" };
+  const headers = { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", ...LAB_ROUTE.headers };
   let body = fs.readFileSync(file);
   if (/\bbr\b/.test(String(req.headers["accept-encoding"] || ""))) {
-    body = fs.existsSync(file + ".br") ? fs.readFileSync(file + ".br") : zlib.brotliCompressSync(body);
+    body = BROTLI.get(file) || zlib.brotliCompressSync(body);
     headers["Content-Encoding"] = "br";
   }
   servedBytes += body.length;
@@ -76,13 +107,14 @@ const expect = (ok, what) => { if (!ok) failures.push(what); };
 servedBytes = 0;
 let t = Date.now();
 await page.goto(base);
-await page.waitForFunction(() => window.csharpLab, null, { timeout: 180000 });
-const cold = { wallMs: Date.now() - t, runtimeReadyMs: await page.evaluate(() => window.csharpLab.readyMs), transferredBytes: servedBytes };
+await page.waitForFunction(() => window.labReadyMs !== undefined, null, { timeout: 180000 });
+const cold = { wallMs: Date.now() - t, runtimeReadyMs: await page.evaluate(() => window.labReadyMs), transferredBytes: servedBytes };
 servedBytes = 0;
 t = Date.now();
 await page.reload();
-await page.waitForFunction(() => window.csharpLab, null, { timeout: 180000 });
-const warm = { wallMs: Date.now() - t, runtimeReadyMs: await page.evaluate(() => window.csharpLab.readyMs), transferredBytes: servedBytes };
+await page.waitForFunction(() => window.labReadyMs !== undefined, null, { timeout: 180000 });
+const warm = { wallMs: Date.now() - t, runtimeReadyMs: await page.evaluate(() => window.labReadyMs), transferredBytes: servedBytes };
+expect(await page.evaluate(() => window.labHello && window.labStates[0] === "booting"), "the bridge said hello and booted on «warm»");
 
 // ── 3. behaviour ──
 const PROGRAMS = [
@@ -125,17 +157,41 @@ PROGRAMS.push(
     source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Peek();\n}",
     check: r => r.status === "compile-error" && /Program\.cs\(4,\d+\): error CS1061/.test(r.stderr) },
 );
+// ── 4. limits (each checked through the frame; a fresh worker must take over after a timeout or a crash) ──
+PROGRAMS.push(
+  { name: "loop without end → timeout", stdin: "", source: "static void Main()\n{\n    long i = 0;\n    while (true) i++;\n}",
+    check: r => r.status === "timeout" },
+  { name: "after a timeout: a fresh worker runs the next program", stdin: "", source: "static void Main()\n{\n    Console.WriteLine(\"alive\");\n}",
+    check: r => r.status === "success" && r.stdout === "alive\n" },
+  { name: "endless printing → output-limit (bounded output)", stdin: "", source: "static void Main()\n{\n    while (true) Console.WriteLine(\"xxxxxxxxxx\");\n}",
+    check: r => r.status === "output-limit" && r.stdout.length === 16 * 1024 },
+  { name: "printing caught by the program itself still → output-limit", stdin: "", source: "static void Main()\n{\n    try { for (int i = 0; i < 100000; i++) Console.Write(\"yy\"); } catch { }\n    Console.WriteLine(\"done\");\n}",
+    check: r => r.status === "output-limit" },
+  { name: "recursion without end → runtime-error", stdin: "", source: "static int F(int n)\n{\n    return F(n + 1) + 1;\n}\nstatic void Main()\n{\n    Console.WriteLine(F(0));\n}",
+    check: r => r.status === "runtime-error" && /stack overflow/.test(r.stderr) },
+  { name: "after a crash: the next program runs", stdin: "", source: "static void Main()\n{\n    Console.WriteLine(\"back\");\n}",
+    check: r => r.status === "success" && r.stdout === "back\n" },
+  // The leak path a synchronous Main still has: a request started and never awaited (it would leave after Main returns). Same origin
+  // on purpose — the page's policy allows it, so only the sealed worker can stop it. The server counts what arrives (below).
+  { name: "no network: a request started by the program never leaves the worker", stdin: base + "csharp-lab/__probe\n", source: "static void Main()\n{\n    string url = Console.ReadLine();\n    try { _ = new HttpClient().GetStringAsync(url); Console.WriteLine(\"started\"); }\n    catch (Exception e) { Console.WriteLine(\"blocked: \" + e.GetType().Name); }\n}",
+    check: r => r.status === "success" || r.status === "runtime-error" },
+  { name: "the lab keeps working after the network attempt", stdin: "", source: "static void Main()\n{\n    Console.WriteLine(\"still here\");\n}",
+    check: r => r.status === "success" && r.stdout === "still here\n" },
+);
 const results = [];
 for (const p of PROGRAMS) {
   const t0 = Date.now();
   let r;
-  try { r = await page.evaluate(([s, i, l]) => window.csharpLab.run(s, i, l), [p.source, p.stdin, p.library || ""]); }
-  catch (e) { r = { status: "threw", stdout: "", stderr: String(e), compileMs: 0, runMs: 0 }; }
+  // Every run has its own deadline (well past the lab's 10 s limit): a lab that never answers FAILS the check, it does not hang the job.
+  try { r = await page.evaluate(([s, i, l]) => Promise.race([window.lab.run(s, i, l), new Promise(res => setTimeout(() => res({ status: "no-answer", stdout: "", stderr: "" }), 30000))]), [p.source, p.stdin, p.library || ""]); }
+  catch (e) { r = { status: "threw", stdout: "", stderr: String(e) }; }
   const wallMs = Date.now() - t0;
   const ok = p.check(r);
   expect(ok, "program «" + p.name + "»: " + JSON.stringify({ status: r.status, stdout: r.stdout, stderr: String(r.stderr).slice(0, 300) }));
-  results.push({ name: p.name, ok, status: r.status, compileMs: r.compileMs, runMs: r.runMs, wallMs });
+  results.push({ name: p.name, ok, status: r.status, durationMs: r.durationMs, wallMs, detail: (String(r.stdout || "") + String(r.stderr || "")).slice(0, 300) });
 }
+await new Promise(r => setTimeout(r, 2000));      // time for a request the program started to arrive, if it could
+expect(probeHits === 0, "a program reached the network from the lab worker (" + probeHits + " request(s) to /csharp-lab/__probe)");
 expect(violations.length === 0, "CSP violations: " + violations.join(" | "));
 expect(pageErrors.length === 0, "page errors: " + pageErrors.join(" | "));
 
@@ -143,10 +199,10 @@ await browser.close();
 server.close();
 
 // ── report ──
-const report = { size: { files: files.length, rawBytes, brotliBytes: brBytes, largest: byFile.slice(0, 12) }, start: { cold, warm }, programs: results, cspViolations: violations, pageErrors, failures };
+const report = { probeHits, size: { files: files.length, rawBytes, brotliBytes: brBytes, largest: byFile.slice(0, 12) }, start: { cold, warm }, programs: results, cspViolations: violations, pageErrors, failures };
 fs.writeFileSync(path.join(reportDir, "report.json"), JSON.stringify(report, null, 2));
 const md = [
-  "## Teacher C# lab spike — in-browser Roslyn on .NET WebAssembly",
+  "## Teacher C# lab — in-browser Roslyn on .NET WebAssembly (bridge frame + lab worker)",
   "",
   "| Measure | Value |", "|---|---|",
   "| Files | " + files.length + " |",
@@ -156,12 +212,12 @@ const md = [
   "| Warm reload (HTTP cache) → ready | " + warm.wallMs + " ms (runtime " + warm.runtimeReadyMs + " ms), transferred " + mb(warm.transferredBytes) + " |",
   "| CSP violations | " + violations.length + " |",
   "",
-  "| Program | OK | Status | Compile ms | Run ms | Wall ms |", "|---|---|---|---|---|---|",
-  ...results.map(r => "| " + r.name + " | " + (r.ok ? "✅" : "❌") + " | " + r.status + " | " + r.compileMs + " | " + r.runMs + " | " + r.wallMs + " |"),
+  "| Program | OK | Status | Compile + run ms (lab) | Wall ms |", "|---|---|---|---|---|",
+  ...results.map(r => "| " + r.name + " | " + (r.ok ? "✅" : "❌") + " | " + r.status + " | " + r.durationMs + " | " + r.wallMs + " |"),
   "",
   "Largest files (Brotli): " + byFile.slice(0, 8).map(f => f.file + " " + mb(f.br)).join(" · "),
   "",
-  failures.length ? "### Failures\n" + failures.map(f => "- " + f).join("\n") : "**SPIKE PASS**",
+  failures.length ? "### Failures\n" + failures.map(f => "- " + f).join("\n") : "**LAB PASS**",
 ].join("\n");
 fs.writeFileSync(path.join(reportDir, "report.md"), md + "\n");
 if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");

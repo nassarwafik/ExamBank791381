@@ -1,4 +1,5 @@
-// SPIKE (docs/enterprise-teacher-csharp-lab-spike.md) — compile and run ONE C# program inside the browser (Roslyn on .NET WebAssembly),
+// Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md, V1 in docs/enterprise-csharp-visual-lab-plan.md) — compile and run ONE
+// C# program inside the teacher's browser (Roslyn on .NET WebAssembly, in a dedicated Web Worker: tools/csharp-lab/wwwroot/lab-worker.js),
 // the same way the Runner's csharp@1 worker does on the server: the worker's implicit usings, nullable enabled, the latest language
 // version, and the book's wrap rule (a source without a class gets `public class Program { ` on its FIRST line and `}` after its last,
 // so a compiler line number is the writer's own line number). Output goes to strings via Console.SetOut / SetError.
@@ -9,7 +10,9 @@
 // scripts/ds-course/unit4/Unit4.cs) passes them as `library`; they compile as a separate file of the same program (global namespace,
 // so `Stack<int>` is the book's stack, found before System.Collections.Generic), minus every class the writer declares (same name
 // and type-parameter count), exactly as the server's course-library.js does for the Runner.
-// Teacher-only by owner decision; this file is measured in CI and is not part of the web app.
+// OUTPUT is bounded (OutputCap characters per stream, the Runner's 16 KB order): a program that prints without end stops with
+// «output-limit» instead of filling the worker's memory. TIME is bounded outside: the bridge terminates the worker (wwwroot/bridge.js).
+// Teacher-only, books only, desktop only, never grading (owner decision; AGENTS.md §10 «Teacher C# lab»).
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -97,6 +100,25 @@ global using global::System.Threading.Tasks;
         return program.WithChangedText(program.GetText().WithChanges(changes));
     }
 
+    /// <summary>The program's output, cut at <see cref="OutputCap"/> characters: past the cap, writing throws.</summary>
+    internal const int OutputCap = 16 * 1024;
+    sealed class OutputLimitException : Exception { }
+    sealed class CappedWriter : StringWriter
+    {
+        public bool Overflowed { get; private set; }
+        public override void Write(char value)
+        {
+            var sb = GetStringBuilder();
+            if (sb.Length >= OutputCap) { Overflowed = true; throw new OutputLimitException(); }
+            sb.Append(value);
+        }
+        public override void Write(char[] buffer, int index, int count) { for (int i = 0; i < count; i++) Write(buffer[index + i]); }
+        public override void Write(string? value) { if (value != null) foreach (var c in value) Write(c); }
+        public override void Write(ReadOnlySpan<char> buffer) { foreach (var c in buffer) Write(c); }
+        public override void WriteLine(string? value) { Write(value); Write(CoreNewLine); }
+        public override void WriteLine(ReadOnlySpan<char> buffer) { Write(buffer); Write(CoreNewLine); }
+    }
+
     [JSExport]
     internal static string Run(string source, string stdin, string library)
     {
@@ -117,8 +139,8 @@ global using global::System.Threading.Tasks;
         var assembly = Assembly.Load(pe.ToArray());
         var entry = assembly.EntryPoint;
         if (entry == null) return Result("compile-error", "", "No Main method.", compileMs, 0);
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
+        var stdout = new CappedWriter();
+        var stderr = new CappedWriter();
         var (oldOut, oldErr) = (Console.Out, Console.Error);
         assembly.GetType("__LabStdin")?.GetField("In", BindingFlags.Public | BindingFlags.Static)?.SetValue(null, new StringReader(stdin ?? ""));
         Console.SetOut(stdout);
@@ -129,16 +151,21 @@ global using global::System.Threading.Tasks;
         {
             entry.Invoke(null, entry.GetParameters().Length == 0 ? null : new object[] { Array.Empty<string>() });
         }
+        catch (TargetInvocationException e) when (stdout.Overflowed || stderr.Overflowed || e.InnerException is OutputLimitException)
+        {
+            status = "output-limit";
+        }
         catch (TargetInvocationException e)
         {
             status = "runtime-error";
-            stderr.WriteLine((e.InnerException ?? e).ToString());
+            try { stderr.WriteLine((e.InnerException ?? e).ToString()); } catch (OutputLimitException) { }
         }
         finally
         {
             Console.SetOut(oldOut);
             Console.SetError(oldErr);
         }
+        if (status == "success" && (stdout.Overflowed || stderr.Overflowed)) status = "output-limit";   // the program caught the stop itself
         return Result(status, stdout.ToString(), stderr.ToString(), compileMs, run.ElapsedMilliseconds);
     }
 

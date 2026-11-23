@@ -10,6 +10,10 @@ export type CSharpToolRunner = {
   /** Whether the runner can run C# right now (GET on the same path). Presentation only: true when the answer cannot be read, so
    *  the server — which checks every run — has the last word. */
   available(): Promise<boolean>;
+  /** Teacher C# lab V1 (csharpLab.ts): "lab" = the program runs in this browser, not on the Runner (the editor says so). */
+  mode?: "runner" | "lab";
+  /** The run's time limit in seconds, for the editor's time-out message (absent: the Runner's 2 s). */
+  timeoutSeconds?: number;
 };
 
 /** A refused or failed run: the server's Arabic message (or a fixed one), its code, and the wait it asks for. */
