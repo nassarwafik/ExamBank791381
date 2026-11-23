@@ -43,7 +43,7 @@ const mb = n => (n / 1024 / 1024).toFixed(2) + " MB";
 
 // ── static server (application/wasm for .wasm; Brotli when the browser accepts it, as a CDN would) ──
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".wasm": "application/wasm", ".dll": "application/octet-stream", ".dat": "application/octet-stream", ".pdb": "application/octet-stream" };
-let servedBytes = 0;
+let servedBytes = 0, probeHits = 0;
 const HOST_PAGE = `<!doctype html><meta charset="utf-8"><title>host</title>
 <iframe id="lab" sandbox="allow-scripts" src="/csharp-lab/index.html" hidden></iframe>
 <script type="module">
@@ -69,6 +69,7 @@ window.labRun = (source, stdin, library) => new Promise(res => { const id = "r" 
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, "http://x").pathname);
   if (pathname === "/" || pathname === "/index.html") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(HOST_PAGE); return; }
+  if (pathname === "/csharp-lab/__probe") { probeHits++; res.writeHead(200, { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" }); res.end("reached"); return; }
   if (!pathname.startsWith("/csharp-lab/")) { res.writeHead(404); res.end(); return; }
   const rel = pathname.slice("/csharp-lab/".length) || "index.html";
   const file = path.join(root, rel);
@@ -149,6 +150,19 @@ PROGRAMS.push(
     check: r => r.status === "success" && r.stdout === "ok\n" },
   { name: "print loop → output-limit (no memory blow-up)", stdin: "", source: 'class P { static void Main() { while (true) Console.Write("x"); } }',
     check: r => r.status === "output-limit" },
+  // A recursion without end overflows the WebAssembly stack: the .NET runtime ENDS ITSELF («Program terminated with exit(1)»). The
+  // teacher must get a runtime error naming the cause, and the lab must recover: the next program runs on a fresh worker.
+  { name: "recursion without end → runtime-error (stack overflow)", stdin: "", source: "class P { static int F(int n) { return F(n + 1) + 1; } static void Main() { Console.WriteLine(F(0)); } }",
+    check: r => r.status === "runtime-error" && /stack overflow/i.test(r.stderr) },
+  { name: "after the runtime ended itself the next program runs (fresh worker)", stdin: "", source: HELLO,
+    check: r => r.status === "success" && r.stdout === "ok\n" },
+  // PIN (docs/enterprise-csharp-visual-lab-plan.md §9): no request leaves the lab — not even one the program starts and never awaits
+  // (the one path a synchronous Main has). The URL is the lab's own server; the server counts what arrives. Today the sandboxed,
+  // opaque-origin design already lets nothing out; this check fails if a future change opens that path.
+  { name: "no network: a request started by the program never leaves the worker", stdin: "PROBE_URL\n", source: "class P { static void Main() { string url = Console.ReadLine(); try { _ = new HttpClient().GetStringAsync(url); Console.WriteLine(\"started\"); } catch (Exception e) { Console.WriteLine(\"blocked: \" + e.GetType().Name); } } }",
+    check: r => r.status === "success" || r.status === "runtime-error" },
+  { name: "the lab keeps working after the network attempt", stdin: "", source: HELLO,
+    check: r => r.status === "success" && r.stdout === "ok\n" },
   { name: "book Stack<T> (Push / Pop / Top / IsEmpty, ToString)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n    Console.WriteLine(s.Pop() + \" \" + s.Top() + \" \" + s.IsEmpty());\n    Console.WriteLine(s);\n}",
     check: r => r.status === "success" && r.stdout === "[3,2,1]\n3 2 False\n[2,1]\n" },
@@ -172,13 +186,15 @@ const results = [];
 for (const p of PROGRAMS) {
   const t0 = Date.now();
   let r;
-  try { r = await page.evaluate(([s, i, l]) => window.labRun(s, i, l), [p.source, p.stdin, p.courseId === "899271d" ? BOOK : ""]); }
+  try { r = await page.evaluate(([s, i, l]) => window.labRun(s, i, l), [p.source, p.stdin.replace("PROBE_URL", base + "csharp-lab/__probe"), p.courseId === "899271d" ? BOOK : ""]); }
   catch (e) { r = { status: "threw", stdout: "", stderr: String(e), compileMs: 0, runMs: 0 }; }
   const wallMs = Date.now() - t0;
   const ok = p.check(r);
   expect(ok, "program «" + p.name + "»: " + JSON.stringify({ status: r.status, stdout: r.stdout, stderr: String(r.stderr).slice(0, 300) }));
   results.push({ name: p.name, ok, status: r.status, compileMs: r.compileMs, runMs: r.runMs, wallMs });
 }
+await new Promise(r => setTimeout(r, 2000));      // time for a request the program started to arrive, if it could
+expect(probeHits === 0, "a program reached the network from the lab worker (" + probeHits + " request(s) to /csharp-lab/__probe)");
 expect(violations.length === 0, "CSP violations: " + violations.join(" | "));
 expect(pageErrors.length === 0, "page errors: " + pageErrors.join(" | "));
 
@@ -186,7 +202,7 @@ await browser.close();
 server.close();
 
 // ── report ──
-const report = { size: { files: files.length, rawBytes, brotliBytes: brBytes, largest: byFile.slice(0, 12) }, start: { cold, warm }, programs: results, cspViolations: violations, pageErrors, failures };
+const report = { probeHits, size: { files: files.length, rawBytes, brotliBytes: brBytes, largest: byFile.slice(0, 12) }, start: { cold, warm }, programs: results, cspViolations: violations, pageErrors, failures };
 fs.writeFileSync(path.join(reportDir, "report.json"), JSON.stringify(report, null, 2));
 const md = [
   "## Teacher C# lab spike — in-browser Roslyn on .NET WebAssembly",

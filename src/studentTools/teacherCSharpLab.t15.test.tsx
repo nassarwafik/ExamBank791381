@@ -3,7 +3,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
-import { teacherLabRunner, resetTeacherLabForTests, LAB_URL } from "./teacherCSharpLab";
+import { teacherLabRunner, resetTeacherLabForTests, LAB_URL, DESKTOP_QUERY, isDesktopViewport } from "./teacherCSharpLab";
 import CourseToolDock from "./CourseToolDock";
 
 // Teacher C# lab — the app side (AGENTS.md §1 «Teacher C# lab»; docs/enterprise-teacher-csharp-lab-spike.md): nothing is created until
@@ -152,7 +152,10 @@ describe("Teacher C# lab — only the teacher's reader", () => {
     fireEvent.click(within(screen.getByRole("group", { name: "الأدوات المسموحة" })).getByRole("button", { name: "محرر C#" }));
     return within(screen.getByRole("dialog", { name: "محرر C#" })).findByTestId("csharp-editor-tool");
   };
-  it("teacherLab: the editor says it runs on this computer and «تشغيل» starts the lab — not the server", async () => {
+  // Desktop only (owner decision 2026-11-23): the dock reads the viewport when it mounts.
+  const desktop = (matches: boolean) => vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === DESKTOP_QUERY ? matches : false, media: q, addEventListener() {}, removeEventListener() {} })));
+  it("teacherLab on a DESKTOP: the editor says it runs on this computer and «تشغيل» starts the lab — not the server", async () => {
+    desktop(true);
     const fetchMock = stubLibrary();
     render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer T" }} teacherLab />);
     const tool = await openEditor();
@@ -162,7 +165,30 @@ describe("Teacher C# lab — only the teacher's reader", () => {
     // no availability check and no run request to the API: only the book's classes are read, with the teacher's session
     expect(fetchMock.mock.calls.map(c => String(c[0]))).toEqual(["/api/student-tools/csharp-run?library=899271d"]);
   });
+  it("teacherLab on a PHONE or tablet: no lab, no on-device note — the editor keeps the Runner path, exactly as before", async () => {
+    desktop(false);
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ ok: true, available: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer T" }} teacherLab />);
+    const tool = await openEditor();
+    expect(within(tool).queryByTestId("csharp-on-device")).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/student-tools/csharp-run", expect.objectContaining({ method: "GET" })));
+    expect(fetchMock.mock.calls.some(c => String(c[0]).includes("library="))).toBe(false);
+    expect(labFrame()).toBeNull();
+  });
+  it("desktop = a wide screen with a precise pointer; no matchMedia (or a failing one) → not a desktop", () => {
+    desktop(true);
+    expect(isDesktopViewport()).toBe(true);
+    desktop(false);
+    expect(isDesktopViewport()).toBe(false);
+    vi.stubGlobal("matchMedia", undefined);
+    expect(isDesktopViewport()).toBe(false);
+    vi.stubGlobal("matchMedia", () => { throw new Error("no"); });
+    expect(isDesktopViewport()).toBe(false);
+    expect(DESKTOP_QUERY).toBe("(min-width: 1024px) and (hover: hover) and (pointer: fine)");
+  });
   it("without teacherLab (a student's reader): no lab, no on-device note — the Runner path as before", async () => {
+    desktop(true);
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, available: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer S" }} />);
