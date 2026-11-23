@@ -9,6 +9,13 @@
 //   • lines past `shown` are a hidden driver: their steps fold into one closing step (line 0), as the course records them;
 //   • a run-time error adds a last step on the line that failed, with the state of the last step (error: true).
 // Nothing is recorded while the recorder itself reads a value (a writer's ToString runs muted), or inside a method named «quiet».
+// Visual lab V5 (plan §13) — RICH mode (the teacher's visual run only; the course's traces are recorded without it, unchanged):
+//   • an item of a structure, a cell's value, that is itself an object or a structure keeps its text AND a reference to it
+//     ("refs": [id | null] beside "items", "ref": id on a node / tree cell), and that object is recorded too (Queue<Student>,
+//     Node<Student>, Stack<Queue<int>>);
+//   • an array, List<T> and LinkedList<T> are objects of their own: { k: "array", type, items, refs? } (a variable holds a reference);
+//     HashSet<T> / SortedSet<T> → { k: "set", type, items, refs? }; Dictionary / SortedDictionary / SortedList →
+//     { k: "map", type, keys, items, refs? }; C#'s own Stack<T> / Queue<T> → the same "stack" / "queue" as the book's.
 internal static class TraceRuntime
 {
     /// <summary>Visual lab V4 — the class a teacher's program may call IN THE VISUAL RUN ONLY (it is compiled into traced programs, never
@@ -45,12 +52,13 @@ internal static class __LabTrace
     static string lastFrames = ""[]"", lastObjs = ""[]"";
     static string? pendingFrames, pendingObjs;
 
+    static bool rich;              // V5: rich types (see the header)
     static bool inside;            // «اكشف الداخل»: the book's Stack<T> / Queue<T> recorded as the objects they are (Head / First, Last → Node<T>)
     static string? markNote;       // Viz.Show(title) / Viz.Pause(reason): the next recorded step carries the title …
     static bool markPause;         // … and, for Pause, a stop for the player
-    public static void Configure(global::System.IO.StringWriter @out, int shownLines, int max, string[] quietNames, string[] library, bool insideMode)
+    public static void Configure(global::System.IO.StringWriter @out, int shownLines, int max, string[] quietNames, string[] library, bool insideMode, bool richMode)
     {
-        inside = insideMode;
+        inside = insideMode; rich = richMode;
         output = @out; shown = shownLines; maxSteps = max; quiet = new global::System.Collections.Generic.HashSet<string>(quietNames);
         libraryTypes = new global::System.Collections.Generic.HashSet<string>(library);
     }
@@ -168,6 +176,7 @@ internal static class __LabTrace
     static string Kind(object o)
     {
         var t = o.GetType();
+        if (rich) { var ck = CollectionKind(o, t); if (ck != """") return ck; }
         if (o is string || t.IsValueType || t.IsArray || t.Assembly != typeof(__LabTrace).Assembly) return """";
         var name = t.Name;
         if (libraryTypes.Contains(name))
@@ -181,6 +190,73 @@ internal static class __LabTrace
         }
         if (name.StartsWith(""__Lab"") || name.Contains(""<"") || name == ""Program"" && t.GetFields(Inst).Length == 0) return """";
         return ""obj"";
+    }
+
+    /// <summary>V5: C#'s own collections (and arrays) as structures of their own — rich mode only.</summary>
+    static string CollectionKind(object o, global::System.Type t)
+    {
+        if (o is string) return """";
+        if (t.IsArray) return t.GetArrayRank() == 1 ? ""array"" : """";
+        if (!t.IsGenericType || t.Assembly == typeof(__LabTrace).Assembly) return """";
+        var d = t.GetGenericTypeDefinition();
+        if (d == typeof(global::System.Collections.Generic.List<>) || d == typeof(global::System.Collections.Generic.LinkedList<>)) return ""array"";
+        if (d == typeof(global::System.Collections.Generic.Stack<>)) return ""stack"";
+        if (d == typeof(global::System.Collections.Generic.Queue<>)) return ""queue"";
+        if (d == typeof(global::System.Collections.Generic.HashSet<>) || d == typeof(global::System.Collections.Generic.SortedSet<>)) return ""set"";
+        if (d == typeof(global::System.Collections.Generic.Dictionary<,>) || d == typeof(global::System.Collections.Generic.SortedDictionary<,>)
+            || d == typeof(global::System.Collections.Generic.SortedList<,>)) return ""map"";
+        return """";
+    }
+    static bool IsBook(object o) => o.GetType().Assembly == typeof(__LabTrace).Assembly;
+    /// <summary>The items of a structure, in the order ToString prints them: the book's from its head (Head / First → Next), C#'s own
+    /// as they enumerate (a Stack from its top, a Queue from its head). At most 200.</summary>
+    static global::System.Collections.Generic.List<object?> ItemsOf(object v, string kind)
+    {
+        var list = new global::System.Collections.Generic.List<object?>();
+        if ((kind == ""stack"" || kind == ""queue"") && IsBook(v))
+        {
+            var seen = new global::System.Collections.Generic.HashSet<object>(global::System.Collections.Generic.ReferenceEqualityComparer.Instance);
+            for (var p = Field(v, kind == ""stack"" ? ""Head"" : ""First""); p != null && seen.Add(p) && list.Count < 200; p = Field(p, ""Next"")) list.Add(Field(p, ""Value""));
+            return list;
+        }
+        if (v is global::System.Collections.IEnumerable e) foreach (var x in e) { if (list.Count >= 200) break; list.Add(x); }
+        return list;
+    }
+    static string Cells(global::System.Collections.Generic.List<object?> vals)
+    {
+        var sb = new global::System.Text.StringBuilder(""["");
+        for (int i = 0; i < vals.Count; i++) { if (i > 0) sb.Append(','); sb.Append(Json(Cell(vals[i]))); }
+        return sb.Append(']').ToString();
+    }
+    /// <summary>V5: ,""refs"":[id|null…] when an item is an object or a structure (nothing otherwise); those are recorded too.</summary>
+    static void Refs(global::System.Text.StringBuilder sb, global::System.Collections.Generic.List<object?> vals, global::System.Collections.Generic.SortedDictionary<int, string> objs)
+    {
+        if (!rich) return;
+        bool any = false;
+        foreach (var x in vals) if (x != null && Kind(x) != """") { any = true; break; }
+        if (!any) return;
+        sb.Append("",\""refs\"":["");
+        for (int i = 0; i < vals.Count; i++) { if (i > 0) sb.Append(','); var x = vals[i]; sb.Append(x != null && Kind(x) != """" ? IdOf(x).ToString() : ""null""); }
+        sb.Append(']');
+    }
+    static void VisitAll(global::System.Collections.Generic.List<object?> vals, global::System.Collections.Generic.SortedDictionary<int, string> objs)
+    {
+        if (rich) foreach (var x in vals) Visit(x, objs);
+    }
+    /// <summary>A type as C# writes it: int[] · List<string> · Dictionary<string, int>.</summary>
+    static string TypeName(global::System.Type t)
+    {
+        if (t.IsArray) return TypeName(t.GetElementType()!) + ""[]"";
+        if (t == typeof(int)) return ""int""; if (t == typeof(long)) return ""long""; if (t == typeof(double)) return ""double"";
+        if (t == typeof(float)) return ""float""; if (t == typeof(decimal)) return ""decimal""; if (t == typeof(bool)) return ""bool"";
+        if (t == typeof(char)) return ""char""; if (t == typeof(string)) return ""string""; if (t == typeof(byte)) return ""byte"";
+        if (t == typeof(short)) return ""short""; if (t == typeof(object)) return ""object"";
+        var n = t.Name; int tick = n.IndexOf('`'); if (tick > 0) n = n.Substring(0, tick);
+        if (!t.IsGenericType) return n;
+        var args = t.GetGenericArguments();
+        var parts = new string[args.Length];
+        for (int i = 0; i < args.Length; i++) parts[i] = TypeName(args[i]);
+        return n + ""<"" + string.Join("", "", parts) + "">"";
     }
 
     const global::System.Reflection.BindingFlags Inst = global::System.Reflection.BindingFlags.Instance | global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.NonPublic;
@@ -215,23 +291,46 @@ internal static class __LabTrace
         objs[id] = """";
         switch (kind)
         {
-            case ""stack"": sb.Append("",\""items\"":"").Append(Chain(Field(v, ""Head""))); break;
-            case ""queue"": sb.Append("",\""items\"":"").Append(Chain(Field(v, ""First""))); break;
+            case ""stack"": case ""queue"": case ""array"": case ""set"":
+            {
+                var vals = ItemsOf(v, kind);
+                if (kind == ""array"" || kind == ""set"") sb.Append("",\""type\"":"").Append(Json(TypeName(v.GetType())));
+                sb.Append("",\""items\"":"").Append(Cells(vals));
+                Refs(sb, vals, objs);
+                objs[id] = sb.Append('}').ToString();
+                VisitAll(vals, objs);
+                return;
+            }
+            case ""map"":
+            {
+                var keys = new global::System.Collections.Generic.List<object?>();
+                var vals = new global::System.Collections.Generic.List<object?>();
+                foreach (global::System.Collections.DictionaryEntry de in (global::System.Collections.IDictionary)v) { if (keys.Count >= 200) break; keys.Add(de.Key); vals.Add(de.Value); }
+                sb.Append("",\""type\"":"").Append(Json(TypeName(v.GetType()))).Append("",\""keys\"":"").Append(Cells(keys)).Append("",\""items\"":"").Append(Cells(vals));
+                Refs(sb, vals, objs);
+                objs[id] = sb.Append('}').ToString();
+                VisitAll(vals, objs);
+                return;
+            }
             case ""node"":
             {
-                var next = Field(v, ""Next"");
-                sb.Append("",\""v\"":"").Append(Json(Cell(Field(v, ""Value"")))).Append("",\""next\"":"").Append(next == null ? ""null"" : IdOf(next).ToString());
+                var next = Field(v, ""Next""); var value = Field(v, ""Value"");
+                sb.Append("",\""v\"":"").Append(Json(Cell(value))).Append("",\""next\"":"").Append(next == null ? ""null"" : IdOf(next).ToString());
+                if (rich && value != null && Kind(value) != """") sb.Append("",\""ref\"":"").Append(IdOf(value));
                 objs[id] = sb.Append('}').ToString();
                 Visit(next, objs);
+                if (rich) Visit(value, objs);
                 return;
             }
             case ""bin"":
             {
-                var l = Field(v, ""Left""); var r = Field(v, ""Right"");
-                sb.Append("",\""v\"":"").Append(Json(Cell(Field(v, ""Value"")))).Append("",\""l\"":"").Append(l == null ? ""null"" : IdOf(l).ToString())
+                var l = Field(v, ""Left""); var r = Field(v, ""Right""); var value = Field(v, ""Value"");
+                sb.Append("",\""v\"":"").Append(Json(Cell(value))).Append("",\""l\"":"").Append(l == null ? ""null"" : IdOf(l).ToString())
                   .Append("",\""r\"":"").Append(r == null ? ""null"" : IdOf(r).ToString());
+                if (rich && value != null && Kind(value) != """") sb.Append("",\""ref\"":"").Append(IdOf(value));
                 objs[id] = sb.Append('}').ToString();
                 Visit(l, objs); Visit(r, objs);
+                if (rich) Visit(value, objs);
                 return;
             }
             default:
@@ -253,20 +352,6 @@ internal static class __LabTrace
             }
         }
         objs[id] = sb.Append('}').ToString();
-    }
-
-    /// <summary>The items of a chain of the book's nodes (a stack from its top, a queue from its head), as cells.</summary>
-    static string Chain(object? node)
-    {
-        var sb = new global::System.Text.StringBuilder(""["");
-        int n = 0;
-        var seen = new global::System.Collections.Generic.HashSet<object>(global::System.Collections.Generic.ReferenceEqualityComparer.Instance);
-        for (var p = node; p != null && seen.Add(p) && n < 200; p = Field(p, ""Next""), n++)
-        {
-            if (n > 0) sb.Append(',');
-            sb.Append(Json(Cell(Field(p, ""Value""))));
-        }
-        return sb.Append(']').ToString();
     }
 
     // ── values, as the course writes them ──
@@ -301,6 +386,19 @@ internal static class __LabTrace
     {
         if (v == null) return ""null"";
         if (v is bool b) return b ? ""true"" : ""false"";
+        if (rich && CollectionKind(v, v.GetType()) is var ck && ck != """")   // V5: C#'s own collections and arrays, in short
+        {
+            if (ck == ""map"")
+            {
+                var parts = new global::System.Collections.Generic.List<string>();
+                foreach (global::System.Collections.DictionaryEntry de in (global::System.Collections.IDictionary)v) { if (parts.Count == 6) { parts.Add(""…""); break; } parts.Add(Cell(de.Key) + "": "" + Cell(de.Value)); }
+                return ""{"" + string.Join("", "", parts) + ""}"";
+            }
+            var items = ItemsOf(v, ck);
+            var few = new global::System.Collections.Generic.List<string>();
+            foreach (var x in items) { if (few.Count == 6) { few.Add(""…""); break; } few.Add(Cell(x)); }
+            return ck == ""stack"" || ck == ""queue"" ? ""["" + string.Join("","", few) + ""]"" : ""{"" + string.Join("", "", few) + ""}"";
+        }
         if (Kind(v) == ""obj"")
         {
             var t = v.GetType();

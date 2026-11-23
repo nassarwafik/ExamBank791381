@@ -106,6 +106,83 @@ export function QueueDrawing({ items, labels, changed, motion }: { items: string
   );
 }
 
+/**
+ * Visual lab V5 — an array / List<T> (`indexed`: each cell's index under it, and the index variables that point at a cell — i, mid … —
+ * as arrows above it) or a set (braces, no order to number). Only the teacher's visual run draws it; the course never has one.
+ */
+export function RowDrawing({ kind, type, items, labels, indexed, marks }: {
+  kind: "array" | "set"; type: string; items: string[]; labels?: DrawLabel[]; indexed: boolean; marks?: { name: string; at: number; top?: boolean }[];
+}) {
+  const ws = items.map(v => Math.max(40, textW(v) + 18));
+  const cellW = (i: number) => ws[i] ?? 40;
+  const x0 = 12 + (kind === "set" ? 12 : 0);
+  const xs = ws.map((_, i) => x0 + ws.slice(0, i).reduce((a, b) => a + b, 0));
+  const inner = items.length ? ws.reduce((a, b) => a + b, 0) : 70;
+  const byCell = new Map<number, { name: string; top?: boolean }[]>();
+  for (const m of marks ?? []) byCell.set(m.at, [...(byCell.get(m.at) ?? []), m]);
+  const maxMarks = Math.max(0, ...[...byCell.values()].map(l => l.length));
+  const top = 22 + (maxMarks ? 22 + maxMarks * 15 : 0), ch = 32;
+  const name = names(labels);
+  const w = Math.max(x0 + inner + (kind === "set" ? 24 : 12) + (byCell.has(items.length) ? 40 : 0), textW(type) + 20, 90);
+  const h = top + ch + (indexed ? 18 : 4) + (name ? 20 : 6);
+  const mx = (at: number) => (at < items.length ? xs[at] + cellW(at) / 2 : x0 + inner + 18);
+  const say = (kind === "set" ? "المجموعة " : "المصفوفة ") + (name ? name + " " : "") + "(" + type + "): "
+    + (items.length ? items.map((v, i) => (indexed ? i + ": " : "") + v).join("، ") : "فارغة")
+    + [...(marks ?? [])].map(m => "، " + m.name + " = " + m.at).join("");
+  return (
+    <Canvas w={w} h={h} label={say}>
+      <text className="learning-ds-tag" x={x0} y={14}>{type}</text>
+      {kind === "set" && <>
+        <text className="learning-ds-null" x={x0 - 12} y={top + ch / 2 + 5}>{"{"}</text>
+        <text className="learning-ds-null" x={x0 + inner + 4} y={top + ch / 2 + 5}>{"}"}</text>
+      </>}
+      {items.length === 0 && <text className="learning-ds-muted" x={x0 + inner / 2} y={top + ch / 2 + 5} textAnchor="middle">فارغة</text>}
+      {items.map((v, i) => (
+        <g key={i}>
+          <rect className={"learning-ds-cell" + (byCell.has(i) ? " is-head" : "")} x={xs[i] + 1} y={top} width={cellW(i) - 2} height={ch} rx={kind === "set" ? 10 : 2} />
+          <text className="learning-ds-value" x={xs[i] + cellW(i) / 2} y={top + ch / 2 + 5} textAnchor="middle">{v}</text>
+          {indexed && <text className="learning-ds-tag" x={xs[i] + cellW(i) / 2} y={top + ch + 14} textAnchor="middle">{i}</text>}
+        </g>
+      ))}
+      {[...byCell.entries()].map(([at, list]) => (
+        <g key={"m" + at}>
+          <Arrow className="learning-ds-pointer" x1={mx(at)} y1={top - 18} x2={mx(at)} y2={top - 3} />
+          {list.map((m, k) => (
+            <text key={m.name} className={"learning-ds-name" + (m.top === false ? " is-dim" : "")} x={mx(at)} y={top - 22 - k * 15} textAnchor="middle">{m.name}</text>
+          ))}
+        </g>
+      ))}
+      {name && <text className="learning-ds-name" x={x0 + inner / 2} y={h - 5} textAnchor="middle">{name}</text>}
+    </Canvas>
+  );
+}
+
+/** Visual lab V5 — a Dictionary: one row per key, «key → value». */
+export function MapDrawing({ type, keys, items, labels }: { type: string; keys: string[]; items: string[]; labels?: DrawLabel[] }) {
+  const kw = Math.max(48, ...keys.map(k => textW(k) + 18)), vw = Math.max(48, ...items.map(v => textW(v) + 18));
+  const top = 22, rh = 30, GAP = 34, x0 = 10;
+  const name = names(labels);
+  const rows = Math.max(keys.length, 1);
+  const w = Math.max(x0 + kw + GAP + vw + 10, textW(type) + 20), h = top + rows * rh + (name ? 24 : 8);
+  const say = "القاموس " + (name ? name + " " : "") + "(" + type + "): " + (keys.length ? keys.map((k, i) => k + " ← " + items[i]).join("، ") : "فارغ");
+  return (
+    <Canvas w={w} h={h} label={say}>
+      <text className="learning-ds-tag" x={x0} y={14}>{type}</text>
+      {keys.length === 0 && <text className="learning-ds-muted" x={x0 + 10} y={top + rh / 2 + 4}>فارغ</text>}
+      {keys.map((k, i) => (
+        <g key={i}>
+          <rect className="learning-ds-cell is-round" x={x0} y={top + i * rh} width={kw} height={rh - 4} rx="4" />
+          <text className="learning-ds-value" x={x0 + kw / 2} y={top + i * rh + rh / 2 + 3} textAnchor="middle">{k}</text>
+          <Arrow className="learning-ds-link" x1={x0 + kw + 4} y1={top + i * rh + rh / 2 - 2} x2={x0 + kw + GAP - 4} y2={top + i * rh + rh / 2 - 2} />
+          <rect className="learning-ds-cell" x={x0 + kw + GAP} y={top + i * rh} width={vw} height={rh - 4} rx="4" />
+          <text className="learning-ds-value" x={x0 + kw + GAP + vw / 2} y={top + i * rh + rh / 2 + 3} textAnchor="middle">{items[i]}</text>
+        </g>
+      ))}
+      {name && <text className="learning-ds-name" x={x0 + (kw + GAP + vw) / 2} y={h - 6} textAnchor="middle">{name}</text>}
+    </Canvas>
+  );
+}
+
 export type ChainCell = { key: number | string; v: string; labels?: DrawLabel[]; hi?: boolean; fresh?: boolean };
 /** A chain of cells: [value | •] → [value | •] → null, with the names that point at each cell under it. */
 export function ChainDrawing({ cells, end = "null", join, onPick, picked }: { cells: ChainCell[]; end?: "null" | "join" | "cycle"; join?: string; onPick?: (i: number) => void; picked?: number | null }) {

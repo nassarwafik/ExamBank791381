@@ -4,16 +4,23 @@
 // program state is drawn as, the tree layout and the binary-search-tree operations of the lab. No React, nothing executed.
 
 export type DsVal = { t: "v"; s: string } | { t: "null" } | { t: "ref"; id: number } | { t: "arr"; items: string[] };
+/** V5 (the teacher's visual run only, read with `rich`): `refs` beside `items` — the object each item refers to (null = a plain value). */
+type DsRefs = { refs?: (number | null)[] };
 export type DsObj =
-  | { id: number; k: "stack"; items: string[] }
-  | { id: number; k: "queue"; items: string[] }
-  | { id: number; k: "node"; v: string; next: number | null }
-  | { id: number; k: "bin"; v: string; l: number | null; r: number | null }
-  | { id: number; k: "obj"; type: string; fields: [string, DsVal][] };
+  | ({ id: number; k: "stack"; items: string[] } & DsRefs)
+  | ({ id: number; k: "queue"; items: string[] } & DsRefs)
+  | { id: number; k: "node"; v: string; next: number | null; ref?: number }
+  | { id: number; k: "bin"; v: string; l: number | null; r: number | null; ref?: number }
+  | { id: number; k: "obj"; type: string; fields: [string, DsVal][] }
+  // V5 rich types: an array / List<T> / LinkedList<T>, a HashSet<T> / SortedSet<T>, a Dictionary (keys and their values)
+  | ({ id: number; k: "array"; type: string; items: string[] } & DsRefs)
+  | ({ id: number; k: "set"; type: string; items: string[] } & DsRefs)
+  | ({ id: number; k: "map"; type: string; keys: string[]; items: string[] } & DsRefs);
 export type DsFrame = { name: string; vars: [string, DsVal][] };
 /** `pause` (visual lab V4, optional; never in a course trace): the writer's Viz.Pause() — a stop for the teacher's player. */
 export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean };
-export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[] };
+/** `pointers` (V5, rich only): the [array, index] pairs the program writes as a[i] — the drawing marks the cell i points at. */
+export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: [string, string][] };
 
 export const DS_LIMITS = { lines: 120, steps: 260, objs: 80, items: 40, text: 80, frames: 40, vars: 30 } as const;
 const isStr = (v: unknown): v is string => typeof v === "string";
@@ -51,24 +58,39 @@ function readFrames(raw: unknown): DsFrame[] | null {
   return out;
 }
 const idOrNull = (v: unknown): v is number | null => v === null || isInt(v);
-function readObjs(raw: unknown): DsObj[] | null {
+const cells = (v: unknown): v is string[] => Array.isArray(v) && v.length <= DS_LIMITS.items && v.every(short);
+function readObjs(raw: unknown, rich: boolean): DsObj[] | null {
   if (!Array.isArray(raw) || raw.length > DS_LIMITS.objs) return null;
   const out: DsObj[] = [], ids = new Set<number>();
   for (const x of raw) {
     const o = rec(x);
     if (!isInt(o.id) || ids.has(o.id)) return null;
     ids.add(o.id);
-    if ((o.k === "stack" || o.k === "queue") && Array.isArray(o.items) && o.items.length <= DS_LIMITS.items && o.items.every(short)) out.push({ id: o.id, k: o.k, items: o.items as string[] });
-    else if (o.k === "node" && short(o.v) && idOrNull(o.next)) out.push({ id: o.id, k: "node", v: o.v, next: o.next });
-    else if (o.k === "bin" && short(o.v) && idOrNull(o.l) && idOrNull(o.r)) out.push({ id: o.id, k: "bin", v: o.v, l: o.l, r: o.r });
-    else if (o.k === "obj" && short(o.type)) { const fields = readPairs(o.fields); if (!fields) return null; out.push({ id: o.id, k: "obj", type: o.type, fields }); }
+    // V5 fields are read ONLY in a rich trace (the teacher's visual run); in any other trace they make it unreadable
+    if (!rich && ("refs" in o || "ref" in o)) return null;
+    let refs: (number | null)[] | undefined;
+    if (o.refs !== undefined) {
+      if (!Array.isArray(o.refs) || !Array.isArray(o.items) || o.refs.length !== o.items.length || !o.refs.every(idOrNull)) return null;
+      refs = o.refs as (number | null)[];
+    }
+    if (o.ref !== undefined && !isInt(o.ref)) return null;
+    const withRefs = refs ? { refs } : {};
+    const withRef = isInt(o.ref) ? { ref: o.ref } : {};
+    if ((o.k === "stack" || o.k === "queue") && cells(o.items)) out.push({ id: o.id, k: o.k, items: o.items, ...withRefs });
+    else if (o.k === "node" && short(o.v) && idOrNull(o.next) && !refs) out.push({ id: o.id, k: "node", v: o.v, next: o.next, ...withRef });
+    else if (o.k === "bin" && short(o.v) && idOrNull(o.l) && idOrNull(o.r) && !refs) out.push({ id: o.id, k: "bin", v: o.v, l: o.l, r: o.r, ...withRef });
+    else if (o.k === "obj" && short(o.type) && !refs && o.ref === undefined) { const fields = readPairs(o.fields); if (!fields) return null; out.push({ id: o.id, k: "obj", type: o.type, fields }); }
+    else if (rich && (o.k === "array" || o.k === "set") && short(o.type) && cells(o.items)) out.push({ id: o.id, k: o.k, type: o.type, items: o.items, ...withRefs });
+    else if (rich && o.k === "map" && short(o.type) && cells(o.keys) && cells(o.items) && o.keys.length === o.items.length) out.push({ id: o.id, k: "map", type: o.type, keys: o.keys, items: o.items, ...withRefs });
     else return null;
   }
-  // every link points at an object of the right kind in this very state
+  // every link points at an object of the right kind in this very state; a V5 reference at an object that is there
   const kind = new Map(out.map(o => [o.id, o.k]));
   for (const o of out) {
     if (o.k === "node" && o.next !== null && kind.get(o.next) !== "node") return null;
     if (o.k === "bin" && [o.l, o.r].some(c => c !== null && kind.get(c) !== "bin")) return null;
+    if ("refs" in o && o.refs && o.refs.some(r => r !== null && !kind.has(r))) return null;
+    if ((o.k === "node" || o.k === "bin") && o.ref !== undefined && !kind.has(o.ref)) return null;
   }
   return out;
 }
@@ -79,8 +101,10 @@ function readObjs(raw: unknown): DsObj[] | null {
  * objects (`h`) are omitted when they equal the previous step's; `o` is how many characters of `out` were printed so far.
  * `limits`: the course's own (DS_LIMITS) by default; the teacher's visual run (src/studentTools/labTrace.ts) allows a longer
  * program and trace — every other check is the same.
+ * `rich` (V5, the teacher's visual run only): the v2 additions are read — `refs` / `ref`, the kinds array / set / map and
+ * `pointers`. Without it (every course trace) any of them makes the trace unreadable: a course trace reads exactly as before.
  */
-export function readDsTrace(config: unknown, limits: { steps: number; lines: number } = DS_LIMITS): DsTrace | null {
+export function readDsTrace(config: unknown, limits: { steps: number; lines: number } = DS_LIMITS, rich = false): DsTrace | null {
   const c = rec(config);
   if (!isStr(c.code) || !c.code.trim() || !isStr(c.out) || !Array.isArray(c.steps) || c.steps.length < 1 || c.steps.length > limits.steps) return null;
   const lines = c.code.split("\n");
@@ -91,7 +115,7 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
     const s = rec(raw);
     if (!isInt(s.l) || s.l < 0 || s.l > lines.length || !isStr(s.n) || s.n.length > 600 || !isInt(s.o) || s.o < printed || s.o > c.out.length) return null;
     if (s.f !== undefined) frames = readFrames(s.f);
-    if (s.h !== undefined) objs = readObjs(s.h);
+    if (s.h !== undefined) objs = readObjs(s.h, rich);
     if (!frames || !objs) return null;
     const ids = new Set(objs.map(o => o.id));
     const refs = [...frames.flatMap(f => f.vars), ...objs.flatMap(o => (o.k === "obj" ? o.fields : []))];
@@ -99,7 +123,14 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
     printed = s.o;
     steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}) });
   }
-  return { lines, ...(short(c.given) || (isStr(c.given) && c.given.length <= 300) ? { given: c.given as string } : {}), ...(isStr(c.stdin) ? { stdin: c.stdin } : {}), steps };
+  let pointers: [string, string][] | undefined;
+  if (c.pointers !== undefined) {
+    const ident = (v: unknown) => isStr(v) && /^[A-Za-z_][A-Za-z0-9_]{0,40}$/.test(v);
+    if (!rich || !Array.isArray(c.pointers) || c.pointers.length > 20 || !c.pointers.every(p => Array.isArray(p) && p.length === 2 && ident(p[0]) && ident(p[1]))) return null;
+    pointers = c.pointers as [string, string][];
+  }
+  return { lines, ...(short(c.given) || (isStr(c.given) && c.given.length <= 300) ? { given: c.given as string } : {}), ...(isStr(c.stdin) ? { stdin: c.stdin } : {}), steps,
+    ...(pointers && pointers.length ? { pointers } : {}) };
 }
 
 // ── what a state is drawn as ──────────────────────────────────────────────────────────────────────────────────────────
@@ -111,7 +142,16 @@ export type DsChainNode = { id: number; v: string; labels: DsLabel[] };
 export type DsChain = { nodes: DsChainNode[]; end: "null" | "join" | "cycle"; join?: string };
 export type DsTreeNode = { id: number; v: string; x: number; depth: number; parent: number | null; labels: DsLabel[] };
 export type DsTree = { nodes: DsTreeNode[] };
-export type DsScene = { stacks: DsBoxes[]; queues: DsBoxes[]; chains: DsChain[]; trees: DsTree[]; objects: Extract<DsObj, { k: "obj" }>[] };
+/** V5: an array / List (`indexed`: its cells numbered from 0, and `marks` = the index variables pointing at a cell) or a set. */
+export type DsMark = { name: string; at: number; top: boolean };
+export type DsRow = { id: number; k: "array" | "set"; type: string; items: string[]; labels: DsLabel[]; indexed: boolean; marks: DsMark[] };
+export type DsMapScene = { id: number; type: string; keys: string[]; items: string[]; labels: DsLabel[] };
+export type DsScene = { stacks: DsBoxes[]; queues: DsBoxes[]; chains: DsChain[]; trees: DsTree[]; objects: Extract<DsObj, { k: "obj" }>[];
+  rows: DsRow[]; maps: DsMapScene[] };
+
+/** V5: an item that refers to an object is drawn with its text and «→#id»; the object it refers to is drawn too, named «#id». */
+export const refText = (text: string, ref: number | null | undefined) => (ref === null || ref === undefined ? text : text + " →#" + ref);
+const withRefs = (items: string[], refs?: (number | null)[]) => items.map((t, i) => refText(t, refs?.[i]));
 
 /** In-order x positions and depths of a binary tree given as (id → children). Pure; guards against a malformed (cyclic) tree. */
 export function layoutTree(root: number, kids: (id: number) => { l: number | null; r: number | null } | undefined): { id: number; x: number; depth: number; parent: number | null }[] {
@@ -130,8 +170,8 @@ export function layoutTree(root: number, kids: (id: number) => { l: number | nul
   return out;
 }
 
-/** The drawing of one program state: every structure with the names that point at it. */
-export function sceneOf(frames: DsFrame[], objs: DsObj[]): DsScene {
+/** The drawing of one program state: every structure with the names that point at it. `pointers` (V5): see DsTrace. */
+export function sceneOf(frames: DsFrame[], objs: DsObj[], pointers?: [string, string][]): DsScene {
   const labels = new Map<number, DsLabel[]>();
   frames.forEach((f, i) => {
     const top = i === frames.length - 1;
@@ -143,13 +183,46 @@ export function sceneOf(frames: DsFrame[], objs: DsObj[]): DsScene {
       labels.set(v.id, list);
     }
   });
+  // V5: what an item or a cell refers to is named «#id» (a drawing has no variable for it)
+  for (const o of objs) {
+    const targets = "refs" in o && o.refs ? o.refs : (o.k === "node" || o.k === "bin") && o.ref !== undefined ? [o.ref] : [];
+    for (const t of targets) {
+      if (t === null) continue;
+      const list = labels.get(t) ?? [];
+      if (!list.some(l => l.name === "#" + t)) list.push({ name: "#" + t, top: true });
+      labels.set(t, list);
+    }
+  }
   const lab = (id: number) => labels.get(id) ?? [];
   const byId = new Map(objs.map(o => [o.id, o]));
-  const scene: DsScene = { stacks: [], queues: [], chains: [], trees: [], objects: [] };
+  // V5: the index variables of a[i]: in each method, a variable `i` holding a whole number marks that cell of the array `a` refers to
+  const marks = new Map<number, DsMark[]>();
+  frames.forEach((f, fi) => {
+    const vars = new Map(f.vars);
+    for (const [a, i] of pointers ?? []) {
+      const arr = vars.get(a), idx = vars.get(i);
+      if (arr?.t !== "ref" || idx?.t !== "v" || !/^-?\d+$/.test(idx.s)) continue;
+      const target = byId.get(arr.id);
+      if (target?.k !== "array") continue;
+      const at = Number(idx.s);
+      if (at < 0 || at > target.items.length) continue;
+      const list = marks.get(arr.id) ?? [];
+      const top = fi === frames.length - 1;
+      const same = list.find(m => m.name === i && m.at === at);
+      if (same) same.top = same.top || top; else list.push({ name: i, at, top });
+      marks.set(arr.id, list);
+    }
+  });
+  const scene: DsScene = { stacks: [], queues: [], chains: [], trees: [], objects: [], rows: [], maps: [] };
   for (const o of objs) {
-    if (o.k === "stack") scene.stacks.push({ id: o.id, items: o.items, labels: lab(o.id) });
-    else if (o.k === "queue") scene.queues.push({ id: o.id, items: o.items, labels: lab(o.id) });
+    if (o.k === "stack") scene.stacks.push({ id: o.id, items: withRefs(o.items, o.refs), labels: lab(o.id) });
+    else if (o.k === "queue") scene.queues.push({ id: o.id, items: withRefs(o.items, o.refs), labels: lab(o.id) });
     else if (o.k === "obj") scene.objects.push(o);
+    else if (o.k === "array" || o.k === "set") {
+      const indexed = o.k === "array" && !o.type.startsWith("LinkedList<");
+      scene.rows.push({ id: o.id, k: o.k, type: o.type, items: withRefs(o.items, o.refs), labels: lab(o.id), indexed, marks: indexed ? marks.get(o.id) ?? [] : [] });
+    }
+    else if (o.k === "map") scene.maps.push({ id: o.id, type: o.type, keys: o.keys, items: withRefs(o.items, o.refs), labels: lab(o.id) });
   }
   // chains: start from the cells nothing points at, then any cell left (a ring)
   const nodes = objs.filter((o): o is Extract<DsObj, { k: "node" }> => o.k === "node");
@@ -164,7 +237,7 @@ export function sceneOf(frames: DsFrame[], objs: DsObj[]): DsScene {
       if (mine.has(cur.id)) { chain.end = "cycle"; chain.join = cur.v; break; }
       if (drawn.has(cur.id)) { chain.end = "join"; chain.join = cur.v; break; }
       mine.add(cur.id); drawn.add(cur.id);
-      chain.nodes.push({ id: cur.id, v: cur.v, labels: lab(cur.id) });
+      chain.nodes.push({ id: cur.id, v: refText(cur.v, cur.ref), labels: lab(cur.id) });
       cur = cur.next === null ? undefined : (byId.get(cur.next) as typeof head | undefined);
     }
     scene.chains.push(chain);
@@ -177,7 +250,7 @@ export function sceneOf(frames: DsFrame[], objs: DsObj[]): DsScene {
     if (placed.has(root.id)) continue;
     const laid = layoutTree(root.id, id => (placed.has(id) && id !== root.id ? undefined : (byId.get(id) as Extract<DsObj, { k: "bin" }> | undefined)));
     laid.forEach(n => placed.add(n.id));
-    scene.trees.push({ nodes: laid.map(n => ({ ...n, v: (byId.get(n.id) as Extract<DsObj, { k: "bin" }>).v, labels: lab(n.id) })) });
+    scene.trees.push({ nodes: laid.map(n => { const b = byId.get(n.id) as Extract<DsObj, { k: "bin" }>; return { ...n, v: refText(b.v, b.ref), labels: lab(n.id) }; }) });
   }
   return scene;
 }

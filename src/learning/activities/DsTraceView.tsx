@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { sceneOf, type DsObj, type DsTrace, type DsVal } from "./ds";
-import { ChainDrawing, Marked, QueueDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
+import { ChainDrawing, MapDrawing, Marked, QueueDrawing, RowDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
 import { freshOf, motionOf } from "./dsMotion";
 
 /**
@@ -38,7 +38,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     setState({ at: next, epoch });
     onStep?.(next + 1, total);
   };
-  const scene = sceneOf(step.frames, step.objs);
+  const scene = sceneOf(step.frames, step.objs, cfg.pointers);
   const moves = motion ? motionOf(prev, step) : null;
   const fresh = motion ? freshOf(prev, step) : null;
   // with motion a stack / queue drawing is a new element at every step, so its entry / exit animation starts again (the course,
@@ -54,11 +54,12 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     const o: DsObj | undefined = byId.get(v.id);
     if (!o) return "?";
     if (o.k === "stack" || o.k === "queue") return (o.k === "stack" ? "راصّة [" : "دور [") + o.items.join(",") + "]";
+    if (o.k === "array" || o.k === "set" || o.k === "map") return o.type + " #" + o.id;   // V5: drawn beside, named by the variable
     return o.k === "obj" ? o.type + " #" + o.id : "خلية " + o.v;
   };
   const frames = step.frames.map((f, i) => ({ f, i })).reverse();   // the running method on top
   const was = (frame: number, name: string) => (prev?.frames[frame]?.name === step.frames[frame]?.name ? prev?.frames[frame]?.vars.find(p => p[0] === name)?.[1] : undefined);
-  const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length;
+  const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length + scene.rows.length + scene.maps.length;
 
   return (
     <div className="learning-trace learning-ds">
@@ -109,6 +110,12 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
                 {scene.stacks.map(s => <StackDrawing key={motion ? s.id + ":" + at : s.id} items={s.items} labels={s.labels} changed={changed(s.id)} motion={moves?.get(s.id)} />)}
                 {scene.queues.map(q => <QueueDrawing key={motion ? q.id + ":" + at : q.id} items={q.items} labels={q.labels} changed={changed(q.id)} motion={moves?.get(q.id)} />)}
               </div>
+              {(scene.rows.length > 0 || scene.maps.length > 0) && (
+                <div className="learning-ds-row">
+                  {scene.rows.map(r => <RowDrawing key={r.id} kind={r.k} type={r.type} items={r.items} labels={r.labels} indexed={r.indexed} marks={r.marks} />)}
+                  {scene.maps.map(m => <MapDrawing key={m.id} type={m.type} keys={m.keys} items={m.items} labels={m.labels} />)}
+                </div>
+              )}
               {scene.chains.map((c, i) => <ChainDrawing key={"c" + i} cells={c.nodes.map(n => ({ key: n.id, v: n.v, labels: n.labels, hi: changed(n.id), fresh: fresh?.has(n.id) }))} end={c.end} join={c.join} />)}
               {scene.trees.map((t, i) => <TreeDrawing key={"t" + i} cells={t.nodes.map(n => ({ key: n.id, v: n.v, x: n.x, depth: n.depth, parent: n.parent, labels: n.labels, hi: changed(n.id), fresh: fresh?.has(n.id) }))} />)}
             </section>

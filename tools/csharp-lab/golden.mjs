@@ -190,6 +190,58 @@ const BEYOND = [
   { name: "a run-time error: a last step on the failing line, marked as an error", stdin: "",
     source: "static void Main()\n{\n    int z = 0;\n    int r = 10 / z;\n}",
     check: (t, steps) => t.status === "runtime-error" && steps.at(-1).error === true && steps.at(-1).line === 4 && /DivideByZero/.test(t.stderr) },
+  // Visual lab V5 — rich types (option `rich`, the teacher's visual run only; every case above, and the 219, are recorded without it)
+  { name: "V5 Queue<Student>: each item keeps its text and refers to the Student object, recorded with its fields", stdin: "", library: true, options: { rich: true },
+    source: "class Student { public string Name; public int Grade; public Student(string n, int g) { Name = n; Grade = g; } }\nclass Program\n{\n    static void Main()\n    {\n        Queue<Student> q = new Queue<Student>();\n        q.Insert(new Student(\"Ali\", 92));\n        q.Insert(new Student(\"Sara\", 88));\n        Console.WriteLine(q.Head().Name);\n    }\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1), byId = new Map(last.objs.map(o => [o.id, o]));
+      const q = last.objs.find(o => o.k === "queue");
+      const people = (q?.refs || []).map(id => byId.get(id));
+      return t.status === "success" && t.stdout === "Ali\n" && q.items.join("|") === "(Ali, 92)|(Sara, 88)"
+        && people.length === 2 && people.every(o => o?.k === "obj" && o.type === "Student")
+        && JSON.stringify(people[1].fields) === JSON.stringify([["Name", { t: "v", s: "\"Sara\"" }], ["Grade", { t: "v", s: "88" }]]);
+    } },
+  { name: "V5 Node<Student>: the cell's value refers to the Student", stdin: "", library: true, options: { rich: true },
+    source: "class Student { public string Name; public Student(string n) { Name = n; } public override string ToString() => Name; }\nclass Program\n{\n    static void Main()\n    {\n        Node<Student> n = new Node<Student>(new Student(\"Omar\"));\n        Console.WriteLine(n.GetValue());\n    }\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1), node = last.objs.find(o => o.k === "node"), byId = new Map(last.objs.map(o => [o.id, o]));
+      return t.status === "success" && t.stdout === "Omar\n" && node?.v === "Omar" && byId.get(node.ref)?.type === "Student";
+    } },
+  { name: "V5 Stack<Queue<int>>: each item of the stack refers to its queue, drawn with its own items", stdin: "", library: true, options: { rich: true },
+    source: "static void Main()\n{\n    Stack<Queue<int>> s = new Stack<Queue<int>>();\n    Queue<int> a = new Queue<int>(); a.Insert(1); a.Insert(2);\n    Queue<int> b = new Queue<int>(); b.Insert(3);\n    s.Push(a); s.Push(b);\n    Console.WriteLine(s.Top());\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1), byId = new Map(last.objs.map(o => [o.id, o]));
+      const st = last.objs.find(o => o.k === "stack");
+      const inner = (st?.refs || []).map(id => byId.get(id));
+      return t.status === "success" && t.stdout === "[3]\n" && st.items.join("|") === "[3]|[1,2]"
+        && inner.map(o => o?.k + ":" + o?.items.join(",")).join("|") === "queue:3|queue:1,2";
+    } },
+  { name: "V5 an array is an object a variable refers to; a[i] gives the pointer pair; its cells change in place", stdin: "", options: { rich: true },
+    source: "static void Main()\n{\n    int[] a = { 5, 3, 8 };\n    for (int i = 0; i < a.Length; i++) a[i] = a[i] * 2;\n    Console.WriteLine(a[2]);\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1), arr = last.objs.find(o => o.k === "array");
+      const aVar = last.frames[0].vars.find(([n]) => n === "a")?.[1];
+      return t.status === "success" && t.stdout === "16\n" && arr?.type === "int[]" && arr.items.join(",") === "10,6,16"
+        && aVar?.t === "ref" && aVar.id === arr.id && JSON.stringify(t.pointers) === JSON.stringify([["a", "i"]])
+        && steps.some(s => s.objs.find(o => o.k === "array")?.items.join(",") === "10,3,8");
+    } },
+  { name: "V5 C#'s collections: List<string>, Dictionary<string,int>, HashSet<int>, Stack<int>, Queue<int>", stdin: "", options: { rich: true },
+    source: "static void Main()\n{\n    List<string> names = new List<string> { \"a\", \"b\" };\n    Dictionary<string, int> ages = new Dictionary<string, int>();\n    ages[\"a\"] = 7;\n    HashSet<int> seen = new HashSet<int> { 4 };\n    Stack<int> st = new Stack<int>(); st.Push(1); st.Push(2);\n    Queue<int> qu = new Queue<int>(); qu.Enqueue(9);\n    Console.WriteLine(names.Count + ages[\"a\"]);\n}",
+    check: (t, steps) => {
+      const o = steps.at(-1).objs, of = k => o.filter(x => x.k === k);
+      return t.status === "success" && t.stdout === "9\n"
+        && of("array").some(x => x.type === "List<string>" && x.items.join(",") === "a,b")
+        && of("map").some(x => x.type === "Dictionary<string, int>" && x.keys.join() === "a" && x.items.join() === "7")
+        && of("set").some(x => x.type === "HashSet<int>" && x.items.join() === "4")
+        && of("stack").some(x => x.items.join(",") === "2,1") && of("queue").some(x => x.items.join() === "9");
+    } },
+  { name: "V5 without `rich` the same Queue<Student> is recorded as before (no refs, no Student objects)", stdin: "", library: true,
+    source: "class Student { public string Name; public int Grade; public Student(string n, int g) { Name = n; Grade = g; } }\nclass Program\n{\n    static void Main()\n    {\n        Queue<Student> q = new Queue<Student>();\n        q.Insert(new Student(\"Ali\", 92));\n        int[] a = { 1 };\n        Console.WriteLine(a[0]);\n    }\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1);
+      return t.status === "success" && !("pointers" in t) && last.objs.every(o => !("refs" in o) && o.k !== "array" && o.type !== "Student")
+        && last.frames[0].vars.some(([n, v]) => n === "a" && v.t === "arr");
+    } },
   { name: "a compile error: reported on the writer's line, nothing recorded", stdin: "",
     source: "static void Main()\n{\n    int x = 1\n}",
     check: (t, steps) => t.status === "compile-error" && /Program\.cs\(3,\d+\): error CS1002/.test(t.stderr) && steps.length === 0 },
