@@ -70,6 +70,7 @@ type ManifestState =
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, examItems, study, codeRun, initialPageId, initialModuleId, onPageChange,
   initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null, bookTools,
+  visualRun = false,
 }: {
   courseId: string;
   /** Phase T11 — the tools the class's teacher chose for this book (student sessions); absent ⇒ the book's built-in set. */
@@ -86,6 +87,9 @@ export default function LearningReader({
   study?: StudyHost;
   /** 899371 P8 — «جرّب الكود» transport for runnable C# blocks. Absent → no run button. */
   codeRun?: CodeRunAccess;
+  /** Visual lab V3 — the TEACHER host only: the book's C# editor offers «تشغيل مرئي» (on a desktop, on this device). Never set by the
+   *  student host (students: plan phase V7, the owner's decision). */
+  visualRun?: boolean;
   /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
    *  Reader out (e.g. for a training) remount it on the SAME page. Read once, at manifest load. */
   initialPageId?: string;
@@ -775,7 +779,7 @@ export default function LearningReader({
       )}
       {/* Phase T7 — the book's student tools. Owner request: they stay available in presentation mode (full screen) too, and the dock
           stays MOUNTED across entering / leaving it (inside the overlay, so inside its focus trap), so an open tool keeps its state. */}
-      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} runHeaders={codeRun?.headers} /></Suspense></ToolDockBoundary>
+      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} runHeaders={codeRun?.headers} visualRun={visualRun} /></Suspense></ToolDockBoundary>
     </div>
   );
 }

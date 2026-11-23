@@ -75,12 +75,14 @@ function readObjs(raw: unknown): DsObj[] | null {
 /**
  * Reads a `ds-trace` config: `{ code, given?, stdin?, out, steps: [{ l, n, f?, h?, o, e? }] }`. A step's frames (`f`) and
  * objects (`h`) are omitted when they equal the previous step's; `o` is how many characters of `out` were printed so far.
+ * `limits`: the course's own (DS_LIMITS) by default; the teacher's visual run (src/studentTools/labTrace.ts) allows a longer
+ * program and trace — every other check is the same.
  */
-export function readDsTrace(config: unknown): DsTrace | null {
+export function readDsTrace(config: unknown, limits: { steps: number; lines: number } = DS_LIMITS): DsTrace | null {
   const c = rec(config);
-  if (!isStr(c.code) || !c.code.trim() || !isStr(c.out) || !Array.isArray(c.steps) || c.steps.length < 1 || c.steps.length > DS_LIMITS.steps) return null;
+  if (!isStr(c.code) || !c.code.trim() || !isStr(c.out) || !Array.isArray(c.steps) || c.steps.length < 1 || c.steps.length > limits.steps) return null;
   const lines = c.code.split("\n");
-  if (lines.length > DS_LIMITS.lines) return null;
+  if (lines.length > limits.lines) return null;
   const steps: DsStep[] = [];
   let frames: DsFrame[] | null = null, objs: DsObj[] | null = null, printed = 0;
   for (const raw of c.steps) {
