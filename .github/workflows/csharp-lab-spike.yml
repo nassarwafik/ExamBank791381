@@ -40,10 +40,6 @@ jobs:
       - name: Publish the lab (Release, browser-wasm)
         working-directory: tools/csharp-lab
         run: dotnet publish -c Release -o out
-      - name: Course libraries (the book's classes, served as libraries/<courseId>.txt)
-        run: |
-          mkdir -p tools/csharp-lab/out/wwwroot/libraries
-          for f in api/src/data/course-libraries/*.cs; do cp "$f" "tools/csharp-lab/out/wwwroot/libraries/$(basename "$f" .cs).txt"; done
       - name: Playwright core (browser driver only; Chrome is preinstalled on the runner)
         run: npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
       - name: Measure and prove in Chromium

@@ -56,7 +56,7 @@ window.addEventListener("message", e => {
   if (m.type === "lab-ready") ready();
   if (m.type === "result" && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
 });
-window.labRun = (source, stdin, courseId) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, courseId }, "*"); });
+window.labRun = (source, stdin, library) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, library }, "*"); });
 </script>`;
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, "http://x").pathname);
@@ -130,7 +130,8 @@ const PROGRAMS = [
   { name: "warm compile (a second small program)", source: "static void Main()\n{\n    Console.WriteLine(\"again\");\n}", stdin: "",
     check: r => r.status === "success" && r.stdout === "again\n" },
 ];
-// «مبنى المعطيات» — the book's own classes, served as libraries/899271d.txt (the proven Unit4.cs) and chosen by the course id.
+// «مبنى المعطيات» — the book's own classes (the proven Unit4.cs), passed IN the run message as the app does (it reads them from the API).
+const BOOK = fs.readFileSync(new URL("../../api/src/data/course-libraries/899271d.cs", import.meta.url), "utf8");
 PROGRAMS.push(
   { name: "endless loop → timeout, worker replaced", stdin: "", source: "class P { static void Main() { while (true) { } } }",
     check: r => r.status === "timeout" },
@@ -161,7 +162,7 @@ const results = [];
 for (const p of PROGRAMS) {
   const t0 = Date.now();
   let r;
-  try { r = await page.evaluate(([s, i, c]) => window.labRun(s, i, c), [p.source, p.stdin, p.courseId || ""]); }
+  try { r = await page.evaluate(([s, i, l]) => window.labRun(s, i, l), [p.source, p.stdin, p.courseId === "899271d" ? BOOK : ""]); }
   catch (e) { r = { status: "threw", stdout: "", stderr: String(e), compileMs: 0, runMs: 0 }; }
   const wallMs = Date.now() - t0;
   const ok = p.check(r);

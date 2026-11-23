@@ -69,11 +69,13 @@ type ManifestState =
  */
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, examItems, study, codeRun, initialPageId, initialModuleId, onPageChange,
-  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null, bookTools,
+  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null, bookTools, teacherLab = false,
 }: {
   courseId: string;
   /** Phase T11 — the tools the class's teacher chose for this book (student sessions); absent ⇒ the book's built-in set. */
   bookTools?: unknown;
+  /** Teacher C# lab: the teacher's reader runs the C# editor on the teacher's own computer (set by LearningReaderWithTraining for actor="teacher"). */
+  teacherLab?: boolean;
   onExit: () => void;
   api?: ReaderContentApi;
   /** Label of the back/exit control — the host decides where "back" leads (teacher library, student portal). */
@@ -775,7 +777,7 @@ export default function LearningReader({
       )}
       {/* Phase T7 — the book's student tools. Owner request: they stay available in presentation mode (full screen) too, and the dock
           stays MOUNTED across entering / leaving it (inside the overlay, so inside its focus trap), so an open tool keeps its state. */}
-      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} runHeaders={codeRun?.headers} /></Suspense></ToolDockBoundary>
+      <ToolDockBoundary><Suspense fallback={null}><CourseToolDock courseId={courseId} bookTools={bookTools} runHeaders={codeRun?.headers} teacherLab={teacherLab} /></Suspense></ToolDockBoundary>
     </div>
   );
 }
