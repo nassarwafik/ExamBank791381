@@ -221,6 +221,29 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   await shotOf(pv, "lab-teacher-visual-guess-1440");
   await pv.getByTestId("lab-trace-guess").getByRole("button", { name: "اكشف" }).click();
   check(await pv.locator(".learning-ds-structures svg").count() > 0, "V4b: «اكشف» draws the structures of that step");
+  // Visual lab V5 — rich types: an array with the index variable i pointing at its cell; a Queue of the writer's Students (each item
+  // refers to its Student object); a Stack of Queues (each item refers to its queue, drawn and named «#id»)
+  await visual(panel, page, "class Student { public string Name; public int Grade; public Student(string n, int g) { Name = n; Grade = g; } }\nclass Program\n{\n    static void Main()\n    {\n        int[] a = { 5, 3, 8 };\n        for (int i = 0; i < a.Length; i++) a[i] = a[i] * 2;\n        Queue<Student> q = new Queue<Student>();\n        q.Insert(new Student(\"Ali\", 92));\n        Stack<Queue<int>> s = new Stack<Queue<int>>();\n        Queue<int> one = new Queue<int>(); one.Insert(1);\n        s.Push(one);\n        Console.WriteLine(a[2]);\n    }\n}");
+  const rv = panel.getByTestId("csharp-trace");
+  await rv.getByRole("button", { name: "من البداية" }).click();
+  let sawMark = false;
+  for (let k = 0; k < 12 && !sawMark; k++) {
+    sawMark = await rv.getByRole("img", { name: /^المصفوفة a \(int\[\]\): .*، i = 1$/ }).count() > 0;
+    if (!sawMark) await rv.getByRole("button", { name: "الخطوة التالية" }).click();
+  }
+  check(sawMark, "V5: the array a (int[]) is drawn with its indices, and i points at its cell");
+  if (sawMark) await shotOf(rv, "lab-teacher-visual-array-1440");
+  const total5 = Number((await rv.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").split("/")[1]);
+  await rv.getByRole("slider", { name: "انتقل إلى الخطوة" }).fill(String(total5)).catch(async () => { for (let k = 0; k < total5; k++) await rv.getByRole("button", { name: "الخطوة التالية" }).click().catch(() => {}); });
+  const structures5 = await rv.locator(".learning-ds-structures").innerText();
+  const heap5 = await rv.getByRole("region", { name: "الكائنات" }).innerText().catch(() => "");
+  const imgs5 = await rv.locator(".learning-ds-structures [role=img]").evaluateAll(els => els.map(e => e.getAttribute("aria-label")));
+  check(/\(Ali, 92\) →#\d+/.test(structures5) && /Student/.test(heap5) && /Ali/.test(heap5),
+    "V5: Queue<Student>: the item «(Ali, 92) →#id» refers to the Student object, drawn with its fields (" + heap5.replace(/\s+/g, " ").slice(0, 60) + ")");
+  check(/\[1\] →#\d+/.test(structures5) && imgs5.some(l => /^الدور [^:]*#\d+: من الرأس إلى النهاية: 1$/.test(l || "")),
+    "V5: Stack<Queue<int>>: the item «[1] →#id» refers to its queue, drawn and named #id (" + imgs5.filter(Boolean).map(l => l.slice(0, 40)).join(" | ") + ")");
+  check(imgs5.some(l => /^المصفوفة a \(int\[\]\): 0: 10، 1: 6، 2: 16/.test(l || "")), "V5: at the end the array is 10 6 16 (changed in place)");
+  await shotOf(rv, "lab-teacher-visual-rich-1440");
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");

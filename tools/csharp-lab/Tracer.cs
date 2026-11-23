@@ -39,7 +39,9 @@ public static partial class Lab
     /// Records one program. `optionsJson`: { "shown"?: lines of the program the learner sees (later lines are a hidden driver whose
     /// steps fold into one closing step, as the course records them), "entry"?: the method to start from (default: Main),
     /// "quiet"?: names of methods that run without steps of their own, "maxSteps"?: at most TraceMaxSteps,
-    /// "inside"?: true = «اكشف الداخل», the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain }.
+    /// "inside"?: true = «اكشف الداخل», the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain,
+    /// "rich"?: true = V5 rich types (TraceRuntime.cs header): items that are objects, C#'s collections and arrays as structures;
+    /// with it the result also carries "pointers": [[array, index]] — every a[i] the writer's program writes (plain names only) }.
     /// A step marked by Viz.Pause() carries "pause": true; Viz.Show(title) gives it the writer's title as its note.
     /// → { status, stdout, stderr, compileMs, runMs, steps: [{ line, note, frames, objs, out, error? }] }
     /// status: success | compile-error | runtime-error | output-limit | step-limit | trace-unsupported
@@ -55,9 +57,15 @@ public static partial class Lab
         string? entryName = options["entry"] is JsonValue ev && ev.TryGetValue<string>(out var e) && !string.IsNullOrWhiteSpace(e) ? e : null;
         int maxSteps = options["maxSteps"] is JsonValue mv && mv.TryGetValue<int>(out var m) && m > 0 ? Math.Min(m, TraceMaxSteps) : TraceMaxSteps;
         bool inside = options["inside"] is JsonValue iv && iv.TryGetValue<bool>(out var ib) && ib;
+        bool rich = options["rich"] is JsonValue rv && rv.TryGetValue<bool>(out var rb) && rb;
         var quiet = options["quiet"] is JsonArray qa ? qa.Select(q => q?.GetValue<string>()).Where(q => !string.IsNullOrEmpty(q)).Cast<string>().ToList() : new List<string>();
 
         var parsed = CSharpSyntaxTree.ParseText(Wrap(source), ParseOptions, "Program.cs");
+        // V5: the array / index pairs the program writes (a[i], list[mid]): the drawing marks the cell an index variable points at
+        var pointers = !rich ? null : parsed.GetRoot().DescendantNodes().OfType<ElementAccessExpressionSyntax>()
+            .Where(x => x.Expression is IdentifierNameSyntax && x.ArgumentList.Arguments.Count == 1 && x.ArgumentList.Arguments[0].Expression is IdentifierNameSyntax)
+            .Select(x => (((IdentifierNameSyntax)x.Expression).Identifier.Text, ((IdentifierNameSyntax)x.ArgumentList.Arguments[0].Expression).Identifier.Text))
+            .Distinct().Take(20).ToList();
         var lib = LibraryFor(library, parsed);
         var program = RedirectStdin(parsed, lib);
         // A library, not a console program: a traced program may start from another method (the course's hidden driver «__Run»)
@@ -98,7 +106,7 @@ public static partial class Lab
         var recorder = assembly.GetType("__LabTrace")!;
         var libraryTypes = lib == null ? new List<string>() : lib.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>()
             .Select(t => t.Identifier.Text + (t.TypeParameterList == null ? "" : "`" + t.TypeParameterList.Parameters.Count)).ToList();
-        recorder.GetMethod("Configure")!.Invoke(null, new object[] { stdout, shown, maxSteps, quiet.ToArray(), libraryTypes.ToArray(), inside });
+        recorder.GetMethod("Configure")!.Invoke(null, new object[] { stdout, shown, maxSteps, quiet.ToArray(), libraryTypes.ToArray(), inside, rich });
         var (oldOut, oldErr) = (Console.Out, Console.Error);
         assembly.GetType("__LabStdin")?.GetField("In", BindingFlags.Public | BindingFlags.Static)?.SetValue(null, new StringReader(stdin ?? ""));
         Console.SetOut(stdout);
@@ -124,7 +132,11 @@ public static partial class Lab
             Console.SetError(oldErr);
         }
         var steps = (string)recorder.GetMethod("StepsJson")!.Invoke(null, null)!;
-        return TraceResult(status, stdout.ToString(), stderr.ToString(), compileMs, run.ElapsedMilliseconds, steps);
+        var result = TraceResult(status, stdout.ToString(), stderr.ToString(), compileMs, run.ElapsedMilliseconds, steps);
+        if (pointers == null) return result;
+        var withPointers = JsonNode.Parse(result)!.AsObject();
+        withPointers["pointers"] = new JsonArray(pointers.Select(p => (JsonNode)new JsonArray(p.Item1, p.Item2)).ToArray());
+        return withPointers.ToJsonString();
     }
 
     static string TraceResult(string status, string stdout, string stderr, long compileMs, long runMs, string? stepsJson) =>

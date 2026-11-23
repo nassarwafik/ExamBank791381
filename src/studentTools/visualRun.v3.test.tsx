@@ -171,7 +171,7 @@ describe("V3 — the transport and who gets it", () => {
     fromLab({ type: "lab-ready" });
     await waitFor(() => expect(post).toHaveBeenCalled());
     const [msg] = post.mock.calls[0] as unknown as [Record<string, unknown>];
-    expect(msg).toMatchObject({ type: "trace", source: SOURCE, stdin: "", library: "public class Stack<T> { }", options: "{}" });
+    expect(msg).toMatchObject({ type: "trace", source: SOURCE, stdin: "", library: "public class Stack<T> { }", options: "{\"rich\":true}" });   // V5: every visual run is recorded rich
     expect(Object.keys(msg).sort()).toEqual(["id", "library", "options", "source", "stdin", "type"]);   // no session, no course id
     fromLab({ type: "result", id: msg.id, result: { ...LAB, stdout: "FORGED" } }, { origin: "https://evil.example" });   // not the lab
     fromLab({ type: "result", id: msg.id, result: LAB });

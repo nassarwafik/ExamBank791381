@@ -141,7 +141,7 @@ export async function deviceCSharpTrace(source: string, stdin: string, library: 
   const l = ensureLab();
   try { await l.ready; } catch { throw unavailable(); }
   if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
-  const result = await post(l, { type: "trace", source, stdin, library, options: JSON.stringify(options.inside ? { inside: true } : {}) }, signal);
+  const result = await post(l, { type: "trace", source, stdin, library, options: JSON.stringify({ rich: true, ...(options.inside ? { inside: true } : {}) }) }, signal);
   return readLabTrace(result, source, stdin);
 }
 

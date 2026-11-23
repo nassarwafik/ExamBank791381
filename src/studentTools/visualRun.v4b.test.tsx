@@ -162,7 +162,7 @@ describe("V4b — «اكشف الداخل»", () => {
     expect(screen.queryByLabelText(/اكشف الداخل/)).toBeNull();
   });
 
-  it("the transport: the trace message carries options {\"inside\":true} — and \"{}\" otherwise", async () => {
+  it("the transport: the trace message carries options {\"rich\":true,\"inside\":true} (V5: always rich)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, library: "public class Stack<T> { }", available: true }), { status: 200 })));
     const r = bookDeviceRunner("899271d", { Authorization: "Bearer T" }, { visual: true });
     void r.trace!("static void Main() { }", "", undefined, { inside: true });
@@ -171,6 +171,6 @@ describe("V4b — «اكشف الداخل»", () => {
     Object.defineProperty(frame, "contentWindow", { value: win, configurable: true });
     window.dispatchEvent(new MessageEvent("message", { data: { type: "lab-ready" }, origin: "null", source: win as unknown as MessageEventSource }));
     await waitFor(() => expect(win.postMessage).toHaveBeenCalled());
-    expect((win.postMessage.mock.calls[0] as unknown as [Record<string, unknown>])[0]).toMatchObject({ type: "trace", options: "{\"inside\":true}" });
+    expect((win.postMessage.mock.calls[0] as unknown as [Record<string, unknown>])[0]).toMatchObject({ type: "trace", options: "{\"rich\":true,\"inside\":true}" });
   });
 });
