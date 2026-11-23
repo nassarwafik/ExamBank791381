@@ -240,7 +240,20 @@ const BEYOND = [
     check: (t, steps) => {
       const last = steps.at(-1);
       return t.status === "success" && !("pointers" in t) && last.objs.every(o => !("refs" in o) && o.k !== "array" && o.type !== "Student")
+        && steps.every(s => !("ret" in s) && s.frames.every(f => !("call" in f)))   // V8: no call ids, no returned values
         && last.frames[0].vars.some(([n, v]) => n === "a" && v.t === "arr");
+    } },
+  // Visual lab V8 — the call tree's data (rich only): a call id per frame, the returned value on the returning step
+  { name: "V8 Fib(4): every call has its own id, its parent is the frame below it, and each return carries its value", stdin: "", options: { rich: true },
+    source: "static int Fib(int n)\n{\n    if (n < 2) return n;\n    return Fib(n - 1) + Fib(n - 2);\n}\nstatic void Main()\n{\n    Console.WriteLine(Fib(4));\n}",
+    check: (t, steps) => {
+      const calls = new Map();                                    // call → { name, parent, n }
+      for (const s of steps) s.frames.forEach((f, d) => { if (!calls.has(f.call)) calls.set(f.call, { name: f.name, parent: d ? s.frames[d - 1].call : null, n: f.vars.find(([k]) => k === "n")?.[1].s }); });
+      const fibs = [...calls.values()].filter(c => c.name === "Fib");
+      const rets = steps.filter(s => "ret" in s).map(s => s.frames.at(-1).call + "=" + s.ret);
+      const root = [...calls.entries()].find(([, c]) => c.name === "Fib" && calls.get(c.parent)?.name === "Main");
+      return t.status === "success" && t.stdout === "3\n" && fibs.length === 9 && fibs.map(c => c.n).join(",") === "4,3,2,1,0,1,2,1,0"
+        && rets.length === 9 && rets.at(-1) === root[0] + "=3" && steps.every(s => s.frames.every(f => Number.isInteger(f.call)));
     } },
   // Visual lab V6 — the trimmed lab: a program that needs a library the download leaves out is refused before it is recorded (LAB0001)
   { name: "V6 a program needing a left-out library (System.Xml) is refused before it is recorded (LAB0001)", stdin: "", options: { rich: true },

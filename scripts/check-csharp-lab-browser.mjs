@@ -249,6 +249,15 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
     "V5: Stack<Queue<int>>: the item «[1] →#id» refers to its queue, drawn and named #id (" + imgs5.filter(Boolean).map(l => l.slice(0, 40)).join(" | ") + ")");
   check(imgs5.some(l => /^المصفوفة a \(int\[\]\): 0: 10، 1: 6، 2: 16/.test(l || "")), "V5: at the end the array is 10 6 16 (changed in place)");
   await shotOf(rv, "lab-teacher-visual-rich-1440");
+  // Visual lab V8 — «شجرة الاستدعاءات»: a recursion (Fib(4)) drawn as its whole call tree, each finished call with what it returned
+  await visual(panel, page, "static int Fib(int n)\n{\n    if (n < 2) return n;\n    return Fib(n - 1) + Fib(n - 2);\n}\nstatic void Main()\n{\n    Console.WriteLine(Fib(4));\n}");
+  const ct = panel.getByTestId("csharp-trace");
+  await ct.getByLabel(/شجرة الاستدعاءات/).check();
+  const tree = ct.getByTestId("lab-call-tree");
+  await tree.waitFor({ timeout: 10000 });
+  const treeLabel = await tree.getByRole("img").getAttribute("aria-label");
+  check(await tree.locator(".lab-call").count() === 10 && /Fib\(4\) أعاد 3/.test(treeLabel || ""), "V8: the call tree of Fib(4): Main and 9 calls, Fib(4) returned 3 (" + (treeLabel || "").slice(0, 90) + ")");
+  await shotOf(ct, "lab-teacher-visual-calltree-1440");
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");

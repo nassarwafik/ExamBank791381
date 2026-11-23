@@ -16,9 +16,11 @@ export type DsObj =
   | ({ id: number; k: "array"; type: string; items: string[] } & DsRefs)
   | ({ id: number; k: "set"; type: string; items: string[] } & DsRefs)
   | ({ id: number; k: "map"; type: string; keys: string[]; items: string[] } & DsRefs);
-export type DsFrame = { name: string; vars: [string, DsVal][] };
+/** `call` (V8, rich only): one number per call for the whole run — the same call keeps it from step to step (the call tree). */
+export type DsFrame = { name: string; vars: [string, DsVal][]; call?: number };
 /** `pause` (visual lab V4, optional; never in a course trace): the writer's Viz.Pause() — a stop for the teacher's player. */
-export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean };
+/** `ret` (V8, rich only): on the step where the running method returns, the value it returns (as a literal). */
+export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean; ret?: string };
 /** `pointers` (V5, rich only): the [array, index] pairs the program writes as a[i] — the drawing marks the cell i points at. */
 export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: [string, string][] };
 
@@ -47,13 +49,14 @@ function readPairs(raw: unknown): [string, DsVal][] | null {
   }
   return out;
 }
-function readFrames(raw: unknown): DsFrame[] | null {
+function readFrames(raw: unknown, rich: boolean): DsFrame[] | null {
   if (!Array.isArray(raw) || !raw.length || raw.length > DS_LIMITS.frames) return null;
   const out: DsFrame[] = [];
   for (const f of raw) {
     const o = rec(f), vars = readPairs(o.vars);
     if (!short(o.name) || !vars) return null;
-    out.push({ name: o.name, vars });
+    if (o.call !== undefined && (!rich || !isInt(o.call) || o.call < 1)) return null;   // V8: rich only, a positive whole number
+    out.push({ name: o.name, vars, ...(isInt(o.call) ? { call: o.call } : {}) });
   }
   return out;
 }
@@ -114,14 +117,15 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
   for (const raw of c.steps) {
     const s = rec(raw);
     if (!isInt(s.l) || s.l < 0 || s.l > lines.length || !isStr(s.n) || s.n.length > 600 || !isInt(s.o) || s.o < printed || s.o > c.out.length) return null;
-    if (s.f !== undefined) frames = readFrames(s.f);
+    if (s.f !== undefined) frames = readFrames(s.f, rich);
+    if (s.r !== undefined && (!rich || !short(s.r))) return null;   // V8: the returned value, rich only
     if (s.h !== undefined) objs = readObjs(s.h, rich);
     if (!frames || !objs) return null;
     const ids = new Set(objs.map(o => o.id));
     const refs = [...frames.flatMap(f => f.vars), ...objs.flatMap(o => (o.k === "obj" ? o.fields : []))];
     if (refs.some(([, v]) => v.t === "ref" && !ids.has(v.id))) return null;
     printed = s.o;
-    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}) });
+    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}), ...(isStr(s.r) ? { ret: s.r } : {}) });
   }
   let pointers: [string, string][] | undefined;
   if (c.pointers !== undefined) {

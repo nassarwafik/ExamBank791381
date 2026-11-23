@@ -37,3 +37,7 @@
 /* «توقّع قبل أن ترى» (V4 part 2): the structures of a step are covered until «اكشف» */
 .lab-trace-guess{ border:2px dashed var(--eb-border-strong); border-radius:var(--eb-r); padding:var(--eb-space-3); display:grid; gap:var(--eb-space-2); justify-items:start; }
 .lab-trace-guess-ask{ margin:0; font-weight:600; }
+
+/* «شجرة الاستدعاءات» (V8): under the player's drawing; a finished call is quiet */
+.lab-trace-calls{ display:flex; flex-direction:column; gap:var(--eb-space-2); margin-block-start:var(--eb-space-3); padding:var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); }
+.lab-call.is-done .learning-ds-cell{ opacity:.75; }

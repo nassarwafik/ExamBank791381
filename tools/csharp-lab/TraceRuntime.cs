@@ -16,6 +16,8 @@
 //   • an array, List<T> and LinkedList<T> are objects of their own: { k: "array", type, items, refs? } (a variable holds a reference);
 //     HashSet<T> / SortedSet<T> → { k: "set", type, items, refs? }; Dictionary / SortedDictionary / SortedList →
 //     { k: "map", type, keys, items, refs? }; C#'s own Stack<T> / Queue<T> → the same "stack" / "queue" as the book's.
+// Visual lab V8 (plan §17) — also in RICH mode: every frame carries "call" (one number per call, for the whole run), and the step on
+//     which a method returns carries "ret" (the value, as a literal) — what the call tree is drawn from.
 internal static class TraceRuntime
 {
     /// <summary>Visual lab V4 — the class a teacher's program may call IN THE VISUAL RUN ONLY (it is compiled into traced programs, never
@@ -36,7 +38,7 @@ internal static class __LabTrace
 {
     sealed class Frame
     {
-        public string Name = """"; public bool Quiet; public string[] Names = new string[0]; public global::System.Func<object?[]> Values = () => new object?[0];
+        public string Name = """"; public bool Quiet; public int Call; public string[] Names = new string[0]; public global::System.Func<object?[]> Values = () => new object?[0];
         public readonly global::System.Collections.Generic.HashSet<string> Written = new global::System.Collections.Generic.HashSet<string>();
     }
     sealed class Box { public int Id; }
@@ -53,6 +55,8 @@ internal static class __LabTrace
     static string? pendingFrames, pendingObjs;
 
     static bool rich;              // V5: rich types (see the header)
+    static int calls;              // V8: the calls so far (a frame's call number)
+    static string? returning;      // V8: the value the method returns on the step being recorded
     static bool inside;            // «اكشف الداخل»: the book's Stack<T> / Queue<T> recorded as the objects they are (Head / First, Last → Node<T>)
     static string? markNote;       // Viz.Show(title) / Viz.Pause(reason): the next recorded step carries the title …
     static bool markPause;         // … and, for Pause, a stop for the player
@@ -74,7 +78,7 @@ internal static class __LabTrace
     }
     public static object Enter(string name)
     {
-        var f = new Frame { Name = name, Quiet = quiet.Contains(name) };
+        var f = new Frame { Name = name, Quiet = quiet.Contains(name), Call = ++calls };
         if (f.Quiet) muted++;
         frames.Add(f);
         return f;
@@ -95,7 +99,9 @@ internal static class __LabTrace
     }
     public static T Return<T>(int at, T value, int l, string[] names, global::System.Func<object?[]> values)
     {
-        Record(l, names, values, ""العملية تُعيد `"" + Lit(value) + ""`."");
+        returning = rich ? Lit(value) : null;
+        try { Record(l, names, values, ""العملية تُعيد `"" + Lit(value) + ""`.""); }
+        finally { returning = null; }
         return value;
     }
     public static void StepValue<T>(T value, int l, string[] names, global::System.Func<object?[]> values) => Record(l, names, values, """");
@@ -116,17 +122,18 @@ internal static class __LabTrace
         bool pause = markPause;
         if (markNote != null) note = markNote;
         markNote = null; markPause = false;
-        Append(l, note, fr, ob, false, pause);
+        Append(l, note, fr, ob, false, pause, returning);
         lastFrames = fr; lastObjs = ob;
     }
 
-    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false)
+    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false, string? ret = null)
     {
         if (count > 0) steps.Append(',');
         steps.Append(""{\""line\"":"").Append(l).Append("",\""note\"":"").Append(Json(note)).Append("",\""frames\"":"").Append(fr)
              .Append("",\""objs\"":"").Append(ob).Append("",\""out\"":"").Append(Json(output.ToString()));
         if (error) steps.Append("",\""error\"":true"");
         if (pause) steps.Append("",\""pause\"":true"");
+        if (ret != null) steps.Append("",\""ret\"":"").Append(Json(ret));
         steps.Append('}');
         count++;
     }
@@ -153,7 +160,9 @@ internal static class __LabTrace
                 object?[] vals;
                 try { vals = f.Values(); } catch { vals = new object?[0]; }
                 if (i > 0) sb.Append(',');
-                sb.Append(""{\""name\"":"").Append(Json(f.Name)).Append("",\""vars\"":["");
+                sb.Append(""{\""name\"":"").Append(Json(f.Name));
+                if (rich) sb.Append("",\""call\"":"").Append(f.Call);
+                sb.Append("",\""vars\"":["");
                 bool firstVar = true;
                 for (int j = 0; j < f.Names.Length && j < vals.Length; j++)
                 {

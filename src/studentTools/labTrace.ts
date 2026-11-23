@@ -77,7 +77,7 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
     const dropped = new Set(objsRaw.slice(objsKept.length).map(o => rec(o).id).filter((id): id is number => typeof id === "number"));
     const framesRaw = Array.isArray(s.frames) ? s.frames : [];
     const framesKept = framesRaw.length > DS_LIMITS.frames ? (clipped = true, framesRaw.slice(framesRaw.length - DS_LIMITS.frames)) : framesRaw;
-    const frames = framesKept.map(f => { const fr = rec(f); return { name: clip(fr.name), vars: pairs(fr.vars, dropped) }; });
+    const frames = framesKept.map(f => { const fr = rec(f); return { name: clip(fr.name), vars: pairs(fr.vars, dropped), ...(fr.call !== undefined ? { call: fr.call } : {}) }; });
     const objs = objsKept.map(o => {
       const x = rec(o);
       if (x.k === "stack" || x.k === "queue") return { ...x, items: clipList(x.items, DS_LIMITS.items), ...withRefs(x, dropped) };
@@ -91,7 +91,7 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
     const printed = str(s.out);
     if (printed.length > out.length) out = printed;
     const line = typeof s.line === "number" && s.line >= 0 ? s.line : -1;
-    return { l: line, n: str(s.note).slice(0, 600), f: frames, h: objs, o: printed.length, ...(s.error === true ? { e: true } : {}), ...(s.pause === true ? { p: true } : {}) };
+    return { l: line, n: str(s.note).slice(0, 600), f: frames, h: objs, o: printed.length, ...(s.error === true ? { e: true } : {}), ...(s.pause === true ? { p: true } : {}), ...(s.ret !== undefined ? { r: clip(s.ret) } : {}) };
   });
   // every step's output must be a prefix of the last one (the course reader checks offsets into ONE output)
   const consistent = r.steps.every(sRaw => out.startsWith(str(rec(sRaw).out)));
