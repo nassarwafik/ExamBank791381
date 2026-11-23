@@ -1,0 +1,23 @@
+<!-- SPIKE (docs/enterprise-teacher-csharp-lab-spike.md): the teacher's in-browser C# compiler, built and measured in its own CI job
+     (.github/workflows/csharp-lab-spike.yml). Not part of the web app's build, never served to students, never used for grading. -->
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- the same invariant globalization as the Runner's csharp@1 worker (toolchain.json); also leaves ICU out of the download -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- the spike measures the UNTRIMMED worst case: a teacher's program may call any BCL API, which trimming could remove -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- plain file names, so the spike's own page can import ./_framework/dotnet.js without a build-time placeholder -->
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
+    <WasmFingerprintDotnetJs>false</WasmFingerprintDotnetJs>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.15" />
+  </ItemGroup>
+</Project>
