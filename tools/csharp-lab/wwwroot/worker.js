@@ -36,6 +36,22 @@ const loader = (type, name, defaultUri) => {
     .catch(() => fetch(defaultUri));
 };
 
+// SEALED after boot (docs/enterprise-csharp-visual-lab-plan.md §9): once the runtime has loaded its files, every network, storage and
+// sub-worker entry point of this global is replaced by a function that throws. Without it a program could START a request that leaves
+// after Main returns (HttpClient, never awaited) — proven in Chrome by tools/csharp-lab/smoke.mjs («no network…»): the sandbox's opaque
+// origin and the frame's policy alone did not stop it. postMessage stays (the lab's own channel).
+const SEALED = ["fetch", "XMLHttpRequest", "WebSocket", "WebSocketStream", "WebTransport", "EventSource", "importScripts", "Worker", "SharedWorker",
+  "BroadcastChannel", "indexedDB", "caches"];
+function blocked() { throw new Error("The C# lab has no network or storage access."); }
+function seal() {
+  for (const name of SEALED) {
+    for (let o = self; o && o !== Object.prototype; o = Object.getPrototypeOf(o)) {
+      if (!Object.prototype.hasOwnProperty.call(o, name)) continue;
+      try { Object.defineProperty(o, name, { value: blocked, writable: false, configurable: false, enumerable: false }); } catch { /* already fixed */ }
+    }
+    try { Object.defineProperty(self, name, { value: blocked, writable: false, configurable: false, enumerable: false }); } catch { /* already fixed */ }
+  }
+}
 // The .NET runtime ENDS ITSELF on a stack overflow (a recursion without end: «Program terminated with exit(1)»), as on
 // Environment.Exit. Lab.Run catches every program exception itself, so anything thrown out of it means the runtime is gone: the result
 // says so («fatal») and the lab replaces this worker before the next run.
@@ -44,6 +60,7 @@ const ENDED = /terminated with exit|call stack|stack overflow|too much recursion
 const started = performance.now();
 const runtime = await dotnet.withResourceLoader(loader).create();
 const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
+seal();
 self.addEventListener("message", event => {
   const m = event.data || {};
   if (m.type !== "run") return;

@@ -156,9 +156,9 @@ PROGRAMS.push(
     check: r => r.status === "runtime-error" && /stack overflow/i.test(r.stderr) },
   { name: "after the runtime ended itself the next program runs (fresh worker)", stdin: "", source: HELLO,
     check: r => r.status === "success" && r.stdout === "ok\n" },
-  // PIN (docs/enterprise-csharp-visual-lab-plan.md §9): no request leaves the lab — not even one the program starts and never awaits
-  // (the one path a synchronous Main has). The URL is the lab's own server; the server counts what arrives. Today the sandboxed,
-  // opaque-origin design already lets nothing out; this check fails if a future change opens that path.
+  // No request leaves the lab (docs/enterprise-csharp-visual-lab-plan.md §9) — not even one the program starts and never awaits (the
+  // one path a synchronous Main has). The URL is the lab's own server, and the server counts what arrives. In Chrome the sandbox and
+  // the frame's policy alone let it out (CI, PR #699 head b8c05bd4: 1 request); the worker's seal (worker.js) stops it.
   { name: "no network: a request started by the program never leaves the worker", stdin: "PROBE_URL\n", source: "class P { static void Main() { string url = Console.ReadLine(); try { _ = new HttpClient().GetStringAsync(url); Console.WriteLine(\"started\"); } catch (Exception e) { Console.WriteLine(\"blocked: \" + e.GetType().Name); } } }",
     check: r => r.status === "success" || r.status === "runtime-error" },
   { name: "the lab keeps working after the network attempt", stdin: "", source: HELLO,
