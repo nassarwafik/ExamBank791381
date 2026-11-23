@@ -2,10 +2,11 @@
 //
 // "The teacher's device executes code. The SmartAssess server decides the grade."
 //
-// The OFFICIAL hidden-test grading of a C# (csharp@1) coding answer may run on the TEACHER'S OWN COMPUTER, in the on-device C# lab
-// (/csharp-lab/, sandboxed opaque-origin iframe, a fresh runtime per graded answer), instead of on the Coding Runner VM:
-//   1. LIST   (teacher): which students of the assignment have open C# targets (pending / dispatched / retryable) — counts only.
-//   2. JOBS   (teacher): for ONE student, each open C# target as a device job: the stored answer's source (coding@3: rebuilt HERE from
+// The OFFICIAL hidden-test grading of a C# (csharp@1) or — since Python phase 2 (owner decision 2026-11-23) — Python (python@1) coding
+// answer may run on the TEACHER'S OWN COMPUTER, in the on-device lab of its language (/csharp-lab/ or /python-lab/: sandboxed
+// opaque-origin iframe, a fresh runtime per graded answer, desktop only), instead of on the Coding Runner VM:
+//   1. LIST   (teacher): which students of the assignment have open C# / Python targets (pending / dispatched / retryable) — counts only.
+//   2. JOBS   (teacher): for ONE student, each open C# / Python target as a device job: the stored answer's source (coding@3: rebuilt HERE from
 //              the published template, exactly as the Runner receives it), the cases as { token, stdin } in snapshot order and the
 //              question's time limit. Expected outputs, weights, titles and marks NEVER leave the server (as for the Runner). The job is
 //              bound to the target's revision and grading key by an opaque ticket.
@@ -19,10 +20,11 @@
 // decides or the Runner grades it later; never a zero):
 //   • a case that timed out, hit the output limit or failed inside the lab, or ran longer than the question's time limit, or whose
 //     duration is unknown (DEVICE_INCONCLUSIVE) — the device is not the Runner's measured sandbox;
-//   • a runtime error raised by the browser runtime itself (PlatformNotSupportedException: an API the lab cannot offer);
+//   • a runtime error raised by the browser runtime itself — an API the lab cannot offer (C#: PlatformNotSupportedException; Python:
+//     no threads, "Function not implemented", an Emscripten / Pyodide limit) — BROWSER_LIMIT;
 //   • a compile error under any policy other than the question's explicit "manualReview" (coding@2+), which only routes the answer
 //     to the teacher (reviewRequired) — so a lab-only compile difference can never cost marks (DEVICE_COMPILE_ERROR);
-//   • any language other than C# (DEVICE_LANGUAGE): the lab is C# only.
+//   • any language other than C# and Python (DEVICE_LANGUAGE): Java has no on-device lab.
 // The teacher can always override the mark anyway (manual override wins in the canonical rebuild); the device evidence is recorded
 // as engine "teacher-device-v1" and audited under the teacher's id.
 const crypto = require("crypto");
@@ -46,7 +48,10 @@ const nowIso = deps => new Date((deps && deps.now ? deps.now() : Date.now())).to
 
 /** The opaque ticket of a device job: binds the evidence to the target's grading key (revision, answer, snapshot) — reveals nothing. */
 function deviceTicket(gradingKey) { return "dt_" + sha256("cg-device-v1\n" + String(gradingKey || "")).slice(0, 40); }
-const deviceLanguage = answer => !!answer && answer.language === "csharp" && answer.languageVersion === 1;
+const DEVICE_LANGUAGES = Object.freeze(["csharp", "python"]);       // each at languageVersion 1 (the Runner's csharp@1 / python@1)
+const deviceLanguage = answer => !!answer && DEVICE_LANGUAGES.includes(answer.language) && answer.languageVersion === 1;
+// A runtime error the BROWSER caused, not the student's program: the device cannot vouch for it (the Runner might run it fine).
+const BROWSER_LIMIT = /PlatformNotSupported|can't start new thread|Function not implemented|emscripten|pyodide/i;
 const openTargetsOf = attempt => (isObj(attempt) && isObj(attempt.codingGrading) && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : {});
 const attemptsOf = doc => (isObj(doc) && Array.isArray(doc.attempts) ? doc.attempts.filter(a => isObj(a) && Number.isInteger(a.attemptNumber) && a.attemptNumber >= 1) : []);
 
@@ -86,7 +91,7 @@ async function loadAssignment(container, assignmentId, deps) {
   return isObj(a) && isObj(a.examSnapshot) ? { ...a, id: assignmentId } : null;
 }
 
-/** LIST — the students with open C# targets (counts only, never source or tests). → { status, students: [{ studentId, jobs }], skipped, hasMore } */
+/** LIST — the students with open C# / Python targets (counts only, never source or tests). → { status, students: [{ studentId, jobs }], skipped, hasMore } */
 async function listDeviceGrading(container, { assignmentId }, deps = {}) {
   const assignment = await loadAssignment(container, assignmentId, deps);
   if (!assignment) return { status: 404, code: "NOT_FOUND" };
@@ -138,7 +143,7 @@ function deviceRefusal(body, auth) {
   for (const c of body.cases) {
     if (INCONCLUSIVE_CASE.has(c.status)) return "DEVICE_INCONCLUSIVE";
     if (typeof c.durationMs !== "number" || c.durationMs > auth.limits.timeMs) return "DEVICE_INCONCLUSIVE";
-    if (c.status === "runtime-error" && /PlatformNotSupported/.test(c.stderr)) return "DEVICE_INCONCLUSIVE";
+    if (c.status === "runtime-error" && BROWSER_LIMIT.test(c.stderr)) return "DEVICE_INCONCLUSIVE";
   }
   return null;
 }
@@ -192,4 +197,4 @@ async function applyDeviceEvidence(container, body, { actor } = {}, deps = {}, o
   return { status: 200, body: { ok: true, applied: true, state: outcome.targetState } };
 }
 
-module.exports = { DEVICE_ENGINE, LIST_MAX_SUBMISSIONS, deviceTicket, listDeviceGrading, studentDeviceJobs, validateDeviceBody, applyDeviceEvidence };
+module.exports = { DEVICE_ENGINE, DEVICE_LANGUAGES, BROWSER_LIMIT, LIST_MAX_SUBMISSIONS, deviceTicket, listDeviceGrading, studentDeviceJobs, validateDeviceBody, applyDeviceEvidence };

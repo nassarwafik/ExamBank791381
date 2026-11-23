@@ -51,8 +51,12 @@ function Host({ initial, onHistory }: { initial: StructuredExam; onHistory: (h: 
 }
 async function mountBuilder(initial: StructuredExam) { let hist!: Hist; render(<Host initial={initial} onHistory={h => { hist = h; }} />); await tick(30); return { hist: () => hist }; }
 
-beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+// Python phase 2 (owner decision 2026-11-23): on a DESKTOP, C# and Python practice runs on the student's device (deviceLabs.ts, covered by
+// src/studentTools/deviceLabs.p2.test.tsx). This suite pins the SERVER practice route, which is what a PHONE / tablet (and Java) uses —
+// so it runs in a phone viewport (happy-dom's default viewport counts as a desktop).
+const phoneViewport = () => vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }));
+beforeEach(() => { phoneViewport(); vi.spyOn(console, "error").mockImplementation(() => {}); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("19F-U1 — the coding@3 student editor: locked vs editable, values-only answer", () => {
   it("U1 locked text is read-only text (never an input), labelled «مقفل» and named for AT; each gap is a labelled LTR textarea without autocomplete", async () => {

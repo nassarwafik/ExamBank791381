@@ -73,6 +73,15 @@ jobs:
           cd "$RUNNER_TEMP/csharp-lab/wwwroot"
           find . -type f ! -name '*.br' ! -name '*.gz' -exec install -D -m 0644 {} "$GITHUB_WORKSPACE/public/csharp-lab/{}" \;
           test -f "$GITHUB_WORKSPACE/public/csharp-lab/index.html" && test -f "$GITHUB_WORKSPACE/public/csharp-lab/_framework/dotnet.js"
+      # On-device Python lab (AGENTS.md §1; docs/enterprise-python-lab-spike.md): the pinned Pyodide release (CPython 3.13), REFUSED unless
+      # its sha512 matches tools/python-lab/pyodide.json, placed with the lab page in public/python-lab/ (served at /python-lab/, loaded only
+      # in a sandboxed iframe). Proven in Chromium by .github/workflows/python-lab-spike.yml.
+      - name: Place the on-device Python lab into public/python-lab
+        run: |
+          node tools/python-lab/fetch-pyodide.mjs tools/python-lab/wwwroot
+          cd tools/python-lab/wwwroot
+          find . -type f -exec install -D -m 0644 {} "$GITHUB_WORKSPACE/public/python-lab/{}" \;
+          test -f "$GITHUB_WORKSPACE/public/python-lab/index.html" && test -f "$GITHUB_WORKSPACE/public/python-lab/pyodide/pyodide.asm.wasm"
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1

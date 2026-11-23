@@ -28,7 +28,7 @@ describe("Gradebook — teacher-device grading", () => {
     expect(onAll).toHaveBeenCalledTimes(1);
     const rowButtons = screen.getAllByRole("button", { name: /على جهازي$/ }).filter(b => b.classList.contains("coding-device-grade"));
     expect(rowButtons).toHaveLength(1);
-    expect(rowButtons[0].getAttribute("aria-label")).toBe("صحّح إجابات C# لـ أحمد على جهازي");
+    expect(rowButtons[0].getAttribute("aria-label")).toBe("صحّح إجابات البرمجة لـ أحمد على جهازي");
     fireEvent.click(rowButtons[0]);
     expect(onOne).toHaveBeenCalledWith(expect.objectContaining({ studentId: "s1" }));
   });

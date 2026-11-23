@@ -123,6 +123,7 @@ tools/csharp-lab/bin/
 tools/csharp-lab/obj/
 tools/csharp-lab/out/
 public/csharp-lab/
+public/python-lab/
 csharp-lab-report/
 # Python lab spike: the Pyodide release is fetched (integrity-checked) by tools/python-lab/fetch-pyodide.mjs, never committed
 tools/python-lab/wwwroot/pyodide/

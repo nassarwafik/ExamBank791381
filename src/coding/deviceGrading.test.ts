@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { runDeviceJob, gradeAllOnDevice, gradeStudentOnDevice, deviceGradeNotice, DeviceGradingError, type DeviceJob } from "./deviceGrading";
+import { type Run, labRunFor, runDeviceJob, gradeAllOnDevice, gradeStudentOnDevice, deviceGradeNotice, DeviceGradingError, type DeviceJob } from "./deviceGrading";
 import type { CodeExecutionResult } from "../codingContract";
 import { TeacherHttpError } from "../teacherFetch";
 import { CSharpToolRunError } from "../studentTools/csharpToolRun";
@@ -10,13 +10,14 @@ const job = (over: Partial<DeviceJob> = {}): DeviceJob => ({
   source: "class P {}", cases: [{ token: "c01", stdin: "1 2\n" }, { token: "c02", stdin: "3 4\n" }], limits: { timeMs: 2000, outputBytes: 16384 }, ...over
 });
 const ok = (stdout: string, durationMs = 5): CodeExecutionResult => ({ status: "success", stdout, stderr: "", durationMs });
+const always = (r: Run) => () => r;
 const runner = (...results: CodeExecutionResult[]) => vi.fn(async () => { const r = results.shift(); if (!r) throw new Error("no more"); return r; });
 
 describe("runDeviceJob — one answer on this device", () => {
   it("runs each case once with its stdin, a FRESH runtime for the first case only, no course library; reports raw evidence", async () => {
     const run = runner(ok("3\n", 4.6), ok("7\n", 2));
     const ev = await runDeviceJob(job(), run);
-    expect(run.mock.calls).toEqual([["class P {}", "1 2\n", "", undefined, { fresh: true }], ["class P {}", "3 4\n", "", undefined, { fresh: false }]]);
+    expect(run.mock.calls).toEqual([["class P {}", "1 2\n", undefined, { fresh: true }], ["class P {}", "3 4\n", undefined, { fresh: false }]]);
     expect(ev).toEqual({ compile: { status: "compiled" }, cases: [{ token: "c01", status: "success", stdout: "3\n", stderr: "", durationMs: 5 }, { token: "c02", status: "success", stdout: "7\n", stderr: "", durationMs: 2 }] });
   });
   it("a compile error on the first case is the compile verdict (no cases); stderr bounded to 32 KB", async () => {
@@ -37,6 +38,8 @@ describe("runDeviceJob — one answer on this device", () => {
     ["over the question's time limit", ok("3\n", 2001)],
     ["unknown duration", { status: "success", stdout: "3\n", stderr: "" }],
     ["an API the browser cannot offer", { status: "runtime-error", stdout: "", stderr: "System.PlatformNotSupportedException", durationMs: 1 }],
+    ["Python: no threads in the browser", { status: "runtime-error", stdout: "", stderr: "RuntimeError: can't start new thread", durationMs: 1 }],
+    ["Python: an OS function the browser lacks", { status: "runtime-error", stdout: "", stderr: "OSError: [Errno 52] Function not implemented", durationMs: 1 }],
   ] as [string, CodeExecutionResult][]) {
     it("held, nothing to send: " + name, async () => {
       const run = runner(r, ok("7\n"));
@@ -63,7 +66,7 @@ describe("gradeAllOnDevice / gradeStudentOnDevice — the server decides", () =>
   it("all students: lists, fetches each student's jobs, runs them, posts identifiers + raw evidence only; progress reported", async () => {
     const { api, calls, posts } = fakeApi();
     const progress: unknown[] = [];
-    const sum = await gradeAllOnDevice(api, "A 1", { run: runner(ok("3\n"), ok("7\n"), ok("3\n"), ok("7\n")), onProgress: p => progress.push(p) });
+    const sum = await gradeAllOnDevice(api, "A 1", { run: always(runner(ok("3\n"), ok("7\n"), ok("3\n"), ok("7\n"))), onProgress: p => progress.push(p) });
     expect(calls.mock.calls[0][0]).toBe("/api/coding/device-grading?assignmentId=A%201");
     expect(calls.mock.calls[1][0]).toBe("/api/coding/device-grading?assignmentId=A%201&studentId=s1");
     expect(posts).toHaveLength(2);
@@ -75,34 +78,53 @@ describe("gradeAllOnDevice / gradeStudentOnDevice — the server decides", () =>
   it("server answers are counted honestly: reviewRequired, 422 held, 409 / already applied skipped, other errors failed", async () => {
     const answers: unknown[] = [{ ok: true, applied: true, state: "reviewRequired" }];
     const { api } = fakeApi({ post: () => { const a = answers.shift(); if (a instanceof Error) throw a; return a; } });
-    expect(await gradeStudentOnDevice(api, "A", "s1", { run: runner(ok("3\n"), ok("7\n")) })).toMatchObject({ review: 1 });
+    expect(await gradeStudentOnDevice(api, "A", "s1", { run: always(runner(ok("3\n"), ok("7\n"))) })).toMatchObject({ review: 1 });
     for (const [answer, key] of [[new TeacherHttpError("x", 422, "DEVICE_INCONCLUSIVE"), "held"], [new TeacherHttpError("x", 409, "STALE_RESULT"), "skipped"], [{ ok: true, alreadyApplied: true }, "skipped"], [new TeacherHttpError("x", 500), "failed"]] as const) {
       answers.push(answer);
-      const s = await gradeStudentOnDevice(api, "A", "s1", { run: runner(ok("3\n"), ok("7\n")) });
+      const s = await gradeStudentOnDevice(api, "A", "s1", { run: always(runner(ok("3\n"), ok("7\n"))) });
       expect(s[key], key).toBe(1);
       expect(s.graded).toBe(0);
     }
   });
   it("held evidence is NEVER posted", async () => {
     const { api, posts } = fakeApi();
-    const sum = await gradeStudentOnDevice(api, "A", "s1", { run: runner({ status: "timeout", stdout: "", stderr: "" }) });
+    const sum = await gradeStudentOnDevice(api, "A", "s1", { run: always(runner({ status: "timeout", stdout: "", stderr: "" })) });
     expect(posts).toEqual([]);
     expect(sum).toMatchObject({ held: 1, graded: 0 });
   });
   it("the lab itself unavailable stops the run with a clear Arabic message", async () => {
     const { api, posts } = fakeApi();
     const run = vi.fn(async () => { throw new CSharpToolRunError("LAB_UNAVAILABLE", "تعذّر تحميل المترجم على هذا الجهاز."); });
-    await expect(gradeAllOnDevice(api, "A", { run })).rejects.toThrow(DeviceGradingError);
+    await expect(gradeAllOnDevice(api, "A", { run: always(run) })).rejects.toThrow(DeviceGradingError);
     expect(posts).toEqual([]);
   });
 });
 
 describe("deviceGradeNotice", () => {
   it("nothing open → says so; otherwise counts, with «قيد المراجعة» for what the device held", () => {
-    expect(deviceGradeNotice({ students: 0, graded: 0, review: 0, held: 0, failed: 0, skipped: 2 })).toBe("لا توجد إجابات C# تنتظر التصحيح.");
+    expect(deviceGradeNotice({ students: 0, graded: 0, review: 0, held: 0, failed: 0, skipped: 2 })).toBe("لا توجد إجابات C# أو Python تنتظر التصحيح.");
     const t = deviceGradeNotice({ students: 3, graded: 4, review: 1, held: 1, failed: 0, skipped: 0 });
     expect(t).toContain("صُحّح على جهازك: 4 إجابات.");
     expect(t).toContain("خطأ ترجمة يحتاج قرارك: إجابة واحدة.");
     expect(t).toContain("قيد المراجعة");
+  });
+});
+
+describe("labRunFor — each job runs in the lab of its language", () => {
+  it("C# and Python (version 1) have a lab; Java and other versions do not (never run, counted as skipped)", () => {
+    expect(typeof labRunFor("csharp", 1)).toBe("function");
+    expect(typeof labRunFor("python", 1)).toBe("function");
+    expect(labRunFor("java", 1)).toBeUndefined();
+    expect(labRunFor("python", 2)).toBeUndefined();
+  });
+  it("a job whose language has no lab is skipped, never posted", async () => {
+    const posts: unknown[] = [];
+    const api = vi.fn(async (_url: string, options?: RequestInit) => {
+      if (options?.method === "POST") { posts.push(options.body); return { ok: true, applied: true }; }
+      return { ok: true, jobs: [job({ language: "java" })], skipped: 0 };
+    }) as unknown as <T>(url: string, options?: RequestInit) => Promise<T>;
+    const sum = await gradeStudentOnDevice(api, "A", "s1");
+    expect(sum).toMatchObject({ skipped: 1, graded: 0 });
+    expect(posts).toEqual([]);
   });
 });

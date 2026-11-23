@@ -75,9 +75,9 @@ describe("device grading — the jobs: what the teacher's device receives", () =
     const text = JSON.stringify((await h.jobs()).jsonBody) + JSON.stringify((await h.list()).jsonBody);
     for (const secret of [...F.CANARY.expected, F.CANARY.title, F.CANARY.reference, "expectedOutput", "weight", "marks", "cg_", h.target().gradingKey, h.target().jobId]) expect(text).not.toContain(secret);
   });
-  it("DG3 a non-C# answer is not offered to the device (counted as skipped) and its evidence is refused", async () => {
+  it("DG3 a Java answer (no on-device lab) is not offered to the device (counted as skipped) and its evidence is refused", async () => {
     const h = harness();
-    await h.submit({ auto1: F.code("print('x')\n", "python"), sa1: { kind: "text", value: "x" } });
+    await h.submit({ auto1: F.code("public class Main { public static void main(String[] a) { System.out.println(1); } }\n", "java"), sa1: { kind: "text", value: "x" } });
     expect((await h.list()).jsonBody).toMatchObject({ students: [], skipped: 1 });
     expect((await h.jobs()).jsonBody).toMatchObject({ jobs: [], skipped: 1 });
     const ticket = device().deviceTicket(h.target().gradingKey);
@@ -260,5 +260,64 @@ describe("device grading — fail safe: what the device cannot vouch for is refu
     expect(h.target()).toMatchObject({ state: "reviewRequired", result: expect.objectContaining({ reviewRequired: true, outcome: "compile-error", engine: "teacher-device-v1" }) });
     expect(h.target().result.automaticScore).toBeUndefined();
     expect(h.grade()).toMatchObject({ manualReview: true });
+  });
+});
+
+describe("device grading — Python answers (Python phase 2): the same path, the same safeguards", () => {
+  const PY = "a, b = map(int, input().split())\nprint('SUM=' + str(a + b))\n";
+  const pyAnswers = () => ({ auto1: F.code(PY, "python"), sa1: { kind: "text", value: "x" } });
+  it("PY1 a Python answer is listed and its job carries the source, the case stdin and the time limit only", async () => {
+    const h = harness();
+    await h.submit(pyAnswers());
+    expect((await h.list()).jsonBody).toMatchObject({ students: [{ studentId: F.S1, jobs: 1 }], skipped: 0 });
+    const job = await oneJob(h);
+    expect(job).toMatchObject({ language: "python", languageVersion: 1, source: PY, limits: { timeMs: 2000 } });
+    expect(JSON.stringify((await h.jobs()).jsonBody)).not.toMatch(/CANARY-3|CANARY-NEG|expectedOutput|weight/);
+  });
+  it("PY2 the SAME evidence gives the SAME mark through the teacher's device as through a Runner callback", async () => {
+    const viaDevice = harness();
+    await viaDevice.submit(pyAnswers());
+    const r = await viaDevice.post(evidence(await oneJob(viaDevice), ONE_WRONG));
+    expect(r.status).toBe(200); expect(r.jsonBody.state).toBe("complete");
+    const viaRunner = harness({ env: F.ENV });
+    await viaRunner.submit(pyAnswers());
+    expect((await viaRunner.callback(F.callbackBody(viaRunner.fetch.jobs()[0], ONE_WRONG))).status).toBe(200);
+    const strip = x => { const rest = { ...x }; delete rest.engine; delete rest.jobId; delete rest.completedAt; return rest; };
+    expect(strip(viaDevice.target().result)).toEqual(strip(viaRunner.target().result));
+    expect(viaDevice.grade()).toEqual(viaRunner.grade());
+    expect(viaDevice.target().result.engine).toBe("teacher-device-v1");
+  });
+  for (const [name, stderr] of [
+    ["no threads in the browser", "Traceback (most recent call last):\n  File \"main.py\", line 3\nRuntimeError: can't start new thread"],
+    ["an OS function the browser lacks", "OSError: [Errno 52] Function not implemented"],
+    ["an Emscripten / Pyodide limit", "pyodide.ffi.JsException: Error: The Python lab has no network or storage access."],
+  ]) {
+    it("PY3 a runtime error the browser caused (" + name + ") is refused — nothing written, still «قيد المراجعة»", async () => {
+      const h = harness();
+      await h.submit(pyAnswers());
+      const job = await oneJob(h);
+      const before = JSON.stringify(h.doc());
+      const r = await h.post(evidence(job, [{ status: "runtime-error", stderr }, ALL_PASS[1], ALL_PASS[2]]));
+      expect(r.status).toBe(422); expect(r.jsonBody.code).toBe("DEVICE_INCONCLUSIVE");
+      expect(JSON.stringify(h.doc())).toBe(before);
+      expect(h.grade()).toMatchObject({ manualReview: true });
+    });
+  }
+  it("PY4 the student's own Python exception is ordinary evidence (that case fails)", async () => {
+    const h = harness();
+    await h.submit(pyAnswers());
+    const job = await oneJob(h);
+    expect((await h.post(evidence(job, [{ status: "runtime-error", stderr: "ValueError: invalid literal for int() with base 10: 'x'" }, ALL_PASS[1], ALL_PASS[2]]))).status).toBe(200);
+    expect(h.target().result).toMatchObject({ passedCount: 2, testCount: 3 });
+  });
+  it("PY5 a Python syntax error under the historical policy is refused (the teacher decides), as for C#", async () => {
+    const h = harness();
+    await h.submit(pyAnswers());
+    const job = await oneJob(h);
+    const r = await h.post(evidence(job, [], { compile: { status: "compile-error", stderr: "SyntaxError: expected ':'" }, cases: [] }));
+    expect(r.status).toBe(422); expect(r.jsonBody.code).toBe("DEVICE_COMPILE_ERROR");
+  });
+  it("PY6 the device languages are exactly C# and Python (version 1)", () => {
+    expect(device().DEVICE_LANGUAGES).toEqual(["csharp", "python"]);
   });
 });
