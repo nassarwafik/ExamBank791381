@@ -1920,6 +1920,16 @@
       "page": "state-classic-builder",
       "viewport": "all",
       "reason": "Phase T12: the scene switches to the classic layout through the Studio's «أدوات» menu, which now has «أدوات الطالب» above «العودة إلى الواجهة الكلاسيكية»; the click lands one row lower, so the pointer rests elsewhere and the hover underline of the issue link «السؤال 1 في القسم 1» is drawn differently (about 80 pixels). The page itself does not change."
+    },
+    {
+      "page": "ed-coding",
+      "viewport": "desktop",
+      "reason": "Python phase 2 (owner decision 2026-11-23, docs/enterprise-python-lab-spike.md) — on a DESKTOP-sized screen (the tablet capture is 1024 px with a fine pointer) a Python coding question in an exam now runs ON THE STUDENT'S DEVICE: the notice «تشغيل الكود غير متاح حاليًا…» is replaced by the practice area «مدخلات التشغيل» and «تشغيل» (the same area a C# question shows); the phone capture is unchanged (no lab on a phone)."
+    },
+    {
+      "page": "ed-coding",
+      "viewport": "tablet",
+      "reason": "Python phase 2 (owner decision 2026-11-23, docs/enterprise-python-lab-spike.md) — on a DESKTOP-sized screen (the tablet capture is 1024 px with a fine pointer) a Python coding question in an exam now runs ON THE STUDENT'S DEVICE: the notice «تشغيل الكود غير متاح حاليًا…» is replaced by the practice area «مدخلات التشغيل» and «تشغيل» (the same area a C# question shows); the phone capture is unchanged (no lab on a phone)."
     }
   ]
 }

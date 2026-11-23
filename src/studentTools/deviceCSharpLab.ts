@@ -1,13 +1,12 @@
 import { normalizeExecutionResult, type CodeExecutionResult } from "../codingContract";
 import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
-import type { CodingExecutionService } from "../coding/codingExecution";
 import { readLabTrace, type LabTraceOptions, type LabTraceResult } from "./labTrace";
 
 // On-device C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «On-device C# lab») — PRACTICE runs of C# on the user's
 // own computer, on a DESKTOP only (isDesktopViewport): Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only
 // places it is used:
 //   • the C# editor of the tool bar in a COURSE BOOK, for the teacher and for students (bookDeviceRunner);
-//   • the «تشغيل» of a C# CODING QUESTION in an exam — practice on the question's visible examples only (withDeviceCSharp);
+//   • the «تشغيل» of a C# CODING QUESTION in an exam — practice on the question's visible examples only (deviceLabs.ts withDeviceLabs);
 //   • the TEACHER's «صحّح على جهازي» (src/coding/deviceGrading.ts, docs/enterprise-teacher-device-grading.md): it only EXECUTES the
 //     official cases and reports raw evidence; the server compares, weights and decides the mark.
 // Never the tool bar's editor in an exam (write only); never a mark decided here.
@@ -160,23 +159,6 @@ export function bookDeviceRunner(courseId: string, headers: Record<string, strin
     async run(source, stdin, signal) { return deviceCSharpRun(source, stdin, await lib(), signal); },
     // Visual lab V3: the TEACHER's reader only (`visual`, set by the dock from the reader's actor) — the plan keeps students for V7.
     ...(opts.visual ? { async trace(source: string, stdin: string, signal?: AbortSignal, options?: LabTraceOptions) { return deviceCSharpTrace(source, stdin, await lib(), signal, options); } } : {}),
-  };
-}
-
-/** An exam coding question's practice service: C# (csharp@1) runs ON THIS DEVICE, with no course library — exactly the program
- *  the Runner grades; every other language goes to `remote` (the server's practice route), or is unavailable without it.
- *  Practice only: a result here is never a score (the server's grading is the only authority). */
-export function withDeviceCSharp(remote: CodingExecutionService | undefined): CodingExecutionService {
-  // Desktop only (owner decision 2026-11-23): on a phone or tablet the question's practice is exactly as before — the server, or nothing.
-  if (!isDesktopViewport()) return remote ?? { capabilities: { available: false, languages: [] }, run: async () => { throw new CSharpToolRunError("EXECUTION_UNAVAILABLE", ""); } };
-  const others = (remote?.capabilities.available ? remote.capabilities.languages : []).filter(l => !(l.key === "csharp" && l.languageVersion === 1));
-  return {
-    capabilities: { available: true, languages: [{ key: "csharp", languageVersion: 1 }, ...others] },
-    async run(req, options = {}) {
-      if (req.language === "csharp" && req.languageVersion === 1) return deviceCSharpRun(req.source, req.stdin, "", options.signal);
-      if (!remote) throw new CSharpToolRunError("EXECUTION_UNAVAILABLE", "");
-      return remote.run(req, options);
-    },
   };
 }
 

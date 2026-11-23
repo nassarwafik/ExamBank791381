@@ -112,3 +112,16 @@
 4. **التصحيح على جهاز المعلّم:** إضافة Python إلى اللغات المقبولة في `api/src/lib/coding/device-grading.js`. المقارنة والعلامة والرفض الآمن موجودة.
 
 يرافق ذلك تعديل `AGENTS.md` §1 ليذكر مختبر Python، مع اختبارات و«أخطاء متعمّدة».
+
+## المرحلة 2: منجزة (قرار المالك 2026-11-23: «أوافق على الترتيب، ابدأ»)
+
+| الخطوة | ماذا تغيّر | الملفات |
+|---|---|---|
+| **1. التخزين والنشر** | الصفحة الرئيسية هي التي تجلب ملفات المفسّر، فتحفظها ذاكرة المتصفح (`fetch` → `fetched`). **الزيارة التالية: 0.20 MB بدل 4.82 MB.** يُنشر المختبر مع الموقع في `/python-lab/` بعد التحقق من بصمة الإصدار. | `tools/python-lab/wwwroot/{main.js,worker.js}`، `public/staticwebapp.config.json` (مسار `/python-lab/*` بنفس ترويسات `/csharp-lab/*`)، خطوة النشر في `azure-static-web-apps-…yml` |
+| **2. «تشغيل» أسئلة Python في الامتحان** | على الحاسوب يعمل C# وPython على جهاز الطالب، على الأمثلة الظاهرة فقط. Java عبر الخادم كما كانت. على الهاتف لا تغيير. | `src/studentTools/devicePythonLab.ts`، `src/studentTools/deviceLabs.ts` (`withDeviceLabs`)، `CodingResponse` و`CodingTemplateResponse` |
+| **3. التصحيح على جهاز المعلّم** | «صحّح على جهازي» يقبل Python أيضًا، والخادم يقارن ويحسب بنفس كود المشغّل. يُرفض بلا كتابة أي خطأ سببه المتصفح لا برنامج الطالب: لا خيوط، و«Function not implemented»، وحدود Emscripten/Pyodide. | `api/src/lib/coding/device-grading.js` (`DEVICE_LANGUAGES`، `BROWSER_LIMIT`)، `src/coding/deviceGrading.ts` (`labRunFor`) |
+
+**ما لم يتغيّر:**
+- محرر Python في الكتب مؤجَّل، لأنه لا يوجد كتاب يعلّم Python.
+- Java ما زالت على المشغّل.
+- المشغّل نفسه لم يتغيّر.

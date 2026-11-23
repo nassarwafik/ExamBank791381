@@ -1,4 +1,4 @@
-// Python lab SPIKE — CPython 3.13 (Pyodide, WebAssembly) in a Web Worker. One request at a time:
+// Python lab — CPython 3.13 (Pyodide, WebAssembly) in a Web Worker. One request at a time:
 //   ← { type: "run", id, source, stdin }   → { type: "result", id, result, fatal }   (→ { type: "ready", readyMs, python } once started)
 // The program runs like the Runner's python@1 (runner/workers/python/toolchain.json, runner/workers/supervisor.py):
 //   • a syntax check first (compile(src, "main.py", "exec")) → "compile-error" with the diagnostic;
@@ -23,7 +23,39 @@ const sink = (parts, which) => ({
     return n;
   },
 });
-const pyodide = await loadPyodide({ indexURL: new URL("./pyodide/", import.meta.url).href, fullStdLib: false, checkAPIVersion: true });
+// The interpreter's files come from the PARENT page (main.js relays): its HTTP cache keeps them between visits, while this opaque-origin
+// frame's own cache would not. Only the files of the pinned release are asked; anything else, or a refused / failed relay, falls back
+// to this worker's own fetch (the lab still works, it only downloads again). Before the seal below, so the relay is boot-time only.
+const RELAYED = new Set(["pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"]);
+const ASK_TIMEOUT_MS = 60000;
+const asks = new Map();
+let askSeq = 0;
+self.addEventListener("message", e => {
+  const m = e.data || {};
+  if (m.type !== "fetched" || !asks.has(m.id)) return;
+  const { resolve, reject, timer } = asks.get(m.id);
+  asks.delete(m.id);
+  clearTimeout(timer);
+  if (m.buffer instanceof ArrayBuffer) resolve(m.buffer); else reject(new Error("fetch refused"));
+});
+function viaPage(name) {
+  return new Promise((resolve, reject) => {
+    const id = ++askSeq;
+    const timer = setTimeout(() => { asks.delete(id); reject(new Error("fetch timeout")); }, ASK_TIMEOUT_MS);
+    asks.set(id, { resolve, reject, timer });
+    self.postMessage({ type: "fetch", id, name });
+  });
+}
+const indexURL = new URL("./pyodide/", import.meta.url).href;
+const ownFetch = self.fetch.bind(self);
+const typeOf = name => (name.endsWith(".wasm") ? "application/wasm" : name.endsWith(".json") ? "application/json" : "application/zip");
+self.fetch = (input, init) => {
+  const url = String(input && input.url ? input.url : input);
+  const name = url.startsWith(indexURL) ? url.slice(indexURL.length).split("?")[0] : "";
+  if (!RELAYED.has(name)) return ownFetch(input, init);
+  return viaPage(name).then(buffer => new Response(buffer, { headers: { "Content-Type": typeOf(name) } })).catch(() => ownFetch(input, init));
+};
+const pyodide = await loadPyodide({ indexURL, fullStdLib: false, checkAPIVersion: true });
 pyodide.setStdout(sink(out, "out"));
 pyodide.setStderr(sink(err, "err"));
 pyodide.runPython(`

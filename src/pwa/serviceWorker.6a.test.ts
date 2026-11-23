@@ -161,7 +161,8 @@ describe("Web App Manifest + icons + Apple metadata", () => {
     expect(config.routes).toEqual([
       { route: "/sw.js", headers: { "Cache-Control": "no-cache" } },
       { route: "/manifest.webmanifest", headers: { "Cache-Control": "no-cache" } },
-      { route: "/csharp-lab/*", headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } }   // Teacher C# lab (AGENTS.md §1)
+      { route: "/csharp-lab/*", headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } },  // Teacher C# lab (AGENTS.md §1)
+      { route: "/python-lab/*", headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } }   // On-device Python lab (AGENTS.md §1)
     ]);
     expect(config.mimeTypes[".webmanifest"]).toBe("application/manifest+json");
     expect(config.navigationFallback).toBeUndefined();                         // routing unchanged

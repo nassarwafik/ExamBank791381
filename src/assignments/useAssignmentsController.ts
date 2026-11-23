@@ -352,12 +352,12 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     await loadResults(item);
     setNotice(bulkRetryNotice({ scheduled: Number(r.scheduled) || 0, hasMore: !!r.hasMore }));
   }
-  // Teacher-device grading (owner decision 2026-11-23): the open C# answers run on THIS computer (the on-device lab), the server
+  // Teacher-device grading (owner decision 2026-11-23): the open C# / Python answers run on THIS computer (the on-device lab), the server
   // compares and applies the mark; then the gradebook reloads from the server. One student, or every student the server lists.
   async function deviceGrade(student: StudentResult | null) {
     if (!resultsFor) return;
     const item = resultsFor;
-    const message = (student ? "ستُشغَّل إجابات C# المفتوحة لـ «" + student.studentName + "»" : "ستُشغَّل إجابات C# المفتوحة لكل الطلاب") +
+    const message = (student ? "ستُشغَّل إجابات C# وPython المفتوحة لـ «" + student.studentName + "»" : "ستُشغَّل إجابات C# وPython المفتوحة لكل الطلاب") +
       " على هذا الحاسوب، والخادم يقارن ويحسب العلامة. أول مرة يُحمَّل المترجم (نحو 10 ميغابايت). إجابة تتجاوز الوقت على جهازك تبقى «قيد المراجعة» ولا تصبح صفرًا.";
     if (!(await confirm({ message, title: "التصحيح على جهازي", confirmLabel: "ابدأ التصحيح" }))) return;
     setBusy(true); setError(""); setNotice("جارٍ التصحيح على جهازك…");

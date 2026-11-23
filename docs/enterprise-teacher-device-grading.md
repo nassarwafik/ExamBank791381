@@ -1,4 +1,4 @@
-# Teacher-device grading of C# answers («صحّح على جهازي»)
+# Teacher-device grading of C# and Python answers («صحّح على جهازي»)
 
 > Phase record. Owner decision 2026-11-23: after the students answer, the teacher grades the **C#** coding answers **on their own
 > computer** — one student («صحّح على جهازي») or every student («صحّح جميع الطلاب على جهازي») — instead of starting the Coding Runner VM.
@@ -52,3 +52,19 @@
 · `src/assignments/useAssignmentsController.ts` · `src/studentTools/deviceCSharpLab.ts` (`fresh`, `durationMs`) · `tools/csharp-lab/wwwroot/main.js`
 · `tools/csharp-lab/smoke.mjs` · tests `api/tests/coding-device-grading.test.js`, `src/coding/deviceGrading.test.ts`,
 `src/assignments/Gradebook.deviceGrading.test.tsx`, `src/AssignmentsPanel.deviceGrading.test.tsx`, `src/studentTools/deviceCSharpLab.t15.test.tsx`.
+
+## 5. Python (Python phase 2, owner decision 2026-11-23)
+
+Python answers (`python@1`) take the **same** path:
+- **Jobs and evidence:** the same jobs, ticket and evidence validator.
+- **Scoring:** the same `scoreCompleteEvidence`.
+- **Refusals:** the same ones as for C#.
+- **Runtime:** the on-device Python lab (`/python-lab/`, CPython 3.13 like the Runner, a fresh interpreter per answer, sealed worker).
+
+**Browser-caused runtime errors are refused (`422`, nothing written).** `BROWSER_LIMIT` covers both languages:
+- C#'s `PlatformNotSupportedException`;
+- Python's «can't start new thread»;
+- «Function not implemented»;
+- an Emscripten / Pyodide limit.
+
+**Java** still has no device lab: its answers are skipped and counted, and wait for the Runner.
