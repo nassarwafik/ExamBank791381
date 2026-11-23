@@ -9,6 +9,9 @@ import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 // this app's storage, cookies or session; its runtime runs in a Web Worker the lab terminates after 10 s (an endless program never
 // freezes this page). Messages are accepted only from that iframe's window and only from the opaque origin ("null").
 // One lab per page; it is created on the first RUN (opening the editor downloads nothing).
+// Caching: an opaque-origin frame's HTTP cache lives and dies with that frame, so the lab asks THIS page for the runtime's heavy files
+// (/csharp-lab/_framework/<name>, the public .NET runtime and assemblies, ~11 MB): this page's normal HTTP cache keeps them between
+// visits (ETag revalidation). Only a plain file name is accepted, only from the lab's window, and only under /csharp-lab/_framework/.
 // The book's classes (Node, Stack, Queue, BinNode … — course content) come from the API with the teacher's session
 // (GET /api/student-tools/csharp-run?library=<courseId>) and travel in the run message: they are never a public file.
 
@@ -16,6 +19,22 @@ export const LAB_URL = "/csharp-lab/index.html";
 const LOAD_TIMEOUT_MS = 30000;          // the lab PAGE (small); the runtime is fetched on the first run
 const RUN_TIMEOUT_MS = 180000;          // the first run also downloads the compiler (~12 MB, once)
 const OUTPUT_BYTES = 16 * 1024;
+export const LAB_FILES = "/csharp-lab/_framework/";
+const FILE_NAME = /^[A-Za-z0-9._-]{1,128}$/;
+
+/** A runtime file the lab asked for, from this page's cache; anything else (or any failure) is a refusal the lab falls back from. */
+async function answerFetch(frame: HTMLIFrameElement, id: string, name: unknown): Promise<void> {
+  const reply = (msg: Record<string, unknown>, transfer?: Transferable[]) => frame.contentWindow?.postMessage(msg, "*", transfer);
+  if (typeof name !== "string" || !FILE_NAME.test(name) || name.startsWith(".")) { reply({ type: "fetched", id, error: true }); return; }
+  try {
+    const res = await fetch(LAB_FILES + name);
+    if (!res.ok) throw new Error(String(res.status));
+    const buffer = await res.arrayBuffer();
+    reply({ type: "fetched", id, buffer }, [buffer]);
+  } catch {
+    reply({ type: "fetched", id, error: true });
+  }
+}
 
 type Pending = { resolve: (r: CodeExecutionResult) => void; timer: ReturnType<typeof setTimeout> };
 type Lab = { frame: HTMLIFrameElement; ready: Promise<void>; pending: Map<string, Pending> };
@@ -41,8 +60,9 @@ function ensureLab(): Lab {
   const loadTimer = setTimeout(() => rejectReady(new Error("lab load timeout")), LOAD_TIMEOUT_MS);
   const onMessage = (e: MessageEvent) => {
     if (e.source !== frame.contentWindow || e.origin !== "null") return;
-    const m = (e.data ?? {}) as { type?: unknown; id?: unknown; result?: unknown };
+    const m = (e.data ?? {}) as { type?: unknown; id?: unknown; result?: unknown; name?: unknown };
     if (m.type === "lab-ready") { clearTimeout(loadTimer); resolveReady(); return; }
+    if (m.type === "fetch" && typeof m.id === "string") { void answerFetch(frame, m.id, m.name); return; }
     if (m.type === "result" && typeof m.id === "string") {
       const p = pending.get(m.id);
       if (!p) return;

@@ -103,6 +103,35 @@ describe("Teacher C# lab — the runner", () => {
     await waitFor(() => expect(labWindow().postMessage).toHaveBeenCalled());
     expect((labWindow().postMessage.mock.calls[0][0] as { library: string }).library).toBe("");
   });
+  it("the lab's runtime files come from THIS page (its HTTP cache): a plain name under /csharp-lab/_framework/ only, bytes transferred", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(url);
+      if (url.startsWith("/api/")) return new Response(JSON.stringify({ ok: true, library: "" }), { status: 200 });
+      if (url.endsWith("missing.wasm")) return new Response("", { status: 404 });
+      return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+    }));
+    teacherLabRunner("899271d", TEACHER).run("x", "");
+    await waitFor(() => expect(labFrame()).toBeTruthy());
+    const post = labWindow().postMessage;
+    fromLab({ type: "fetch", id: "f1", name: "dotnet.native.wasm" });
+    await waitFor(() => expect(post.mock.calls.some(c => (c[0] as { id?: string }).id === "f1")).toBe(true));
+    const [msg, target, transfer] = post.mock.calls.find(c => (c[0] as { id?: string }).id === "f1")! as unknown as [{ type: string; buffer: ArrayBuffer }, string, ArrayBuffer[]];
+    expect(msg.type).toBe("fetched");
+    expect([...new Uint8Array(msg.buffer)]).toEqual([1, 2, 3]);
+    expect(target).toBe("*");
+    expect(transfer).toEqual([msg.buffer]);
+    expect(calls).toContain("/csharp-lab/_framework/dotnet.native.wasm");
+    // anything but a plain file name is refused without a request; a missing file is a refusal the lab falls back from
+    for (const [id, name] of [["b1", "../api/student-tools/csharp-run"], ["b2", "a/b.wasm"], ["b3", ".env"], ["b4", ""], ["b5", 7], ["b6", "x".repeat(129)], ["b7", "missing.wasm"]] as const) fromLab({ type: "fetch", id, name });
+    await waitFor(() => expect(post.mock.calls.filter(c => /^b\d$/.test(String((c[0] as { id?: string }).id))).length).toBe(7));
+    for (const c of post.mock.calls.filter(c => /^b\d$/.test(String((c[0] as { id?: string }).id)))) expect(c[0]).toMatchObject({ type: "fetched", error: true });
+    expect(calls.filter(u => u.startsWith("/csharp-lab/"))).toEqual(["/csharp-lab/_framework/dotnet.native.wasm", "/csharp-lab/_framework/missing.wasm"]);
+    // a fetch request that is not from the lab's window / opaque origin is ignored
+    fromLab({ type: "fetch", id: "evil", name: "dotnet.native.wasm" }, { origin: window.location.origin });
+    await new Promise(res => setTimeout(res, 20));
+    expect(post.mock.calls.some(c => (c[0] as { id?: string }).id === "evil")).toBe(false);
+  });
   it("a lab page that never answers is a clear refusal, and the next run tries again", async () => {
     stubLibrary();
     vi.useFakeTimers();

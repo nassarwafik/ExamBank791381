@@ -54,6 +54,14 @@ window.addEventListener("message", e => {
   window.labOrigins.push(e.origin);
   const m = e.data || {};
   if (m.type === "lab-ready") ready();
+  // as the app's teacherCSharpLab.ts: the runtime's files come from THIS page's HTTP cache, a plain name under /csharp-lab/_framework/
+  if (m.type === "fetch") {
+    const ok = typeof m.name === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(m.name) && !m.name.startsWith(".");
+    if (!ok) { frame.contentWindow.postMessage({ type: "fetched", id: m.id, error: true }, "*"); return; }
+    fetch("/csharp-lab/_framework/" + m.name).then(r => (r.ok ? r.arrayBuffer() : Promise.reject())).then(
+      buffer => frame.contentWindow.postMessage({ type: "fetched", id: m.id, buffer }, "*", [buffer]),
+      () => frame.contentWindow.postMessage({ type: "fetched", id: m.id, error: true }, "*"));
+  }
   if (m.type === "result" && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
 });
 window.labRun = (source, stdin, library) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, library }, "*"); });
@@ -109,6 +117,8 @@ async function firstRun() {
 }
 const cold = await firstRun();
 const warm = await firstRun();
+// The point of the parent-side fetch: a second visit revalidates (304s) instead of downloading the runtime again.
+expect(warm.transferredBytes < 2 * 1024 * 1024, "warm visit must not re-download the runtime: transferred " + mb(warm.transferredBytes));
 expect((await page.evaluate(() => window.labOrigins)).every(o => o === "null"), "the lab must answer from an OPAQUE origin (sandboxed)");
 
 // ── 3. behaviour ──
