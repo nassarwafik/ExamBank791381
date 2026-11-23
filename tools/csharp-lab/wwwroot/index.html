@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <!-- The spike's OWN policy: the app's policy plus 'wasm-unsafe-eval' (needed by the .NET WebAssembly runtime). The web app's
-       policy (scripts/content-security-policy.ts) is not changed by the spike; the smoke test reports any violation. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>C# lab spike</title>
+  <!-- Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md). Loaded ONLY in a sandboxed iframe (sandbox="allow-scripts", an
+       opaque origin: no access to the app's storage, cookies or session) by the teacher's book editor. Its own policy: the app's
+       policy plus 'wasm-unsafe-eval' (the .NET WebAssembly runtime) and a blob: module worker (where the runtime runs, so an endless
+       program is stopped by terminating the worker). The app's own CSP (scripts/content-security-policy.ts) is unchanged. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src blob:; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>C# lab</title>
 </head>
 <body>
-  <pre id="status">loading…</pre>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

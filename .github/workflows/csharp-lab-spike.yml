@@ -1,4 +1,4 @@
-name: Teacher C# Lab Spike
+name: Teacher C# Lab
 # Adds a job and weakens none (AGENTS.md §1, §12). Owner-approved SPIKE (docs/enterprise-teacher-csharp-lab-spike.md): build the
 # teacher's in-browser C# compiler (Roslyn on .NET WebAssembly, tools/csharp-lab), then MEASURE it and PROVE it in real Chromium —
 # download size (raw and Brotli), cold and warm start, compile / run times, output, input, compile and runtime errors, the book's
@@ -10,6 +10,7 @@ on:
     paths:
       - "tools/csharp-lab/**"
       - "scripts/ds-course/unit4/**"
+      - "api/src/data/course-libraries/**"
       - ".github/workflows/csharp-lab-spike.yml"
   workflow_dispatch:
 permissions:
@@ -39,6 +40,10 @@ jobs:
       - name: Publish the lab (Release, browser-wasm)
         working-directory: tools/csharp-lab
         run: dotnet publish -c Release -o out
+      - name: Course libraries (the book's classes, served as libraries/<courseId>.txt)
+        run: |
+          mkdir -p tools/csharp-lab/out/wwwroot/libraries
+          for f in api/src/data/course-libraries/*.cs; do cp "$f" "tools/csharp-lab/out/wwwroot/libraries/$(basename "$f" .cs).txt"; done
       - name: Playwright core (browser driver only; Chrome is preinstalled on the runner)
         run: npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
       - name: Measure and prove in Chromium

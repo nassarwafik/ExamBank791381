@@ -1,4 +1,7 @@
-// SPIKE (docs/enterprise-teacher-csharp-lab-spike.md) — measure and prove the teacher's in-browser C# compiler in real Chromium.
+// Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md) — measure and prove the in-browser C# compiler in real Chromium, driven
+// EXACTLY as the app drives it: a host page embeds /csharp-lab/index.html in a sandboxed iframe (sandbox="allow-scripts": an opaque
+// origin) and talks to it by postMessage; the runtime runs in the lab's worker. The server sends the headers the production config
+// sends for /csharp-lab/* (Access-Control-Allow-Origin: *, needed by the opaque-origin page and its worker).
 //   node tools/csharp-lab/smoke.mjs <published wwwroot>      (env: PLAYWRIGHT_CORE_DIR, CHROMIUM_PATH, optional REPORT_DIR)
 // 1. SIZE: every file the page can download, raw and Brotli (the published .br when present, else compressed here).
 // 2. START: a cold load (empty cache) to "ready", then a warm reload (HTTP cache) — the teacher's first and later visits.
@@ -41,11 +44,31 @@ const mb = n => (n / 1024 / 1024).toFixed(2) + " MB";
 // ── static server (application/wasm for .wasm; Brotli when the browser accepts it, as a CDN would) ──
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".wasm": "application/wasm", ".dll": "application/octet-stream", ".dat": "application/octet-stream", ".pdb": "application/octet-stream" };
 let servedBytes = 0;
+const HOST_PAGE = `<!doctype html><meta charset="utf-8"><title>host</title>
+<iframe id="lab" sandbox="allow-scripts" src="/csharp-lab/index.html" hidden></iframe>
+<script type="module">
+const frame = document.getElementById("lab"); const pending = new Map(); let n = 0, ready;
+window.labReady = new Promise(r => { ready = r; }); window.labOrigins = [];
+window.addEventListener("message", e => {
+  if (e.source !== frame.contentWindow) return;
+  window.labOrigins.push(e.origin);
+  const m = e.data || {};
+  if (m.type === "lab-ready") ready();
+  if (m.type === "result" && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
+});
+window.labRun = (source, stdin, courseId) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, courseId }, "*"); });
+</script>`;
 const server = http.createServer((req, res) => {
-  const rel = decodeURIComponent(new URL(req.url, "http://x").pathname).replace(/^\/+/, "") || "index.html";
+  const pathname = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  if (pathname === "/" || pathname === "/index.html") { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(HOST_PAGE); return; }
+  if (!pathname.startsWith("/csharp-lab/")) { res.writeHead(404); res.end(); return; }
+  const rel = pathname.slice("/csharp-lab/".length) || "index.html";
   const file = path.join(root, rel);
   if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
-  const headers = { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream", "Cache-Control": "public, max-age=3600" };
+  const headers = { "Content-Type": TYPES[path.extname(file)] || (path.extname(file) === ".txt" ? "text/plain; charset=utf-8" : "application/octet-stream"), "Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*" };
+  const st = fs.statSync(file);
+  headers.ETag = '"' + st.size.toString(16) + "-" + Math.floor(st.mtimeMs).toString(16) + '"';
+  if (req.headers["if-none-match"] === headers.ETag) { res.writeHead(304, headers); res.end(); return; }
   let body = fs.readFileSync(file);
   if (/\bbr\b/.test(String(req.headers["accept-encoding"] || ""))) {
     body = fs.existsSync(file + ".br") ? fs.readFileSync(file + ".br") : zlib.brotliCompressSync(body);
@@ -72,17 +95,21 @@ page.on("pageerror", e => pageErrors.push(String(e)));
 const failures = [];
 const expect = (ok, what) => { if (!ok) failures.push(what); };
 
-// ── 2. start: cold, then warm ──
-servedBytes = 0;
-let t = Date.now();
-await page.goto(base);
-await page.waitForFunction(() => window.csharpLab, null, { timeout: 180000 });
-const cold = { wallMs: Date.now() - t, runtimeReadyMs: await page.evaluate(() => window.csharpLab.readyMs), transferredBytes: servedBytes };
-servedBytes = 0;
-t = Date.now();
-await page.reload();
-await page.waitForFunction(() => window.csharpLab, null, { timeout: 180000 });
-const warm = { wallMs: Date.now() - t, runtimeReadyMs: await page.evaluate(() => window.csharpLab.readyMs), transferredBytes: servedBytes };
+// ── 2. start: page → lab iframe ready → first program done (the runtime starts on the first run), cold then warm ──
+const HELLO = 'class P { static void Main() { Console.WriteLine("ok"); } }';
+async function firstRun() {
+  servedBytes = 0;
+  const t0 = Date.now();
+  await page.goto(base);
+  await page.evaluate(() => window.labReady);
+  const labReadyMs = Date.now() - t0;
+  const r = await page.evaluate(s => window.labRun(s, "", ""), HELLO);
+  expect(r.status === "success" && r.stdout === "ok\n", "first run: " + JSON.stringify(r).slice(0, 300));
+  return { labReadyMs, firstResultMs: Date.now() - t0, transferredBytes: servedBytes };
+}
+const cold = await firstRun();
+const warm = await firstRun();
+expect((await page.evaluate(() => window.labOrigins)).every(o => o === "null"), "the lab must answer from an OPAQUE origin (sandboxed)");
 
 // ── 3. behaviour ──
 const PROGRAMS = [
@@ -103,25 +130,30 @@ const PROGRAMS = [
   { name: "warm compile (a second small program)", source: "static void Main()\n{\n    Console.WriteLine(\"again\");\n}", stdin: "",
     check: r => r.status === "success" && r.stdout === "again\n" },
 ];
-// «مبنى المعطيات» — the book's own classes (scripts/ds-course/unit4/Unit4.cs), passed as the course library.
-const BOOK = fs.readFileSync(new URL("../../scripts/ds-course/unit4/Unit4.cs", import.meta.url), "utf8");
+// «مبنى المعطيات» — the book's own classes, served as libraries/899271d.txt (the proven Unit4.cs) and chosen by the course id.
 PROGRAMS.push(
-  { name: "book Stack<T> (Push / Pop / Top / IsEmpty, ToString)", library: BOOK, stdin: "",
+  { name: "endless loop → timeout, worker replaced", stdin: "", source: "class P { static void Main() { while (true) { } } }",
+    check: r => r.status === "timeout" },
+  { name: "after a timeout the next program runs (fresh worker)", stdin: "", source: HELLO,
+    check: r => r.status === "success" && r.stdout === "ok\n" },
+  { name: "print loop → output-limit (no memory blow-up)", stdin: "", source: 'class P { static void Main() { while (true) Console.Write("x"); } }',
+    check: r => r.status === "output-limit" },
+  { name: "book Stack<T> (Push / Pop / Top / IsEmpty, ToString)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n    Console.WriteLine(s.Pop() + \" \" + s.Top() + \" \" + s.IsEmpty());\n    Console.WriteLine(s);\n}",
     check: r => r.status === "success" && r.stdout === "[3,2,1]\n3 2 False\n[2,1]\n" },
-  { name: "book Queue<T> (Insert / Remove / Head / IsEmpty, ToString)", library: BOOK, stdin: "",
+  { name: "book Queue<T> (Insert / Remove / Head / IsEmpty, ToString)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Queue<string> q = new Queue<string>();\n    q.Insert(\"a\"); q.Insert(\"b\"); q.Insert(\"c\");\n    Console.WriteLine(q);\n    Console.WriteLine(q.Remove() + q.Head() + q.IsEmpty());\n}",
     check: r => r.status === "success" && r.stdout === "[a,b,c]\nabFalse\n" },
-  { name: "book Node<T> chain (GetValue / GetNext / HasNext)", library: BOOK, stdin: "",
+  { name: "book Node<T> chain (GetValue / GetNext / HasNext)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Node<int> first = new Node<int>(1, new Node<int>(2, new Node<int>(3)));\n    Node<int> pos = first; int sum = 0;\n    while (pos != null) { sum += pos.GetValue(); pos = pos.GetNext(); }\n    Console.WriteLine(sum + \" \" + first.HasNext() + \" \" + first.GetNext().GetNext().HasNext());\n}",
     check: r => r.status === "success" && r.stdout === "6 True False\n" },
-  { name: "book BinNode<T> tree (in-order, recursion)", library: BOOK, stdin: "",
+  { name: "book BinNode<T> tree (in-order, recursion)", courseId: "899271d", stdin: "",
     source: "static void InOrder(BinNode<int> t)\n{\n    if (t == null) return;\n    InOrder(t.GetLeft()); Console.Write(t.GetValue() + \" \"); InOrder(t.GetRight());\n}\nstatic void Main()\n{\n    BinNode<int> t = new BinNode<int>(new BinNode<int>(1), 2, new BinNode<int>(new BinNode<int>(3), 4, null));\n    InOrder(t); Console.WriteLine(t.HasLeft() + \" \" + t.GetRight().HasRight());\n}",
     check: r => r.status === "success" && r.stdout === "1 2 3 4 True False\n" },
-  { name: "writer's own Stack<T> replaces the book's (no duplicate)", library: BOOK, stdin: "",
+  { name: "writer's own Stack<T> replaces the book's (no duplicate)", courseId: "899271d", stdin: "",
     source: "public class Stack<T> { private T[] a = new T[10]; private int n; public void Push(T x) { a[n++] = x; } public T Pop() { return a[--n]; } }\nclass P { static void Main() { var s = new Stack<int>(); s.Push(7); Console.WriteLine(s.Pop()); var q = new Queue<int>(); q.Insert(5); Console.WriteLine(q.Head()); } }",
     check: r => r.status === "success" && r.stdout === "7\n5\n" },
-  { name: "book compile error keeps the writer's line (library after)", library: BOOK, stdin: "",
+  { name: "book compile error keeps the writer's line (library after)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Peek();\n}",
     check: r => r.status === "compile-error" && /Program\.cs\(4,\d+\): error CS1061/.test(r.stderr) },
 );
@@ -129,7 +161,7 @@ const results = [];
 for (const p of PROGRAMS) {
   const t0 = Date.now();
   let r;
-  try { r = await page.evaluate(([s, i, l]) => window.csharpLab.run(s, i, l), [p.source, p.stdin, p.library || ""]); }
+  try { r = await page.evaluate(([s, i, c]) => window.labRun(s, i, c), [p.source, p.stdin, p.courseId || ""]); }
   catch (e) { r = { status: "threw", stdout: "", stderr: String(e), compileMs: 0, runMs: 0 }; }
   const wallMs = Date.now() - t0;
   const ok = p.check(r);
@@ -152,8 +184,8 @@ const md = [
   "| Files | " + files.length + " |",
   "| Download, raw | " + mb(rawBytes) + " |",
   "| Download, Brotli | " + mb(brBytes) + " |",
-  "| Cold start (empty cache) → ready | " + cold.wallMs + " ms (runtime " + cold.runtimeReadyMs + " ms), transferred " + mb(cold.transferredBytes) + " |",
-  "| Warm reload (HTTP cache) → ready | " + warm.wallMs + " ms (runtime " + warm.runtimeReadyMs + " ms), transferred " + mb(warm.transferredBytes) + " |",
+  "| Cold: page → lab ready / → first result | " + cold.labReadyMs + " ms / " + cold.firstResultMs + " ms, transferred " + mb(cold.transferredBytes) + " |",
+  "| Warm (HTTP cache, revalidated): page → lab ready / → first result | " + warm.labReadyMs + " ms / " + warm.firstResultMs + " ms, transferred " + mb(warm.transferredBytes) + " |",
   "| CSP violations | " + violations.length + " |",
   "",
   "| Program | OK | Status | Compile ms | Run ms | Wall ms |", "|---|---|---|---|---|---|",
