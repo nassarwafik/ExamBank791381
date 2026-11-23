@@ -1,4 +1,4 @@
-// Python lab SPIKE (docs/enterprise-python-lab-spike.md) — measure and prove CPython 3.13 (Pyodide) in real Chromium, driven exactly as
+// Python lab (docs/enterprise-python-lab-spike.md) — measure and prove CPython 3.13 (Pyodide) in real Chromium, driven exactly as
 // the app drives the C# lab: a host page embeds /python-lab/index.html in a sandboxed iframe (sandbox="allow-scripts": an opaque origin)
 // and talks to it by postMessage; Python runs in the lab's worker. The server sends the headers production sends for the C# lab
 // (Access-Control-Allow-Origin: *, needed by the opaque-origin page and its worker).
@@ -53,6 +53,14 @@ window.addEventListener("message", e => {
   window.labOrigins.push(e.origin);
   const m = e.data || {};
   if (m.type === "lab-ready") ready();
+  // as the app's devicePythonLab.ts: the interpreter's files come from THIS page's HTTP cache, a plain name under /python-lab/pyodide/
+  if (m.type === "fetch") {
+    const ok = typeof m.name === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(m.name) && !m.name.startsWith(".");
+    if (!ok) { frame.contentWindow.postMessage({ type: "fetched", id: m.id, error: true }, "*"); return; }
+    fetch("/python-lab/pyodide/" + m.name).then(r => (r.ok ? r.arrayBuffer() : Promise.reject())).then(
+      buffer => frame.contentWindow.postMessage({ type: "fetched", id: m.id, buffer }, "*", [buffer]),
+      () => frame.contentWindow.postMessage({ type: "fetched", id: m.id, error: true }, "*"));
+  }
   if (m.type === "result" && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
 });
 window.labRun = (source, stdin, fresh) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, ...(fresh ? { fresh: true } : {}) }, "*"); });
@@ -104,6 +112,8 @@ async function firstRun() {
 }
 const cold = await firstRun();
 const warm = await firstRun();
+// The point of the parent-side fetch: a second visit revalidates (304s) instead of downloading the interpreter again.
+expect(warm.transferredBytes < 1024 * 1024, "warm visit must not re-download the interpreter: transferred " + mb(warm.transferredBytes));
 expect((await page.evaluate(() => window.labOrigins)).every(o => o === "null"), "the lab must answer from an OPAQUE origin (sandboxed)");
 
 // ── 3 / 4. behaviour and isolation ──

@@ -63,7 +63,7 @@ describe("AssignmentsPanel — «التصحيح على جهازي»", () => {
   it("one student: the row button grades that student only", async () => {
     grading.one.mockResolvedValue({ students: 1, graded: 1, review: 0, held: 0, failed: 0, skipped: 0 });
     const r = await openGradebook();
-    fireEvent.click(r.getByRole("button", { name: "صحّح إجابات C# لـ طالب برمجة على جهازي" }));
+    fireEvent.click(r.getByRole("button", { name: "صحّح إجابات البرمجة لـ طالب برمجة على جهازي" }));
     fireEvent.click(within(await confirmEl()).getByRole("button", { name: "ابدأ التصحيح" }));
     await waitFor(() => expect(grading.one).toHaveBeenCalledTimes(1));
     expect(grading.one.mock.calls[0].slice(1, 3)).toEqual(["a1", "s1"]);

@@ -11,7 +11,7 @@
 //                                       questionId } — identifiers ONLY (any other field is refused). retry re-dispatches the same
 //                                       revision; force starts a new, audited revision from the stored answer and the snapshot.
 //     GET  /api/coding/device-grading?assignmentId=…[&studentId=…]   teacher-only (owner decision 2026-11-23): the students with open
-//                                       C# targets (counts), or ONE student's device jobs (source + case stdin + time limit — never
+//                                       C# / Python targets (counts), or ONE student's device jobs (source + case stdin + time limit — never
 //                                       expected outputs, weights, titles or marks) for grading ON THE TEACHER'S DEVICE.
 //     POST /api/coding/device-grading   teacher-only: the RAW evidence of one device job; the server compares, weights and applies it
 //                                       with the Runner callback's own code (lib/coding/device-grading.js).

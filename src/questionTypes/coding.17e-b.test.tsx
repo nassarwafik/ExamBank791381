@@ -86,8 +86,12 @@ async function mountWithApi(respond: Parameters<typeof attemptApi>[0], opts: { q
   return { ...a, utils };
 }
 
-beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); localStorage.clear(); sessionStorage.clear(); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+// Python phase 2 (owner decision 2026-11-23): on a DESKTOP, C# and Python practice runs on the student's device (deviceLabs.ts, covered by
+// src/studentTools/deviceLabs.p2.test.tsx). This suite pins the SERVER practice route, which is what a PHONE / tablet (and Java) uses —
+// so it runs in a phone viewport (happy-dom's default viewport counts as a desktop).
+const phoneViewport = () => vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }));
+beforeEach(() => { phoneViewport(); vi.spyOn(console, "error").mockImplementation(() => {}); localStorage.clear(); sessionStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("17E-B IDE1–IDE7 — the workspace, languages, starter code, restore and per-language drafts", () => {
   it("IDE1 / IDE3 / IDE4 a workspace: language selector → editor → stdin → run controls → output → public tests; default language + its starter", async () => {

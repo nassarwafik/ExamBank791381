@@ -52,8 +52,12 @@ async function mountWithApi(respond: Parameters<typeof makeApi>[0]) {
 const runButton = () => screen.findByRole("button", { name: "تشغيل" }, { timeout: 3000 });
 const tick = (ms = 20) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
 
-beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); localStorage.clear(); sessionStorage.clear(); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+// Python phase 2 (owner decision 2026-11-23): on a DESKTOP, C# and Python practice runs on the student's device (deviceLabs.ts, covered by
+// src/studentTools/deviceLabs.p2.test.tsx). This suite pins the SERVER practice route, which is what a PHONE / tablet (and Java) uses —
+// so it runs in a phone viewport (happy-dom's default viewport counts as a desktop).
+const phoneViewport = () => vi.stubGlobal("matchMedia", (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }));
+beforeEach(() => { phoneViewport(); vi.spyOn(console, "error").mockImplementation(() => {}); localStorage.clear(); sessionStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("U1 / U2 — capabilities and run go through the attempt context to the authenticated routes", () => {
   it("capabilities are fetched once; «تشغيل» appears for an available language; the run body is minimal and server-bound (no limits, no token, no test id)", async () => {
