@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Python lab SPIKE (docs/enterprise-python-lab-spike.md). Meant to be loaded ONLY in a sandboxed iframe (sandbox="allow-scripts",
+       an opaque origin: no access to the app's storage, cookies or session), exactly like the C# lab. Its own policy: the app's
+       policy plus 'wasm-unsafe-eval' (the CPython WebAssembly runtime) and a blob: worker (where Python runs, so an endless program
+       is stopped by terminating the worker). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src blob:; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Python lab</title>
+</head>
+<body>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
