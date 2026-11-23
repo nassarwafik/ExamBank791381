@@ -54,7 +54,7 @@ window.addEventListener("message", e => {
   window.labOrigins.push(e.origin);
   const m = e.data || {};
   if (m.type === "lab-ready") ready();
-  // as the app's teacherCSharpLab.ts: the runtime's files come from THIS page's HTTP cache, a plain name under /csharp-lab/_framework/
+  // as the app's deviceCSharpLab.ts: the runtime's files come from THIS page's HTTP cache, a plain name under /csharp-lab/_framework/
   if (m.type === "fetch") {
     const ok = typeof m.name === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(m.name) && !m.name.startsWith(".");
     if (!ok) { frame.contentWindow.postMessage({ type: "fetched", id: m.id, error: true }, "*"); return; }
@@ -64,7 +64,7 @@ window.addEventListener("message", e => {
   }
   if (m.type === "result" && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
 });
-window.labRun = (source, stdin, library) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, library }, "*"); });
+window.labRun = (source, stdin, library, fresh) => new Promise(res => { const id = "r" + (++n); pending.set(id, res); frame.contentWindow.postMessage({ type: "run", id, source, stdin, library, ...(fresh ? { fresh: true } : {}) }, "*"); });
 </script>`;
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, "http://x").pathname);
@@ -178,6 +178,17 @@ PROGRAMS.push(
   { name: "writer's own Stack<T> replaces the book's (no duplicate)", courseId: "899271d", stdin: "",
     source: "public class Stack<T> { private T[] a = new T[10]; private int n; public void Push(T x) { a[n++] = x; } public T Pop() { return a[--n]; } }\nclass P { static void Main() { var s = new Stack<int>(); s.Push(7); Console.WriteLine(s.Pop()); var q = new Queue<int>(); q.Insert(5); Console.WriteLine(q.Head()); } }",
     check: r => r.status === "success" && r.stdout === "7\n5\n" },
+  // Teacher-device grading: each student's answer starts in a FRESH runtime (fresh: true), so nothing one program leaves behind in
+  // the process (here: AppDomain data) is met by the next student's program. The first pair shows the leak WITHOUT fresh.
+  { name: "process state survives a plain run (why grading needs fresh)", stdin: "",
+    source: "class P { static void Main() { AppDomain.CurrentDomain.SetData(\"left\", \"behind\"); Console.WriteLine(\"set\"); } }",
+    check: r => r.status === "success" && r.stdout === "set\n" },
+  { name: "…and is visible to the next plain run", stdin: "",
+    source: "class P { static void Main() { Console.WriteLine(AppDomain.CurrentDomain.GetData(\"left\") ?? \"none\"); } }",
+    check: r => r.status === "success" && r.stdout === "behind\n" },
+  { name: "a FRESH run starts clean (grading isolation between students)", stdin: "", fresh: true,
+    source: "class P { static void Main() { Console.WriteLine(AppDomain.CurrentDomain.GetData(\"left\") ?? \"none\"); } }",
+    check: r => r.status === "success" && r.stdout === "none\n" },
   { name: "book compile error keeps the writer's line (library after)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Peek();\n}",
     check: r => r.status === "compile-error" && /Program\.cs\(4,\d+\): error CS1061/.test(r.stderr) },
@@ -186,7 +197,7 @@ const results = [];
 for (const p of PROGRAMS) {
   const t0 = Date.now();
   let r;
-  try { r = await page.evaluate(([s, i, l]) => window.labRun(s, i, l), [p.source, p.stdin.replace("PROBE_URL", base + "csharp-lab/__probe"), p.courseId === "899271d" ? BOOK : ""]); }
+  try { r = await page.evaluate(([s, i, l, f]) => window.labRun(s, i, l, f), [p.source, p.stdin.replace("PROBE_URL", base + "csharp-lab/__probe"), p.courseId === "899271d" ? BOOK : "", !!p.fresh]); }
   catch (e) { r = { status: "threw", stdout: "", stderr: String(e), compileMs: 0, runMs: 0 }; }
   const wallMs = Date.now() - t0;
   const ok = p.check(r);

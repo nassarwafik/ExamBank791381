@@ -10,8 +10,9 @@ import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose, IconD
 import type { GradingStatus } from "../gradingStatus";
 import { studentStatus } from "./gradebookStatus";
 import type { CodingEvidenceTotals, CodingGradingStatus, GradebookFilter, GradebookSort, Item, StudentResult } from "./types";
-import { codingStatusBadge, needsCodingRetry } from "./codingRecovery";
+import { assignmentCodingOpen, attemptCodingOpen, codingStatusBadge, needsCodingRetry } from "./codingRecovery";
 import { codingSummaryBadge } from "../coding/codingTeacherEvidence";
+import { isDesktopViewport } from "../studentTools/deviceCSharpLab";
 import { lateDurationLabel, lateStampOf } from "./latePolicy";
 
 export type GradebookProps = {
@@ -38,6 +39,9 @@ export type GradebookProps = {
   /** Phase 17D-A — assignment-level coding grading summary (server-derived) and the ONE bulk retry action. */
   codingSummary?: CodingGradingStatus | null;
   onBulkCodingRetry?: () => void;
+  /** Teacher-device grading (owner decision 2026-11-23): grade the open C# answers ON THIS COMPUTER — all students, or one. */
+  onDeviceGradeAll?: () => void;
+  onDeviceGradeStudent?: (s: StudentResult) => void;
   /** Phase 17E-D — assignment totals of the compact evidence summary (delayed = automatic recovery exhausted). */
   codingTotals?: CodingEvidenceTotals | null;
   /** Phase 21E.2 — export the whole gradebook of this assignment as CSV (every student, not only the filtered rows). */
@@ -69,6 +73,8 @@ export default function Gradebook(p: GradebookProps) {
   // need assignments.schedule.set (every POST of /api/assignment-results); opening a student's marking and the coding retry need
   // assignments.grading.grade. A teacher without them still reads the whole gradebook and exports it.
   const can = useCan(), schedule = can("assignments.schedule.set"), grade = can("assignments.grading.grade");
+  // Teacher-device grading runs the on-device lab: desktop only, like the lab itself (owner decision 2026-11-23).
+  const onDevice = isDesktopViewport();
   // Phase 17E-D — the assignment-level coding summary card (counts only, server-derived). "بحاجة لإعادة محاولة" = retryable / stale
   // targets whose automatic recovery is still running; "متأخر" = automatic recovery exhausted (needs a teacher retry).
   const cs = p.codingSummary, ct = p.codingTotals;
@@ -107,6 +113,7 @@ export default function Gradebook(p: GradebookProps) {
         {p.onPrint && <button type="button" className="eb-button is-small gradebook-print" onClick={p.onPrint} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />طباعة سجل العلامات (PDF)</button>}
         {schedule && p.onRemindAll && p.assignment.status === "published" && p.rows.some(s => !s.latestResult) && <button type="button" className="eb-button is-small gradebook-remind" onClick={p.onRemindAll} disabled={p.busy}><IconBell size={16} aria-hidden="true" />تذكير من لم يسلّم</button>}
         {!archived && grade && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
+        {!archived && grade && onDevice && p.onDeviceGradeAll && assignmentCodingOpen(p.codingSummary, p.codingTotals) && <button type="button" className="eb-button is-small coding-device-grade-all" disabled={p.busy} onClick={p.onDeviceGradeAll} title="يشغّل إجابات C# المفتوحة على هذا الحاسوب، والخادم يحسب العلامة">صحّح جميع الطلاب على جهازي</button>}
       </div>
       {codingCard && <p className="eb-coding-summary" data-testid="coding-summary-card">
         <span>قيد التصحيح: {codingCard.pending}</span><span>بحاجة لإعادة محاولة: {codingCard.retry}</span><span>متأخر: {codingCard.delayed}</span>{codingCard.superseded > 0 && <span>علامة المعلم معتمدة: {codingCard.superseded}</span>}
@@ -163,6 +170,7 @@ export default function Gradebook(p: GradebookProps) {
                 <td data-label="العلامة">{s.latestResult ? s.latestResult.score + "/" + s.latestResult.totalMarks + " (" + s.latestResult.percentage + "%)" : "—"}{late && !late.waived && (s.latestResult?.latePenalty || 0) > 0 && <small className="late-penalty-note">قبل الخصم: {s.latestResult!.rawScore}</small>}</td>
                 <td className="eb-col-actions"><div className="eb-row-actions">
                   {grade && s.latestResult && <button type="button" className={"eb-button is-small review-button" + (pending ? " is-primary" : "")} onClick={() => p.onReview(s)}>{pending ? "تصحيح الآن" : "عرض التصحيح"}</button>}
+                  {!archived && grade && onDevice && p.onDeviceGradeStudent && attemptCodingOpen(s.latestResult) && <button type="button" className="eb-button is-small coding-device-grade" disabled={p.busy} onClick={() => p.onDeviceGradeStudent!(s)} aria-label={"صحّح إجابات C# لـ " + s.studentName + " على جهازي"}>صحّح على جهازي</button>}
                   {!archived && schedule && (
                     <ActionMenu label={"إجراءات " + s.studentName}>
                       <button type="button" className="eb-menu-item" onClick={() => p.onGrant(s)} disabled={p.busy}><IconPlus size={16} />منح محاولة إضافية</button>

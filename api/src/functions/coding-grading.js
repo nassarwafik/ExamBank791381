@@ -10,7 +10,12 @@
 //     POST /api/coding/regrade          teacher-only: { action: "retry" | "force", assignmentId, studentId, attemptNumber,
 //                                       questionId } — identifiers ONLY (any other field is refused). retry re-dispatches the same
 //                                       revision; force starts a new, audited revision from the stored answer and the snapshot.
-// Neither route ever executes code, and neither logs source, stdin, stdout, stderr, hidden tests or keys.
+//     GET  /api/coding/device-grading?assignmentId=…[&studentId=…]   teacher-only (owner decision 2026-11-23): the students with open
+//                                       C# targets (counts), or ONE student's device jobs (source + case stdin + time limit — never
+//                                       expected outputs, weights, titles or marks) for grading ON THE TEACHER'S DEVICE.
+//     POST /api/coding/device-grading   teacher-only: the RAW evidence of one device job; the server compares, weights and applies it
+//                                       with the Runner callback's own code (lib/coding/device-grading.js).
+// No route ever executes code, and none logs source, stdin, stdout, stderr, hidden tests or keys.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
@@ -21,9 +26,11 @@ const { tenantOf, classAccessible } = require("../lib/teacher-tenancy");
 const { verifyCallbackRequest } = require("../lib/coding/callback-protocol");
 const { resolveCallbackKey } = require("../lib/coding/hmac-key-separation");
 const { validateCallbackBody, applyOfficialCallback, regradeTarget } = require("../lib/coding/official-grading");
+const { listDeviceGrading, studentDeviceJobs, validateDeviceBody, applyDeviceEvidence } = require("../lib/coding/device-grading");
 
 const CALLBACK_MAX_BYTES = 8 * 1024 * 1024;
 const REGRADE_MAX_CHARS = 4096;
+const DEVICE_MAX_BYTES = 2 * 1024 * 1024;           // 50 cases × (stdout 17 KB + stderr 4 KB) + compile stderr, with room
 const REGRADE_KEYS = ["action", "assignmentId", "attemptNumber", "questionId", "studentId"];
 const SAFE_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -91,7 +98,55 @@ async function regradeHandler(request, deps = {}, obs = null) {
   }
 }
 
+/** A query parameter (Azure Functions `request.query`, or parsed from the URL). */
+function queryParam(request, name) {
+  try { if (request.query && typeof request.query.get === "function") return request.query.get(name) || ""; } catch { /* fall through */ }
+  try { return new URL(String(request.url || ""), "http://localhost").searchParams.get(name) || ""; } catch { return ""; }
+}
+const safeId = v => typeof v === "string" && SAFE_ID.test(v) && !v.includes("..");
+
+/** Teacher-device grading: the same teacher session, capability and class tenancy as a re-grade (the teacher of the class only). */
+async function deviceGradingHandler(request, deps = {}, obs = null) {
+  try {
+    const auth = (await requireTeacherSession(request, deps));
+    if (!auth.ok) return auth.response;
+    const capabilityDenial = await requireCapability(auth, "coding-grading.js", "*", deps, obs);
+    if (capabilityDenial) return capabilityDenial;
+    const method = String(request.method || "GET").toUpperCase();
+    let b = null;
+    if (method === "POST") {
+      const text = await readText(request, DEVICE_MAX_BYTES);
+      try { b = text === null ? null : JSON.parse(text); } catch { b = null; }
+      if (!validateDeviceBody(b)) return reply(400, { ok: false, code: "REQUEST_INVALID" });
+    } else {
+      const assignmentId = queryParam(request, "assignmentId"), studentId = queryParam(request, "studentId");
+      if (!safeId(assignmentId) || (studentId !== "" && !safeId(studentId))) return reply(400, { ok: false, code: "REQUEST_INVALID" });
+      b = { assignmentId, studentId };
+    }
+    const container = (deps.getContainer || getContainer)();
+    {
+      const tenant = tenantOf(auth.user), load = deps.downloadJsonOrNull || downloadJsonOrNull;
+      if (tenant) {
+        const target = await load(container, "platform/assignments/" + b.assignmentId + ".json");
+        if (!target || !(await classAccessible(n => load(container, n), target.classId, tenant))) return reply(404, { ok: false, code: "NOT_FOUND" });
+      }
+    }
+    if (method === "POST") {
+      const r = await applyDeviceEvidence(container, b, { actor: auth.user && auth.user.sub }, deps, obs);
+      return reply(r.status, r.body);
+    }
+    const r = b.studentId ? await studentDeviceJobs(container, b, deps) : await listDeviceGrading(container, b, deps);
+    if (r.status !== 200) return reply(r.status, { ok: false, code: r.code });
+    return reply(200, b.studentId ? { ok: true, jobs: r.jobs, skipped: r.skipped } : { ok: true, students: r.students, skipped: r.skipped, hasMore: r.hasMore });
+  } catch (e) {
+    obs?.logError?.("coding.deviceGrade.error", e);
+    return reply(500, { ok: false, code: "INTERNAL" });
+  }
+}
+
 app.http("codingGradeCallback", { methods: ["POST"], authLevel: "anonymous", route: "coding/grade-callback", handler: withObservability("coding-grade-callback", callbackHandler) });
 app.http("codingRegrade", { methods: ["POST"], authLevel: "anonymous", route: "coding/regrade", handler: withObservability("coding-regrade", regradeHandler) });
 
-module.exports = { callbackHandler, regradeHandler };
+app.http("codingDeviceGrading", { methods: ["GET", "POST"], authLevel: "anonymous", route: "coding/device-grading", handler: withObservability("coding-device-grading", deviceGradingHandler) });
+
+module.exports = { callbackHandler, regradeHandler, deviceGradingHandler };

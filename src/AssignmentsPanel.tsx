@@ -84,7 +84,7 @@ export default function AssignmentsPanel(props:Props){
     <Gradebook assignment={d.item} rows={g.rows} totalRows={g.results.length} gradingOf={rowGrading} busy={c.busy} focusStudentId={g.focusStudentId}
      search={g.search} onSearch={g.setSearch} filter={g.filter} onFilter={g.setFilter} sort={g.sort} onSort={g.setSort}
      onReview={g.review} onGrant={g.grant} onReopen={g.reopen} onExtend={g.extend} onDeadline={g.deadline} onEndAttempt={g.endAttempt} onLateWaiver={g.lateWaiver} fmt={fmt}
-     codingSummary={g.codingSummary} codingTotals={g.codingTotals} onBulkCodingRetry={g.bulkCodingRetry}
+     codingSummary={g.codingSummary} codingTotals={g.codingTotals} onBulkCodingRetry={g.bulkCodingRetry} onDeviceGradeAll={g.deviceGradeAll} onDeviceGradeStudent={g.deviceGradeStudent}
      selection={{selected:g.selected,onToggle:g.toggleSelected,onToggleAll:g.toggleAllSelected,onClear:g.clearSelection,onBulkGrant:g.bulkGrant,onBulkDeadline:g.openBulkDeadline,onRemind:g.remindSelected}} onRemindAll={g.remindAll}
      onExportCsv={()=>{if(d.item)downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}
      onExportXlsx={()=>{if(d.item)downloadXlsx(exportFilename("TadrisPlus-سجل-العلامات",d.item.title).replace(/\.csv$/,""),gradebookCsvRows(d.item,g.results,rowGrading),{sheetName:"سجل العلامات",rtl:true,boldRows:[GRADEBOOK_HEADER_ROW]})}}

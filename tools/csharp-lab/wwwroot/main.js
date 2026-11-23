@@ -1,7 +1,7 @@
 // Teacher C# lab — the bridge between the teacher's book editor (the PARENT page) and the runtime worker.
 // Runs inside the sandboxed iframe (opaque origin). Protocol with the parent (window.postMessage):
-//   ← { type: "run", id, source, stdin, library }       → { type: "result", id, result: { status, stdout, stderr, compileMs, runMs } }
-//   ← { type: "trace", id, source, stdin, library, options }  → { type: "result", id, result: { …, steps } }   (phase V2: Tracer.cs)
+//   ← { type: "run", id, source, stdin, library, fresh? } → { type: "result", id, result: { status, stdout, stderr, compileMs, runMs } }
+//   ← { type: "trace", id, source, stdin, library, options, fresh? }  → { type: "result", id, result: { …, steps } }   (phase V2: Tracer.cs)
 //   → { type: "lab-ready" } once, when this page has loaded (the runtime itself starts on the first run).
 //   → { type: "fetch", id, name }  ← { type: "fetched", id, buffer } | { type: "fetched", id, error: true }
 //     The runtime's heavy files (_framework/<name>: the .NET runtime and assemblies, ~11 MB) are fetched BY THE PARENT: an
@@ -49,6 +49,9 @@ function startWorker() {
 
 function runOnce(m) {
   return new Promise(async resolve => {
+    // `fresh`: a new runtime for this run (teacher-device grading starts each student's answer in its own runtime, so one student's
+    // program can never leave anything behind — a static, a hooked global — that another student's run would meet).
+    if (m.fresh && worker) { onResult = null; worker.terminate(); worker = null; }
     try {
       if (!worker) startWorker();
       await workerReady;
@@ -97,7 +100,7 @@ window.addEventListener("message", event => {
   }
   if ((m.type !== "run" && m.type !== "trace") || typeof m.id !== "string" || typeof m.source !== "string") return;
   queue.push({ kind: m.type, id: m.id, source: m.source, stdin: typeof m.stdin === "string" ? m.stdin : "", library: typeof m.library === "string" ? m.library : "",
-    options: m.type === "trace" && typeof m.options === "string" ? m.options : "" });
+    options: m.type === "trace" && typeof m.options === "string" ? m.options : "", fresh: m.fresh === true });
   pump();
 });
 window.parent.postMessage({ type: "lab-ready" }, "*");

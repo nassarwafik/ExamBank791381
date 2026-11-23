@@ -10,7 +10,7 @@ export type CSharpToolRunner = {
   /** Whether the runner can run C# right now (GET on the same path). Presentation only: true when the answer cannot be read, so
    *  the server — which checks every run — has the last word. */
   available(): Promise<boolean>;
-  /** "device": the teacher's in-browser lab (teacherCSharpLab.ts) — runs on this computer; absent: the server's Runner. */
+  /** "device": the teacher's in-browser lab (deviceCSharpLab.ts) — runs on this computer; absent: the server's Runner. */
   where?: "device";
 };
 
