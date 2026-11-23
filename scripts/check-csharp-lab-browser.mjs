@@ -169,6 +169,28 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   check(v.last === "الخطوة " + v.total + " / " + v.total + "" || v.last.endsWith(v.total + " / " + v.total), "the steps can be walked to the last one (" + v.last + ")");
   check(/3[\s\S]*2[\s\S]*1/.test(v.stack) && v.out === "[3,2,1]\n", "the last step draws the stack 3 2 1 and the output so far is [3,2,1] (" + JSON.stringify({ stack: v.stack.slice(0, 80), out: v.out }) + ")");
   await shot(page, "lab-teacher-visual-1440");
+  // Visual lab V4 — the player: a breakpoint on line 5 (Console.WriteLine), auto-play from the start stops AT it; «توسيع»
+  const tv = panel.getByTestId("csharp-trace");
+  await tv.getByRole("button", { name: "من البداية" }).click();
+  await tv.getByRole("button", { name: "نقطة توقّف على السطر 5" }).click();
+  check(await tv.getByRole("button", { name: "نقطة توقّف على السطر 5" }).getAttribute("aria-pressed") === "true", "V4: a click on line number 5 sets a breakpoint");
+  await tv.getByLabel("السرعة").selectOption("fast");
+  await tv.getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
+  await tv.getByText("توقف عند نقطة التوقف على السطر 5.").waitFor({ timeout: 30000 });
+  const stopAt = (await tv.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
+  const playLabel = await tv.locator(".learning-trace-btn.is-play").innerText();
+  check(/▶/.test(playLabel) && stopAt !== "الخطوة " + v.total + " / " + v.total && (await tv.locator(".learning-trace-line.is-current .learning-trace-linecode").innerText()).includes("Console.WriteLine"),
+    "V4: auto-play stopped AT the breakpoint, on the Console.WriteLine line (" + stopAt + ")");
+  await tv.getByRole("button", { name: "توسيع" }).click();
+  const wide = page.getByRole("dialog", { name: "التشغيل المرئي" });
+  await wide.getByTestId("csharp-trace-wide").waitFor({ timeout: 10000 });
+  const wideCounter = (await wide.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
+  const box = await wide.boundingBox();
+  check(wideCounter === stopAt && box && box.width > 1000, "V4: «توسيع» shows the same step in a wide window (" + wideCounter + ", " + Math.round(box?.width || 0) + " px)");
+  await page.waitForTimeout(800);   // the window's opening transition, before the screenshot
+  await shot(page, "lab-teacher-visual-wide-1440");
+  await wide.getByRole("button", { name: "إغلاق" }).click();
+  await panel.getByTestId("csharp-trace").waitFor({ timeout: 10000 });
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");
