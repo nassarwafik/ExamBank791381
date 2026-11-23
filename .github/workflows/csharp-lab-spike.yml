@@ -11,6 +11,12 @@ on:
       - "tools/csharp-lab/**"
       - "scripts/ds-course/unit4/**"
       - "api/src/data/course-libraries/**"
+      - "api/src/functions/student-tool-run.js"
+      - "src/studentTools/**"
+      - "src/learning/reader/LearningReader.tsx"
+      - "src/learning/training/LearningReaderWithTraining.tsx"
+      - "public/staticwebapp.config.json"
+      - "scripts/check-csharp-lab-browser.mjs"
       - ".github/workflows/csharp-lab-spike.yml"
   workflow_dispatch:
 permissions:
@@ -20,14 +26,15 @@ concurrency:
   cancel-in-progress: true
 jobs:
   spike:
-    name: Teacher C# lab — build, measure, prove in Chromium
+    name: Teacher C# lab — build, measure, prove in Chromium and in the site
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+          cache: npm
       - name: Install the .NET 10 SDK (Microsoft's official script)
         run: |
           curl -sSL https://dot.net/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
@@ -48,6 +55,25 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           REPORT_DIR: csharp-lab-report
         run: node tools/csharp-lab/smoke.mjs tools/csharp-lab/out/wwwroot
+      # The lab in the REAL site (docs/enterprise-csharp-visual-lab-plan.md §9): the same files placed in public/csharp-lab/ the way the
+      # deploy job places them, the production build, the real API in process — the teacher on a desktop runs programs on the device
+      # (and recovers from a time-out and from a stack overflow); a phone and a student never get the lab. Adds a check, weakens none.
+      - name: Place the lab in the site (as the deploy job does)
+        run: |
+          cd tools/csharp-lab/out/wwwroot
+          find . -type f ! -name '*.br' ! -name '*.gz' -exec install -D -m 0644 {} "$GITHUB_WORKSPACE/public/csharp-lab/{}" \;
+          test -f "$GITHUB_WORKSPACE/public/csharp-lab/index.html" && test -f "$GITHUB_WORKSPACE/public/csharp-lab/_framework/dotnet.js"
+      - name: Production build with the lab, and the API
+        run: |
+          npm ci
+          npm ci --prefix api
+          npm run build
+      - name: Prove the lab in the real site (teacher desktop / phone, student)
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          SHOT_DIR: csharp-lab-report
+        run: node scripts/check-csharp-lab-browser.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:

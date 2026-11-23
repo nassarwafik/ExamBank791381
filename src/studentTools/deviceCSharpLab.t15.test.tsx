@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 // @vitest-environment-options {"settings":{"disableIframePageLoading":true}}
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
-import { bookDeviceRunner, withDeviceCSharp, resetDeviceLabForTests, LAB_URL } from "./deviceCSharpLab";
+import { bookDeviceRunner, withDeviceCSharp, resetDeviceLabForTests, LAB_URL, DESKTOP_QUERY, isDesktopViewport } from "./deviceCSharpLab";
 import type { CodingExecutionService } from "../coding/codingExecution";
 import CourseToolDock from "./CourseToolDock";
 
@@ -12,6 +12,9 @@ import CourseToolDock from "./CourseToolDock";
 // origin are accepted; results are normalised; a lab that never loads is a clear refusal; only the teacher's reader uses it.
 
 afterEach(() => { cleanup(); resetDeviceLabForTests(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+// Desktop only (owner decision 2026-11-23, docs/enterprise-csharp-visual-lab-plan.md): the dock and the exam practice read the viewport.
+const desktop = (matches: boolean) => vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === DESKTOP_QUERY ? matches : false, media: q, addEventListener() {}, removeEventListener() {} })));
+beforeEach(() => desktop(true));
 
 const labFrame = () => document.querySelector<HTMLIFrameElement>('iframe[data-testid="teacher-csharp-lab"]');
 // Iframe page loading is off (no network in unit tests): each lab iframe gets a stand-in window, so the source check stays exact.
@@ -184,6 +187,36 @@ describe("On-device lab — books (every reader) and exam C# practice", () => {
     await expect(svc.run({ language: "java", languageVersion: 1, source: "x", stdin: "" })).rejects.toMatchObject({ code: "EXECUTION_UNAVAILABLE" });
     const down: CodingExecutionService = { capabilities: { available: false, languages: [] }, run: vi.fn() };
     expect(withDeviceCSharp(down).capabilities.languages).toEqual([{ key: "csharp", languageVersion: 1 }]);
+  });
+  it("a PHONE or tablet (teacher or student): no lab, no on-device note — the book editor keeps the Runner path, exactly as before", async () => {
+    desktop(false);
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ ok: true, available: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer T" }} />);
+    const tool = await openEditor();
+    expect(within(tool).queryByTestId("csharp-on-device")).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/student-tools/csharp-run", expect.objectContaining({ method: "GET" })));
+    expect(fetchMock.mock.calls.some(c => String(c[0]).includes("library="))).toBe(false);
+    expect(labFrame()).toBeNull();
+  });
+  it("exam practice on a PHONE or tablet: no lab — C# goes to the server like every language (unavailable without it)", async () => {
+    desktop(false);
+    const remoteRun = vi.fn(async () => ({ status: "success" as const, stdout: "srv", stderr: "" }));
+    const remote: CodingExecutionService = { capabilities: { available: true, languages: [{ key: "csharp", languageVersion: 1 }] }, run: remoteRun };
+    expect(withDeviceCSharp(remote)).toBe(remote);
+    expect(withDeviceCSharp(undefined).capabilities).toEqual({ available: false, languages: [] });
+    expect(labFrame()).toBeNull();
+  });
+  it("desktop = a wide screen with a precise pointer; no matchMedia (or a failing one) → not a desktop", () => {
+    desktop(true);
+    expect(isDesktopViewport()).toBe(true);
+    desktop(false);
+    expect(isDesktopViewport()).toBe(false);
+    vi.stubGlobal("matchMedia", undefined);
+    expect(isDesktopViewport()).toBe(false);
+    vi.stubGlobal("matchMedia", () => { throw new Error("no"); });
+    expect(isDesktopViewport()).toBe(false);
+    expect(DESKTOP_QUERY).toBe("(min-width: 1024px) and (hover: hover) and (pointer: fine)");
   });
   it("guard: the exam page and the exam preview never hand the TOOL BAR a run transport (its editor stays write-only in exams)", () => {
     for (const f of ["src/StudentExamPage.tsx", "src/ExamPreview.tsx"]) {

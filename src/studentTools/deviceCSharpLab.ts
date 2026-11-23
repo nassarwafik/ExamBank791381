@@ -3,7 +3,8 @@ import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 import type { CodingExecutionService } from "../coding/codingExecution";
 
 // On-device C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «On-device C# lab») — PRACTICE runs of C# on the user's
-// own computer: Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only places it is used:
+// own computer, on a DESKTOP only (isDesktopViewport): Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only
+// places it is used:
 //   • the C# editor of the tool bar in a COURSE BOOK, for the teacher and for students (bookDeviceRunner);
 //   • the «تشغيل» of a C# CODING QUESTION in an exam — practice on the question's visible examples only (withDeviceCSharp).
 // Never the tool bar's editor in an exam (write only), never grading: official grading stays on the server's Runner.
@@ -19,6 +20,14 @@ import type { CodingExecutionService } from "../coding/codingExecution";
 // (GET /api/student-tools/csharp-run?library=<courseId>) and travel in the run message: they are never a public file.
 
 export const LAB_URL = "/csharp-lab/index.html";
+
+/** DESKTOP ONLY (owner decision 2026-11-23, docs/enterprise-csharp-visual-lab-plan.md): a wide screen with a precise pointer. On a
+ *  phone or tablet the book editor and the exam question's practice stay exactly as they were (the Runner path). Presentation only,
+ *  read when the dock / the question mounts. */
+export const DESKTOP_QUERY = "(min-width: 1024px) and (hover: hover) and (pointer: fine)";
+export function isDesktopViewport(): boolean {
+  try { return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(DESKTOP_QUERY).matches; } catch { return false; }
+}
 const LOAD_TIMEOUT_MS = 30000;          // the lab PAGE (small); the runtime is fetched on the first run
 const RUN_TIMEOUT_MS = 180000;          // the first run also downloads the compiler (~12 MB, once)
 const OUTPUT_BYTES = 16 * 1024;
@@ -134,6 +143,8 @@ export function bookDeviceRunner(courseId: string, headers: Record<string, strin
  *  the Runner grades; every other language goes to `remote` (the server's practice route), or is unavailable without it.
  *  Practice only: a result here is never a score (the server's grading is the only authority). */
 export function withDeviceCSharp(remote: CodingExecutionService | undefined): CodingExecutionService {
+  // Desktop only (owner decision 2026-11-23): on a phone or tablet the question's practice is exactly as before — the server, or nothing.
+  if (!isDesktopViewport()) return remote ?? { capabilities: { available: false, languages: [] }, run: async () => { throw new CSharpToolRunError("EXECUTION_UNAVAILABLE", ""); } };
   const others = (remote?.capabilities.available ? remote.capabilities.languages : []).filter(l => !(l.key === "csharp" && l.languageVersion === 1));
   return {
     capabilities: { available: true, languages: [{ key: "csharp", languageVersion: 1 }, ...others] },
