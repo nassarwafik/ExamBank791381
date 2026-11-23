@@ -9,7 +9,8 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "tools/csharp-lab/**"
-      - "scripts/ds-course/unit4/**"
+      - "scripts/ds-course/**"
+      - "scripts/build-ds-course.mjs"
       - "api/src/data/course-libraries/**"
       - "api/src/functions/student-tool-run.js"
       - "src/studentTools/**"
@@ -28,7 +29,7 @@ jobs:
   spike:
     name: Teacher C# lab — build, measure, prove in Chromium and in the site
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -55,6 +56,16 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           REPORT_DIR: csharp-lab-report
         run: node tools/csharp-lab/smoke.mjs tools/csharp-lab/out/wwwroot
+      # Phase V2 (docs/enterprise-csharp-visual-lab-plan.md §10): the TRACE RECORDER, proven against the course itself — every traced
+      # program of «مبنى المعطيات» recorded by the real compiler in the lab must equal, step for step, the steps the course recorded
+      # (lines, frames, variables, structures, output, error); plus programs beyond the course (same output as a plain run) and the
+      # recorder's own limits. Adds a check, weakens none.
+      - name: Prove the trace recorder against every traced program of the course
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          REPORT_DIR: csharp-lab-report
+        run: node tools/csharp-lab/golden.mjs tools/csharp-lab/out/wwwroot
       # The lab in the REAL site (docs/enterprise-csharp-visual-lab-plan.md §9): the same files placed in public/csharp-lab/ the way the
       # deploy job places them, the production build, the real API in process — the teacher on a desktop runs programs on the device
       # (and recovers from a time-out and from a stack overflow); a phone and a student never get the lab. Adds a check, weakens none.

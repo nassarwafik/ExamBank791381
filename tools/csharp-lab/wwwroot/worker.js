@@ -1,5 +1,6 @@
 // Teacher C# lab — the .NET WebAssembly runtime (Roslyn) in a Web Worker. One request at a time:
 //   ← { type: "run", id, source, stdin, library }   → { type: "result", id, result, fatal }   (→ { type: "ready" } once started)
+//   ← { type: "trace", id, source, stdin, library, options }: the same, recorded step by step (Lab.Trace, phase V2)
 //   fatal: the runtime itself is gone (it ended itself): the lab terminates this worker and starts a fresh one for the next run.
 // The runtime's binary resources (the .wasm runtime and assemblies) are asked from the lab page, which asks the teacher's page:
 //   → { type: "fetch", id, name }   ← { type: "fetched", id, buffer | error }
@@ -63,9 +64,13 @@ const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssembl
 seal();
 self.addEventListener("message", event => {
   const m = event.data || {};
-  if (m.type !== "run") return;
+  if (m.type !== "run" && m.type !== "trace") return;
   let result, fatal = false;
-  try { result = JSON.parse(exports.Lab.Run(String(m.source ?? ""), String(m.stdin ?? ""), String(m.library ?? ""))); }
+  try {
+    result = JSON.parse(m.type === "trace"
+      ? exports.Lab.Trace(String(m.source ?? ""), String(m.stdin ?? ""), String(m.library ?? ""), String(m.options ?? ""))
+      : exports.Lab.Run(String(m.source ?? ""), String(m.stdin ?? ""), String(m.library ?? "")));
+  }
   catch (e) {
     const message = String(e && e.message || e);
     fatal = true;
