@@ -1,4 +1,4 @@
-<!-- SPIKE (docs/enterprise-teacher-csharp-lab-spike.md): the teacher's in-browser C# compiler, built and measured in its own CI job
+<!-- SPIKE (docs/enterprise-teacher-csharp-lab-spike.md): the in-browser C# compiler, built and measured in its own CI job
      (.github/workflows/csharp-lab-spike.yml). Not part of the web app's build, never served to students, never used for grading. -->
 <Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <PropertyGroup>
@@ -10,12 +10,51 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <!-- the same invariant globalization as the Runner's csharp@1 worker (toolchain.json); also leaves ICU out of the download -->
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- the spike measures the UNTRIMMED worst case: a teacher's program may call any BCL API, which trimming could remove -->
-    <PublishTrimmed>false</PublishTrimmed>
+    <!-- Visual lab V6 (docs/enterprise-csharp-visual-lab-plan.md §14): SELECTIVE trimming. `partial` trims only the framework's own
+         trimmable libraries — Roslyn and the lab are left whole — and every library a teaching program may use is kept WHOLE (the
+         TrimmerRootAssembly list below). Lab.cs refuses, as a compile error (LAB0001), any program that references a type outside
+         those libraries, so a program never fails half-way for a library the download left out (and teacher-device grading refuses a
+         compile error: teacher review, never a zero). The list is the same as Lab.cs's KeptWhole; tools/csharp-lab/trimming.test.mjs
+         fails the root suite if they differ. -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
     <!-- plain file names, so the spike's own page can import ./_framework/dotnet.js without a build-time placeholder -->
     <WasmFingerprintAssets>false</WasmFingerprintAssets>
     <WasmFingerprintDotnetJs>false</WasmFingerprintDotnetJs>
   </PropertyGroup>
+  <!-- kept whole: what a teaching program uses (the BCL's core, Console, collections, LINQ, numbers, text, regular expressions) … -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.Private.CoreLib" />
+    <TrimmerRootAssembly Include="System.Runtime" />
+    <TrimmerRootAssembly Include="System.Console" />
+    <TrimmerRootAssembly Include="System.Collections" />
+    <TrimmerRootAssembly Include="System.Collections.Concurrent" />
+    <TrimmerRootAssembly Include="System.Collections.NonGeneric" />
+    <TrimmerRootAssembly Include="System.Collections.Specialized" />
+    <TrimmerRootAssembly Include="System.Linq" />
+    <TrimmerRootAssembly Include="System.Memory" />
+    <TrimmerRootAssembly Include="System.ObjectModel" />
+    <TrimmerRootAssembly Include="System.Runtime.Numerics" />
+    <TrimmerRootAssembly Include="System.Text.RegularExpressions" />
+  </ItemGroup>
+  <!-- … and the forwarding libraries older code is compiled against (they only point at the libraries above) -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System" />
+    <TrimmerRootAssembly Include="System.Core" />
+    <TrimmerRootAssembly Include="System.Buffers" />
+    <TrimmerRootAssembly Include="System.Diagnostics.Debug" />
+    <TrimmerRootAssembly Include="System.Globalization" />
+    <TrimmerRootAssembly Include="System.IO" />
+    <TrimmerRootAssembly Include="System.Numerics" />
+    <TrimmerRootAssembly Include="System.Reflection" />
+    <TrimmerRootAssembly Include="System.Runtime.Extensions" />
+    <TrimmerRootAssembly Include="System.Text.Encoding" />
+    <TrimmerRootAssembly Include="System.Text.Encoding.Extensions" />
+    <TrimmerRootAssembly Include="System.Threading" />
+    <TrimmerRootAssembly Include="System.Threading.Tasks" />
+    <TrimmerRootAssembly Include="System.Threading.Thread" />
+    <TrimmerRootAssembly Include="System.ValueTuple" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
     <PackageReference Include="Basic.Reference.Assemblies.Net100" Version="1.8.15" />

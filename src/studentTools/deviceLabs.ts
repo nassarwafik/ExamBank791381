@@ -1,6 +1,6 @@
 import type { CodingExecutionService } from "../coding/codingExecution";
 import { CSharpToolRunError } from "./csharpToolRun";
-import { deviceCSharpRun, isDesktopViewport } from "./deviceCSharpLab";
+import { deviceCSharpRun, isDesktopViewport, viaRunner } from "./deviceCSharpLab";
 import { devicePythonRun } from "./devicePythonLab";
 
 // The exam coding question's PRACTICE service (owner decisions; AGENTS.md §1 «On-device C# lab» / «On-device Python lab»): on a
@@ -16,7 +16,12 @@ export function withDeviceLabs(remote: CodingExecutionService | undefined): Codi
   return {
     capabilities: { available: true, languages: [...DEVICE_LANGUAGES.map(l => ({ ...l })), ...others] },
     async run(req, options = {}) {
-      if (req.language === "csharp" && req.languageVersion === 1) return deviceCSharpRun(req.source, req.stdin, "", options.signal);
+      if (req.language === "csharp" && req.languageVersion === 1) {
+        const result = await deviceCSharpRun(req.source, req.stdin, "", options.signal);
+        // V6: a program that needs a library the lab's download leaves out (LAB0001) goes to the server, when it runs C#
+        const serverCSharp = !!remote?.capabilities.available && remote.capabilities.languages.some(l => l.key === "csharp" && l.languageVersion === 1);
+        return serverCSharp ? viaRunner(result, () => remote!.run(req, options), options.signal) : result;
+      }
       if (req.language === "python" && req.languageVersion === 1) return devicePythonRun(req.source, req.stdin, options.signal);
       if (!remote) throw new CSharpToolRunError("EXECUTION_UNAVAILABLE", "");
       return remote.run(req, options);

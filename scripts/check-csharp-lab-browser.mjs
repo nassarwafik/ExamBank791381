@@ -248,6 +248,15 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");
   check(reads.length === 1 && reads[0].status === 200 && reads[0].query === "library=899271d", "exactly ONE server read: the book's classes (" + JSON.stringify(reads) + ")");
+  // Visual lab V6 — the trimmed lab: a program that needs a library its download leaves out (System.Xml) is refused BEFORE it runs
+  // (LAB0001, naming the type) and the book editor asks the Runner instead; here there is no Runner (the server says so), so the lab's
+  // own answer stands — a compile error that says why, never a run that fails half-way, and the editor stays usable
+  const x = await run(panel, page, "using System.Xml;\nclass P\n{\n    static void Main()\n    {\n        Console.WriteLine(new XmlDocument().Name);\n    }\n}", 60000);
+  const asked = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
+  check(/خطأ ترجمة/.test(x.status) && /LAB0001: 'System\.Xml\.XmlDocument'/.test(x.err || ""), "V6: a program needing a left-out library (System.Xml) is refused before it runs, naming the type (" + (x.err || "").slice(0, 80) + ")");
+  check(asked.length === 1 && asked[0].status !== 200, "V6: the book editor asked the Runner once for it; with no Runner here the lab's answer stood (" + JSON.stringify(asked.map(a => a.status)) + ")");
+  const y = await run(panel, page, "static void Main()\n{\n    Console.WriteLine(System.Text.RegularExpressions.Regex.IsMatch(\"a1\", @\"\\d\"));\n}", 60000);
+  check(y.out === "True\n", "V6: after it the editor still runs on this device (Regex, kept whole) (" + JSON.stringify(y.out) + ")");
   await ctx.close();
 }
 

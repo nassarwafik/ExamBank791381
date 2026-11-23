@@ -59,6 +59,45 @@ global using global::System.Threading.Tasks;
         CSharpCompilation.Create("TeacherProgram", library == null ? new[] { UsingsTree, ShimTree, program } : new[] { UsingsTree, ShimTree, program, library },
             Basic.Reference.Assemblies.Net100.References.All, Options);
 
+    /// <summary>
+    /// Visual lab V6 (docs/enterprise-csharp-visual-lab-plan.md §14) — the libraries the trimmed download keeps WHOLE (CSharpLab.csproj's
+    /// TrimmerRootAssembly list of implementation libraries; tools/csharp-lab/trimming.test.mjs keeps the two lists equal). A program may
+    /// use only types that live in them: every other library is left out of the download or cut to what Roslyn and the lab need.
+    /// </summary>
+    internal static readonly HashSet<string> KeptWhole = new HashSet<string>
+    {
+        "System.Private.CoreLib", "System.Runtime", "System.Console", "System.Collections", "System.Collections.Concurrent",
+        "System.Collections.NonGeneric", "System.Collections.Specialized", "System.Linq", "System.Memory", "System.ObjectModel",
+        "System.Runtime.Numerics", "System.Text.RegularExpressions",
+    };
+
+    /// <summary>
+    /// The first type the compiled program references that this lab cannot vouch for (null when every one can): read from the
+    /// program's own metadata (every type reference, the compiler's own included), each resolved as the runtime resolves it (type
+    /// forwarding included) — a type that does not resolve, or resolves into a library not kept whole, is refused BEFORE the program
+    /// runs, as a compile error (LAB0001). So a program never fails half-way for a library the download left out.
+    /// </summary>
+    internal static string? Unavailable(byte[] image)
+    {
+        using var pe = new System.Reflection.PortableExecutable.PEReader(new MemoryStream(image));
+        var md = System.Reflection.Metadata.PEReaderExtensions.GetMetadataReader(pe);
+        foreach (var handle in md.TypeReferences)
+        {
+            var tr = md.GetTypeReference(handle);
+            if (tr.ResolutionScope.Kind != System.Reflection.Metadata.HandleKind.AssemblyReference) continue;   // nested: its outer type is checked
+            var asm = md.GetString(md.GetAssemblyReference((System.Reflection.Metadata.AssemblyReferenceHandle)tr.ResolutionScope).Name);
+            var ns = md.GetString(tr.Namespace);
+            var name = (ns.Length > 0 ? ns + "." : "") + md.GetString(tr.Name);
+            Type? type;
+            try { type = Type.GetType(name + ", " + asm, throwOnError: false); } catch { type = null; }
+            if (type == null || !KeptWhole.Contains(type.Assembly.GetName().Name ?? "")) return name;
+        }
+        return null;
+    }
+    internal static string UnavailableMessage(string type) =>
+        "Program.cs: error LAB0001: '" + type + "' is not part of the C# lab on this device (its library is left out of the download). " +
+        "Run this program on the server (the Runner).";
+
     static string TypeKey(TypeDeclarationSyntax t) => t.Identifier.Text + "/" + (t.TypeParameterList?.Parameters.Count ?? 0);
 
     /// <summary>The course library minus every type the writer declares (null when nothing is left or there is no library).</summary>
@@ -114,7 +153,9 @@ global using global::System.Threading.Tasks;
             return Result("compile-error", "", string.Join("\n", errors), compileMs, 0);
         }
 
-        var assembly = Assembly.Load(pe.ToArray());
+        var image = pe.ToArray();
+        if (Unavailable(image) is string missing) return Result("compile-error", "", UnavailableMessage(missing), compileMs, 0);
+        var assembly = Assembly.Load(image);
         var entry = assembly.EntryPoint;
         if (entry == null) return Result("compile-error", "", "No Main method.", compileMs, 0);
         var stdout = new CappedWriter(OutputCapChars);
@@ -124,6 +165,7 @@ global using global::System.Threading.Tasks;
         Console.SetOut(stdout);
         Console.SetError(stderr);
         var status = "success";
+        string? leftOut = null;
         var run = Stopwatch.StartNew();
         try
         {
@@ -136,6 +178,7 @@ global using global::System.Threading.Tasks;
         catch (TargetInvocationException e)
         {
             status = "runtime-error";
+            if (LeftOut(e.InnerException ?? e)) leftOut = LeftOutMessage;
             stderr.WriteLine((e.InnerException ?? e).ToString());
         }
         finally
@@ -143,8 +186,20 @@ global using global::System.Threading.Tasks;
             Console.SetOut(oldOut);
             Console.SetError(oldErr);
         }
-        return Result(status, stdout.ToString(), stderr.ToString(), compileMs, run.ElapsedMilliseconds);
+        // the marker goes FIRST, so no cap on the error text can cut it off
+        return Result(status, stdout.ToString(), (leftOut == null ? "" : leftOut + "\n") + stderr.ToString(), compileMs, run.ElapsedMilliseconds);
     }
+
+    /// <summary>
+    /// V6: a run that failed for a library the trimmed download left out — reached past the compile-time check (Unavailable), by
+    /// reflection. Not the program's fault: the error then says «PlatformNotSupported» first, which teacher-device grading already
+    /// refuses as evidence the device cannot vouch for (api/src/lib/coding/device-grading.js BROWSER_LIMIT → teacher review).
+    /// </summary>
+    internal static bool LeftOut(Exception x) =>
+        x is TypeLoadException || x is MissingMemberException || x is FileLoadException
+        || x is FileNotFoundException f && f.Message.Contains("assembly", StringComparison.OrdinalIgnoreCase);
+    internal const string LeftOutMessage = "PlatformNotSupportedException: LAB0002: the program needs a library the C# lab on this device leaves out of " +
+        "its download. Run it on the server (the Runner).";
 
     // The Runner's practice output limit (16 KB); a print loop stops here instead of filling the page's memory.
     const int OutputCapChars = 16 * 1024;

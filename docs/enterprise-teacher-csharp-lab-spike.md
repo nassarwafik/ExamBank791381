@@ -22,7 +22,7 @@
 
 | الملف | الدور |
 |---|---|
-| `tools/csharp-lab/CSharpLab.csproj` | مشروع .NET 10 لـ `browser-wasm`، مع Roslyn 5.12.0 وحزمة المراجع `Basic.Reference.Assemblies.Net100` 1.8.15. بلا تقليص (Trimming)، لقياس أسوأ حالة. |
+| `tools/csharp-lab/CSharpLab.csproj` | مشروع .NET 10 لـ `browser-wasm`، مع Roslyn 5.12.0 وحزمة المراجع `Basic.Reference.Assemblies.Net100` 1.8.15. بلا تقليص (Trimming)، لقياس أسوأ حالة. **منذ V6:** تقليص انتقائي مع حماية المكتبات التي يستعملها البرنامج (`docs/enterprise-csharp-visual-lab-plan.md` §14). |
 | `tools/csharp-lab/Lab.cs` | `Lab.Run(source, stdin)`، يعمل كعامل csharp@1: الـ usings الضمنية نفسها، و`nullable` مفعّل، وأحدث إصدار للغة، وقاعدة اللفّ. |
 | `tools/csharp-lab/wwwroot/` | صفحة النموذج بسياسة أمان خاصة بها. |
 | `tools/csharp-lab/smoke.mjs` | يقيس ويثبت في Chromium حقيقي، ويكتب تقريرًا. |
