@@ -8,6 +8,7 @@
 //     parent's cache keeps them (ETag revalidation). Names are checked here and again by the parent.
 // • The runtime lives in a WORKER created from a blob (an opaque-origin page cannot start a worker from a URL); a program that
 //   does not finish within RUN_LIMIT_MS is stopped by terminating the worker → status "timeout", and the next run starts a fresh one.
+//   A result marked «fatal» (the runtime ended itself, e.g. a stack overflow) also replaces the worker.
 // • The course library (the book's classes) arrives IN the message: the parent reads it from the API with the teacher's session —
 //   course content is never a public file, and this opaque-origin page has no session of its own.
 // • Only messages from the parent window are answered.
@@ -33,7 +34,7 @@ function startWorker() {
       const m = e.data || {};
       if (m.type === "ready") { URL.revokeObjectURL(url); resolve(); }
       else if (m.type === "boot-error") reject(new Error(m.message));
-      else if (m.type === "result" && w === worker && onResult) onResult(m.result);
+      else if (m.type === "result" && w === worker && onResult) onResult(m.result, m.fatal === true);
       else if (m.type === "fetch") {
         const id = "f" + (++fetchSeq);
         if (typeof m.name !== "string" || !FILE_NAME.test(m.name)) { w.postMessage({ type: "fetched", id: m.id, error: true }); return; }
@@ -61,7 +62,13 @@ function runOnce(m) {
       worker = null;
       resolve({ status: "timeout", stdout: "", stderr: "", compileMs: 0, runMs: RUN_LIMIT_MS });
     }, RUN_LIMIT_MS);
-    onResult = result => { onResult = null; clearTimeout(timer); resolve(result); };
+    onResult = (result, fatal) => {
+      onResult = null;
+      clearTimeout(timer);
+      // The runtime ended itself (a stack overflow): this worker is gone for good — replace it before the next run.
+      if (fatal) { worker.terminate(); worker = null; }
+      resolve(result);
+    };
     worker.postMessage({ type: "run", source: m.source, stdin: m.stdin, library: m.library });
   });
 }

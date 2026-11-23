@@ -1,5 +1,6 @@
 // Teacher C# lab — the .NET WebAssembly runtime (Roslyn) in a Web Worker. One request at a time:
-//   ← { type: "run", id, source, stdin, library }   → { type: "result", id, result }   (→ { type: "ready" } once started)
+//   ← { type: "run", id, source, stdin, library }   → { type: "result", id, result, fatal }   (→ { type: "ready" } once started)
+//   fatal: the runtime itself is gone (it ended itself): the lab terminates this worker and starts a fresh one for the next run.
 // The runtime's binary resources (the .wasm runtime and assemblies) are asked from the lab page, which asks the teacher's page:
 //   → { type: "fetch", id, name }   ← { type: "fetched", id, buffer | error }
 // so the browser's normal HTTP cache keeps them between visits (an opaque-origin frame's own cache does not survive the visit).
@@ -35,15 +36,43 @@ const loader = (type, name, defaultUri) => {
     .catch(() => fetch(defaultUri));
 };
 
+// SEALED after boot (docs/enterprise-csharp-visual-lab-plan.md §9): once the runtime has loaded its files, every network, storage and
+// sub-worker entry point of this global is replaced by a function that throws. Without it a program could START a request that leaves
+// after Main returns (HttpClient, never awaited) — proven in Chrome by tools/csharp-lab/smoke.mjs («no network…»): the sandbox's opaque
+// origin and the frame's policy alone did not stop it. postMessage stays (the lab's own channel).
+const SEALED = ["fetch", "XMLHttpRequest", "WebSocket", "WebSocketStream", "WebTransport", "EventSource", "importScripts", "Worker", "SharedWorker",
+  "BroadcastChannel", "indexedDB", "caches"];
+function blocked() { throw new Error("The C# lab has no network or storage access."); }
+function seal() {
+  for (const name of SEALED) {
+    for (let o = self; o && o !== Object.prototype; o = Object.getPrototypeOf(o)) {
+      if (!Object.prototype.hasOwnProperty.call(o, name)) continue;
+      try { Object.defineProperty(o, name, { value: blocked, writable: false, configurable: false, enumerable: false }); } catch { /* already fixed */ }
+    }
+    try { Object.defineProperty(self, name, { value: blocked, writable: false, configurable: false, enumerable: false }); } catch { /* already fixed */ }
+  }
+}
+// The .NET runtime ENDS ITSELF on a stack overflow (a recursion without end: «Program terminated with exit(1)»), as on
+// Environment.Exit. Lab.Run catches every program exception itself, so anything thrown out of it means the runtime is gone: the result
+// says so («fatal») and the lab replaces this worker before the next run.
+const ENDED = /terminated with exit|call stack|stack overflow|too much recursion/i;
+
 const started = performance.now();
 const runtime = await dotnet.withResourceLoader(loader).create();
 const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
+seal();
 self.addEventListener("message", event => {
   const m = event.data || {};
   if (m.type !== "run") return;
-  let result;
+  let result, fatal = false;
   try { result = JSON.parse(exports.Lab.Run(String(m.source ?? ""), String(m.stdin ?? ""), String(m.library ?? ""))); }
-  catch (e) { result = { status: "internal-error", stdout: "", stderr: String(e && e.message || e), compileMs: 0, runMs: 0 }; }
-  self.postMessage({ type: "result", id: m.id, result });
+  catch (e) {
+    const message = String(e && e.message || e);
+    fatal = true;
+    result = ENDED.test(message)
+      ? { status: "runtime-error", stdout: "", stderr: "Stack overflow: the program stopped the C# runtime — most often a recursion without a stopping condition.\n" + message, compileMs: 0, runMs: 0 }
+      : { status: "internal-error", stdout: "", stderr: message, compileMs: 0, runMs: 0 };
+  }
+  self.postMessage({ type: "result", id: m.id, result, fatal });
 });
 self.postMessage({ type: "ready", readyMs: Math.round(performance.now() - started) });

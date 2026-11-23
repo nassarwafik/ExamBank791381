@@ -16,6 +16,13 @@ import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 // (GET /api/student-tools/csharp-run?library=<courseId>) and travel in the run message: they are never a public file.
 
 export const LAB_URL = "/csharp-lab/index.html";
+
+/** DESKTOP ONLY (owner decision 2026-11-23, docs/enterprise-csharp-visual-lab-plan.md): a wide screen with a precise pointer. On a
+ *  phone or tablet the teacher's editor stays exactly as it was (the Runner path). Presentation only, read when the dock mounts. */
+export const DESKTOP_QUERY = "(min-width: 1024px) and (hover: hover) and (pointer: fine)";
+export function isDesktopViewport(): boolean {
+  try { return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(DESKTOP_QUERY).matches; } catch { return false; }
+}
 const LOAD_TIMEOUT_MS = 30000;          // the lab PAGE (small); the runtime is fetched on the first run
 const RUN_TIMEOUT_MS = 180000;          // the first run also downloads the compiler (~12 MB, once)
 const OUTPUT_BYTES = 16 * 1024;
