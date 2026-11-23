@@ -1,0 +1,9 @@
+{
+  "note": "Python lab spike (docs/enterprise-python-lab-spike.md): the exact Pyodide release, verified by its npm integrity before use. Python 3.13 — the Runner's python@1 is CPython 3.13 (runner/workers/python/toolchain.json).",
+  "package": "pyodide",
+  "version": "0.29.5",
+  "tarball": "https://registry.npmjs.org/pyodide/-/pyodide-0.29.5.tgz",
+  "integrity": "sha512-TkYrUv9m8QmfImADKRmpwZulL48E0uUaBSO+dvRQKyAJc0qh9gu7jn8btyHPh3NZm1r2IH2YrJhIr7Q2B9urAw==",
+  "python": "3.13",
+  "files": ["pyodide.mjs", "pyodide.asm.js", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"]
+}

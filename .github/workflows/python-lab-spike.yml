@@ -1,0 +1,43 @@
+name: Python Lab Spike
+# Adds a job and weakens none (AGENTS.md §1, §12). Owner-approved FEASIBILITY SPIKE (docs/enterprise-python-lab-spike.md): CPython 3.13
+# in the browser (Pyodide, pinned and integrity-checked by tools/python-lab/fetch-pyodide.mjs), measured and proven in real Chromium
+# inside the same sandboxed-iframe / sealed-worker design as the C# lab. Nothing here is deployed or served by the web app.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/python-lab/**"
+      - ".github/workflows/python-lab-spike.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: python-lab-spike-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  spike:
+    name: Python lab — fetch (integrity-checked), measure, prove in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Fetch the pinned Pyodide release (refused unless its sha512 matches tools/python-lab/pyodide.json)
+        run: node tools/python-lab/fetch-pyodide.mjs tools/python-lab/wwwroot
+      - name: Playwright core (browser driver only; Chrome is preinstalled on the runner)
+        run: npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+      - name: Measure and prove in Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          REPORT_DIR: python-lab-report
+        run: node tools/python-lab/smoke.mjs tools/python-lab/wwwroot
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: python-lab-spike-report
+          path: python-lab-report/
+          if-no-files-found: ignore
+          retention-days: 14
