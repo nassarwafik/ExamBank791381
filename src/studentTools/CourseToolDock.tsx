@@ -13,8 +13,10 @@ import { validateBookStudentTools } from "./studentToolsSpec";
 /** Owner decisions: in a book the C# editor runs ON THE READER'S DEVICE (deviceCSharpLab.ts) — the teacher and students alike, no Runner
  *  cost — on a DESKTOP only (2026-11-23): on a phone or tablet the editor keeps the Runner path, exactly as before. `runHeaders` (the
  *  reader's session) are used on the device only to read the book's classes from the API, which checks the reader. */
-export default function CourseToolDock({ courseId, bookTools, runHeaders }: { courseId: string; bookTools?: unknown; runHeaders?: Record<string, string> }) {
-  const runner = useMemo(() => (runHeaders ? (isDesktopViewport() ? bookDeviceRunner(courseId, runHeaders) : bookCSharpRunner(runHeaders, courseId)) : undefined), [runHeaders, courseId]);
+/** Visual lab V3 — `visualRun` (the TEACHER's reader only): on the device, the editor also offers «تشغيل مرئي» (the program recorded step
+ *  by step and drawn as the course's trace activity draws it). Presentation: the lab runs only the reader's own program on this device. */
+export default function CourseToolDock({ courseId, bookTools, runHeaders, visualRun = false }: { courseId: string; bookTools?: unknown; runHeaders?: Record<string, string>; visualRun?: boolean }) {
+  const runner = useMemo(() => (runHeaders ? (isDesktopViewport() ? bookDeviceRunner(courseId, runHeaders, { visual: visualRun }) : bookCSharpRunner(runHeaders, courseId)) : undefined), [runHeaders, courseId, visualRun]);
   const chosen = bookTools === undefined ? undefined : validateBookStudentTools(bookTools);
   const tools = chosen === undefined ? courseStudentTools(courseId) : chosen.ok && chosen.value.tools.length ? chosen.value : undefined;
   return tools ? <StudentToolDock studentTools={tools} csharpRunner={runner} /> : null;
