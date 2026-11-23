@@ -1,5 +1,5 @@
 import { normalizeExecutionResult, type CodeExecutionResult } from "../codingContract";
-import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
+import { bookCSharpRunner, CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 import { readLabTrace, type LabTraceOptions, type LabTraceResult } from "./labTrace";
 
 // On-device C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «On-device C# lab») — PRACTICE runs of C# on the user's
@@ -156,10 +156,28 @@ export function bookDeviceRunner(courseId: string, headers: Record<string, strin
   return {
     where: "device",
     available: async () => true,
-    async run(source, stdin, signal) { return deviceCSharpRun(source, stdin, await lib(), signal); },
+    async run(source, stdin, signal) {
+      const result = await deviceCSharpRun(source, stdin, await lib(), signal);
+      return viaRunner(result, () => bookCSharpRunner(headers, courseId).run(source, stdin, signal), signal);   // V6: LAB0001 → the Runner
+    },
     // Visual lab V3: the TEACHER's reader only (`visual`, set by the dock from the reader's actor) — the plan keeps students for V7.
     ...(opts.visual ? { async trace(source: string, stdin: string, signal?: AbortSignal, options?: LabTraceOptions) { return deviceCSharpTrace(source, stdin, await lib(), signal, options); } } : {}),
   };
+}
+
+/**
+ * Visual lab V6 (docs/enterprise-csharp-visual-lab-plan.md §14) — the lab refused this program BEFORE running it because it needs a
+ * library the lab's trimmed download leaves out (LAB0001, tools/csharp-lab/Lab.cs). The Runner has every library: practice runs then
+ * go to it (the book editor here, the exam question in deviceLabs.ts). Teacher-device grading never falls back: a compile error is
+ * refused by the API and stays in teacher review.
+ */
+export const leftOutOfLab = (r: CodeExecutionResult) => r.status === "compile-error" && /\bLAB0001\b/.test(r.stderr);
+
+/** A practice run the lab refused (LAB0001) asked of the Runner instead; if the Runner cannot answer, the lab's own answer stands. */
+export async function viaRunner(labResult: CodeExecutionResult, runner: () => Promise<CodeExecutionResult>, signal?: AbortSignal): Promise<CodeExecutionResult> {
+  if (!leftOutOfLab(labResult)) return labResult;
+  try { return await runner(); }
+  catch (e) { if (signal?.aborted || (e instanceof CSharpToolRunError && e.code === "ABORTED")) throw e; return labResult; }
 }
 
 /** Test seam: forget the page's lab (unit tests mount and unmount many readers). */

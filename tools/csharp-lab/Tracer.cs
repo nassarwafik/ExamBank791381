@@ -93,7 +93,9 @@ public static partial class Lab
             return TraceResult("trace-unsupported", "", "The recorder could not prepare this program:\n" + string.Join("\n", why), compileMs, 0, null);
         }
 
-        var assembly = Assembly.Load(pe.ToArray());
+        var image = pe.ToArray();
+        if (Unavailable(image) is string missing) return TraceResult("compile-error", "", UnavailableMessage(missing), compileMs, 0, null);
+        var assembly = Assembly.Load(image);
         var wanted = entryName ?? "Main";
         MethodInfo? entry = assembly.GetTypes()
             .Where(t => !t.Name.StartsWith("__Lab"))

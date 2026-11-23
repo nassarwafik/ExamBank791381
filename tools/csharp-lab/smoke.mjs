@@ -159,7 +159,11 @@ PROGRAMS.push(
   // No request leaves the lab (docs/enterprise-csharp-visual-lab-plan.md §9) — not even one the program starts and never awaits (the
   // one path a synchronous Main has). The URL is the lab's own server, and the server counts what arrives. In Chrome the sandbox and
   // the frame's policy alone let it out (CI, PR #699 head b8c05bd4: 1 request); the worker's seal (worker.js) stops it.
-  { name: "no network: a request started by the program never leaves the worker", stdin: "PROBE_URL\n", source: "class P { static void Main() { string url = Console.ReadLine(); try { _ = new HttpClient().GetStringAsync(url); Console.WriteLine(\"started\"); } catch (Exception e) { Console.WriteLine(\"blocked: \" + e.GetType().Name); } } }",
+  // V6: HttpClient's library is left out of the trimmed download, so the plain program is refused before it runs (LAB0001) — and the
+  // seal is still proven by the only way left to try: reflection into what remains of that library.
+  { name: "no network (V6): HttpClient is refused before it runs (LAB0001)", stdin: "PROBE_URL\n", source: "class P { static void Main() { string url = Console.ReadLine(); _ = new HttpClient().GetStringAsync(url); Console.WriteLine(\"started\"); } }",
+    check: r => r.status === "compile-error" && /LAB0001: 'System\.Net\.Http\.HttpClient'/.test(r.stderr) },
+  { name: "no network: a request started by the program (by reflection) never leaves the worker", stdin: "PROBE_URL\n", source: "using System.Reflection;\nclass P { static void Main() { string url = Console.ReadLine(); try { var t = Type.GetType(\"System.Net.Http.HttpClient, System.Net.Http\", true); var c = Activator.CreateInstance(t); t.GetMethod(\"GetStringAsync\", new[] { typeof(string) }).Invoke(c, new object[] { url }); Console.WriteLine(\"started\"); } catch (Exception e) { Console.WriteLine(\"blocked: \" + e.GetType().Name); } } }",
     check: r => r.status === "success" || r.status === "runtime-error" },
   { name: "the lab keeps working after the network attempt", stdin: "", source: HELLO,
     check: r => r.status === "success" && r.stdout === "ok\n" },
@@ -189,6 +193,20 @@ PROGRAMS.push(
   { name: "a FRESH run starts clean (grading isolation between students)", stdin: "", fresh: true,
     source: "class P { static void Main() { Console.WriteLine(AppDomain.CurrentDomain.GetData(\"left\") ?? \"none\"); } }",
     check: r => r.status === "success" && r.stdout === "none\n" },
+  // V6 — the trimmed download (docs/enterprise-csharp-visual-lab-plan.md §14): what a teaching program uses is kept whole …
+  { name: "V6 kept whole: Regex, BigInteger, StringBuilder, SortedSet, ArrayList, C#'s Stack, ConcurrentDictionary, LINQ, Math", stdin: "",
+    source: "using System.Text;\nusing System.Text.RegularExpressions;\nusing System.Numerics;\nusing System.Collections;\nusing System.Collections.Concurrent;\nclass P { static void Main() { var sb = new StringBuilder(); sb.Append(Regex.Replace(\"a1b22\", @\"\\d+\", \"#\")); sb.Append(' ').Append(BigInteger.Pow(2, 70)); var set = new SortedSet<int> { 3, 1, 2 }; var al = new ArrayList { 1, \"x\" }; var st = new System.Collections.Generic.Stack<int>(); st.Push(4); var cd = new ConcurrentDictionary<string, int>(); cd[\"k\"] = 5; Console.WriteLine(sb + \" \" + string.Join(\",\", set) + \" \" + al.Count + st.Peek() + cd[\"k\"] + \" \" + Enumerable.Range(1, 4).Sum() + \" \" + Math.Round(Math.PI, 2)); } }",
+    check: r => r.status === "success" && r.stdout === "a#b# 1180591620717411303424 1,2,3 245 10 3.14\n" },
+  // … and a program that needs a library left out is refused BEFORE it runs, naming the type (never a run that fails half-way)
+  { name: "V6 left out: System.Xml is refused before it runs (LAB0001)", stdin: "",
+    source: "using System.Xml;\nclass P { static void Main() { var d = new XmlDocument(); d.LoadXml(\"<a/>\"); Console.WriteLine(d.DocumentElement.Name); } }",
+    check: r => r.status === "compile-error" && /LAB0001: 'System\.Xml\.XmlDocument'/.test(r.stderr) && r.stdout === "" },
+  { name: "V6 cut to what the lab needs: System.Text.Json is refused too (LAB0001)", stdin: "",
+    source: "using System.Text.Json;\nclass P { static void Main() { Console.WriteLine(JsonSerializer.Serialize(new[] { 1, 2 })); } }",
+    check: r => r.status === "compile-error" && /LAB0001: 'System\.Text\.Json\.JsonSerializer'/.test(r.stderr) },
+  { name: "V6 reached by reflection: the run says PlatformNotSupported first (teacher-device grading refuses it)", stdin: "",
+    source: "class P { static void Main() { Console.WriteLine(\"before\"); var t = Type.GetType(\"System.Xml.XmlDocument, System.Private.Xml\", true); Console.WriteLine(t.Name); } }",
+    check: r => r.status === "runtime-error" && /^PlatformNotSupportedException: LAB0002/.test(r.stderr) && r.stdout === "before\n" },
   { name: "book compile error keeps the writer's line (library after)", courseId: "899271d", stdin: "",
     source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Peek();\n}",
     check: r => r.status === "compile-error" && /Program\.cs\(4,\d+\): error CS1061/.test(r.stderr) },
