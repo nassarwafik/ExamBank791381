@@ -122,4 +122,5 @@ artifacts/phase-21e2/
 tools/csharp-lab/bin/
 tools/csharp-lab/obj/
 tools/csharp-lab/out/
+public/csharp-lab/
 csharp-lab-report/

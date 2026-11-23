@@ -4,6 +4,10 @@
 //     GET  /api/student-tools/csharp-run  → { ok, available } — whether the runner offers csharp@1 right now (any signed-in actor;
 //          the same fact /api/coding/capabilities gives every student). The editor asks it once, so a stopped runner shows
 //          «متوقف حاليًا» instead of a button that cannot work. It authorises nothing: every POST is checked in full.
+//     GET  /api/student-tools/csharp-run?library=<courseId>  → { ok, library } — TEACHER C# LAB only (AGENTS.md §1): the book's classes
+//          (course-library.js) for the teacher's on-device lab, which runs in a sandboxed iframe with no access to the API. A teacher
+//          with learning.course.view and the course in their entitlement; a student is refused (403); an unknown course is 404. The
+//          classes are course content, so they are never a static file: this authenticated read is their only way to the browser.
 // OWNER DECISION (T14 follow-up): the book is practice, so the editor may run there; in exams and assignments the editor is a WRITING
 // aid only (the student copies the code into the answer) and NEVER runs. This route therefore has no exam context at all: a body
 // naming an assignment is malformed (400) and reaches nothing. Coding QUESTIONS keep their own, separate practice run (coding-run.js).
@@ -32,7 +36,7 @@ const { classroomServing, offersCourse } = require("../lib/student-classes");
 const { resolveCodingExecutionProvider, loadCodingCapabilities, runCodingExecution } = require("../lib/coding/execution-provider");
 const { reserveCodingRun } = require("../lib/coding/run-rate-limit");
 const { RUN_LANGUAGE, RUN_LIMITS, wrapProgram } = require("../lib/learning-run");
-const { withCourseLibrary } = require("../lib/course-library");
+const { withCourseLibrary, libraryClasses } = require("../lib/course-library");
 const { utf8ByteLength } = require("../lib/shared-finalization/codingQuestion");
 const { projectStudentToolsForStudent, validateBookStudentTools, csharpRunAllowedInBook } = require("../lib/shared-finalization/studentTools/studentToolsSpec");
 const { courseStudentTools } = require("../lib/shared-finalization/studentTools/courseTools");
@@ -118,12 +122,31 @@ async function bookDecision(actor, body, deps) {
   return null;
 }
 
+function readQuery(request, name) {
+  try {
+    const q = request.query && typeof request.query.get === "function" ? request.query : new URL(String(request.url || ""), "http://x").searchParams;
+    return q.get(name);
+  } catch { return null; }
+}
+
+/** The book's classes for the teacher's on-device lab (teachers only; the course must be in their entitlement). */
+async function libraryResponse(actor, courseIdRaw, deps) {
+  if (actor.kind !== "teacher") return refuse(403, "RUN_NOT_ALLOWED");
+  const courseId = String(courseIdRaw).trim();
+  if (!COURSE_ID.test(courseId)) return refuse(404, "NOT_FOUND");
+  const course = await teacherCourseDecision(actor.container, actor.user, courseId, deps);
+  if (!course.ok) return course.code === "COURSE_UNKNOWN" ? refuse(404, "NOT_FOUND") : courseRefusal(course, { teacher: true });
+  return reply(200, { ok: true, library: libraryClasses(courseId).map(c => c.code).join("\n\n") });
+}
+
 async function handler(request, deps = {}, obs = null) {
   try {
     const method = String(request.method || "POST").toUpperCase();
     const actor = await resolveActor(request, deps, obs);
     if (actor.kind === "denied") return actor.response;
     if (method === "GET") {
+      const libraryFor = readQuery(request, "library");
+      if (libraryFor !== null) return libraryResponse(actor, libraryFor, deps);
       const caps = await loadCodingCapabilities(resolveCodingExecutionProvider(deps));
       const available = caps.available && caps.languages.some(l => l.key === RUN_LANGUAGE.language && l.languageVersion === RUN_LANGUAGE.languageVersion);
       return reply(200, { ok: true, available });

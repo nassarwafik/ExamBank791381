@@ -204,6 +204,7 @@ export default function LearningReaderWithTraining({ courseId, bookTools, api, o
     <LearningReader
       courseId={courseId}
       bookTools={bookTools}
+      teacherLab={actor === "teacher"}
       api={api}
       onExit={onExit}
       exitLabel={exitLabel}
