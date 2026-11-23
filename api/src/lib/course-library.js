@@ -53,10 +53,4 @@ function withCourseLibrary(courseId, program, writerSource) {
   return parts.length ? program + "\n" + parts.join("\n\n") + "\n" : program;
 }
 
-/** The whole library as one C# file (its classes in file order), for the teacher's in-browser C# lab, which leaves out the writer's
- *  own classes itself with the same rule (tools/csharp-lab/Lab.cs). Unknown course → "". */
-function libraryText(courseId) {
-  return libraryClasses(courseId).map(c => c.code).join("\n\n");
-}
-
-module.exports = { libraryClasses, declaredTypes, withCourseLibrary, libraryText };
+module.exports = { libraryClasses, declaredTypes, withCourseLibrary };

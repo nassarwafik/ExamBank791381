@@ -7,8 +7,7 @@ import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 // CodingEditor: syntax colours, line numbers, brackets, no autocomplete) with «نسخ الكود» to paste into the answer.
 // Owner decision: in exams and assignments it is a WRITING aid only (no runner is ever passed there); in a course book, when its tools
 // allow it, ONE-CLICK RUNNING on the isolated Coding Runner: the output, the compiler's messages (with the learner's own line numbers),
-// runtime errors, time-outs. Teacher C# lab V1: a runner with mode "lab" (csharpLab.ts — the teacher's reader on a desktop) runs the
-// program in this browser instead; the panel says so and shows the lab's own time limit. Its own lazy chunk. The code lives in this page only (the dock keeps the tool mounted for the whole attempt); it is never
+// runtime errors, time-outs. Its own lazy chunk. The code lives in this page only (the dock keeps the tool mounted for the whole attempt); it is never
 // stored, never the answer and never graded. The server decides whether a run is allowed; this panel only shows what it says.
 
 const STARTER = "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Console.WriteLine(\"مرحبا\");\n    }\n}\n";
@@ -17,17 +16,14 @@ const VERDICT: Record<CodeExecutionResult["status"], string> = {
   success: "انتهى التشغيل بنجاح.",
   "compile-error": "خطأ ترجمة: الكود لا يُترجم. اقرأ رسالة المترجم؛ رقم السطر فيها هو رقم سطرك.",
   "runtime-error": "خطأ أثناء التشغيل: توقف البرنامج قبل أن ينتهي.",
-  timeout: "تجاوز الوقت المسموح. هل في الكود حلقة لا تنتهي، أو ينتظر مدخلات لم تُكتب؟",
+  timeout: "تجاوز الوقت المسموح (ثانيتان). هل في الكود حلقة لا تنتهي، أو ينتظر مدخلات لم تُكتب؟",
   "output-limit": "الناتج أطول من الحد المسموح، فعُرض أوله فقط.",
   "internal-error": "تعذّر التشغيل لسبب في المشغّل. حاول مرة أخرى.",
 };
 const READS_INPUT = /Console\s*\.\s*Read(Line)?\s*\(/;
 /** Whether the runner is up (asked once when the editor opens; a run answered «unavailable» turns it down; «التحقق مرة أخرى» asks again). */
 type Availability = "checking" | "up" | "down";
-const DOWN_CODES = new Set(["EXECUTION_UNAVAILABLE", "LANGUAGE_UNAVAILABLE", "LAB_UNAVAILABLE"]);
-/** «تجاوز الوقت المسموح (…)»: the Runner's 2 s, or the runner's own limit (the teacher's lab: 10 s). */
-const seconds = (n: number) => (n === 2 ? "ثانيتان" : n + " ثوانٍ");
-const timeoutVerdict = (n: number) => "تجاوز الوقت المسموح (" + seconds(n) + "). هل في الكود حلقة لا تنتهي، أو ينتظر مدخلات لم تُكتب؟";
+const DOWN_CODES = new Set(["EXECUTION_UNAVAILABLE", "LANGUAGE_UNAVAILABLE"]);
 type State = { kind: "idle" } | { kind: "running" } | { kind: "done"; result: CodeExecutionResult } | { kind: "error"; message: string };
 
 type Props = {
@@ -42,7 +38,6 @@ export default function CSharpEditorTool({ runner }: Props) {
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => () => ctrl.current?.abort(), []);
   const canRun = !!runner;
-  const lab = runner?.mode === "lab";
   const [copied, setCopied] = useState<"" | "ok" | "failed">("");
   const copy = async () => {
     try { await navigator.clipboard.writeText(source); setCopied("ok"); }
@@ -79,9 +74,7 @@ export default function CSharpEditorTool({ runner }: Props) {
 
   const result = state.kind === "done" ? state.result : null;
   const needsInput = !!result && result.status === "runtime-error" && !stdin.trim() && READS_INPUT.test(source);
-  const verdict = (r: CodeExecutionResult) => (r.status === "timeout" ? timeoutVerdict(runner?.timeoutSeconds ?? 2) : VERDICT[r.status]);
-  const checking = lab ? "جارٍ تحميل مختبر \u2066C#\u2069 في متصفحك… (أول مرة فقط قد يستغرق ذلك قليلًا)" : "جارٍ التحقق من المشغّل…";
-  const status = availability === "checking" ? checking : state.kind === "running" ? "جارٍ التشغيل…" : state.kind === "error" ? state.message : result ? verdict(result) : "";
+  const status = availability === "checking" ? "جارٍ التحقق من المشغّل…" : state.kind === "running" ? "جارٍ التشغيل…" : state.kind === "error" ? state.message : result ? VERDICT[result.status] : "";
   const errLabel = result?.status === "compile-error" ? "رسالة المترجم" : "رسالة الخطأ";
 
   return (
@@ -94,12 +87,11 @@ export default function CSharpEditorTool({ runner }: Props) {
       </div>
       {canRun && availability === "down" ? (
         <div className="stt-row stt-cs-actions">
-          <p className="stt-hint" role="note" data-testid="csharp-runner-down">{lab ? "تعذّر تشغيل مختبر \u2066C#\u2069 في هذا المتصفح الآن؛ يمكنك الكتابة في المحرر فقط." : "تشغيل الكود متوقف حاليًا؛ يمكنك الكتابة في المحرر فقط."}</p>
+          <p className="stt-hint" role="note" data-testid="csharp-runner-down">تشغيل الكود متوقف حاليًا؛ يمكنك الكتابة في المحرر فقط.</p>
           <button type="button" className="stt-btn" onClick={check}>التحقق مرة أخرى</button>
         </div>
       ) : canRun ? (
         <>
-          {lab && <p className="stt-hint" role="note" data-testid="csharp-lab-note">مختبر المعلّم: يعمل الكود في متصفحك بمترجم <bdi dir="ltr">C#</bdi> الحقيقي، ولا يُرسل إلى أي خادم.</p>}
           <label className="stt-cs-field">
             <span>المدخلات <small>(كل قيمة في سطر، بترتيب قراءتها بـ <bdi dir="ltr">Console.ReadLine</bdi>)</small></span>
             <textarea className="stt-cs-input" dir="ltr" lang="en" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />

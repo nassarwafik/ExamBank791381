@@ -211,7 +211,6 @@ export default function LearningReaderWithTraining({ courseId, bookTools, api, o
       examItems={examItems}
       study={studyHost}
       codeRun={codeRun ?? undefined}
-      teacherCSharpLab={actor === "teacher"}
       initialPageId={view.kind === "reader" ? view.pageId : undefined}
       initialModuleId={initialModuleId}
       onPageChange={onPageChange}

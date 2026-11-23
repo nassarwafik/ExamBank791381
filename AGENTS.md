@@ -23,11 +23,10 @@ disappear or lose their non-negotiable rules.
 
 | Area | Path | Boundary |
 |---|---|---|
-| Web app (teacher + student, React 19 / TypeScript / Vite, RTL-first) | `src/` | Never executes student code (the one exception is the Teacher C# lab below). Never holds a secret. |
+| Web app (teacher + student, React 19 / TypeScript / Vite, RTL-first) | `src/` | Never executes student code. Never holds a secret. |
 | API (Azure Functions v4, Node 22, CommonJS) | `api/src/functions/` (one module per route), `api/src/lib/` | **Owns every grading decision and every authority check.** |
 | Shared finalization source | `src/` TypeScript → generated CJS for the API (`scripts/build-shared-finalization.mjs`) | Regenerate with the script; a drift test fails CI on hand edits. |
-| Coding Runner (gateway, Docker sandboxes, worker images) | `runner/` | **The only place student code runs** (apart from a teacher's own browser in the Teacher C# lab, section 10). Executes and reports raw evidence; never compares, weights or grades. |
-| Teacher C# lab (Roslyn on .NET WebAssembly, in the teacher's browser) | `tools/csharp-lab/`, published to `/csharp-lab/` by `scripts/build-csharp-lab.mjs` | **Teacher only, books only, desktop only, never grading** (section 10). Its own frame and policy, a sealed worker; never a student's tool. |
+| Coding Runner (gateway, Docker sandboxes, worker images) | `runner/` | **The only place student code runs.** Executes and reports raw evidence; never compares, weights or grades. |
 | Runner deployment material (Azure VM, systemd, readiness, rollback) | `runner/deploy/azure-vm/` | Documentation and scripts for the operator. Running them against the live VM is a deployment (section 11). |
 | Load / certification harness | `runner/tests/load/`, `runner/tests/mutation/` | Independent evaluator of the Runner; never weaken a rule to obtain PASS. |
 | Storage | Azure Blob Storage JSON documents (see `README.md`) | No database migrations exist; do not invent one. |
@@ -177,12 +176,6 @@ Preserve, in every change touching coding assessment:
   withheld and rejected (`409 STALE_RESULT`);
 - **callback / HMAC boundaries**: three distinct keys (runner request, callback, recovery sweep), signature + freshness +
   replay checks on both sides, keys never logged.
-- **Teacher C# lab** (owner decision, `docs/enterprise-csharp-visual-lab-plan.md`): a teacher's program may run in **that
-  teacher's own browser**, in the book reader only, on a desktop only. It is **never** offered to a student, never in an exam
-  or an assignment, and never a source of any mark or grading evidence. It runs in its own same-origin frame whose own policy
-  is the only place `'wasm-unsafe-eval'` exists (the site's policy never gains it), inside a worker sealed from the network and
-  storage, with a hard time limit and bounded output. The book's classes reach it only through the API, with a teacher session.
-  Widening any of this (students, exams, grading, the site's policy) is an owner decision recorded in this file first.
 
 ### Identity, access and owner safety
 

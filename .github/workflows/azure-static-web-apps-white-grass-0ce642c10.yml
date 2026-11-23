@@ -56,22 +56,6 @@ jobs:
         with:
           submodules: true
           lfs: false
-      # Teacher C# lab (docs/enterprise-csharp-visual-lab-plan.md, V1): publish the teacher's in-browser C# compiler into
-      # public/csharp-lab/ (git-ignored) BEFORE the Static Web Apps build, which copies public/ into dist/. Proven by csharp-lab.yml on
-      # the same head. Adds steps; changes no gate and no deployment setting.
-      - name: Set up Node.js (C# lab build script)
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Install the .NET 10 SDK for the C# lab (Microsoft's official script)
-        run: |
-          curl -sSL https://dot.net/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
-          bash "$RUNNER_TEMP/dotnet-install.sh" --channel 10.0 --install-dir "$HOME/.dotnet"
-          echo "$HOME/.dotnet" >> "$GITHUB_PATH"
-          echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
-          echo "DOTNET_CLI_TELEMETRY_OPTOUT=1" >> "$GITHUB_ENV"
-      - name: Publish the teacher C# lab into public/csharp-lab
-        run: node scripts/build-csharp-lab.mjs
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
