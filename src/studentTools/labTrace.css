@@ -1,0 +1,35 @@
+/* Visual lab V4 (docs/enterprise-csharp-visual-lab-plan.md §12) — the teacher's player around the course's trace view. Only the lab's
+   chunk loads this file; the course's activities never get these classes (DsDraw marks is-enter / is-leave only when a player asks). */
+.lab-trace-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.lab-trace-bar .learning-trace-btn.is-play[aria-pressed="true"]{ background:var(--eb-primary); color:var(--eb-surface); border-color:var(--eb-primary); }
+.lab-trace-speed, .lab-trace-check{ display:inline-flex; align-items:center; gap:var(--eb-space-2); min-block-size:44px; }
+.lab-trace-speed select{ min-block-size:36px; }
+.lab-trace-check input{ inline-size:1.1rem; block-size:1.1rem; }
+.lab-trace-note{ margin-block:var(--eb-space-2); color:var(--eb-text-secondary); }
+
+/* breakpoints: the program's line numbers become toggles */
+.learning-trace-lineno.is-toggle{ font:inherit; color:inherit; background:none; border:1px solid transparent; border-radius:999px; cursor:pointer; min-inline-size:1.9rem; padding:0 .25rem; }
+.learning-trace-lineno.is-toggle:hover{ border-color:var(--eb-border-strong); }
+.learning-trace-lineno.is-toggle:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
+.learning-trace-lineno.is-break{ background:var(--eb-danger); color:var(--eb-surface); border-color:var(--eb-danger); }
+
+/* motion: only inside the player, only without reduced motion */
+.lab-trace.has-motion .is-enter, .lab-trace.has-motion .is-leave{ transform-box:fill-box; transform-origin:center; }
+.lab-trace.has-motion .is-enter.is-from-top{ animation:lab-from-top 420ms ease-out both; }
+.lab-trace.has-motion .is-enter.is-from-end{ animation:lab-from-end 420ms ease-out both; }
+.lab-trace.has-motion .is-enter.is-pop{ animation:lab-pop 380ms ease-out both; }
+.lab-trace.has-motion .is-leave.is-to-top{ animation:lab-to-top 520ms ease-in forwards; }
+.lab-trace.has-motion .is-leave.is-to-start{ animation:lab-to-start 520ms ease-in forwards; }
+.lab-trace:not(.has-motion) .is-leave{ display:none; }
+@keyframes lab-from-top{ from{ transform:translateY(-26px); opacity:0; } }
+@keyframes lab-from-end{ from{ transform:translateX(30px); opacity:0; } }
+@keyframes lab-pop{ from{ transform:scale(.55); opacity:0; } }
+@keyframes lab-to-top{ to{ transform:translateY(-28px); opacity:0; } }
+@keyframes lab-to-start{ to{ transform:translateX(-34px); opacity:0; } }
+@media (prefers-reduced-motion: reduce){
+  .lab-trace .is-enter, .lab-trace .is-leave{ animation:none !important; }
+  .lab-trace .is-leave{ display:none; }
+}
+
+/* «توسيع»: the same player in a wide window */
+.eb-dialog.size-lg.lab-trace-dialog{ width:min(1400px, 100%); max-height:94vh; }
