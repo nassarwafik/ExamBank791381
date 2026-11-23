@@ -1,6 +1,7 @@
 // Teacher C# lab — the bridge between the teacher's book editor (the PARENT page) and the runtime worker.
 // Runs inside the sandboxed iframe (opaque origin). Protocol with the parent (window.postMessage):
 //   ← { type: "run", id, source, stdin, library, fresh? } → { type: "result", id, result: { status, stdout, stderr, compileMs, runMs } }
+//   ← { type: "trace", id, source, stdin, library, options, fresh? }  → { type: "result", id, result: { …, steps } }   (phase V2: Tracer.cs)
 //   → { type: "lab-ready" } once, when this page has loaded (the runtime itself starts on the first run).
 //   → { type: "fetch", id, name }  ← { type: "fetched", id, buffer } | { type: "fetched", id, error: true }
 //     The runtime's heavy files (_framework/<name>: the .NET runtime and assemblies, ~11 MB) are fetched BY THE PARENT: an
@@ -72,7 +73,7 @@ function runOnce(m) {
       if (fatal) { worker.terminate(); worker = null; }
       resolve(result);
     };
-    worker.postMessage({ type: "run", source: m.source, stdin: m.stdin, library: m.library });
+    worker.postMessage({ type: m.kind, source: m.source, stdin: m.stdin, library: m.library, options: m.options });
   });
 }
 
@@ -97,8 +98,9 @@ window.addEventListener("message", event => {
     else w.postMessage({ type: "fetched", id: workerId, error: true });
     return;
   }
-  if (m.type !== "run" || typeof m.id !== "string" || typeof m.source !== "string") return;
-  queue.push({ id: m.id, source: m.source, stdin: typeof m.stdin === "string" ? m.stdin : "", library: typeof m.library === "string" ? m.library : "", fresh: m.fresh === true });
+  if ((m.type !== "run" && m.type !== "trace") || typeof m.id !== "string" || typeof m.source !== "string") return;
+  queue.push({ kind: m.type, id: m.id, source: m.source, stdin: typeof m.stdin === "string" ? m.stdin : "", library: typeof m.library === "string" ? m.library : "",
+    options: m.type === "trace" && typeof m.options === "string" ? m.options : "", fresh: m.fresh === true });
   pump();
 });
 window.parent.postMessage({ type: "lab-ready" }, "*");

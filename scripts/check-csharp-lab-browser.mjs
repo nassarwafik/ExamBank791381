@@ -121,10 +121,24 @@ async function setCode(panel, page, source) {
 }
 async function run(panel, page, source, timeout = 60000) {
   await setCode(panel, page, source);
-  await panel.getByRole("button", { name: "تشغيل" }).click();
+  await panel.getByRole("button", { name: "تشغيل", exact: true }).click();
   const status = panel.locator(".stt-cs-status");
   await status.filter({ hasNotText: /^$|جارٍ/ }).waitFor({ timeout });
   return { status: (await status.innerText()).trim(), out: await panel.getByTestId("csharp-output").textContent().catch(() => null), err: await panel.getByTestId("csharp-errors").textContent().catch(() => null) };
+}
+
+/** Visual lab V3: «تشغيل مرئي» — the program recorded step by step on this device and drawn by the course's trace view. */
+async function visual(panel, page, source, timeout = 60000) {
+  await setCode(panel, page, source);
+  await panel.getByRole("button", { name: "تشغيل مرئي", exact: true }).click();
+  const status = panel.locator(".stt-cs-status");
+  await status.filter({ hasNotText: /^$|جارٍ/ }).waitFor({ timeout });
+  const view = panel.getByTestId("csharp-trace");
+  await view.waitFor({ timeout: 20000 });
+  const counter = async () => (await view.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
+  const total = Number((await counter()).split("/")[1]);
+  for (let i = 1; i < total; i++) await view.getByRole("button", { name: "الخطوة التالية" }).click();
+  return { status: (await status.innerText()).trim(), total, last: await counter(), stack: await view.locator(".learning-ds-structures").innerText().catch(() => ""), out: await view.getByRole("region", { name: "الناتج حتى الآن" }).textContent() };
 }
 
 console.log("1. teacher, desktop: the book's C# editor runs on this computer");
@@ -149,6 +163,12 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   check(e.out === "back\n", "after the stack overflow the next program runs (" + JSON.stringify(e) + ")");
   const f = await run(panel, page, "static void Main()\n{\n    int x = 1\n}", 60000);
   check(/خطأ ترجمة/.test(f.status) && /Program\.cs\(3,\d+\): error CS1002/.test(f.err || ""), "a missing «;» → «خطأ ترجمة» on the writer's line 3 (" + (f.err || "").slice(0, 60) + ")");
+  // Visual lab V3 — the teacher's «تشغيل مرئي»: the book's Stack<T> program recorded on this device and drawn step by step
+  const v = await visual(panel, page, "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n}");
+  check(/سُجّل التنفيذ خطوة خطوة/.test(v.status) && v.total >= 10, "«تشغيل مرئي»: the run is recorded step by step (" + v.total + " steps, «" + v.status.slice(0, 40) + "»)");
+  check(v.last === "الخطوة " + v.total + " / " + v.total + "" || v.last.endsWith(v.total + " / " + v.total), "the steps can be walked to the last one (" + v.last + ")");
+  check(/3[\s\S]*2[\s\S]*1/.test(v.stack) && v.out === "[3,2,1]\n", "the last step draws the stack 3 2 1 and the output so far is [3,2,1] (" + JSON.stringify({ stack: v.stack.slice(0, 80), out: v.out }) + ")");
+  await shot(page, "lab-teacher-visual-1440");
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");
@@ -175,6 +195,7 @@ console.log("3. student, desktop: the book's C# editor runs on this computer too
   await studentOpens(page);
   const panel = await openEditor(page);
   check(/يعمل على جهازك/.test(await panel.getByTestId("csharp-on-device").innerText()), "the student's editor says the code runs on this computer");
+  check(await panel.getByRole("button", { name: "تشغيل مرئي", exact: true }).count() === 0, "student: no «تشغيل مرئي» (the teacher's only, plan V7 for students)");
   const a = await run(panel, page, "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n}", 180000);
   check(/انتهى التشغيل بنجاح/.test(a.status) && a.out === "[3,2,1]\n", "student: the book's Stack<T>: [3,2,1] (" + JSON.stringify(a) + ")");
   const mine = traffic.slice(before).filter(t => t.path === "/api/student-tools/csharp-run");

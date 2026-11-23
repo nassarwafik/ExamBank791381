@@ -1,6 +1,7 @@
 import { normalizeExecutionResult, type CodeExecutionResult } from "../codingContract";
 import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 import type { CodingExecutionService } from "../coding/codingExecution";
+import { readLabTrace, type LabTraceResult } from "./labTrace";
 
 // On-device C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «On-device C# lab») — PRACTICE runs of C# on the user's
 // own computer, on a DESKTOP only (isDesktopViewport): Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only
@@ -50,7 +51,8 @@ async function answerFetch(frame: HTMLIFrameElement, id: string, name: unknown):
   }
 }
 
-type Pending = { resolve: (r: CodeExecutionResult) => void; timer: ReturnType<typeof setTimeout> };
+/** `resolve` gets the lab's raw result: a run normalises it (deviceCSharpRun), a trace reads it (deviceCSharpTrace). */
+type Pending = { resolve: (raw: unknown) => void; timer: ReturnType<typeof setTimeout> };
 type Lab = { frame: HTMLIFrameElement; ready: Promise<void>; pending: Map<string, Pending> };
 let lab: Lab | null = null;
 let seq = 0;
@@ -82,9 +84,7 @@ function ensureLab(): Lab {
       if (!p) return;
       clearTimeout(p.timer);
       pending.delete(m.id);
-      // the lab reports the program's own run time as runMs (compile excluded): it is the case's duration
-      const raw = m.result && typeof m.result === "object" && !Array.isArray(m.result) ? (m.result as Record<string, unknown>) : null;
-      p.resolve(normalizeExecutionResult(raw && typeof raw.runMs === "number" && raw.durationMs === undefined ? { ...raw, durationMs: raw.runMs } : m.result, OUTPUT_BYTES));
+      p.resolve(m.result);
     }
   };
   window.addEventListener("message", onMessage);
@@ -119,28 +119,47 @@ export async function deviceCSharpRun(source: string, stdin: string, library: st
   const l = ensureLab();
   try { await l.ready; } catch { throw unavailable(); }
   if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
+  const result = await post(l, { type: "run", source, stdin, library, ...(opts.fresh ? { fresh: true } : {}) }, signal);
+  // the lab reports the program's own run time as runMs (compile excluded): it is the case's duration
+  const raw = result && typeof result === "object" && !Array.isArray(result) ? (result as Record<string, unknown>) : null;
+  return normalizeExecutionResult(raw && typeof raw.runMs === "number" && raw.durationMs === undefined ? { ...raw, durationMs: raw.runMs } : result, OUTPUT_BYTES);
+}
+
+/** One message to the lab and its raw answer (time-out → unavailable; abort → ABORTED). */
+function post(l: Lab, message: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
   const id = "run-" + (++seq);
-  return new Promise<CodeExecutionResult>((resolve, reject) => {
+  return new Promise<unknown>((resolve, reject) => {
     const timer = setTimeout(() => { l.pending.delete(id); reject(unavailable()); }, RUN_TIMEOUT_MS);
     l.pending.set(id, { resolve, timer });
     signal?.addEventListener("abort", () => { clearTimeout(timer); l.pending.delete(id); reject(new CSharpToolRunError("ABORTED", "")); }, { once: true });
-    l.frame.contentWindow?.postMessage({ type: "run", id, source, stdin, library, ...(opts.fresh ? { fresh: true } : {}) }, "*");
+    l.frame.contentWindow?.postMessage({ ...message, id }, "*");
   });
+}
+
+/** Visual lab V3 — ONE program RECORDED step by step on this device (the lab's trace recorder, tools/csharp-lab/Tracer.cs), read
+ *  strictly into the course's trace shape (labTrace.ts). Same lab, same isolation and time limit as a run. */
+export async function deviceCSharpTrace(source: string, stdin: string, library: string, signal?: AbortSignal): Promise<LabTraceResult> {
+  const l = ensureLab();
+  try { await l.ready; } catch { throw unavailable(); }
+  if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
+  const result = await post(l, { type: "trace", source, stdin, library, options: "{}" }, signal);
+  return readLabTrace(result, source, stdin);
 }
 
 /** The book editor's on-device runner (teacher and students): `headers` are the reader's session headers, used ONLY to read the
  *  book's classes from the API, which checks the reader (a teacher entitled to the course; a student whose class offers the book
  *  with running allowed). */
-export function bookDeviceRunner(courseId: string, headers: Record<string, string>): CSharpToolRunner {
+export function bookDeviceRunner(courseId: string, headers: Record<string, string>, opts: { visual?: boolean } = {}): CSharpToolRunner {
   const library = libraryLoader(courseId, headers);
+  const lib = async () => {
+    try { return await library(); } catch { throw new CSharpToolRunError("LIBRARY_UNAVAILABLE", "تعذّر تحميل فئات الكتاب (Stack وQueue وNode…). تحقّق من الاتصال وحاول مرة أخرى."); }
+  };
   return {
     where: "device",
     available: async () => true,
-    async run(source, stdin, signal) {
-      let lib: string;
-      try { lib = await library(); } catch { throw new CSharpToolRunError("LIBRARY_UNAVAILABLE", "تعذّر تحميل فئات الكتاب (Stack وQueue وNode…). تحقّق من الاتصال وحاول مرة أخرى."); }
-      return deviceCSharpRun(source, stdin, lib, signal);
-    },
+    async run(source, stdin, signal) { return deviceCSharpRun(source, stdin, await lib(), signal); },
+    // Visual lab V3: the TEACHER's reader only (`visual`, set by the dock from the reader's actor) — the plan keeps students for V7.
+    ...(opts.visual ? { async trace(source: string, stdin: string, signal?: AbortSignal) { return deviceCSharpTrace(source, stdin, await lib(), signal); } } : {}),
   };
 }
 
