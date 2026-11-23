@@ -93,7 +93,7 @@ export default function CSharpEditorTool({ runner }: Props) {
         </div>
       ) : canRun ? (
         <>
-          {onDevice && <p className="stt-hint" data-testid="csharp-on-device">يعمل على جهازك (مختبر المعلّم): بلا مشغّل وبلا تكلفة. أول تشغيل يحمّل المترجم مرة واحدة (نحو 12 ميغابايت).</p>}
+          {onDevice && <p className="stt-hint" data-testid="csharp-on-device">يعمل على جهازك: بلا مشغّل وبلا تكلفة. أول تشغيل يحمّل المترجم مرة واحدة (نحو 10 ميغابايت)، ثم يبقى محفوظًا في المتصفح.</p>}
           <label className="stt-cs-field">
             <span>المدخلات <small>(كل قيمة في سطر، بترتيب قراءتها بـ <bdi dir="ltr">Console.ReadLine</bdi>)</small></span>
             <textarea className="stt-cs-input" dir="ltr" lang="en" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />

@@ -8,7 +8,6 @@ import { studentToolAnswerRisks } from "./studentToolsRisk";
 import { bookCSharpRunner, CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
 import StudentToolDock from "./StudentToolDock";
 import StudentToolsEditor from "./StudentToolsEditor";
-import CourseToolDock from "./CourseToolDock";
 import type { CodeExecutionResult } from "../codingContract";
 import { readFileSync } from "node:fs";
 
@@ -88,7 +87,7 @@ describe("T14 — exams and assignments: a writing aid only", () => {
       const src = readFileSync(f, "utf8");
       expect({ f, wiresRunner: /csharpRunner|csharpToolRun|CSharpRunner/.test(src) }).toEqual({ f, wiresRunner: false });
     }
-    expect(readFileSync("src/studentTools/CourseToolDock.tsx", "utf8")).toMatch(/bookCSharpRunner/);
+    expect(readFileSync("src/studentTools/CourseToolDock.tsx", "utf8")).toMatch(/bookDeviceRunner/);   // books: the on-device lab
   });
   it("a book runner with a write-only book set still runs nothing", async () => {
     const f = fakeRunner(async () => ok("x"));
@@ -185,20 +184,8 @@ describe("T14 — the book transport", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
     expect(await bookCSharpRunner({}, "x").available()).toBe(true);
   });
-  it("the book tool bar runs through the Reader's session headers", async () => {
-    const fetchMock = vi.fn(async (_p: string, init?: RequestInit) => new Response(JSON.stringify(init?.method === "GET" ? { ok: true, available: true } : { ok: true, result: ok("BOOK\n") }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer S" }} />);
-    fireEvent.click(screen.getByTestId("student-tools-button"));
-    fireEvent.click(within(screen.getByRole("group", { name: "الأدوات المسموحة" })).getByRole("button", { name: "محرر C#" }));
-    const panel = screen.getByRole("dialog", { name: "محرر C#" });
-    await within(panel).findByTestId("csharp-editor-tool");
-    await runReady(panel);
-    fireEvent.click(within(panel).getByRole("button", { name: "تشغيل" }));
-    expect((await within(panel).findByTestId("csharp-output")).textContent).toBe("BOOK\n");
-    const post = fetchMock.mock.calls.map(c => c as unknown as [string, RequestInit]).find(([, init]) => init.method === "POST")!;
-    expect(JSON.parse(String(post[1].body)).context).toBe("book");
-  });
+  // (Owner decision, after #696: a book's C# editor runs ON THE DEVICE for every reader — deviceCSharpLab.t15 covers that path;
+  //  bookCSharpRunner, the Runner transport above, stays available for a host that has no device lab.)
 });
 
 describe("T14 — Builder and answer risk", () => {

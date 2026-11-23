@@ -9,7 +9,9 @@
 //      a recursion without end → a runtime error, and the next run works; a compile error names the writer's line. The only server
 //      call is ONE read of the book's classes — never a run.
 //   2. TEACHER on a PHONE (390, touch): no lab, no frame — the editor is the one it was (the Runner path).
-//   3. STUDENT on a desktop: no lab, no frame; and the book's classes route refuses a student session.
+//   3. STUDENT on a desktop (owner decision, #700: every reader of a book whose editor may run): the editor runs on this computer too —
+//      the book's Stack<T> prints [3,2,1], no program reaches a server, ONE read of the book's classes with the STUDENT's session.
+//   3b. STUDENT on a PHONE: no lab, no frame (desktop only, as for the teacher).
 //   4. No CSP violation in the page or the frame; no page error.
 // Tools: PLAYWRIGHT_CORE_DIR (or the global `playwright`), CHROMIUM_PATH. SHOT_DIR (optional) receives screenshots.
 // Exit 1 when a check fails, 2 when a tool or the build (with the lab) is missing.
@@ -166,16 +168,30 @@ console.log("2. teacher, phone: no lab");
   await ctx.close();
 }
 
-console.log("3. student, desktop: no lab; the book's classes are refused to a student");
+console.log("3. student, desktop: the book's C# editor runs on this computer too");
 {
+  const before = traffic.length;
   const { ctx, page } = await session("student", { width: 1440, height: 900 });
   await studentOpens(page);
   const panel = await openEditor(page);
+  check(/يعمل على جهازك/.test(await panel.getByTestId("csharp-on-device").innerText()), "the student's editor says the code runs on this computer");
+  const a = await run(panel, page, "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n}", 180000);
+  check(/انتهى التشغيل بنجاح/.test(a.status) && a.out === "[3,2,1]\n", "student: the book's Stack<T>: [3,2,1] (" + JSON.stringify(a) + ")");
+  const mine = traffic.slice(before).filter(t => t.path === "/api/student-tools/csharp-run");
+  check(mine.filter(t => t.method === "POST").length === 0, "student: no program was sent to a server");
+  check(mine.filter(t => t.method === "GET").length === 1 && mine.find(t => t.method === "GET").status === 200, "student: ONE read of the book's classes, allowed by the book's run permission (" + JSON.stringify(mine) + ")");
+  await shot(page, "lab-student-1440");
+  await ctx.close();
+}
+
+console.log("3b. student, phone: no lab");
+{
+  const { ctx, page } = await session("student", { width: 390, height: 844 }, { touch: true });
+  await studentOpens(page);
+  const panel = await openEditor(page);
   await page.waitForTimeout(500);
-  check(await panel.getByTestId("csharp-on-device").count() === 0, "no on-device note (the Runner path, as before)");
-  check(await page.locator("iframe[data-testid='teacher-csharp-lab']").count() === 0, "no lab frame");
-  const r = await page.evaluate(async t => { const x = await fetch("/api/student-tools/csharp-run?library=899271d", { headers: { Authorization: "Bearer " + t } }); return { status: x.status, body: await x.text() }; }, studentToken);
-  check(r.status >= 400 && !/class Stack/.test(r.body), "GET /api/student-tools/csharp-run?library=… with a student session → " + r.status + ", no classes");
+  check(await panel.getByTestId("csharp-on-device").count() === 0, "student, phone: no on-device note (the Runner path, as before)");
+  check(await page.locator("iframe[data-testid='teacher-csharp-lab']").count() === 0, "student, phone: no lab frame");
   await ctx.close();
 }
 

@@ -9,6 +9,7 @@ import { normalizeClassStatus } from "../classLifecycle";
 import { useConfirm } from "../ui/useConfirm";
 import { windowBlocks, assignmentWindowIssues } from "./assignmentWindow";
 import { bulkRetryNotice } from "./codingRecovery";
+import { deviceGradeNotice, DeviceGradingError, gradeAllOnDevice, gradeStudentOnDevice, type DeviceGradeProgress, type DeviceGradeSummary } from "../coding/deviceGrading";
 import { assignmentsApi, toLocalInput } from "./assignmentsApi";
 import { matchesMasterScope, normalizeQuery, gradebookRows, rowGrading, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
 import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
@@ -351,6 +352,23 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     await loadResults(item);
     setNotice(bulkRetryNotice({ scheduled: Number(r.scheduled) || 0, hasMore: !!r.hasMore }));
   }
+  // Teacher-device grading (owner decision 2026-11-23): the open C# answers run on THIS computer (the on-device lab), the server
+  // compares and applies the mark; then the gradebook reloads from the server. One student, or every student the server lists.
+  async function deviceGrade(student: StudentResult | null) {
+    if (!resultsFor) return;
+    const item = resultsFor;
+    const message = (student ? "ستُشغَّل إجابات C# المفتوحة لـ «" + student.studentName + "»" : "ستُشغَّل إجابات C# المفتوحة لكل الطلاب") +
+      " على هذا الحاسوب، والخادم يقارن ويحسب العلامة. أول مرة يُحمَّل المترجم (نحو 10 ميغابايت). إجابة تتجاوز الوقت على جهازك تبقى «قيد المراجعة» ولا تصبح صفرًا.";
+    if (!(await confirm({ message, title: "التصحيح على جهازي", confirmLabel: "ابدأ التصحيح" }))) return;
+    setBusy(true); setError(""); setNotice("جارٍ التصحيح على جهازك…");
+    const onProgress = (p: DeviceGradeProgress) => setNotice("جارٍ التصحيح على جهازك… " + (p.students > 1 ? "الطالب " + p.student + " من " + p.students + "، " : "") + "الإجابة " + p.answer + " من " + p.answers);
+    let sum: DeviceGradeSummary | null = null;
+    try { sum = student ? await gradeStudentOnDevice(api, item.assignmentId, student.studentId, { onProgress }) : await gradeAllOnDevice(api, item.assignmentId, { onProgress }); }
+    catch (e) { setNotice(""); setError(e instanceof DeviceGradingError || e instanceof Error ? e.message : "تعذّر التصحيح على هذا الجهاز."); }
+    finally { setBusy(false); }
+    await loadResults(item);
+    if (sum) setNotice(deviceGradeNotice(sum));
+  }
   // Merge an authoritative lifecycle snapshot (returned by every mutating action) into the student's row so the UI never guesses
   // (B2B #2/#20). Only defined fields are applied.
   function mergeSnap(studentId: string, snap: LifecycleSnap) { setResults(x => x.map(y => (y.studentId === studentId ? { ...y, ...snap } : y))); }
@@ -486,7 +504,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item), setLatePolicy: (item: Item, value: LatePolicy | null) => void setLatePolicy(item, value), setResultsRelease: (item: Item, mode: ResultsRelease) => void setResultsRelease(item, mode), releaseResults: (item: Item, released: boolean) => void releaseResults(item, released) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
     detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, tab: pageTab, selectTab: selectPageTab, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
-    gradebook: { rows: visibleResults, results, moved: movedStudents, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s), lateWaiver: (s: StudentResult, waived: boolean) => void lateWaiver(s, waived),
+    gradebook: { rows: visibleResults, results, moved: movedStudents, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), deviceGradeAll: () => void deviceGrade(null), deviceGradeStudent: (s: StudentResult) => void deviceGrade(s), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s), lateWaiver: (s: StudentResult, waived: boolean) => void lateWaiver(s, waived),
       selected, toggleSelected: (id: string) => setSelected(x => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; }),
       toggleAllSelected: (ids: string[], on: boolean) => setSelected(x => { const n = new Set(x); for (const id of ids) { if (on) n.add(id); else n.delete(id); } return n; }),
       clearSelection, bulkGrant: () => void bulkGrant(), openBulkDeadline,
