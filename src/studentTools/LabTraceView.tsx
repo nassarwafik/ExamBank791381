@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "../learning/activities/activities.css";
 import "./labTrace.css";
 import DsTraceView from "../learning/activities/DsTraceView";
 import type { DsTrace } from "../learning/activities/ds";
-import { nextBreak, PLAY_SPEEDS as SPEEDS, structureSteps } from "../learning/activities/dsMotion";
+import { changesStructures, isStop, nextBreak, PLAY_SPEEDS as SPEEDS, structureSteps } from "../learning/activities/dsMotion";
+import type { LabTraceOptions, LabTraceResult } from "./labTrace";
 import Dialog from "../ui/Dialog";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 
@@ -15,27 +16,48 @@ import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 //   • motion: what enters a stack / queue slides in, what leaves slides out, a new cell appears (dsMotion.ts). None with
 //     prefers-reduced-motion — the steps are the same, only still;
 //   • «توسيع»: the same player in a wide window, for the class. One state for both places.
+// V4 part 2 (§12):
+//   • Viz.Pause("…") in the program is a stop like a breakpoint (auto-play halts there, «إلى نقطة التوقف التالية» goes there, and
+//     «عمليات المباني فقط» keeps it); Viz.Show("…") titles a step (the step's note, drawn by the course's view);
+//   • «اكشف الداخل»: records the SAME program again with the book's Stack<T> / Queue<T> as objects (their Node<T> chain) — the step,
+//     the breakpoints and the other choices stay; a failed re-recording keeps the drawing it had and says so;
+//   • «توقّع قبل أن ترى»: every step whose structures changed is covered until «اكشف» (auto-play halts at it) — the class predicts first.
 // Its own lazy chunk (with its CSS): the editor and the reader carry none of it until a visual run is asked for.
 type Speed = keyof typeof SPEEDS;
 const SPEED_NAMES: Record<Speed, string> = { slow: "بطيء", normal: "عادي", fast: "سريع" };
 
-export default function LabTraceView({ trace, epoch }: { trace: DsTrace; epoch: number }) {
-  return <Player key={epoch} trace={trace} epoch={epoch} />;
+type Retrace = (options: LabTraceOptions, signal: AbortSignal) => Promise<LabTraceResult>;
+
+export default function LabTraceView({ trace, epoch, retrace }: { trace: DsTrace; epoch: number; retrace?: Retrace }) {
+  return <Player key={epoch} first={trace} epoch={epoch} retrace={retrace} />;
 }
 
-function Player({ trace, epoch }: { trace: DsTrace; epoch: number }) {
+const stopNote = (line: number, isBreak: boolean) => (isBreak ? "توقف عند نقطة التوقف على السطر " + line + "." : "توقف عند Viz.Pause على السطر " + line + ".");
+
+function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retrace?: Retrace }) {
+  const [trace, setTrace] = useState(first);
   const total = trace.steps.length;
-  const [at, setAt] = useState(0);
+  const [atRaw, setAt] = useState(0);
+  const at = Math.min(atRaw, total - 1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<Speed>("normal");
   const [opsOnly, setOpsOnly] = useState(false);
   const [breakpoints, setBreakpoints] = useState<ReadonlySet<number>>(new Set());
   const [expanded, setExpanded] = useState(false);
   const [note, setNote] = useState("");
+  const [inside, setInside] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [predict, setPredict] = useState(false);
+  const [revealed, setRevealed] = useState<ReadonlySet<number>>(new Set());
   const reduced = usePrefersReducedMotion();
+  const ctrl = useRef<AbortController | null>(null);
+  useEffect(() => () => ctrl.current?.abort(), []);
 
   const ops = useMemo(() => structureSteps(trace), [trace]);
-  const pool = useMemo(() => (opsOnly ? ops : trace.steps.map((_, i) => i)), [opsOnly, ops, trace]);
+  // «عمليات المباني فقط» keeps the writer's own Viz.Pause() stops too
+  const pool = useMemo(() => (opsOnly ? trace.steps.map((_, i) => i).filter(i => ops.includes(i) || trace.steps[i].pause === true) : trace.steps.map((_, i) => i)),
+    [opsOnly, ops, trace]);
+  const isHidden = (i: number) => predict && !revealed.has(i) && changesStructures(trace, i);
   const after = (i: number) => pool.find(p => p > i) ?? null;
   const before = (i: number) => [...pool].reverse().find(p => p < i) ?? null;
 
@@ -47,24 +69,51 @@ function Player({ trace, epoch }: { trace: DsTrace; epoch: number }) {
     if (next === undefined) return;
     const t = setTimeout(() => {
       setAt(next);
-      const line = trace.steps[next].line;
-      if (breakpoints.has(line)) { setPlaying(false); setNote("توقف عند نقطة التوقف على السطر " + line + "."); }
+      const step = trace.steps[next];
+      if (isStop(step, breakpoints)) { setPlaying(false); setNote(stopNote(step.line, breakpoints.has(step.line))); }
+      else if (predict && !revealed.has(next) && changesStructures(trace, next)) { setPlaying(false); setNote("تغيّرت المباني: توقّعوا كيف أصبحت، ثم اكشفوا."); }
       else if (pool.find(p => p > next) === undefined) setPlaying(false);
     }, SPEEDS[speed]);
     return () => clearTimeout(t);
-  }, [playing, at, speed, pool, breakpoints, trace]);
+  }, [playing, at, speed, pool, breakpoints, trace, predict, revealed]);
 
   const move = (to: number | null) => { if (to !== null) { setAt(to); setNote(""); } };
   const toggle = (line: number) => setBreakpoints(b => { const n = new Set(b); if (n.has(line)) n.delete(line); else n.add(line); return n; });
   const toBreak = () => {
     const i = nextBreak(trace, at, breakpoints, pool);
-    if (i === null) setNote(breakpoints.size ? "لا نقطة توقّف بعد هذه الخطوة." : "لا نقاط توقّف: انقر رقم سطر في البرنامج لتضع واحدة.");
+    if (i === null) setNote(breakpoints.size || trace.steps.some(s => s.pause) ? "لا نقطة توقّف بعد هذه الخطوة." : "لا نقاط توقّف: انقر رقم سطر في البرنامج لتضع واحدة.");
     else move(i);
   };
+  // «اكشف الداخل»: the same program recorded again; what the teacher chose stays (step, breakpoints, speed, walk)
+  const lookInside = async (on: boolean) => {
+    if (!retrace) return;
+    ctrl.current?.abort();
+    const c = new AbortController();
+    ctrl.current = c;
+    setPlaying(false);
+    setRecording(true);
+    setInside(on);
+    setNote(on ? "جارٍ تسجيل البرنامج مع داخل المكدّس والطابور…" : "جارٍ تسجيل البرنامج كما يُرسم عادة…");
+    try {
+      const r = await retrace({ inside: on }, c.signal);
+      if (c.signal.aborted) return;
+      if (!r.trace) { setInside(!on); setNote("تعذّر التسجيل الآن، فبقي العرض كما كان." + (r.status === "compile-error" ? " (خطأ ترجمة)" : "")); return; }
+      setTrace(r.trace);
+      setRevealed(new Set());
+      setNote(on ? "المكدّس والطابور معروضان من الداخل: عقد مترابطة (Node) يشير إليها رأسهما." : "عاد المكدّس والطابور إلى رسمهما المعتاد.");
+    } catch {
+      if (!c.signal.aborted) { setInside(!on); setNote("تعذّر التسجيل الآن، فبقي العرض كما كان."); }
+    } finally {
+      if (!c.signal.aborted) setRecording(false);
+    }
+  };
+  const setGuess = (on: boolean) => { setPredict(on); setRevealed(new Set()); setNote(on ? "عند كل خطوة تغيّر المباني: توقّعوا أولًا، ثم «اكشف»." : ""); };
+  const reveal = () => { setRevealed(r => new Set(r).add(at)); setNote(""); };
   const setOps = (on: boolean) => {
     setOpsOnly(on);
     // the step shown stays a step of the walk: the nearest structure step at or before it
-    if (on && !ops.includes(at)) setAt([...ops].reverse().find(p => p <= at) ?? 0);
+    const kept = (i: number) => ops.includes(i) || trace.steps[i].pause === true;
+    if (on && !kept(at)) setAt(trace.steps.map((_, i) => i).filter(i => i <= at && kept(i)).pop() ?? 0);
   };
   const isLast = after(at) === null, isFirst = before(at) === null;
 
@@ -84,6 +133,12 @@ function Player({ trace, epoch }: { trace: DsTrace; epoch: number }) {
         </label>
         <button type="button" className="learning-trace-btn" onClick={toBreak}>إلى نقطة التوقف التالية</button>
         <label className="lab-trace-check"><input type="checkbox" checked={opsOnly} onChange={e => setOps(e.target.checked)} /> عمليات المباني فقط</label>
+        {retrace && (
+          <label className="lab-trace-check" title="يرسم Stack و Queue الخاصّين بالكتاب كعقد مترابطة كما بُنيا">
+            <input type="checkbox" checked={inside} disabled={recording} onChange={e => void lookInside(e.target.checked)} /> اكشف الداخل
+          </label>
+        )}
+        <label className="lab-trace-check"><input type="checkbox" checked={predict} onChange={e => setGuess(e.target.checked)} /> توقّع قبل أن ترى</label>
         {!expanded && <button type="button" className="learning-trace-btn" onClick={() => setExpanded(true)}>توسيع</button>}
         <span className="learning-trace-counter">الخطوة <span dir="ltr">{at + 1} / {total}</span></span>
         {total > 12 && (
@@ -92,7 +147,8 @@ function Player({ trace, epoch }: { trace: DsTrace; epoch: number }) {
         )}
       </div>
       <p className="lab-trace-note" role="status" aria-live="polite">{note || (breakpoints.size ? "نقاط التوقف: السطر " + [...breakpoints].sort((a, b) => a - b).join("، ") + "." : "انقر رقم سطر في البرنامج لتضع نقطة توقّف.")}</p>
-      <DsTraceView cfg={trace} epoch={epoch} at={at} controls={false} breakpoints={breakpoints} onToggleBreakpoint={toggle} motion={!reduced} />
+      <DsTraceView cfg={trace} epoch={epoch} at={at} controls={false} breakpoints={breakpoints} onToggleBreakpoint={toggle} motion={!reduced}
+        hidden={isHidden(at)} onReveal={reveal} />
     </div>
   );
 

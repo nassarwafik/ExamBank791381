@@ -11,7 +11,8 @@ export type DsObj =
   | { id: number; k: "bin"; v: string; l: number | null; r: number | null }
   | { id: number; k: "obj"; type: string; fields: [string, DsVal][] };
 export type DsFrame = { name: string; vars: [string, DsVal][] };
-export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean };
+/** `pause` (visual lab V4, optional; never in a course trace): the writer's Viz.Pause() — a stop for the teacher's player. */
+export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean };
 export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[] };
 
 export const DS_LIMITS = { lines: 120, steps: 260, objs: 80, items: 40, text: 80, frames: 40, vars: 30 } as const;
@@ -73,7 +74,8 @@ function readObjs(raw: unknown): DsObj[] | null {
 }
 
 /**
- * Reads a `ds-trace` config: `{ code, given?, stdin?, out, steps: [{ l, n, f?, h?, o, e? }] }`. A step's frames (`f`) and
+ * Reads a `ds-trace` config: `{ code, given?, stdin?, out, steps: [{ l, n, f?, h?, o, e?, p? }] }` (`p`: the lab's Viz.Pause — never in a
+ * course trace; only the teacher's player stops on it). A step's frames (`f`) and
  * objects (`h`) are omitted when they equal the previous step's; `o` is how many characters of `out` were printed so far.
  * `limits`: the course's own (DS_LIMITS) by default; the teacher's visual run (src/studentTools/labTrace.ts) allows a longer
  * program and trace — every other check is the same.
@@ -95,7 +97,7 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
     const refs = [...frames.flatMap(f => f.vars), ...objs.flatMap(o => (o.k === "obj" ? o.fields : []))];
     if (refs.some(([, v]) => v.t === "ref" && !ids.has(v.id))) return null;
     printed = s.o;
-    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true });
+    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}) });
   }
   return { lines, ...(short(c.given) || (isStr(c.given) && c.given.length <= 300) ? { given: c.given as string } : {}), ...(isStr(c.stdin) ? { stdin: c.stdin } : {}), steps };
 }

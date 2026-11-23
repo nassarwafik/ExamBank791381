@@ -11,6 +11,16 @@
 // Nothing is recorded while the recorder itself reads a value (a writer's ToString runs muted), or inside a method named «quiet».
 internal static class TraceRuntime
 {
+    /// <summary>Visual lab V4 — the class a teacher's program may call IN THE VISUAL RUN ONLY (it is compiled into traced programs, never
+    /// into «تشغيل» or teacher-device grading): Viz.Show("…") gives the step a title of the writer's own; Viz.Pause() makes it a
+    /// stop for the player's auto-play. A program that declares its own class Viz keeps it (this one is then left out).</summary>
+    internal const string VizSource = @"
+public static class Viz
+{
+    public static void Show(string title) => global::__LabTrace.Show(title);
+    public static void Pause(string? reason = null) => global::__LabTrace.Pause(reason);
+}
+";
     internal const string Source = @"
 #nullable enable
 internal sealed class __LabTraceLimit : global::System.Exception { }
@@ -35,8 +45,12 @@ internal static class __LabTrace
     static string lastFrames = ""[]"", lastObjs = ""[]"";
     static string? pendingFrames, pendingObjs;
 
-    public static void Configure(global::System.IO.StringWriter @out, int shownLines, int max, string[] quietNames, string[] library)
+    static bool inside;            // «اكشف الداخل»: the book's Stack<T> / Queue<T> recorded as the objects they are (Head / First, Last → Node<T>)
+    static string? markNote;       // Viz.Show(title) / Viz.Pause(reason): the next recorded step carries the title …
+    static bool markPause;         // … and, for Pause, a stop for the player
+    public static void Configure(global::System.IO.StringWriter @out, int shownLines, int max, string[] quietNames, string[] library, bool insideMode)
     {
+        inside = insideMode;
         output = @out; shown = shownLines; maxSteps = max; quiet = new global::System.Collections.Generic.HashSet<string>(quietNames);
         libraryTypes = new global::System.Collections.Generic.HashSet<string>(library);
     }
@@ -91,16 +105,20 @@ internal static class __LabTrace
         if (l > shown) { pendingFrames = fr; pendingObjs = ob; return; }
         pendingFrames = pendingObjs = null;
         if (count >= maxSteps) throw new __LabTraceLimit();
-        Append(l, note, fr, ob, false);
+        bool pause = markPause;
+        if (markNote != null) note = markNote;
+        markNote = null; markPause = false;
+        Append(l, note, fr, ob, false, pause);
         lastFrames = fr; lastObjs = ob;
     }
 
-    static void Append(int l, string note, string fr, string ob, bool error)
+    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false)
     {
         if (count > 0) steps.Append(',');
         steps.Append(""{\""line\"":"").Append(l).Append("",\""note\"":"").Append(Json(note)).Append("",\""frames\"":"").Append(fr)
              .Append("",\""objs\"":"").Append(ob).Append("",\""out\"":"").Append(Json(output.ToString()));
         if (error) steps.Append("",\""error\"":true"");
+        if (pause) steps.Append("",\""pause\"":true"");
         steps.Append('}');
         count++;
     }
@@ -108,6 +126,9 @@ internal static class __LabTrace
     public static void Finish() { if (pendingFrames != null) Append(0, ""انتهى التنفيذ."", pendingFrames, pendingObjs!, false); }
     public static void Fail() { if (line <= shown) Append(line, ""خطأ في التشغيل: البرنامج يتوقّف هنا."", lastFrames, lastObjs, true); }
     public static string StepsJson() => ""["" + steps + ""]"";
+    /// <summary>Viz.Show / Viz.Pause (the visual run's own class, TraceRuntime.VizSource): marks the step of the statement that called it.</summary>
+    public static void Show(string title) { markNote = string.IsNullOrWhiteSpace(title) ? null : title; }
+    public static void Pause(string? reason) { markPause = true; if (!string.IsNullOrWhiteSpace(reason)) markNote = reason; }
 
     // ── the snapshot ──
     static (string frames, string objs) Snapshot()
@@ -151,6 +172,7 @@ internal static class __LabTrace
         var name = t.Name;
         if (libraryTypes.Contains(name))
         {
+            if (inside && (name == ""Stack`1"" || name == ""Queue`1"")) return ""obj"";   // «اكشف الداخل»: its fields and its Node<T> chain
             if (name == ""Stack`1"") return ""stack"";
             if (name == ""Queue`1"") return ""queue"";
             if (name == ""Node"" || name == ""Node`1"") return ""node"";

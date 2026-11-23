@@ -150,6 +150,40 @@ const BEYOND = [
   { name: "input with Console.ReadLine while traced", stdin: "7\n",
     source: "static void Main()\n{\n    int n = int.Parse(Console.ReadLine());\n    Console.WriteLine(n * n);\n}",
     check: (t, steps) => t.status === "success" && t.stdout === "49\n" && steps.some(s => s.frames[0].vars.some(([v, x]) => v === "n" && x.s === "7")) },
+  // Visual lab V4 part 2 — «اكشف الداخل»: the book's Stack<T> recorded as the object it is (its Head) and its Node<T> chain
+  { name: "«اكشف الداخل»: the book's Stack<T> as an object whose Head points at the Node<T> chain 3 → 2 → 1", stdin: "", library: true, options: { inside: true },
+    source: "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1);
+      const st = last && last.objs.find(o => o.k === "obj" && o.type === "Stack");
+      const head = st && st.fields.find(([n]) => n === "Head");
+      const byId = new Map((last?.objs || []).map(o => [o.id, o]));
+      const chain = [];
+      for (let id = head && head[1].id; id != null && chain.length < 10; id = byId.get(id)?.next) chain.push(byId.get(id)?.v);
+      return t.status === "success" && t.stdout === "[3,2,1]\n" && !last.objs.some(o => o.k === "stack") && chain.join(",") === "3,2,1";
+    } },
+  { name: "«اكشف الداخل»: the book's Queue<T> as an object whose First → 1 → 2 and Last → 2", stdin: "", library: true, options: { inside: true },
+    source: "static void Main()\n{\n    Queue<int> q = new Queue<int>();\n    q.Insert(1); q.Insert(2);\n    Console.WriteLine(q);\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1);
+      const qu = last && last.objs.find(o => o.k === "obj" && o.type === "Queue");
+      const field = name => qu && qu.fields.find(([n]) => n === name)?.[1];
+      const byId = new Map((last?.objs || []).map(o => [o.id, o]));
+      const chain = [];
+      for (let id = field("First")?.id; id != null && chain.length < 10; id = byId.get(id)?.next) chain.push(byId.get(id)?.v);
+      return t.status === "success" && t.stdout === "[1,2]\n" && !last.objs.some(o => o.k === "queue") && chain.join(",") === "1,2"
+        && byId.get(field("Last")?.id)?.v === "2";
+    } },
+  // Viz.Show / Viz.Pause: the visual run's own marks (a «تشغيل» of the same program does not know Viz: compile error, by design)
+  { name: "Viz.Show gives the step its title, Viz.Pause marks a stop; «تشغيل» does not know Viz", stdin: "", library: true, plainCompileError: true,
+    source: "static void Main()\n{\n    Queue<int> q = new Queue<int>();\n    q.Insert(1); q.Insert(2);\n    Viz.Show(\"بعد الإدخال\");\n    q.Remove();\n    Viz.Pause(\"قبل الطباعة\");\n    Console.WriteLine(q);\n}",
+    check: (t, steps) => t.status === "success" && t.stdout === "[2]\n"
+      && steps.some(s => s.line === 5 && s.note === "بعد الإدخال" && !s.pause)
+      && steps.some(s => s.line === 7 && s.note === "قبل الطباعة" && s.pause === true)
+      && steps.filter(s => s.pause).length === 1 },
+  { name: "a program with its own class Viz keeps it (no duplicate, no marks)", stdin: "",
+    source: "class Viz { public static void Show(string s) { Console.WriteLine(\"mine \" + s); } }\nclass Program { static void Main() { Viz.Show(\"x\"); } }",
+    check: (t, steps) => t.status === "success" && t.stdout === "mine x\n" && !steps.some(s => s.pause || s.note === "x") },
   { name: "the step limit: a loop without end stops as «step-limit» with exactly the limit's steps", stdin: "", options: { maxSteps: 50 },
     source: "static void Main()\n{\n    long i = 0;\n    while (true) i++;\n}",
     check: (t, steps) => t.status === "step-limit" && steps.length === 50 },
@@ -166,7 +200,8 @@ for (const b of BEYOND) {
   const traced = await page.evaluate(([s, i, l, o]) => window.labTrace(s, i, l, o), [b.source, b.stdin, lib, JSON.stringify(b.options || {})]);
   const plain = await page.evaluate(([s, i, l]) => window.labRun(s, i, l), [b.source, b.stdin, lib]);
   const steps = traced.steps || [];
-  const sameOutput = traced.status === "compile-error" || traced.status === "step-limit" || traced.stdout === plain.stdout;
+  const sameOutput = b.plainCompileError ? plain.status === "compile-error" && /Viz/.test(plain.stderr)
+    : traced.status === "compile-error" || traced.status === "step-limit" || traced.stdout === plain.stdout;
   const ok = !!b.check(traced, steps) && sameOutput;
   beyond.push({ name: b.name, ok, status: traced.status, steps: steps.length, sameOutput });
   if (!ok) console.log("✗ beyond: " + b.name + " — " + JSON.stringify({ status: traced.status, stdout: traced.stdout, plain: plain.stdout, stderr: String(traced.stderr).slice(0, 300) }));

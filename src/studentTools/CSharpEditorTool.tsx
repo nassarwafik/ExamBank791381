@@ -31,7 +31,7 @@ const READS_INPUT = /Console\s*\.\s*Read(Line)?\s*\(/;
 type Availability = "checking" | "up" | "down";
 const DOWN_CODES = new Set(["EXECUTION_UNAVAILABLE", "LANGUAGE_UNAVAILABLE"]);
 type State = { kind: "idle" } | { kind: "running" } | { kind: "done"; result: CodeExecutionResult } | { kind: "error"; message: string }
-  | { kind: "traced"; result: LabTraceResult; epoch: number };
+  | { kind: "traced"; result: LabTraceResult; epoch: number; source: string; stdin: string };
 /** What a visual run ended as (the steps say the rest). */
 const TRACED: Record<LabTraceResult["status"], string> = {
   success: "سُجّل التنفيذ خطوة خطوة. تنقّل بين الخطوات لترى المباني والمتغيّرات تتغيّر.",
@@ -98,7 +98,7 @@ export default function CSharpEditorTool({ runner }: Props) {
     setState({ kind: "running" });
     try {
       const traced = await runner.trace(source, stdin, c.signal);
-      if (!c.signal.aborted) setState(s => ({ kind: "traced", result: traced, epoch: (s.kind === "traced" ? s.epoch : 0) + 1 }));
+      if (!c.signal.aborted) setState(s => ({ kind: "traced", result: traced, epoch: (s.kind === "traced" ? s.epoch : 0) + 1, source, stdin }));
     } catch (e) {
       if (c.signal.aborted) return;
       setState({ kind: "error", message: e instanceof CSharpToolRunError && e.message ? e.message : "تعذّر التسجيل الآن. حاول مرة أخرى." });
@@ -149,7 +149,8 @@ export default function CSharpEditorTool({ runner }: Props) {
               {traced.result.clipped && <p className="stt-hint" role="note" data-testid="csharp-trace-clipped">بعض القيم أو المباني أكبر من أن تُرسم كاملة، فعُرض أولها.</p>}
               {traced.result.trace && (
                 <Suspense fallback={<p className="stt-hint" role="status">جارٍ تجهيز العرض…</p>}>
-                  <LabTraceView trace={traced.result.trace} epoch={traced.epoch} />
+                  <LabTraceView trace={traced.result.trace} epoch={traced.epoch}
+                    retrace={(options, signal) => runner!.trace!(traced.source, traced.stdin, signal, options)} />
                 </Suspense>
               )}
               {traced.result.stderr && (traced.result.status === "compile-error" || traced.result.status === "runtime-error" || traced.result.status === "trace-unsupported") && <>

@@ -12,6 +12,8 @@ import { DS_LIMITS, readDsTrace, type DsTrace } from "../learning/activities/ds"
 
 export const LAB_TRACE_LIMITS = { steps: 5000, lines: 1000 } as const;
 export type LabTraceStatus = "success" | "compile-error" | "runtime-error" | "output-limit" | "step-limit" | "timeout" | "trace-unsupported" | "internal-error";
+/** Visual lab V4: `inside` = «اكشف الداخل» (the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain). */
+export type LabTraceOptions = { inside?: boolean };
 export type LabTraceResult = { status: LabTraceStatus; stdout: string; stderr: string; trace: DsTrace | null; clipped: boolean };
 
 const STATUSES: ReadonlySet<string> = new Set(["success", "compile-error", "runtime-error", "output-limit", "step-limit", "timeout", "trace-unsupported", "internal-error"]);
@@ -73,7 +75,7 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
     const printed = str(s.out);
     if (printed.length > out.length) out = printed;
     const line = typeof s.line === "number" && s.line >= 0 ? s.line : -1;
-    return { l: line, n: str(s.note).slice(0, 600), f: frames, h: objs, o: printed.length, ...(s.error === true ? { e: true } : {}) };
+    return { l: line, n: str(s.note).slice(0, 600), f: frames, h: objs, o: printed.length, ...(s.error === true ? { e: true } : {}), ...(s.pause === true ? { p: true } : {}) };
   });
   // every step's output must be a prefix of the last one (the course reader checks offsets into ONE output)
   const consistent = r.steps.every(sRaw => out.startsWith(str(rec(sRaw).out)));

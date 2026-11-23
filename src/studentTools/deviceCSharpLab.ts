@@ -1,6 +1,6 @@
 import { normalizeExecutionResult, type CodeExecutionResult } from "../codingContract";
 import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
-import { readLabTrace, type LabTraceResult } from "./labTrace";
+import { readLabTrace, type LabTraceOptions, type LabTraceResult } from "./labTrace";
 
 // On-device C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «On-device C# lab») — PRACTICE runs of C# on the user's
 // own computer, on a DESKTOP only (isDesktopViewport): Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only
@@ -137,11 +137,11 @@ function post(l: Lab, message: Record<string, unknown>, signal?: AbortSignal): P
 
 /** Visual lab V3 — ONE program RECORDED step by step on this device (the lab's trace recorder, tools/csharp-lab/Tracer.cs), read
  *  strictly into the course's trace shape (labTrace.ts). Same lab, same isolation and time limit as a run. */
-export async function deviceCSharpTrace(source: string, stdin: string, library: string, signal?: AbortSignal): Promise<LabTraceResult> {
+export async function deviceCSharpTrace(source: string, stdin: string, library: string, signal?: AbortSignal, options: LabTraceOptions = {}): Promise<LabTraceResult> {
   const l = ensureLab();
   try { await l.ready; } catch { throw unavailable(); }
   if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
-  const result = await post(l, { type: "trace", source, stdin, library, options: "{}" }, signal);
+  const result = await post(l, { type: "trace", source, stdin, library, options: JSON.stringify(options.inside ? { inside: true } : {}) }, signal);
   return readLabTrace(result, source, stdin);
 }
 
@@ -158,7 +158,7 @@ export function bookDeviceRunner(courseId: string, headers: Record<string, strin
     available: async () => true,
     async run(source, stdin, signal) { return deviceCSharpRun(source, stdin, await lib(), signal); },
     // Visual lab V3: the TEACHER's reader only (`visual`, set by the dock from the reader's actor) — the plan keeps students for V7.
-    ...(opts.visual ? { async trace(source: string, stdin: string, signal?: AbortSignal) { return deviceCSharpTrace(source, stdin, await lib(), signal); } } : {}),
+    ...(opts.visual ? { async trace(source: string, stdin: string, signal?: AbortSignal, options?: LabTraceOptions) { return deviceCSharpTrace(source, stdin, await lib(), signal, options); } } : {}),
   };
 }
 

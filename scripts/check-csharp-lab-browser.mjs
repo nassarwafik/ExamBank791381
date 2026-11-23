@@ -72,6 +72,8 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 const failures = [];
 const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if (!ok) failures.push(what); };
 const shot = async (page, name) => { if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, name + ".png") }); };
+/** One element (scrolled into view) — the player's drawing sits below the editor. */
+const shotOf = async (locator, name) => { if (process.env.SHOT_DIR) await locator.screenshot({ path: path.join(process.env.SHOT_DIR, name + ".png") }); };
 const violations = [];
 async function session(role, viewport, { touch = false } = {}) {
   // The site's own service worker is ALLOWED (as in production): Playwright's «block» option injects a script into every frame, and
@@ -191,6 +193,34 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   await shot(page, "lab-teacher-visual-wide-1440");
   await wide.getByRole("button", { name: "إغلاق" }).click();
   await panel.getByTestId("csharp-trace").waitFor({ timeout: 10000 });
+  // Visual lab V4 part 2 — Viz.Show / Viz.Pause in the program, «اكشف الداخل» (the book's Stack<T> as its Node<T> chain), «توقّع قبل أن ترى»
+  await visual(panel, page, "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Push(1); s.Push(2);\n    Viz.Show(\"بعد الإدخال\");\n    Viz.Pause(\"قبل الطباعة\");\n    Console.WriteLine(s);\n}");
+  const pv = panel.getByTestId("csharp-trace");
+  await pv.getByRole("button", { name: "من البداية" }).click();
+  await pv.getByLabel("السرعة").selectOption("fast");
+  await pv.getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
+  await pv.getByText("توقف عند Viz.Pause على السطر 6.").waitFor({ timeout: 30000 });
+  const pauseLine = await pv.locator(".learning-trace-line.is-current .learning-trace-linecode").innerText();
+  check(pauseLine.includes("Viz.Pause") && /قبل الطباعة/.test(await pv.locator(".learning-trace-note").first().innerText()),
+    "V4b: auto-play stopped AT Viz.Pause (line 6), its reason shown");
+  await pv.getByRole("button", { name: "الخطوة السابقة" }).click();
+  check(/بعد الإدخال/.test(await pv.locator(".learning-trace-note").first().innerText()), "V4b: Viz.Show titles its step («بعد الإدخال»)");
+  await pv.getByLabel(/اكشف الداخل/).check();
+  await pv.getByText(/معروضان من الداخل/).waitFor({ timeout: 60000 });
+  const heap = await pv.getByRole("region", { name: "الكائنات" }).innerText().catch(() => "");
+  check(/Stack/.test(heap) && /Head/.test(heap), "V4b: «اكشف الداخل» re-records: the Stack is an object with its Head (" + heap.replace(/\s+/g, " ").slice(0, 80) + ")");
+  check(await pv.locator(".learning-ds-structures svg").count() > 0, "V4b: … and its Node chain is drawn");
+  await shotOf(pv, "lab-teacher-visual-inside-1440");
+  await pv.getByLabel(/اكشف الداخل/).uncheck();
+  await pv.getByText(/رسمهما المعتاد/).waitFor({ timeout: 60000 });
+  await pv.getByLabel(/توقّع قبل أن ترى/).check();
+  await pv.getByRole("button", { name: "من البداية" }).click();
+  await pv.getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
+  await pv.getByTestId("lab-trace-guess").waitFor({ timeout: 30000 });
+  check(await pv.locator(".learning-ds-structures svg").count() === 0, "V4b: «توقّع قبل أن ترى»: auto-play halts at a covered step, nothing drawn");
+  await shotOf(pv, "lab-teacher-visual-guess-1440");
+  await pv.getByTestId("lab-trace-guess").getByRole("button", { name: "اكشف" }).click();
+  check(await pv.locator(".learning-ds-structures svg").count() > 0, "V4b: «اكشف» draws the structures of that step");
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");

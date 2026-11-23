@@ -1,5 +1,5 @@
 import type { CodeExecutionResult } from "../codingContract";
-import type { LabTraceResult } from "./labTrace";
+import type { LabTraceOptions, LabTraceResult } from "./labTrace";
 
 // Phase T14 — the transport of the tool bar's «محرر C#»: ONE run of the learner's code through POST /api/student-tools/csharp-run.
 // BOOKS ONLY (owner decision): the book reader creates it with its session auth; an exam page never does, so in an exam the editor is a
@@ -14,7 +14,7 @@ export type CSharpToolRunner = {
   /** "device": the teacher's in-browser lab (deviceCSharpLab.ts) — runs on this computer; absent: the server's Runner. */
   where?: "device";
   /** Visual lab V3: the program RECORDED step by step on this device (the teacher's book reader only). Absent: no «تشغيل مرئي». */
-  trace?(source: string, stdin: string, signal?: AbortSignal): Promise<LabTraceResult>;
+  trace?(source: string, stdin: string, signal?: AbortSignal, options?: LabTraceOptions): Promise<LabTraceResult>;
 };
 
 /** A refused or failed run: the server's Arabic message (or a fixed one), its code, and the wait it asks for. */
