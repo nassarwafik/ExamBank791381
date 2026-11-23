@@ -46,8 +46,10 @@ global using global::System.Threading.Tasks;
 
     static readonly SyntaxTree UsingsTree = CSharpSyntaxTree.ParseText(GlobalUsings, ParseOptions, "GlobalUsings.cs");
     static readonly SyntaxTree ShimTree = CSharpSyntaxTree.ParseText(StdinShim, ParseOptions, "LabStdin.cs");
+    // concurrentBuild: false — the browser runtime is single-threaded: Roslyn's default parallel build waits on worker tasks, which
+    // throws "Cannot wait on monitors on this runtime" (CI run 45115490788, the first program).
     static readonly CSharpCompilationOptions Options = new CSharpCompilationOptions(OutputKind.ConsoleApplication,
-        optimizationLevel: OptimizationLevel.Release, nullableContextOptions: NullableContextOptions.Enable);
+        optimizationLevel: OptimizationLevel.Release, nullableContextOptions: NullableContextOptions.Enable, concurrentBuild: false);
 
     static CSharpCompilation Compile(SyntaxTree program) =>
         CSharpCompilation.Create("TeacherProgram", new[] { UsingsTree, ShimTree, program }, Basic.Reference.Assemblies.Net100.References.All, Options);
