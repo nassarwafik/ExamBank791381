@@ -72,7 +72,11 @@ export type HexBinaryTableToolV1 = { id: "hexBinaryTable"; showDecimal: boolean 
 /** Phase T14 — a free C# editor (a coding scratch pad: never an answer, never stored, never graded). `allowRun` lets the learner RUN the
  *  code on the isolated Coding Runner — IN A COURSE BOOK ONLY (owner decision): in an exam or assignment the editor is a writing aid
  *  whatever this flag says, and the run route has no exam context at all (api/src/functions/student-tool-run.js). Off ⇒ write only. */
-export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean };
+/** Visual lab V7 (docs/enterprise-csharp-visual-lab-plan.md §15; owner decision 2026-11-23) — `allowVisual`, additive within version 1:
+ *  in a BOOK whose editor may run (`allowRun`), the class's teacher may also give students «تشغيل مرئي» (the program recorded step by
+ *  step ON THE STUDENT'S OWN DEVICE, desktop only, and drawn). Off by default; the canonical form carries the key only when true, so
+ *  every spec saved before keeps its exact shape. Never in an exam or an assignment (the editor never runs there), never a mark. */
+export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean; allowVisual?: true };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
   | CSharpEditorToolV1;
@@ -134,7 +138,7 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   periodicTable: ["id", "showMass", "showConfiguration", "range"],
   placeValueBoxes: ["id", "width"],
   hexBinaryTable: ["id", "showDecimal"],
-  csharpEditor: ["id", "allowRun"]
+  csharpEditor: ["id", "allowRun", "allowVisual"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -287,9 +291,13 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
     case "hexBinaryTable":
       value = { id, showDecimal: bool("showDecimal") };
       break;
-    case "csharpEditor":
-      value = { id, allowRun: bool("allowRun") };
+    case "csharpEditor": {
+      const allowRun = bool("allowRun");
+      if ("allowVisual" in raw && typeof raw.allowVisual !== "boolean") add("STUDENT_TOOLS_INVALID_VALUE", path + ".allowVisual", "القيمة «allowVisual» يجب أن تكون نعم / لا.");
+      else if (raw.allowVisual === true && !allowRun) add("STUDENT_TOOLS_INVALID_VALUE", path + ".allowVisual", "التشغيل المرئي يحتاج السماح بتشغيل الكود أولًا.");
+      value = { id, allowRun, ...(raw.allowVisual === true ? { allowVisual: true as const } : {}) };
       break;
+    }
   }
   return issues.length === before ? value : null;
 }
@@ -394,6 +402,12 @@ export function enabledToolsForSection(spec: StudentToolsSpecV1 | undefined, sec
 export function csharpRunAllowedInBook(spec: StudentToolsSpecV1 | undefined): boolean {
   const tool = spec?.tools.find(t => t.id === "csharpEditor");
   return !!tool && tool.id === "csharpEditor" && tool.allowRun === true;
+}
+
+/** Visual lab V7 — whether a BOOK tool set gives the learner «تشغيل مرئي» too (it needs running; the dock applies it on a desktop only). */
+export function csharpVisualAllowedInBook(spec: StudentToolsSpecV1 | undefined): boolean {
+  const tool = spec?.tools.find(t => t.id === "csharpEditor");
+  return csharpRunAllowedInBook(spec) && !!tool && tool.id === "csharpEditor" && tool.allowVisual === true;
 }
 
 /** Section overrides that name a section the exam does not have (a blocking quality issue: the teacher's intent cannot be applied). */

@@ -248,8 +248,15 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                 {tool?.id === "csharpEditor" && (place === "book" ? (
                   <div className="sb-tool-options">
                     <label className="sb-check">
-                      <input type="checkbox" checked={tool.allowRun} disabled={disabled} onChange={e => patchTool(id, { allowRun: e.target.checked } as Partial<CSharpEditorToolV1>)} />
+                      <input type="checkbox" checked={tool.allowRun} disabled={disabled} onChange={e => setTools(tools.map(t => (t.id === id
+                        ? (e.target.checked ? { id: "csharpEditor", allowRun: true } : { id: "csharpEditor", allowRun: false }) as CSharpEditorToolV1   // off ⇒ the visual run goes too
+                        : t)))} />
                       <span>السماح بتشغيل الكود للتدريب (يعرض الناتج وأخطاء الترجمة والتشغيل)</span>
+                    </label>
+                    <label className="sb-check">
+                      <input type="checkbox" checked={tool.allowVisual === true} disabled={disabled || !tool.allowRun}
+                        onChange={e => setTools(tools.map(t => (t.id === id ? ({ id: "csharpEditor", allowRun: true, ...(e.target.checked ? { allowVisual: true } : {}) } as CSharpEditorToolV1) : t)))} />
+                      <span>السماح بالتشغيل المرئي خطوة خطوة (على الحاسوب): يرسم المتغيّرات والمباني في كل خطوة على جهاز الطالب. للتدريب فقط، لا يُصحَّح.</span>
                     </label>
                   </div>
                 ) : (
