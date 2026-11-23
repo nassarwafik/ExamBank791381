@@ -78,7 +78,7 @@ async function session(role, viewport, { touch = false } = {}) {
   await ctx.exposeBinding("__cspViolation", (_src, v) => violations.push(role + ": " + v));
   await ctx.addInitScript(([t, r]) => {
     document.addEventListener("securitypolicyviolation", e => window.__cspViolation?.(e.violatedDirective + " " + e.blockedURI + " @" + location.pathname));
-    if (location.pathname.startsWith("/csharp-lab/")) return;
+    if (window.top !== window) return;   // the session belongs to the page only — never to a frame (the lab's sandboxed frame has no storage)
     sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "student" ? "سارة أحمد" : "المعلم");
   }, [role === "student" ? studentToken : teacherToken, role]);
   const page = await ctx.newPage();
