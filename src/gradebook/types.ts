@@ -85,3 +85,20 @@ export type GbAiProposal = {
   built: number;
 };
 export type GbAiProposalReply = { ok: true; classId: string; proposal: GbAiProposal } | { ok: false; code: string; message: string };
+
+/** GB10c — one change to the CURRENT draft («تعديل المخطط الحالي»), by the draft's own keys (a new part: "new_1"…). The page applies them,
+ *  so the existing parts and columns keep their ids. A null weight is one the teacher still has to type. */
+export type GbAiEditOp =
+  | { op: "setCategoryWeight"; categoryKey: string; weight: number | null }
+  | { op: "renameCategory"; categoryKey: string; title: string }
+  | { op: "addCategory"; categoryKey: string; title: string; weight: number | null }
+  | { op: "removeCategory"; categoryKey: string }
+  | { op: "addItem"; categoryKey: string; source: GbSource; weight: number | null }
+  | { op: "removeItem"; categoryKey: string; itemKey: string }
+  | { op: "setItemWeight"; categoryKey: string; itemKey: string; weight: number | null }
+  | { op: "equalizeItems"; categoryKey: string }
+  | { op: "equalizeCategories" };
+export type GbAiEdit = { ops: GbAiEditOp[]; changes: string[]; unmatched: GbAiUnmatched[]; notes: string[]; assumptions: string[] };
+export type GbAiEditReply = { ok: true; classId: string; edit: GbAiEdit } | { ok: false; code: string; message: string };
+/** GB10c — the draft as the server reads it for an edit. */
+export type GbAiCurrent = { categories: { key: string; title: string; weight: number | null; items: { key: string; weight: number | null; source: GbSource }[] }[] };

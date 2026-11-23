@@ -92,6 +92,8 @@ describe("GB10 — building the scheme from a description", () => {
     current = book({ scheme: { revision: 1, updatedAt: "", categories: [{ categoryId: "old", title: "قديم", weight: 100, items: [{ itemId: "x", weight: 100, source: { kind: "manual", title: "م", maxScore: 10 } }] }] }, etags: { scheme: "e1", entries: null } });
     mount();
     const { builder, ai } = await openAi("تعديل مخطط العلامات");
+    expect((within(ai).getByRole("radio", { name: "تعديل المخطط الحالي" }) as HTMLInputElement).checked).toBe(true);   // GB10c: a scheme → edit first
+    fireEvent.click(within(ai).getByRole("radio", { name: "بناء مخطط جديد مكانه" }));
     fireEvent.click(within(ai).getByRole("button", { name: "مثال 1" }));
     expect((within(ai).getByLabelText("وصف توزيع العلامات") as HTMLTextAreaElement).value).toContain("ثلاثة أقسام");
     fireEvent.click(within(ai).getByRole("button", { name: "اقترح المخطط" }));

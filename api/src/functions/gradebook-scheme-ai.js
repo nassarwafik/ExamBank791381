@@ -12,12 +12,17 @@ const { isSafeId } = require("../lib/roster-input");
 const { readApprovals } = require("../lib/gradebook/approval");
 const { listClassSources } = require("../lib/gradebook/class-sources");
 const ai = require("../lib/gradebook/ai-proposal");
+const edit = require("../lib/gradebook/ai-edit");
 
 /*
  * Class gradebook GB10 (docs/enterprise-class-gradebook-gb.md §4.11) — POST /api/gradebook-scheme-ai: «بناء المخطط بالذكاء الاصطناعي».
  *
- * Contract: { classId, description: string (1..2000 characters) } → 200 { ok: true, classId, proposal } | 200 { ok: false, code, message }
- * (the model understood no scheme, or answered malformed JSON) | 400 bad request | 401 | 403 CAPABILITY_DENIED | 404 CLASS_NOT_FOUND |
+ * Contract: { classId, description: string (1..2000 characters), mode?: "build" (default) | "edit", current? } →
+ *   build: 200 { ok: true, classId, proposal }   — a new scheme for the builder (GB10);
+ *   edit:  200 { ok: true, classId, edit }       — GB10c (§4.12): operations on the draft the page sent as `current`
+ *          ({ categories: [{ key, title, weight, items: [{ key, weight, source }] }] }), answered by the draft's own keys so the existing
+ *          parts and columns keep their ids; the page shows «ما سيتغيّر» and applies them;
+ *   200 { ok: false, code, message } (the model understood no scheme / no change, or answered malformed JSON) | 400 bad request | 401 | 403 CAPABILITY_DENIED | 404 CLASS_NOT_FOUND |
  * 409 CLASS_ARCHIVED / SCHEME_LOCKED | 429 RATE_LIMITED | 502 AI_PROVIDER_FAILED / AI_RESPONSE_INVALID | 503 | 504 AI_TIMEOUT.
  *
  * NOTHING is written: the proposal is loaded into the scheme builder, and the teacher saves it with the existing scheme.save (its
@@ -62,6 +67,10 @@ async function handler(request, deps = {}, obs = null) {
     const description = typeof body.description === "string" ? body.description.trim() : "";
     if (!description) return bad("اكتب وصفًا لتوزيع العلامات.", "DESCRIPTION_REQUIRED");
     if (description.length > ai.AI_SCHEME_LIMITS.descriptionChars) return bad("الوصف أطول من الحد المسموح (" + ai.AI_SCHEME_LIMITS.descriptionChars + " حرف).", "DESCRIPTION_TOO_LONG");
+    const mode = body.mode === undefined || body.mode === "build" ? "build" : body.mode === "edit" ? "edit" : "";
+    if (!mode) return bad("الوضع غير معروف.", "UNKNOWN_MODE");
+    const current = mode === "edit" ? edit.readCurrent(body.current) : null;
+    if (mode === "edit" && !current) return bad(edit.EDIT_MESSAGES.CURRENT_INVALID, "CURRENT_INVALID");
 
     const c = deps.container || (deps.getContainer || storage.getContainer)();
     const dl = deps.downloadJsonOrNull || storage.downloadJsonOrNull;
@@ -73,17 +82,18 @@ async function handler(request, deps = {}, obs = null) {
     const approvals = readApprovals(await dl(c, approvalsName(classId)), classId);
     if (!approvals) return unavailable();                     // a corrupt approvals document is never read as «nothing approved»
     if (approvals.final || Object.keys(approvals.parts).length) {
-      return reply(409, { ok: false, code: "SCHEME_LOCKED", error: "في المخطط أقسام معتمدة؛ أعد فتحها قبل بناء مخطط جديد." });
+      return reply(409, { ok: false, code: "SCHEME_LOCKED", error: "في المخطط أقسام معتمدة؛ أعد فتحها قبل بناء المخطط أو تعديله بالذكاء الاصطناعي." });
     }
 
     const sources = await listClassSources(c, classroom, grants.has(PROJECTS_CAPABILITY), deps);
     const refs = ai.buildSourceRefs(sources);
+    const handles = mode === "edit" ? edit.buildEditHandles(current, refs) : null;
+    const call = mode === "edit"
+      ? { instructions: edit.AI_EDIT_INSTRUCTIONS, prompt: edit.buildAiEditPrompt(description, refs, handles), schema: edit.buildAiEditSchema(), schemaName: "gradebook_scheme_edit" }
+      : { instructions: ai.AI_SCHEME_INSTRUCTIONS, prompt: ai.buildAiSchemePrompt(description, refs), schema: ai.buildAiSchemeSchema(), schemaName: "gradebook_scheme_proposal" };
     let result;
     try {
-      ({ result } = await (deps.callTextJson || callTextJson)({
-        instructions: ai.AI_SCHEME_INSTRUCTIONS, prompt: ai.buildAiSchemePrompt(description, refs), schema: ai.buildAiSchemeSchema(),
-        schemaName: "gradebook_scheme_proposal", timeoutMs: AI_TIMEOUT_MS
-      }));
+      ({ result } = await (deps.callTextJson || callTextJson)({ ...call, timeoutMs: AI_TIMEOUT_MS }));
     } catch (e) {
       const timeout = isTimeout(e);
       log("gradebook.ai.provider_failed", { reason: timeout ? "timeout" : (e && e.name ? String(e.name) : "error") });
@@ -91,9 +101,20 @@ async function handler(request, deps = {}, obs = null) {
         ? reply(504, { ok: false, code: "AI_TIMEOUT", error: "استغرق الذكاء الاصطناعي وقتًا أطول من المسموح؛ اختصر الوصف أو أعد المحاولة." })
         : reply(502, { ok: false, code: "AI_PROVIDER_FAILED", error: "تعذّر الوصول إلى خدمة الذكاء الاصطناعي حاليًا؛ أعد المحاولة لاحقًا." });
     }
+    const context = { classId, assignments: sources.documents, projectCodes: sources.projectCodes };
+    if (mode === "edit") {
+      const e = edit.normalizeAiEdit(result, refs, handles, current);
+      if (!e.ok) { log("gradebook.ai.no_change", { code: e.code }); return reply(200, e); }
+      if (!edit.addedAreSaveable(e.result, context)) {
+        log("gradebook.ai.invalid", { code: "AI_RESPONSE_INVALID", mode });
+        return reply(502, { ok: false, code: "AI_RESPONSE_INVALID", error: "تعديل الذكاء الاصطناعي غير صالح لهذا الصف؛ أعد المحاولة." });
+      }
+      log("gradebook.ai.edited", { operations: e.edit.ops.length, unmatched: e.edit.unmatched.length });
+      return reply(200, { ok: true, classId, edit: e.edit });
+    }
     const r = ai.normalizeAiScheme(result, refs);
     if (!r.ok) { log("gradebook.ai.no_scheme", { code: r.code }); return reply(200, r); }
-    if (!ai.proposalIsSaveable(r.proposal, { classId, assignments: sources.documents, projectCodes: sources.projectCodes })) {
+    if (!ai.proposalIsSaveable(r.proposal, context)) {
       log("gradebook.ai.invalid", { code: "AI_RESPONSE_INVALID" });
       return reply(502, { ok: false, code: "AI_RESPONSE_INVALID", error: "اقتراح الذكاء الاصطناعي غير صالح لهذا الصف؛ أعد المحاولة." });
     }

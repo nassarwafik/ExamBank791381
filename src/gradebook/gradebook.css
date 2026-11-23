@@ -109,5 +109,10 @@
 .eb-gb-builder-tools > .eb-gb-copy{ flex:1 1 100%; }
 .eb-gb-ai-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
 .eb-gb-ai-intro, .eb-gb-ai-help{ margin:0; }
+.eb-gb-ai-field{ flex:0 0 auto; }
 .eb-gb-ai-field textarea{ inline-size:100%; max-inline-size:100%; box-sizing:border-box; resize:vertical; min-block-size:8rem; font:inherit; }
 .eb-gb-ai-notes{ margin:var(--eb-space-1) 0 0; padding-inline-start:var(--eb-space-4); }
+/* GB10c — the choice between a new scheme and a change, and the list of changes */
+.eb-gb-ai-mode{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); display:flex; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-4); min-width:0; }
+.eb-gb-ai-mode label{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
+.eb-gb-ai-changes{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:var(--eb-space-1); }

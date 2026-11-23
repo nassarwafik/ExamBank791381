@@ -5,7 +5,7 @@
 //   - a structural problem (empty title, invalid weight, a column without a source, too many parts) blocks the save;
 //   - sums that are not 100 do NOT block it: the scheme is saved as a draft, with no final mark, and the page says so.
 // Weights are never changed silently: «توزيع بالتساوي» is a button the teacher presses.
-import type { GbAiProposal, GbCategory, GbCopyProposal, GbScheme, GbSource } from "./types";
+import type { GbAiCurrent, GbAiEdit, GbAiEditOp, GbAiProposal, GbCategory, GbCopyProposal, GbScheme, GbSource } from "./types";
 
 export const LIMITS = { categories: 10, itemsPerCategory: 40, categoryTitle: 80, manualTitle: 120, manualMaxScore: 1000 } as const;
 const SUM_TOLERANCE = 0.01;
@@ -206,4 +206,56 @@ export function copyReport(p: GbCopyProposal): { summary: string; missing: strin
   const missing = p.unmatched.map(u => "«" + u.category + "» · " + (u.title || (u.kind === "project" ? "مشروع" : "واجب")) + " (" + u.weight + "%) — " + u.reason
     + (u.candidates && u.candidates.length ? " المرشحون: " + u.candidates.map(c => "«" + c + "»").join("، ") + "." : ""));
   return { summary, missing };
+}
+
+/** GB10c — the draft as the server reads it for an edit: its own keys (never its ids), the titles, and each weight as a number or null. */
+export function toAiCurrent(d: Draft): GbAiCurrent {
+  return { categories: d.categories.map(c => ({ key: c.key, title: c.title.trim(), weight: parseWeight(c.weightText),
+    items: c.items.map(i => ({ key: i.key, weight: parseWeight(i.weightText), source: i.source })) })) };
+}
+
+/**
+ * GB10c — applies the AI's changes to the draft, in order, by its own keys: every part and column that stays keeps its id (manual marks
+ * and decisions are stored under it); a new part or column gets a new one. «بالتساوي» uses the builder's own rule. An operation whose
+ * key is unknown (it cannot happen for a reply to this very draft) is skipped, never guessed.
+ */
+export function applyAiEdit(d: Draft, ops: GbAiEditOp[]): Draft {
+  const created = new Map<string, string>();
+  const keyOf = (k: string) => created.get(k) || k;
+  const has = (draft: Draft, k: string) => draft.categories.some(c => c.key === k);
+  const text = (w: number | null) => (w === null ? "" : weightText(w));
+  let out = d;
+  for (const op of ops) {
+    if (op.op === "equalizeCategories") { out = equalizeCategories(out); continue; }
+    if (op.op === "addCategory") {
+      out = addCategory(out, op.title);
+      const added = out.categories[out.categories.length - 1];
+      created.set(op.categoryKey, added.key);
+      out = setCategoryWeight(out, added.key, text(op.weight));
+      continue;
+    }
+    const ck = keyOf(op.categoryKey);
+    if (!has(out, ck)) continue;
+    switch (op.op) {
+      case "setCategoryWeight": out = setCategoryWeight(out, ck, text(op.weight)); break;
+      case "renameCategory": out = setCategoryTitle(out, ck, op.title); break;
+      case "removeCategory": out = removeCategory(out, ck); break;
+      case "equalizeItems": out = equalizeItems(out, ck); break;
+      case "addItem": {
+        out = addItem(out, ck, op.source);
+        const cat = out.categories.find(c => c.key === ck)!;
+        out = setItemWeight(out, ck, cat.items[cat.items.length - 1].key, text(op.weight));
+        break;
+      }
+      case "removeItem": out = removeItem(out, ck, op.itemKey); break;
+      case "setItemWeight": out = setItemWeight(out, ck, op.itemKey, text(op.weight)); break;
+    }
+  }
+  return out;
+}
+
+/** GB10c — what the AI changed, in words: the summary, each change, what it could not do (with why), and the notes and assumptions. */
+export function aiEditReport(e: GbAiEdit): { summary: string; changes: string[]; missing: string[]; notes: string[] } {
+  const summary = "طبّق الذكاء الاصطناعي " + e.ops.length + " من التعديلات." + (e.unmatched.length ? " لم يُطبَّق " + e.unmatched.length + ":" : " راجع المخطط ثم احفظ.");
+  return { summary, changes: e.changes, missing: aiReport({ categories: [], unmatched: e.unmatched, notes: [], assumptions: [], built: 0 }).missing, notes: [...e.notes, ...e.assumptions] };
 }

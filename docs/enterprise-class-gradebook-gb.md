@@ -1,6 +1,6 @@
 # Class gradebook — «سجل العلامات الصفي» (Phases GB0–GB7)
 
-**Status:** GB0–GB9, GB6a and GB6b merged (GB9, #687). GB10 (building the scheme from a description with AI, §4.11) in review.
+**Status:** GB0–GB10, GB6a and GB6b merged (GB10, #690, on 2026-11-22). GB10c (editing the current scheme by a description, §4.12) and the GB10 layout follow-up (§4.11) in review.
 
 | Phase | Pull request |
 |---|---|
@@ -15,7 +15,9 @@
 | GB6b — approval buttons for the teacher, «علاماتي» for the student | nassarwafik/ExamBank791381#679 |
 | GB8 — copy a scheme from another class (D7) | nassarwafik/ExamBank791381#685 |
 | GB9 — «علامة يرصدها المعلم» made clear in the builder | nassarwafik/ExamBank791381#687 |
-| GB10 — «بناء المخطط بالذكاء الاصطناعي» (§4.11) | `claude/inspiring-knuth-ub53oi` |
+| GB10 — «بناء المخطط بالذكاء الاصطناعي» (§4.11) | nassarwafik/ExamBank791381#690 |
+| GB10 layout follow-up — measured in a real browser, a field gap fixed | `claude/inspiring-knuth-ub53oi` |
+| GB10c — «تعديل المخطط الحالي» (§4.12) | `claude/inspiring-knuth-ub53oi` (with the follow-up) |
 | Hotfixes met on the way | nassarwafik/ExamBank791381#661 (a date-bound test), nassarwafik/ExamBank791381#666 (phone page switch starts at the top) |
 
 Each phase is its own branch and pull request, with exact-head CI, an independent review and the owner's manual merge
@@ -522,6 +524,63 @@ reviews it and saves with the existing «حفظ» (`scheme.save`: its validation
   A weight still to type is an empty field.
 - **On a refusal:** «لم أفهم من الوصف…», a rate limit or a provider failure keeps the window open with the server's message.
 
+**Measured in a real browser** (follow-up after #690; harness `browser-harness/gradebook-scheme-ai-gb10.html`: the production panel,
+builder and window with the App's stylesheets, over TEST data and no network):
+- **Widths:** 390 px and 1440 px light, and 390 px dark (`data-theme="dark"`). The page never scrolls sideways. Nothing in the window
+  or in the filled builder leaves the dialog, except the screen-reader-only labels, which are clipped on purpose. No console error.
+- **A defect found and fixed:** below the description field, the window showed 42 px of empty space before the help line.
+  - **Cause:** the builder's `.eb-gb-field` rule (`flex: 1 1 220px`) is meant for a field in a row. Inside the window's vertical
+    column, the 220 px became a height, so the field was 220 px tall for 178 px of content.
+  - **Fix:** `.eb-gb-ai-field { flex: 0 0 auto; }`, for this window only; the builder's own fields are unchanged.
+  - **Fail-first measurement:** the field was 220 px on `main` `849a4c02`, and is 178 px after the fix (label 24 + gap 4 + field 150).
+
+### 4.12 GB10c — «تعديل المخطط الحالي» (owner direction 2026-11-22)
+
+**The request.** GB10 builds a new scheme from a description. GB10c changes the scheme already in the builder from a description:
+«اجعل الفصل الثاني 50%», «أضف امتحان 3 إلى الشهري», «احذف الحضور». The owner told the work to continue with the recommended options of
+the plan:
+- **A list of operations, never a regenerated scheme.** Nothing the teacher did not ask for changes, and every change is shown.
+- **A scheme an approval locks is refused,** as for a new proposal (GB10).
+- **«ما سيتغيّر» first, then «طبّق التعديلات»,** and «تراجع» after applying.
+
+**Why the page applies the operations.** A manual column's marks and every excused / zero decision are stored under the column's id. A
+regenerated scheme would give the columns new ids and leave those marks behind. So:
+- the page sends its draft by its own keys (`current`: keys, titles, weights, sources; **never** the part or column ids);
+- the server judges the operations against that draft and answers them by the same keys;
+- the page applies them with the builder's own functions. Every part and column that stays keeps its id; only an added one gets a new id.
+
+**The route** is GB10's, with `mode: "edit"` and `current` (`api/src/functions/gradebook-scheme-ai.js`):
+- every check of GB10 in the same order, all before any provider call;
+- a `current` that is not a draft (a repeated or unsafe key, an invalid weight, a malformed source, more than ten parts or forty columns)
+  is `400 CURRENT_INVALID`; an unknown mode is `400 UNKNOWN_MODE`.
+
+**What the model is shown** (`api/src/lib/gradebook/ai-edit.js`, pure): the description; the class's sources under the GB10
+references; the current draft under handles:
+- parts `K1`, `K2`…;
+- columns by their source's reference (`A…`/`P…`), `M…` for a manual column, `U…` for a source the class no longer offers.
+Never a key, an id, a student or a mark.
+
+**The operations** (`setCategoryWeight`, `renameCategory`, `addCategory`, `removeCategory`, `addItem`, `removeItem`, `setItemWeight`,
+`equalizeItems`, `equalizeCategories`) are judged in order against a simulation of the draft:
+- a part or column the draft does not have at that point is refused (`CATEGORY_NOT_FOUND` / `ITEM_NOT_FOUND`); a removed part cannot be
+  edited afterwards; a column freed by a removal can be added elsewhere;
+- a new part is `N1`, `N2`… for the later operations, and `new_1`… in the answer;
+- an added column follows GB10's rules: only a shown reference, used once (`UNKNOWN_SOURCE`, `DUPLICATE`); a manual column only with the
+  maximum the teacher stated (`MANUAL_MAX_MISSING`);
+- a weight set by an operation must be valid (`WEIGHT_INVALID`); a stated number is kept as it is; «بالتساوي» is an operation the page
+  computes with the builder's rule, never the model's arithmetic;
+- each applied operation is described in words («ما سيتغيّر»: from and to); each refused one is listed with why.
+- **Defence in depth:** every column an operation adds must pass `validateScheme` for the class, or the answer is
+  `502 AI_RESPONSE_INVALID`. The draft's own columns are the teacher's and are judged by «حفظ» as before.
+
+**The page:**
+- with a scheme in the builder, the window offers «تعديل المخطط الحالي» (chosen first) and «بناء مخطط جديد مكانه»; three examples each;
+- «اقترح التعديلات» shows «ما سيتغيّر», what was not applied and why, and the notes. Nothing changes before «طبّق التعديلات», which is
+  disabled when nothing can be applied; «رجوع» returns to the description, kept;
+- after applying, the builder's notice lists what changed, and «تراجع عن تعديلات الذكاء الاصطناعي» restores the draft as it was (also
+  after a GB10 proposal);
+- nothing is saved before «حفظ».
+
 ## 5. Phases
 
 | Phase | Scope | Specific evidence |
@@ -537,6 +596,7 @@ reviews it and saves with the existing «حفظ» (`scheme.save`: its validation
 | **GB9** | «علامة يرصدها المعلم» made clear in the builder (§4.10) | a part with no assignment built and saved through the real builder; layout measured at 390 px and 1440 px |
 | **GB8** | Copying a scheme from another class (D7, §4.9) | tenancy (another teacher's class never read); match by the same exam; nothing rescaled; new ids; **mutation proof** (§8) |
 | **GB7** | Performance (a class of 40 students × 30 columns) and the final review | measured read count and time |
+| **GB10c** | «تعديل المخطط الحالي» (§4.12): operations judged on the server against the page's draft, applied by the page by its keys | ids kept for every part and column that stays; the model never sees a key or id; refusals listed; **mutation proof** (§8) |
 | **GB10** | «بناء المخطط بالذكاء الاصطناعي» (§4.11): the pure proposal module, the route, its two capabilities and rate limit, the window | what the model is shown (no id, student, mark or other class); every refusal before any provider call; nothing written; weights never rescaled; **mutation proof** (§8) |
 
 Every phase runs the minimum set of `AGENTS.md` §12: `npm test`, `npm run lint`, `npx tsc -b`, `npm run build` and
@@ -644,6 +704,19 @@ GB7 P2, and none in GB1). Each was killed by a stronger test, and none was decla
   the route's catch answers the same 503, so the answer cannot change. The defect it stands for, a corrupt document READ as
   «nothing approved» (M10-15b, `|| { final: null, parts: {} }`), is killed. The explicit check is kept: it says the rule.
 - **Restore:** files restored byte-for-byte, SHA-256 checked; `git status` clean after the campaign.
+
+**GB10c mutation proof** (`ai-edit.js`, the route, the draft and the window): 18 planted, 18 KILLED (one, M10c-8, after a new test).
+- **Planted:**
+  - in the operations: an invented reference added; a source used twice; a column found in another part; a key the model wrote
+    accepted as a column; an invalid weight coerced instead of refused; a manual maximum invented; a removed part still editable;
+    the ten-part limit dropped; a draft with a repeated key accepted; a draft key shown to the model; the defence-in-depth check
+    bypassed;
+  - in the route: the simulation returned to the page; an invalid draft sent to the model;
+  - in the page: ids regenerated (a manual column would lose its marks); a weight invented for a null; the changes applied before
+    «طبّق»; «طبّق» enabled with nothing to apply; the draft's ids sent instead of its keys.
+- **The survivor:** M10c-8 (the ten-part limit on `addCategory`) survived the first run: no test reached it. It is now killed by «a
+  scheme with ten parts cannot get an eleventh».
+- **Restore:** files restored byte-for-byte, SHA-256 checked.
 
 **GB6a mutation proof** (`api/src/lib/gradebook/approval.js`, `class-gradebook.js`, `student-gradebook.js`, the capability registry).
 - **Planted:** 26 defects (G6-1 … G6-25, plus G6-18+). Among them: a pending or missing cell counted as final, the release check
