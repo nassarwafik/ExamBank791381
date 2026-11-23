@@ -69,8 +69,9 @@ export type PeriodicTableToolV1 = { id: "periodicTable"; showMass: boolean; show
 export type PlaceValueBoxesToolV1 = { id: "placeValueBoxes"; width: 4 | 8 | 16 };
 /** Phase T13 — the reference list 0 – F: hex, binary (4 bits) and, as the teacher chose, decimal. */
 export type HexBinaryTableToolV1 = { id: "hexBinaryTable"; showDecimal: boolean };
-/** Phase T14 — a free C# editor (a coding scratch pad: never an answer, never stored, never graded). `allowRun` lets the student RUN the
- *  code on the isolated Coding Runner; the server re-checks it on every run (api/src/functions/student-tool-run.js). Off ⇒ write only. */
+/** Phase T14 — a free C# editor (a coding scratch pad: never an answer, never stored, never graded). `allowRun` lets the learner RUN the
+ *  code on the isolated Coding Runner — IN A COURSE BOOK ONLY (owner decision): in an exam or assignment the editor is a writing aid
+ *  whatever this flag says, and the run route has no exam context at all (api/src/functions/student-tool-run.js). Off ⇒ write only. */
 export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
@@ -114,7 +115,7 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "periodicTable": return { id, showMass: true, showConfiguration: true, range: "all" };
     case "placeValueBoxes": return { id, width: 8 };
     case "hexBinaryTable": return { id, showDecimal: true };
-    case "csharpEditor": return { id, allowRun: false };   // owner decision: in an exam the teacher switches running on explicitly
+    case "csharpEditor": return { id, allowRun: false };   // exams: always write only; a book's teacher may switch running on
   }
 }
 
@@ -387,18 +388,6 @@ export function enabledToolsForSection(spec: StudentToolsSpecV1 | undefined, sec
   const disabled = sectionId !== undefined && spec.sectionOverrides && Object.prototype.hasOwnProperty.call(spec.sectionOverrides, sectionId)
     ? spec.sectionOverrides[sectionId].disabled : [];
   return spec.tools.filter(t => !disabled.includes(t.id));
-}
-
-/**
- * Phase T14 — whether this exam lets the student RUN code from the C# editor: the tool is on with `allowRun`, and NO section switches
- * the editor off. The server does not know which section the student is in, so a per-section switch-off cannot be enforced for a
- * run; rather than trust a section the browser names, running is off for the whole exam then (fail closed). The run route and the
- * student's tool bar apply this same rule.
- */
-export function csharpRunAllowedInExam(spec: StudentToolsSpecV1 | undefined): boolean {
-  const tool = spec?.tools.find(t => t.id === "csharpEditor");
-  if (!tool || tool.id !== "csharpEditor" || tool.allowRun !== true) return false;
-  return !Object.values(spec?.sectionOverrides || {}).some(o => o.disabled.includes("csharpEditor"));
 }
 
 /** Phase T14 — whether a BOOK tool set (no sections) lets the learner run code from the C# editor. */

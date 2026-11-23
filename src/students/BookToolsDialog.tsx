@@ -24,7 +24,7 @@ export default function BookToolsDialog({ open, courseId, courseTitle, className
       </>}>
       <p className="eb-muted">تظهر هذه الأدوات للطالب في زر «الأدوات» أثناء قراءة الكتاب. الأدوات لا تحفظ شيئًا ولا ترسله ولا تصحّحه.</p>
       <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل الأدوات…</p>}>
-        <StudentToolsEditor value={draft} sections={[]} excludeTools={BOOK_EXCLUDED_TOOLS} onChange={next => setDraft(next ?? { version: 1, tools: [] })} />
+        <StudentToolsEditor value={draft} sections={[]} excludeTools={BOOK_EXCLUDED_TOOLS} place="book" onChange={next => setDraft(next ?? { version: 1, tools: [] })} />
       </Suspense>
     </Dialog>
   );
