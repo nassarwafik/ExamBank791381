@@ -3,7 +3,7 @@ import StudentToolDock from "./StudentToolDock";
 import { bookCSharpRunner } from "./csharpToolRun";
 import { bookDeviceRunner, isDesktopViewport } from "./deviceCSharpLab";
 import { courseStudentTools } from "./courseTools";
-import { validateBookStudentTools } from "./studentToolsSpec";
+import { csharpVisualAllowedInBook, validateBookStudentTools } from "./studentToolsSpec";
 
 // Phase T7 — the course book's tool bar: the course's fixed set (courseTools.ts) in the exam's StudentToolDock. One lazy chunk for
 // the reader, so neither the course table nor the dock adds to the reader's first load; a course without a set renders nothing.
@@ -15,9 +15,12 @@ import { validateBookStudentTools } from "./studentToolsSpec";
  *  reader's session) are used on the device only to read the book's classes from the API, which checks the reader. */
 /** Visual lab V3 — `visualRun` (the TEACHER's reader only): on the device, the editor also offers «تشغيل مرئي» (the program recorded step
  *  by step and drawn as the course's trace activity draws it). Presentation: the lab runs only the reader's own program on this device. */
+/** Visual lab V7 (owner decision 2026-11-23) — a STUDENT gets «تشغيل مرئي» too when the class's teacher turned it on for this book
+ *  (`allowVisual` of the book's C# editor, which needs running): on the student's own device, desktop only, never in an exam. */
 export default function CourseToolDock({ courseId, bookTools, runHeaders, visualRun = false }: { courseId: string; bookTools?: unknown; runHeaders?: Record<string, string>; visualRun?: boolean }) {
-  const runner = useMemo(() => (runHeaders ? (isDesktopViewport() ? bookDeviceRunner(courseId, runHeaders, { visual: visualRun }) : bookCSharpRunner(runHeaders, courseId)) : undefined), [runHeaders, courseId, visualRun]);
   const chosen = bookTools === undefined ? undefined : validateBookStudentTools(bookTools);
   const tools = chosen === undefined ? courseStudentTools(courseId) : chosen.ok && chosen.value.tools.length ? chosen.value : undefined;
+  const visual = visualRun || csharpVisualAllowedInBook(tools);
+  const runner = useMemo(() => (runHeaders ? (isDesktopViewport() ? bookDeviceRunner(courseId, runHeaders, { visual }) : bookCSharpRunner(runHeaders, courseId)) : undefined), [runHeaders, courseId, visual]);
   return tools ? <StudentToolDock studentTools={tools} csharpRunner={runner} /> : null;
 }

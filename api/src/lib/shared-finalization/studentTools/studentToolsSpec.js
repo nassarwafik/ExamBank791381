@@ -8,6 +8,7 @@ exports.projectStudentToolsForStudent = projectStudentToolsForStudent;
 exports.projectStudentToolsForPreStart = projectStudentToolsForPreStart;
 exports.enabledToolsForSection = enabledToolsForSection;
 exports.csharpRunAllowedInBook = csharpRunAllowedInBook;
+exports.csharpVisualAllowedInBook = csharpVisualAllowedInBook;
 exports.studentToolsUnknownSectionIssues = studentToolsUnknownSectionIssues;
 exports.validateBookStudentTools = validateBookStudentTools;
 const richContentModel_1 = require("../richContent/richContentModel");
@@ -76,7 +77,7 @@ const TOOL_KEYS = {
     periodicTable: ["id", "showMass", "showConfiguration", "range"],
     placeValueBoxes: ["id", "width"],
     hexBinaryTable: ["id", "showDecimal"],
-    csharpEditor: ["id", "allowRun"]
+    csharpEditor: ["id", "allowRun", "allowVisual"]
 };
 const hasControlOrBidi = (s) => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
 function utf8Length(s) {
@@ -292,9 +293,15 @@ function readTool(raw, path, add, issues) {
         case "hexBinaryTable":
             value = { id, showDecimal: bool("showDecimal") };
             break;
-        case "csharpEditor":
-            value = { id, allowRun: bool("allowRun") };
+        case "csharpEditor": {
+            const allowRun = bool("allowRun");
+            if ("allowVisual" in raw && typeof raw.allowVisual !== "boolean")
+                add("STUDENT_TOOLS_INVALID_VALUE", path + ".allowVisual", "القيمة «allowVisual» يجب أن تكون نعم / لا.");
+            else if (raw.allowVisual === true && !allowRun)
+                add("STUDENT_TOOLS_INVALID_VALUE", path + ".allowVisual", "التشغيل المرئي يحتاج السماح بتشغيل الكود أولًا.");
+            value = { id, allowRun, ...(raw.allowVisual === true ? { allowVisual: true } : {}) };
             break;
+        }
     }
     return issues.length === before ? value : null;
 }
@@ -410,6 +417,10 @@ function enabledToolsForSection(spec, sectionId) {
 function csharpRunAllowedInBook(spec) {
     const tool = spec?.tools.find(t => t.id === "csharpEditor");
     return !!tool && tool.id === "csharpEditor" && tool.allowRun === true;
+}
+function csharpVisualAllowedInBook(spec) {
+    const tool = spec?.tools.find(t => t.id === "csharpEditor");
+    return csharpRunAllowedInBook(spec) && !!tool && tool.id === "csharpEditor" && tool.allowVisual === true;
 }
 function studentToolsUnknownSectionIssues(spec, sectionIds) {
     const known = new Set(sectionIds);

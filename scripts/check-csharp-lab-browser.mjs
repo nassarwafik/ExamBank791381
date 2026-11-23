@@ -44,11 +44,16 @@ require(path.join(root, "api/src/lib/observability.js")).setSink(() => {});
 const { createLearningApi } = require(path.join(root, "browser-harness/learning-l8-api.cjs"));
 const CID = "899271d";
 const student = { userId: "u1", role: "student", active: true, archived: false, authVersion: 1, classId: "cA", displayName: "سارة أحمد", code: "S1001" };
+// Visual lab V7: a second class whose teacher turned «تشغيل مرئي» on for the book (the class's book tools, as the teacher saves them)
+const student2 = { userId: "u2", role: "student", active: true, archived: false, authVersion: 1, classId: "cB", displayName: "عمر خالد", code: "S1002" };
+const VISUAL_TOOLS = { version: 1, tools: [{ id: "csharpEditor", allowRun: true, allowVisual: true }] };
 const api = createLearningApi({ apiRoot: path.join(root, "api"), seed: {
   "platform/users/u1.json": student,
   "platform/classes/cA.json": { classId: "cA", name: "الصف الحادي عشر", grade: "11", status: "active", active: true, studentIds: ["u1"], learningMaterials: [{ courseId: CID, visibleModuleIds: [CID + "-m04"] }] },
+  "platform/users/u2.json": student2,
+  "platform/classes/cB.json": { classId: "cB", name: "الصف الحادي عشر ب", grade: "11", status: "active", active: true, studentIds: ["u2"], learningMaterials: [{ courseId: CID, visibleModuleIds: [CID + "-m04"], studentTools: VISUAL_TOOLS }] },
 } });
-const studentToken = api.studentToken(student), teacherToken = api.teacherToken();
+const studentToken = api.studentToken(student), teacherToken = api.teacherToken(), student2Token = api.studentToken(student2);
 const MIME = { ".js": "text/javascript", ".html": "text/html; charset=utf-8", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png", ".webp": "image/webp", ".json": "application/json", ".wasm": "application/wasm", ".webmanifest": "application/manifest+json" };
 const traffic = [];
 const server = http.createServer((req, res) => {
@@ -75,7 +80,7 @@ const shot = async (page, name) => { if (process.env.SHOT_DIR) await page.screen
 /** One element (scrolled into view) — the player's drawing sits below the editor. */
 const shotOf = async (locator, name) => { if (process.env.SHOT_DIR) await locator.screenshot({ path: path.join(process.env.SHOT_DIR, name + ".png") }); };
 const violations = [];
-async function session(role, viewport, { touch = false } = {}) {
+async function session(role, viewport, { touch = false, token } = {}) {
   // The site's own service worker is ALLOWED (as in production): Playwright's «block» option injects a script into every frame, and
   // that script throws inside the lab's sandboxed (opaque-origin) frame — a harness artifact, not the site's behaviour.
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: touch, isMobile: touch, serviceWorkers: "allow", locale: "ar" });
@@ -84,7 +89,7 @@ async function session(role, viewport, { touch = false } = {}) {
     document.addEventListener("securitypolicyviolation", e => window.__cspViolation?.(e.violatedDirective + " " + e.blockedURI + " @" + location.pathname));
     if (window.top !== window) return;   // the session belongs to the page only — never to a frame (the lab's sandboxed frame has no storage)
     sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "student" ? "سارة أحمد" : "المعلم");
-  }, [role === "student" ? studentToken : teacherToken, role]);
+  }, [token || (role === "student" ? studentToken : teacherToken), role]);
   const page = await ctx.newPage();
   page.on("pageerror", e => failures.push("page error (" + role + "): " + e.message));
   return { ctx, page };
@@ -95,9 +100,9 @@ async function teacherOpens(page) {
   await page.reload();
   await page.locator(".learning-reader-page").first().waitFor({ timeout: 20000 });
 }
-async function studentOpens(page) {
+async function studentOpens(page, who = student) {
   await page.goto(origin + "/#/s/today");
-  await page.evaluate(([k, v]) => localStorage.setItem(k, v), ["examBankReaderPosition:v1:" + student.userId, JSON.stringify({ courseId: CID, pageId: PAGE, at: new Date().toISOString() })]);
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), ["examBankReaderPosition:v1:" + who.userId, JSON.stringify({ courseId: CID, pageId: PAGE, at: new Date().toISOString() })]);
   await page.goto(origin + "/#/s/today");
   await page.reload();
   await page.getByRole("button", { name: "تابع القراءة" }).first().click({ timeout: 20000 });
@@ -279,13 +284,28 @@ console.log("3. student, desktop: the book's C# editor runs on this computer too
   await studentOpens(page);
   const panel = await openEditor(page);
   check(/يعمل على جهازك/.test(await panel.getByTestId("csharp-on-device").innerText()), "the student's editor says the code runs on this computer");
-  check(await panel.getByRole("button", { name: "تشغيل مرئي", exact: true }).count() === 0, "student: no «تشغيل مرئي» (the teacher's only, plan V7 for students)");
+  check(await panel.getByRole("button", { name: "تشغيل مرئي", exact: true }).count() === 0, "student: no «تشغيل مرئي» (the class's teacher did not turn it on for the book — V7)");
   const a = await run(panel, page, "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    for (int i = 1; i <= 3; i++) s.Push(i);\n    Console.WriteLine(s);\n}", 180000);
   check(/انتهى التشغيل بنجاح/.test(a.status) && a.out === "[3,2,1]\n", "student: the book's Stack<T>: [3,2,1] (" + JSON.stringify(a) + ")");
   const mine = traffic.slice(before).filter(t => t.path === "/api/student-tools/csharp-run");
   check(mine.filter(t => t.method === "POST").length === 0, "student: no program was sent to a server");
   check(mine.filter(t => t.method === "GET").length === 1 && mine.find(t => t.method === "GET").status === 200, "student: ONE read of the book's classes, allowed by the book's run permission (" + JSON.stringify(mine) + ")");
   await shot(page, "lab-student-1440");
+  await ctx.close();
+}
+
+console.log("3c. student whose class's teacher turned «تشغيل مرئي» on for the book (V7), desktop");
+{
+  const before = traffic.length;
+  const { ctx, page } = await session("student", { width: 1440, height: 900 }, { token: student2Token });
+  await studentOpens(page, student2);
+  const panel = await openEditor(page);
+  check(await panel.getByRole("button", { name: "تشغيل مرئي", exact: true }).count() === 1, "V7: this class's student gets «تشغيل مرئي»");
+  const v = await visual(panel, page, "static void Main()\n{\n    Queue<int> q = new Queue<int>();\n    q.Insert(1); q.Insert(2);\n    q.Remove();\n    Console.WriteLine(q);\n}");
+  check(/سُجّل التنفيذ خطوة خطوة/.test(v.status) && v.out === "[2]\n" && /2/.test(v.stack), "V7: the student's run is recorded on this computer and drawn step by step (" + v.total + " steps, out " + JSON.stringify(v.out) + ")");
+  const mine = traffic.slice(before).filter(t => t.path === "/api/student-tools/csharp-run");
+  check(mine.filter(t => t.method === "POST").length === 0, "V7: the student's visual run sent nothing to a server");
+  await shotOf(panel.getByTestId("csharp-trace"), "lab-student-visual-1440");
   await ctx.close();
 }
 
