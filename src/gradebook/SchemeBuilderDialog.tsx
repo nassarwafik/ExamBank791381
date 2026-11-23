@@ -5,9 +5,9 @@ import { IconPlus, IconTrash, IconArrowUp, IconArrowDown, IconSparkles } from ".
 import { TeacherHttpError } from "../teacherFetch";
 import { loadSources, saveScheme } from "./gradebookApi";
 import SchemeCopyPanel from "./SchemeCopyPanel";
-import type { GbAiProposal, GbGradebook, GbSchemeSaved, GbSource, GbSources } from "./types";
+import type { GbAiEdit, GbAiProposal, GbGradebook, GbSchemeSaved, GbSource, GbSources } from "./types";
 import {
-  type Draft, type DraftCategory, fromScheme, fromCopy, copyReport, fromAiProposal, aiReport, summarize, toPayload, isDirty, addCategory, removeCategory, setCategoryTitle, setCategoryWeight,
+  type Draft, type DraftCategory, fromScheme, fromCopy, copyReport, fromAiProposal, aiReport, toAiCurrent, applyAiEdit, aiEditReport, summarize, toPayload, isDirty, addCategory, removeCategory, setCategoryTitle, setCategoryWeight,
   addItem, removeItem, setItemWeight, moveItem, equalizeCategories, equalizeItems, sourceKey, normalizeDigits, LIMITS
 } from "./schemeDraft";
 
@@ -49,8 +49,10 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
   const [error, setError] = useState("");
   const [stale, setStale] = useState(false);
   const [showIssues, setShowIssues] = useState(false);
-  const [copied, setCopied] = useState<{ summary: string; missing: string[]; notes?: string[] } | null>(null);
+  const [copied, setCopied] = useState<{ summary: string; missing: string[]; notes?: string[]; changes?: string[] } | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
+  /** GB10 / GB10c — the draft before the AI's proposal or changes were applied, for «تراجع»; cleared by any later replace. */
+  const [beforeAi, setBeforeAi] = useState<Draft | null>(null);
   const { confirm, confirmDialog } = useConfirm();
   const classId = p.gradebook.classId;
 
@@ -112,7 +114,7 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
             )}
             <SchemeCopyPanel token={p.token} classId={classId} onCopied={async proposal => {
               if (draft.categories.length && !(await confirm({ title: "استبدال المخطط؟", message: "سيحلّ مخطط «" + proposal.from.name + "» محلّ المخطط في هذه النافذة. لا يُحفظ شيء قبل «حفظ».", confirmLabel: "استبدال", cancelLabel: "إلغاء" }))) return;
-              setDraft(fromCopy(proposal)); setShowIssues(true); setCopied(copyReport(proposal));
+              setBeforeAi(null); setDraft(fromCopy(proposal)); setShowIssues(true); setCopied(copyReport(proposal));
             }} />
           </div>
         )}
@@ -120,15 +122,21 @@ export default function SchemeBuilderDialog(p: SchemeBuilderDialogProps) {
           <Suspense fallback={null}>
             <SchemeAiDialog open token={p.token} classId={classId} onClose={() => setAiOpen(false)} onProposal={async (proposal: GbAiProposal) => {
               if (draft.categories.length && !(await confirm({ title: "استبدال المخطط؟", message: "سيحلّ المخطط المقترح محلّ المخطط في هذه النافذة. لا يُحفظ شيء قبل «حفظ».", confirmLabel: "استبدال", cancelLabel: "إلغاء" }))) return;
-              setDraft(fromAiProposal(proposal)); setShowIssues(true); setCopied(aiReport(proposal)); setAiOpen(false);
-            }} />
+              setBeforeAi(draft); setDraft(fromAiProposal(proposal)); setShowIssues(true); setCopied(aiReport(proposal)); setAiOpen(false);
+            }}
+              current={draft.categories.length ? toAiCurrent(draft) : null}
+              onEdit={(e: GbAiEdit) => { setBeforeAi(draft); setDraft(applyAiEdit(draft, e.ops)); setShowIssues(true); setCopied(aiEditReport(e)); setAiOpen(false); }} />
           </Suspense>
         )}
         {copied && (
           <div className={copied.missing.length ? "eb-gb-warning" : "platform-notice"} role="status">
             <p className="eb-gb-copy-summary">{copied.summary}</p>
+            {copied.changes && copied.changes.length > 0 && <ol className="eb-gb-ai-changes" aria-label="ما تغيّر">{copied.changes.map((m, i) => <li key={i}>{m}</li>)}</ol>}
             {copied.missing.length > 0 && <ul className="eb-gb-copy-missing">{copied.missing.map((m, i) => <li key={i}>{m}</li>)}</ul>}
             {copied.notes && copied.notes.length > 0 && <ul className="eb-gb-ai-notes" aria-label="ملاحظات على المخطط المقترح">{copied.notes.map((m, i) => <li key={i}>{m}</li>)}</ul>}
+            {beforeAi && !readOnly && (
+              <button type="button" className="eb-button is-small is-quiet" onClick={() => { setDraft(beforeAi); setBeforeAi(null); setCopied(null); }}>تراجع عن تعديلات الذكاء الاصطناعي</button>
+            )}
           </div>
         )}
         {readOnly && !p.lockNote && <p className="eb-muted" role="status">{p.gradebook.readOnly ? "للعرض فقط: هذا الصف في الأرشيف." : "للعرض فقط: تعديل المخطط يحتاج صلاحية التصحيح."}</p>}

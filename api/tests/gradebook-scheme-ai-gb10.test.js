@@ -200,3 +200,59 @@ describe("GB10 — both capabilities, in the enforce mode", () => {
     expect(p.calls).toHaveLength(1);
   });
 });
+
+// ── GB10c (§4.12) — «تعديل المخطط الحالي»: the same route with mode "edit" ─────────────────────────────────────────────────────────────
+describe("GB10c — editing the current scheme through the route", () => {
+  const current = s => ({ categories: [
+    { key: "k1", title: "الشهري", weight: 40, items: [{ key: "k2", weight: 100, source: { kind: "assignment", assignmentId: s.ids[0] } }] },
+    { key: "k3", title: "الفصل", weight: 60, items: [{ key: "k4", weight: 100, source: { kind: "manual", title: "الحضور", maxScore: 10 } }] }
+  ] });
+  const editModel = operations => async args => ({ result: { operations: operations(args), unmatched: [], assumptions: [] } });
+  const o = (op, extra = {}) => ({ op, category: "", item: "", title: "", ref: "", manualTitle: "", manualMaxScore: null, weight: null, weightSource: "stated", mention: op, ...extra });
+  const refOf = (args, title) => (args.prompt.match(new RegExp("^(A\\d+) \\| واجب أو امتحان \\| " + title + " \\|", "m")) || [])[1] || "";
+
+  it("answers operations by the draft's own keys and the class's sources; the model saw handles only; nothing is written", async () => {
+    const s = await setup();
+    const before = s.snapshot();
+    const r = await s.ask(s.A, { classId: s.cls, description: "أضف امتحان 1 إلى الشهري بوزن 50 واجعل الفصل 50%", mode: "edit", current: current(s) },
+      { override: async args => editModel(a => [o("addItem", { category: "K1", ref: refOf(a, "امتحان 1"), weight: 50 }), o("setCategoryWeight", { category: "K2", weight: 50 })])(args) });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.ok).toBe(true);
+    expect(r.jsonBody.edit.ops).toEqual([
+      { op: "addItem", categoryKey: "k1", source: { kind: "assignment", assignmentId: s.ids[1] }, weight: 50 },
+      { op: "setCategoryWeight", categoryKey: "k3", weight: 50 }
+    ]);
+    expect(r.jsonBody.edit.changes).toHaveLength(2);
+    expect(r.jsonBody).not.toHaveProperty("edit.result");                                    // the simulation stays on the server
+    expect(s.snapshot()).toBe(before);
+    const { prompt, schemaName } = s.calls[0];
+    expect(schemaName).toBe("gradebook_scheme_edit");
+    expect(prompt).toMatch(/^K1 \| الشهري \| 40% من العلامة النهائية$/m);
+    expect(prompt).toMatch(/^  - M1 \| الحضور \(علامة يرصدها المعلم من 10\) \| 100%$/m);
+    for (const secret of [...s.ids, s.foreign, "k1", "k2", "k3", "k4", "سلمى"]) expect(prompt).not.toMatch(new RegExp("(^|[^\\w])" + secret + "($|[^\\w])", "m"));
+  });
+  it("a draft that is not one, or an unknown mode, is refused before any provider call", async () => {
+    const s = await setup();
+    const bad = current(s); bad.categories[1].key = "k1";
+    expect((await s.ask(s.A, { classId: s.cls, description: "x", mode: "edit", current: bad })).jsonBody.code).toBe("CURRENT_INVALID");
+    expect((await s.ask(s.A, { classId: s.cls, description: "x", mode: "edit" })).jsonBody.code).toBe("CURRENT_INVALID");
+    expect((await s.ask(s.A, { classId: s.cls, description: "x", mode: "rewrite" })).jsonBody.code).toBe("UNKNOWN_MODE");
+    expect(s.calls).toHaveLength(0);
+  });
+  it("the same refusals as a proposal: another teacher's class, a locked scheme", async () => {
+    const s = await setup();
+    expect((await s.ask(s.A, { classId: s.other, description: "x", mode: "edit", current: current(s) })).status).toBe(404);
+    s.mem.setJson("platform/gradebooks/" + s.cls + "/approvals.json", { schemaVersion: 1, classId: s.cls, revision: 1, parts: { k1: { approvedAt: "2026-11-01T00:00:00.000Z", schemeRevision: 1, snapshot: { items: [], students: {} } } }, final: null, history: [] });
+    expect((await s.ask(s.A, { classId: s.cls, description: "x", mode: "edit", current: current(s) })).jsonBody.code).toBe("SCHEME_LOCKED");
+    expect(s.calls).toHaveLength(0);
+  });
+  it("no change understood → 200 ok:false AI_NO_CHANGE; another class's assignment id written by the model never becomes an operation", async () => {
+    const s = await setup();
+    let r = await s.ask(s.A, { classId: s.cls, description: "مرحبا", mode: "edit", current: current(s) }, { override: editModel(() => []) });
+    expect(r.jsonBody).toMatchObject({ ok: false, code: "AI_NO_CHANGE" });
+    r = await s.ask(s.A, { classId: s.cls, description: "x", mode: "edit", current: current(s) }, { override: editModel(() => [o("addItem", { category: "K1", ref: s.foreign, weight: 10 })]) });
+    expect(r.jsonBody.edit.ops).toEqual([]);
+    expect(r.jsonBody.edit.unmatched.map(u => u.code)).toEqual(["UNKNOWN_SOURCE"]);
+    expect(JSON.stringify(r.jsonBody)).not.toContain(s.foreign);
+  });
+});
