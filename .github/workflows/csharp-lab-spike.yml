@@ -1,4 +1,4 @@
-name: Teacher C# Lab Spike
+name: Teacher C# Lab
 # Adds a job and weakens none (AGENTS.md §1, §12). Owner-approved SPIKE (docs/enterprise-teacher-csharp-lab-spike.md): build the
 # teacher's in-browser C# compiler (Roslyn on .NET WebAssembly, tools/csharp-lab), then MEASURE it and PROVE it in real Chromium —
 # download size (raw and Brotli), cold and warm start, compile / run times, output, input, compile and runtime errors, the book's
@@ -10,6 +10,7 @@ on:
     paths:
       - "tools/csharp-lab/**"
       - "scripts/ds-course/unit4/**"
+      - "api/src/data/course-libraries/**"
       - ".github/workflows/csharp-lab-spike.yml"
   workflow_dispatch:
 permissions:

@@ -1,4 +1,4 @@
-// SPIKE (docs/enterprise-teacher-csharp-lab-spike.md) — compile and run ONE C# program inside the browser (Roslyn on .NET WebAssembly),
+// Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md) — compile and run ONE C# program inside the browser (Roslyn on .NET WebAssembly),
 // the same way the Runner's csharp@1 worker does on the server: the worker's implicit usings, nullable enabled, the latest language
 // version, and the book's wrap rule (a source without a class gets `public class Program { ` on its FIRST line and `}` after its last,
 // so a compiler line number is the writer's own line number). Output goes to strings via Console.SetOut / SetError.
@@ -117,8 +117,8 @@ global using global::System.Threading.Tasks;
         var assembly = Assembly.Load(pe.ToArray());
         var entry = assembly.EntryPoint;
         if (entry == null) return Result("compile-error", "", "No Main method.", compileMs, 0);
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
+        var stdout = new CappedWriter(OutputCapChars);
+        var stderr = new CappedWriter(OutputCapChars);
         var (oldOut, oldErr) = (Console.Out, Console.Error);
         assembly.GetType("__LabStdin")?.GetField("In", BindingFlags.Public | BindingFlags.Static)?.SetValue(null, new StringReader(stdin ?? ""));
         Console.SetOut(stdout);
@@ -128,6 +128,10 @@ global using global::System.Threading.Tasks;
         try
         {
             entry.Invoke(null, entry.GetParameters().Length == 0 ? null : new object[] { Array.Empty<string>() });
+        }
+        catch (TargetInvocationException e) when (e.InnerException is OutputLimitException)
+        {
+            status = "output-limit";
         }
         catch (TargetInvocationException e)
         {
@@ -140,6 +144,22 @@ global using global::System.Threading.Tasks;
             Console.SetError(oldErr);
         }
         return Result(status, stdout.ToString(), stderr.ToString(), compileMs, run.ElapsedMilliseconds);
+    }
+
+    // The Runner's practice output limit (16 KB); a print loop stops here instead of filling the page's memory.
+    const int OutputCapChars = 16 * 1024;
+
+    sealed class OutputLimitException : Exception { }
+
+    /// <summary>A StringWriter that refuses to grow past its cap (throws OutputLimitException inside the program).</summary>
+    sealed class CappedWriter : StringWriter
+    {
+        readonly int cap;
+        public CappedWriter(int cap) { this.cap = cap; }
+        void Room(int more) { if (GetStringBuilder().Length + more > cap) throw new OutputLimitException(); }
+        public override void Write(char value) { Room(1); base.Write(value); }
+        public override void Write(string? value) { Room(value?.Length ?? 0); base.Write(value); }
+        public override void Write(char[] buffer, int index, int count) { Room(count); base.Write(buffer, index, count); }
     }
 
     static string Result(string status, string stdout, string stderr, long compileMs, long runMs) =>

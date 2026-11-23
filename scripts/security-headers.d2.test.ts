@@ -97,6 +97,12 @@ describe("static security headers (staticwebapp.config.json)", () => {
     expect(h["Permissions-Policy"]).toContain("fullscreen=(self)");          // the learning reader's full-screen mode
     expect(h["Cross-Origin-Opener-Policy"]).toBe("same-origin");
   });
+  it("Teacher C# lab: CORS only for /csharp-lab/* (the opaque-origin lab iframe and its worker), revalidated; .wasm served as application/wasm", () => {
+    const withCors = (swa.routes as { route: string; headers?: Record<string, string> }[]).filter(r => r.headers && "Access-Control-Allow-Origin" in r.headers);
+    expect(withCors).toEqual([{ route: "/csharp-lab/*", headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache" } }]);
+    expect(Object.keys(h)).not.toContain("Access-Control-Allow-Origin");      // never global: the API and the app pages get no CORS
+    expect(swa.mimeTypes[".wasm"]).toBe("application/wasm");
+  });
   it("no global CSP / CORP / COEP: the API and the sandboxed simulator runtime keep their own policies", () => {
     expect(Object.keys(h).join(" ")).not.toMatch(/Content-Security-Policy|Cross-Origin-Resource-Policy|Cross-Origin-Embedder-Policy/i);
   });

@@ -16,7 +16,7 @@ const VERDICT: Record<CodeExecutionResult["status"], string> = {
   success: "انتهى التشغيل بنجاح.",
   "compile-error": "خطأ ترجمة: الكود لا يُترجم. اقرأ رسالة المترجم؛ رقم السطر فيها هو رقم سطرك.",
   "runtime-error": "خطأ أثناء التشغيل: توقف البرنامج قبل أن ينتهي.",
-  timeout: "تجاوز الوقت المسموح (ثانيتان). هل في الكود حلقة لا تنتهي، أو ينتظر مدخلات لم تُكتب؟",
+  timeout: "تجاوز الوقت المسموح. هل في الكود حلقة لا تنتهي، أو ينتظر مدخلات لم تُكتب؟",
   "output-limit": "الناتج أطول من الحد المسموح، فعُرض أوله فقط.",
   "internal-error": "تعذّر التشغيل لسبب في المشغّل. حاول مرة أخرى.",
 };
@@ -74,7 +74,8 @@ export default function CSharpEditorTool({ runner }: Props) {
 
   const result = state.kind === "done" ? state.result : null;
   const needsInput = !!result && result.status === "runtime-error" && !stdin.trim() && READS_INPUT.test(source);
-  const status = availability === "checking" ? "جارٍ التحقق من المشغّل…" : state.kind === "running" ? "جارٍ التشغيل…" : state.kind === "error" ? state.message : result ? VERDICT[result.status] : "";
+  const onDevice = runner?.where === "device";
+  const status = availability === "checking" ? "جارٍ التحقق من المشغّل…" : state.kind === "running" ? (onDevice ? "جارٍ التشغيل على جهازك… (أول تشغيل يحمّل المترجم مرة واحدة)" : "جارٍ التشغيل…") : state.kind === "error" ? state.message : result ? VERDICT[result.status] : "";
   const errLabel = result?.status === "compile-error" ? "رسالة المترجم" : "رسالة الخطأ";
 
   return (
@@ -92,6 +93,7 @@ export default function CSharpEditorTool({ runner }: Props) {
         </div>
       ) : canRun ? (
         <>
+          {onDevice && <p className="stt-hint" data-testid="csharp-on-device">يعمل على جهازك (مختبر المعلّم): بلا مشغّل وبلا تكلفة. أول تشغيل يحمّل المترجم مرة واحدة (نحو 12 ميغابايت).</p>}
           <label className="stt-cs-field">
             <span>المدخلات <small>(كل قيمة في سطر، بترتيب قراءتها بـ <bdi dir="ltr">Console.ReadLine</bdi>)</small></span>
             <textarea className="stt-cs-input" dir="ltr" lang="en" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />
