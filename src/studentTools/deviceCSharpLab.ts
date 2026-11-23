@@ -6,8 +6,10 @@ import type { CodingExecutionService } from "../coding/codingExecution";
 // own computer, on a DESKTOP only (isDesktopViewport): Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only
 // places it is used:
 //   • the C# editor of the tool bar in a COURSE BOOK, for the teacher and for students (bookDeviceRunner);
-//   • the «تشغيل» of a C# CODING QUESTION in an exam — practice on the question's visible examples only (withDeviceCSharp).
-// Never the tool bar's editor in an exam (write only), never grading: official grading stays on the server's Runner.
+//   • the «تشغيل» of a C# CODING QUESTION in an exam — practice on the question's visible examples only (withDeviceCSharp);
+//   • the TEACHER's «صحّح على جهازي» (src/coding/deviceGrading.ts, docs/enterprise-teacher-device-grading.md): it only EXECUTES the
+//     official cases and reports raw evidence; the server compares, weights and decides the mark.
+// Never the tool bar's editor in an exam (write only); never a mark decided here.
 //
 // Isolation: the lab page lives in a hidden iframe with sandbox="allow-scripts" — an OPAQUE origin, so the code it runs cannot reach
 // this app's storage, cookies or session; its runtime runs in a Web Worker the lab terminates after 10 s (an endless program never
@@ -80,7 +82,9 @@ function ensureLab(): Lab {
       if (!p) return;
       clearTimeout(p.timer);
       pending.delete(m.id);
-      p.resolve(normalizeExecutionResult(m.result, OUTPUT_BYTES));
+      // the lab reports the program's own run time as runMs (compile excluded): it is the case's duration
+      const raw = m.result && typeof m.result === "object" && !Array.isArray(m.result) ? (m.result as Record<string, unknown>) : null;
+      p.resolve(normalizeExecutionResult(raw && typeof raw.runMs === "number" && raw.durationMs === undefined ? { ...raw, durationMs: raw.runMs } : m.result, OUTPUT_BYTES));
     }
   };
   window.addEventListener("message", onMessage);
@@ -109,8 +113,9 @@ function libraryLoader(courseId: string, headers: Record<string, string>): () =>
   };
 }
 
-/** ONE practice run on this device (the lab is created on the first call). `library`: the book's classes, or "". */
-export async function deviceCSharpRun(source: string, stdin: string, library: string, signal?: AbortSignal): Promise<CodeExecutionResult> {
+/** ONE run on this device (the lab is created on the first call). `library`: the book's classes, or "". `fresh`: start a new runtime
+ *  for this run (teacher-device grading: each student's answer in its own runtime). */
+export async function deviceCSharpRun(source: string, stdin: string, library: string, signal?: AbortSignal, opts: { fresh?: boolean } = {}): Promise<CodeExecutionResult> {
   const l = ensureLab();
   try { await l.ready; } catch { throw unavailable(); }
   if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
@@ -119,7 +124,7 @@ export async function deviceCSharpRun(source: string, stdin: string, library: st
     const timer = setTimeout(() => { l.pending.delete(id); reject(unavailable()); }, RUN_TIMEOUT_MS);
     l.pending.set(id, { resolve, timer });
     signal?.addEventListener("abort", () => { clearTimeout(timer); l.pending.delete(id); reject(new CSharpToolRunError("ABORTED", "")); }, { once: true });
-    l.frame.contentWindow?.postMessage({ type: "run", id, source, stdin, library }, "*");
+    l.frame.contentWindow?.postMessage({ type: "run", id, source, stdin, library, ...(opts.fresh ? { fresh: true } : {}) }, "*");
   });
 }
 

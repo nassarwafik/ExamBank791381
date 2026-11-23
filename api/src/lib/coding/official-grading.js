@@ -700,6 +700,26 @@ async function finalSideEffects(container, assignment, ids, deps, obs, { regrade
   } catch { obs?.logWarn?.("coding.autoGrade.sideEffects.failed", { attemptNumber: Number(ids.attemptNumber) }); }
 }
 
+/** The scoring of COMPLETE evidence (ev.kind "complete") on one target, inside the submission CAS — the ONE path for the Runner's
+ *  callback and the teacher's device (`engine` records which one produced the evidence). → the "complete" outcome. */
+function scoreCompleteEvidence(target, attempt, auth, ev, { jobId, engine, at, wasFinal, scoreBefore }) {
+  // Phase 17E-A — the question's scoring policy decides the mark (proportional = the 17C rule; allOrNothing = all cases pass)
+  const allOrNothing = auth.scoringPolicy === "allOrNothing";
+  // Phase 17F-C2 — a REAL compile error (the runner's structural verdict) under the teacher's "manualReview" policy is complete
+  // evidence that requires the teacher's mark: no automatic score is computed or stored, the grade stays under review.
+  const reviewRequired = ev.compileError && auth.compileErrorPolicy === "manualReview";
+  const automaticScore = reviewRequired ? null : officialCodingScoreFor(auth.scoringPolicy, auth.maxMarks, ev);
+  target.result = { revision: target.revision, jobId, engine, ...(reviewRequired ? { reviewRequired: true } : { automaticScore }), maxMarks: auth.maxMarks, passedWeight: ev.passedWeight, totalWeight: ev.totalWeight, testCount: ev.testCount, passedCount: ev.passedCount, ...(allOrNothing ? { scoringPolicy: "allOrNothing" } : {}), outcome: ev.compileError ? "compile-error" : "graded", ...(ev.compilePreview !== undefined ? { compilePreview: ev.compilePreview } : {}), cases: ev.cases.map(c => ({ testId: c.testId, status: c.status, passed: c.passed, ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}), ...(c.actualPreview !== undefined ? { actualPreview: c.actualPreview } : {}), ...(c.stderrPreview !== undefined ? { stderrPreview: c.stderrPreview } : {}) })), completedAt: at };
+  // RF1-C — its OWN terminal state: the Runner job is acknowledged complete, the SmartAssess target awaits the teacher
+  target.state = reviewRequired ? "reviewRequired" : "complete"; delete target.technicalCode; target.updatedAt = at;
+  if (reviewRequired) holdForReview(auth.grade);
+  else applyGrade(auth.grade, automaticScore, allOrNothing ? !ev.compileError && ev.passedCount === ev.testCount : !ev.compileError && ev.passedWeight >= ev.totalWeight);
+  rebuildAttemptGrades(attempt);                                                      // the ONE canonical rebuild; an override still wins
+  // QA2-14 (owner decision) — a result that changes a mark the student already sees as final (a forced regrade) is announced too
+  const finalScoreChanged = wasFinal && !!attempt.finalized && Number(attempt.score) !== scoreBefore;
+  return { kind: "complete", targetState: target.state, becameFinal: !wasFinal && !!attempt.finalized, finalScoreChanged, outcome: target.result.outcome, ...(reviewRequired ? { reviewRequired: true } : {}), passedCount: ev.passedCount, testCount: ev.testCount };
+}
+
 /**
  * Applies ONE authenticated, structurally valid callback. → { status, body }:
  *   200 { applied: true, state }      complete (scored) or retryable (technical — never a zero)
@@ -732,21 +752,7 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
         target.state = "retryable"; target.technicalCode = ev.code; target.updatedAt = at;
         outcome = { kind: "retryable", code: ev.code };
       } else {
-        // Phase 17E-A — the question's scoring policy decides the mark (proportional = the 17C rule; allOrNothing = all cases pass)
-        const allOrNothing = auth.scoringPolicy === "allOrNothing";
-        // Phase 17F-C2 — a REAL compile error (the runner's structural verdict) under the teacher's "manualReview" policy is complete
-        // evidence that requires the teacher's mark: no automatic score is computed or stored, the grade stays under review.
-        const reviewRequired = ev.compileError && auth.compileErrorPolicy === "manualReview";
-        const automaticScore = reviewRequired ? null : officialCodingScoreFor(auth.scoringPolicy, auth.maxMarks, ev);
-        target.result = { revision: target.revision, jobId: body.jobId, engine: ENGINE, ...(reviewRequired ? { reviewRequired: true } : { automaticScore }), maxMarks: auth.maxMarks, passedWeight: ev.passedWeight, totalWeight: ev.totalWeight, testCount: ev.testCount, passedCount: ev.passedCount, ...(allOrNothing ? { scoringPolicy: "allOrNothing" } : {}), outcome: ev.compileError ? "compile-error" : "graded", ...(ev.compilePreview !== undefined ? { compilePreview: ev.compilePreview } : {}), cases: ev.cases.map(c => ({ testId: c.testId, status: c.status, passed: c.passed, ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}), ...(c.actualPreview !== undefined ? { actualPreview: c.actualPreview } : {}), ...(c.stderrPreview !== undefined ? { stderrPreview: c.stderrPreview } : {}) })), completedAt: at };
-        // RF1-C — its OWN terminal state: the Runner job is acknowledged complete, the SmartAssess target awaits the teacher
-        target.state = reviewRequired ? "reviewRequired" : "complete"; delete target.technicalCode; target.updatedAt = at;
-        if (reviewRequired) holdForReview(auth.grade);
-        else applyGrade(auth.grade, automaticScore, allOrNothing ? !ev.compileError && ev.passedCount === ev.testCount : !ev.compileError && ev.passedWeight >= ev.totalWeight);
-        rebuildAttemptGrades(attempt);                                                      // the ONE canonical rebuild; an override still wins
-        // QA2-14 (owner decision) — a result that changes a mark the student already sees as final (a forced regrade) is announced too
-        const finalScoreChanged = wasFinal && !!attempt.finalized && Number(attempt.score) !== scoreBefore;
-        outcome = { kind: "complete", targetState: target.state, becameFinal: !wasFinal && !!attempt.finalized, finalScoreChanged, outcome: target.result.outcome, ...(reviewRequired ? { reviewRequired: true } : {}), passedCount: ev.passedCount, testCount: ev.testCount };
+        outcome = scoreCompleteEvidence(target, attempt, auth, ev, { jobId: body.jobId, engine: ENGINE, at, wasFinal, scoreBefore });
       }
       current.updatedAt = at;
       return current;
@@ -940,5 +946,7 @@ function teacherCodingSummary(attempt) {
 
 module.exports = {
   JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, TERMINAL_STATES, STALE_DISPATCHED_MS, legacyAutoGradingWithhold, reviewRequiredTarget, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, questionAutoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
-  dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, teacherCodingEvidence, teacherCodingSummary, overrideScoreOf, mutateTarget, manualRecovery, resolveCodingTarget
+  dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, teacherCodingEvidence, teacherCodingSummary, overrideScoreOf, mutateTarget, manualRecovery, resolveCodingTarget,
+  // Teacher-device grading (device-grading.js) — the SAME scoring, job-state and final side effects as the Runner callback
+  scoreCompleteEvidence, isTerminalState, setJobState, finalSideEffects
 };

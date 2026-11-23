@@ -3,7 +3,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
-import { bookDeviceRunner, withDeviceCSharp, resetDeviceLabForTests, LAB_URL, DESKTOP_QUERY, isDesktopViewport } from "./deviceCSharpLab";
+import { bookDeviceRunner, withDeviceCSharp, resetDeviceLabForTests, deviceCSharpRun, LAB_URL, DESKTOP_QUERY, isDesktopViewport } from "./deviceCSharpLab";
 import type { CodingExecutionService } from "../coding/codingExecution";
 import CourseToolDock from "./CourseToolDock";
 
@@ -227,5 +227,25 @@ describe("On-device lab — books (every reader) and exam C# practice", () => {
       const src = readFileSync(f, "utf8");
       expect({ f, usesPracticeSeam: /withDeviceCSharp\(/.test(src), usesBookRunner: /bookDeviceRunner/.test(src) }).toEqual({ f, usesPracticeSeam: true, usesBookRunner: false });
     }
+  });
+});
+
+describe("On-device lab — teacher-device grading needs", () => {
+  it("`fresh` asks the lab for a new runtime (only when set), and the program's run time (runMs) becomes the case duration", async () => {
+    const first = deviceCSharpRun("class P {}", "1 2\n", "", undefined, { fresh: true });
+    await waitFor(() => expect(labFrame()).toBeTruthy());
+    const post = labWindow().postMessage;
+    fromLab({ type: "lab-ready" });
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    const [m1] = post.mock.calls[0] as unknown as [Record<string, unknown>];
+    expect(m1).toMatchObject({ type: "run", source: "class P {}", stdin: "1 2\n", library: "", fresh: true });
+    fromLab({ type: "result", id: m1.id, result: { status: "success", stdout: "3\n", stderr: "", compileMs: 250, runMs: 7 } });
+    expect(await first).toEqual({ status: "success", stdout: "3\n", stderr: "", durationMs: 7 });
+    const second = deviceCSharpRun("class P {}", "", "");
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    const [m2] = post.mock.calls[1] as unknown as [Record<string, unknown>];
+    expect("fresh" in m2).toBe(false);
+    fromLab({ type: "result", id: m2.id, result: { status: "success", stdout: "", stderr: "", runMs: "x", durationMs: 9 } });
+    expect((await second).durationMs).toBe(9);
   });
 });
