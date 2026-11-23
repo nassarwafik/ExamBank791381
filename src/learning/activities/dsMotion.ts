@@ -51,9 +51,15 @@ export function structureSteps(trace: DsTrace): number[] {
   return out;
 }
 
-/** The next step after `from` (within `allowed`, if given) whose line is a breakpoint; null when none. */
+/** A stop of the player: a breakpoint on the step's line, or the writer's own Viz.Pause() (V4 part 2). */
+export const isStop = (s: DsStep, breakpoints: ReadonlySet<number>) => breakpoints.has(s.line) || s.pause === true;
+
+/** The next step after `from` (within `allowed`, if given) that is a stop; null when none. */
 export function nextBreak(trace: DsTrace, from: number, breakpoints: ReadonlySet<number>, allowed?: number[]): number | null {
   const pool = allowed ?? trace.steps.map((_, i) => i);
-  for (const i of pool) if (i > from && breakpoints.has(trace.steps[i].line)) return i;
+  for (const i of pool) if (i > from && isStop(trace.steps[i], breakpoints)) return i;
   return null;
 }
+
+/** «توقّع قبل أن ترى»: a step whose structures changed from the step before (the class predicts it before it is shown). */
+export const changesStructures = (trace: DsTrace, i: number) => i > 0 && JSON.stringify(trace.steps[i].objs) !== JSON.stringify(trace.steps[i - 1].objs);

@@ -32,12 +32,15 @@ public static partial class Lab
     internal const int TraceMaxSteps = 5000;
 
     static readonly CSharpCompilationOptions TraceOptions = Options.WithOutputKind(OutputKind.DynamicallyLinkedLibrary);
+    static readonly SyntaxTree VizTree = CSharpSyntaxTree.ParseText(TraceRuntime.VizSource, ParseOptions, "LabViz.cs");
     static readonly SyntaxTree TraceRuntimeTree = CSharpSyntaxTree.ParseText(TraceRuntime.Source, ParseOptions, "LabTrace.cs");
 
     /// <summary>
     /// Records one program. `optionsJson`: { "shown"?: lines of the program the learner sees (later lines are a hidden driver whose
     /// steps fold into one closing step, as the course records them), "entry"?: the method to start from (default: Main),
-    /// "quiet"?: names of methods that run without steps of their own, "maxSteps"?: at most TraceMaxSteps }.
+    /// "quiet"?: names of methods that run without steps of their own, "maxSteps"?: at most TraceMaxSteps,
+    /// "inside"?: true = «اكشف الداخل», the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain }.
+    /// A step marked by Viz.Pause() carries "pause": true; Viz.Show(title) gives it the writer's title as its note.
     /// → { status, stdout, stderr, compileMs, runMs, steps: [{ line, note, frames, objs, out, error? }] }
     /// status: success | compile-error | runtime-error | output-limit | step-limit | trace-unsupported
     /// </summary>
@@ -51,6 +54,7 @@ public static partial class Lab
         int shown = options["shown"] is JsonValue sv && sv.TryGetValue<int>(out var s) && s > 0 ? s : int.MaxValue;
         string? entryName = options["entry"] is JsonValue ev && ev.TryGetValue<string>(out var e) && !string.IsNullOrWhiteSpace(e) ? e : null;
         int maxSteps = options["maxSteps"] is JsonValue mv && mv.TryGetValue<int>(out var m) && m > 0 ? Math.Min(m, TraceMaxSteps) : TraceMaxSteps;
+        bool inside = options["inside"] is JsonValue iv && iv.TryGetValue<bool>(out var ib) && ib;
         var quiet = options["quiet"] is JsonArray qa ? qa.Select(q => q?.GetValue<string>()).Where(q => !string.IsNullOrEmpty(q)).Cast<string>().ToList() : new List<string>();
 
         var parsed = CSharpSyntaxTree.ParseText(Wrap(source), ParseOptions, "Program.cs");
@@ -58,7 +62,10 @@ public static partial class Lab
         var program = RedirectStdin(parsed, lib);
         // A library, not a console program: a traced program may start from another method (the course's hidden driver «__Run»)
         // and need not have a Main.
-        var plain = CSharpCompilation.Create("TeacherProgram", lib == null ? new[] { UsingsTree, ShimTree, program } : new[] { UsingsTree, ShimTree, program, lib },
+        // Viz (Show / Pause) exists in the visual run only — unless the writer declares a class Viz of their own.
+        bool ownViz = parsed.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>().Any(t => t.Identifier.Text == "Viz" && t.TypeParameterList == null);
+        var support = ownViz ? new[] { UsingsTree, ShimTree, TraceRuntimeTree } : new[] { UsingsTree, ShimTree, TraceRuntimeTree, VizTree };
+        var plain = CSharpCompilation.Create("TeacherProgram", lib == null ? support.Append(program) : support.Append(program).Append(lib),
             Basic.Reference.Assemblies.Net100.References.All, TraceOptions);
         var errors = plain.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         if (errors.Count > 0) return TraceResult("compile-error", "", string.Join("\n", errors.Select(d => d.ToString())), total.ElapsedMilliseconds, 0, null);
@@ -66,7 +73,7 @@ public static partial class Lab
         SyntaxTree traced;
         try { traced = TraceInstrumenter.Instrument(program, plain.GetSemanticModel(program)); }
         catch (Exception x) { return TraceResult("trace-unsupported", "", "The recorder could not prepare this program: " + x.Message, total.ElapsedMilliseconds, 0, null); }
-        var trees = new List<SyntaxTree> { UsingsTree, ShimTree, TraceRuntimeTree, traced };
+        var trees = new List<SyntaxTree>(support) { traced };
         if (lib != null) trees.Add(lib);
         var compilation = CSharpCompilation.Create("TracedProgram", trees, Basic.Reference.Assemblies.Net100.References.All, TraceOptions);
         using var pe = new MemoryStream();
@@ -91,7 +98,7 @@ public static partial class Lab
         var recorder = assembly.GetType("__LabTrace")!;
         var libraryTypes = lib == null ? new List<string>() : lib.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>()
             .Select(t => t.Identifier.Text + (t.TypeParameterList == null ? "" : "`" + t.TypeParameterList.Parameters.Count)).ToList();
-        recorder.GetMethod("Configure")!.Invoke(null, new object[] { stdout, shown, maxSteps, quiet.ToArray(), libraryTypes.ToArray() });
+        recorder.GetMethod("Configure")!.Invoke(null, new object[] { stdout, shown, maxSteps, quiet.ToArray(), libraryTypes.ToArray(), inside });
         var (oldOut, oldErr) = (Console.Out, Console.Error);
         assembly.GetType("__LabStdin")?.GetField("In", BindingFlags.Public | BindingFlags.Static)?.SetValue(null, new StringReader(stdin ?? ""));
         Console.SetOut(stdout);

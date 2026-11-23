@@ -20,9 +20,12 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * `at` = the step the player shows (it then owns the navigation: `controls={false}` hides this view's own buttons); `breakpoints` /
  * `onToggleBreakpoint` = a line number becomes a toggle; `motion` = what just entered / left is marked for the player's animation.
  */
-export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false }: {
+export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal }: {
   cfg: DsTrace; epoch: number; onStep?: (step: number, of: number) => void;
   at?: number; controls?: boolean; breakpoints?: ReadonlySet<number>; onToggleBreakpoint?: (line: number) => void; motion?: boolean;
+  /** V4 part 2, «توقّع قبل أن ترى»: the structures, variables and objects of this step are covered until `onReveal` (a variable
+   *  that refers to a stack says its contents, so it would give the answer away). */
+  hidden?: boolean; onReveal?: () => void;
 }) {
   const [state, setState] = useState({ at: 0, epoch: 0 });
   const total = cfg.steps.length;
@@ -93,7 +96,13 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
           {cfg.stdin !== undefined && (
             <p className="learning-trace-stdin"><span className="learning-trace-label">المدخلات:</span> <span dir="ltr">{cfg.stdin.split("\n").join(" ")}</span></p>
           )}
-          {drawings > 0 && (
+          {hidden ? (
+            <section className="learning-ds-structures lab-trace-guess" aria-label="مباني المعطيات" data-testid="lab-trace-guess">
+              <h4 className="learning-trace-heading">مباني المعطيات والمتغيّرات الآن</h4>
+              <p className="lab-trace-guess-ask">تغيّرت المباني في هذه الخطوة. توقّعوا كيف أصبحت، ثم اكشفوا.</p>
+              <button type="button" className="learning-trace-btn is-next" onClick={onReveal}>اكشف</button>
+            </section>
+          ) : drawings > 0 && (
             <section className="learning-ds-structures" aria-label="مباني المعطيات">
               <h4 className="learning-trace-heading">مباني المعطيات الآن</h4>
               <div className="learning-ds-row">
@@ -104,7 +113,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
               {scene.trees.map((t, i) => <TreeDrawing key={"t" + i} cells={t.nodes.map(n => ({ key: n.id, v: n.v, x: n.x, depth: n.depth, parent: n.parent, labels: n.labels, hi: changed(n.id), fresh: fresh?.has(n.id) }))} />)}
             </section>
           )}
-          <section className="learning-trace-memory" aria-label="المتغيّرات">
+          {!hidden && <section className="learning-trace-memory" aria-label="المتغيّرات">
             <h4 className="learning-trace-heading">{step.frames.length > 1 ? "مكدّس الاستدعاءات والمتغيّرات" : "المتغيّرات"}</h4>
             {frames.map(({ f, i }) => (
               <div key={i} className={"learning-trace-frame" + (i === step.frames.length - 1 ? " is-top" : "")}>
@@ -126,8 +135,8 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
                 )}
               </div>
             ))}
-          </section>
-          {scene.objects.length > 0 && (
+          </section>}
+          {!hidden && scene.objects.length > 0 && (
             <section className="learning-trace-heap" aria-label="الكائنات">
               <h4 className="learning-trace-heading">الكائنات</h4>
               {scene.objects.map(o => (
