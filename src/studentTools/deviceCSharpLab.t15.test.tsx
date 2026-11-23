@@ -3,14 +3,15 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
-import { teacherLabRunner, resetTeacherLabForTests, LAB_URL } from "./teacherCSharpLab";
+import { bookDeviceRunner, withDeviceCSharp, resetDeviceLabForTests, LAB_URL } from "./deviceCSharpLab";
+import type { CodingExecutionService } from "../coding/codingExecution";
 import CourseToolDock from "./CourseToolDock";
 
 // Teacher C# lab — the app side (AGENTS.md §1 «Teacher C# lab»; docs/enterprise-teacher-csharp-lab-spike.md): nothing is created until
 // the first run; the lab is a SANDBOXED iframe (allow-scripts only → opaque origin); only messages from that iframe AND from the opaque
 // origin are accepted; results are normalised; a lab that never loads is a clear refusal; only the teacher's reader uses it.
 
-afterEach(() => { cleanup(); resetTeacherLabForTests(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); resetDeviceLabForTests(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 const labFrame = () => document.querySelector<HTMLIFrameElement>('iframe[data-testid="teacher-csharp-lab"]');
 // Iframe page loading is off (no network in unit tests): each lab iframe gets a stand-in window, so the source check stays exact.
@@ -37,7 +38,7 @@ function stubLibrary(answer: () => Response = () => new Response(JSON.stringify(
 describe("Teacher C# lab — the runner", () => {
   it("creates nothing until the first run; then the book's classes from the API (teacher session) and ONE sandboxed iframe", async () => {
     const fetchMock = stubLibrary();
-    const r = teacherLabRunner("899271d", TEACHER);
+    const r = bookDeviceRunner("899271d", TEACHER);
     expect(r.where).toBe("device");
     expect(await r.available()).toBe(true);
     expect(labFrame()).toBeNull();                                         // opening the editor downloads nothing
@@ -62,21 +63,21 @@ describe("Teacher C# lab — the runner", () => {
   });
   it("one lab per page; the library is read once per runner", async () => {
     const fetchMock = stubLibrary();
-    const r = teacherLabRunner("899271d", TEACHER);
+    const r = bookDeviceRunner("899271d", TEACHER);
     r.run("a", "");
     await waitFor(() => expect(labFrame()).toBeTruthy());
     fromLab({ type: "lab-ready" });
     r.run("b", "");
-    teacherLabRunner("899271d", TEACHER).run("c", "");
+    bookDeviceRunner("899271d", TEACHER).run("c", "");
     await waitFor(() => expect(labWindow().postMessage).toHaveBeenCalledTimes(3));
     expect(document.querySelectorAll('iframe[data-testid="teacher-csharp-lab"]')).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);                            // two runners → two reads; the same runner reads once
   });
   it("ignores messages from any other window or from a real origin (a same-origin or foreign sender is not the lab)", async () => {
     stubLibrary();
-    const r = teacherLabRunner("899271d", TEACHER);
+    const r = bookDeviceRunner("899271d", TEACHER);
     let settled = false;
-    const pending = r.run("x", "").then(v => { settled = true; return v; });
+    const pending = r.run("x", "").then((v: unknown) => { settled = true; return v; });
     await waitFor(() => expect(labFrame()).toBeTruthy());
     const post = labWindow().postMessage;
     fromLab({ type: "lab-ready" }, { origin: window.location.origin });  // not opaque → ignored
@@ -90,14 +91,14 @@ describe("Teacher C# lab — the runner", () => {
     await new Promise(res => setTimeout(res, 20));
     expect(settled).toBe(false);
     fromLab({ type: "result", id, result: { status: "timeout", stdout: "", stderr: "" } });
-    expect((await pending).status).toBe("timeout");
+    expect(((await pending) as { status: string }).status).toBe("timeout");
   });
   it("a refused library read is a clear refusal and builds no lab; a book without classes (404) runs with none", async () => {
     stubLibrary(() => new Response(JSON.stringify({ ok: false }), { status: 403 }));
-    expect(await teacherLabRunner("899271d", TEACHER).run("x", "").catch(e => e)).toMatchObject({ code: "LIBRARY_UNAVAILABLE" });
+    expect(await bookDeviceRunner("899271d", TEACHER).run("x", "").catch((e: unknown) => e)).toMatchObject({ code: "LIBRARY_UNAVAILABLE" });
     expect(labFrame()).toBeNull();
     stubLibrary(() => new Response(JSON.stringify({ ok: false }), { status: 404 }));
-    teacherLabRunner("791381", TEACHER).run("x", "");
+    bookDeviceRunner("791381", TEACHER).run("x", "");
     await waitFor(() => expect(labFrame()).toBeTruthy());
     fromLab({ type: "lab-ready" });
     await waitFor(() => expect(labWindow().postMessage).toHaveBeenCalled());
@@ -111,7 +112,7 @@ describe("Teacher C# lab — the runner", () => {
       if (url.endsWith("missing.wasm")) return new Response("", { status: 404 });
       return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
     }));
-    teacherLabRunner("899271d", TEACHER).run("x", "");
+    bookDeviceRunner("899271d", TEACHER).run("x", "");
     await waitFor(() => expect(labFrame()).toBeTruthy());
     const post = labWindow().postMessage;
     fromLab({ type: "fetch", id: "f1", name: "dotnet.native.wasm" });
@@ -135,8 +136,8 @@ describe("Teacher C# lab — the runner", () => {
   it("a lab page that never answers is a clear refusal, and the next run tries again", async () => {
     stubLibrary();
     vi.useFakeTimers();
-    const r = teacherLabRunner("899271d", TEACHER);
-    const p = r.run("x", "").catch(e => e);
+    const r = bookDeviceRunner("899271d", TEACHER);
+    const p = r.run("x", "").catch((e: unknown) => e);
     await vi.advanceTimersByTimeAsync(30001);
     expect(await p).toMatchObject({ code: "LAB_UNAVAILABLE" });
     expect(labFrame()).toBeNull();                                         // removed: the next run builds a fresh one
@@ -146,37 +147,52 @@ describe("Teacher C# lab — the runner", () => {
   });
 });
 
-describe("Teacher C# lab — only the teacher's reader", () => {
+describe("On-device lab — books (every reader) and exam C# practice", () => {
   const openEditor = async () => {
     fireEvent.click(screen.getByTestId("student-tools-button"));
     fireEvent.click(within(screen.getByRole("group", { name: "الأدوات المسموحة" })).getByRole("button", { name: "محرر C#" }));
     return within(screen.getByRole("dialog", { name: "محرر C#" })).findByTestId("csharp-editor-tool");
   };
-  it("teacherLab: the editor says it runs on this computer and «تشغيل» starts the lab — not the server", async () => {
+  it("a book reader (teacher or student — the same dock): the editor runs on this device; only the book's classes are read from the API", async () => {
     const fetchMock = stubLibrary();
-    render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer T" }} teacherLab />);
+    render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer S" }} />);
     const tool = await openEditor();
     expect(within(tool).getByTestId("csharp-on-device").textContent).toContain("يعمل على جهازك");
     fireEvent.click(await within(tool).findByRole("button", { name: "تشغيل" }));
     await waitFor(() => expect(labFrame()).toBeTruthy());
-    // no availability check and no run request to the API: only the book's classes are read, with the teacher's session
-    expect(fetchMock.mock.calls.map(c => String(c[0]))).toEqual(["/api/student-tools/csharp-run?library=899271d"]);
+    expect(fetchMock.mock.calls.map(c => String(c[0]))).toEqual(["/api/student-tools/csharp-run?library=899271d"]);   // no Runner request
   });
-  it("without teacherLab (a student's reader): no lab, no on-device note — the Runner path as before", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, available: true }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    render(<CourseToolDock courseId="899271d" runHeaders={{ Authorization: "Bearer S" }} />);
-    const tool = await openEditor();
-    expect(within(tool).queryByTestId("csharp-on-device")).toBeNull();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(labFrame()).toBeNull();
+  it("exam practice: C# runs on the device with NO course library (the program the Runner grades); other languages go to the server", async () => {
+    const remoteRun = vi.fn(async () => ({ status: "success" as const, stdout: "py", stderr: "" }));
+    const remote: CodingExecutionService = { capabilities: { available: true, languages: [{ key: "python", languageVersion: 1 }, { key: "csharp", languageVersion: 1 }] }, run: remoteRun };
+    const svc = withDeviceCSharp(remote);
+    expect(svc.capabilities).toEqual({ available: true, languages: [{ key: "csharp", languageVersion: 1 }, { key: "python", languageVersion: 1 }] });
+    expect(await svc.run({ language: "python", languageVersion: 1, source: "print(1)", stdin: "" })).toMatchObject({ stdout: "py" });
+    const pending = svc.run({ language: "csharp", languageVersion: 1, source: "class P { static void Main() {} }", stdin: "IN" });
+    await waitFor(() => expect(labFrame()).toBeTruthy());
+    fromLab({ type: "lab-ready" });
+    await waitFor(() => expect(labWindow().postMessage).toHaveBeenCalled());
+    const [msg] = labWindow().postMessage.mock.calls[0] as unknown as [Record<string, unknown>];
+    expect(msg).toMatchObject({ type: "run", source: "class P { static void Main() {} }", stdin: "IN", library: "" });
+    expect(remoteRun).toHaveBeenCalledTimes(1);                                         // C# never reached the server
+    fromLab({ type: "result", id: msg.id, result: { status: "success", stdout: "ok", stderr: "" } });
+    expect(await pending).toMatchObject({ status: "success", stdout: "ok" });
   });
-  it("guard: only LearningReaderWithTraining sets teacherLab, and only for actor \"teacher\"; no student or exam page imports the lab", () => {
-    expect(readFileSync("src/learning/training/LearningReaderWithTraining.tsx", "utf8")).toMatch(/teacherLab=\{actor === "teacher"\}/);
-    for (const f of ["src/student/StudentReader.tsx", "src/StudentExamPage.tsx", "src/ExamPreview.tsx", "src/learning/reader/LearningReader.tsx"]) {
+  it("exam practice without the server's runner: C# still runs on the device; other languages are unavailable (never a fake result)", async () => {
+    const svc = withDeviceCSharp(undefined);
+    expect(svc.capabilities).toEqual({ available: true, languages: [{ key: "csharp", languageVersion: 1 }] });
+    await expect(svc.run({ language: "java", languageVersion: 1, source: "x", stdin: "" })).rejects.toMatchObject({ code: "EXECUTION_UNAVAILABLE" });
+    const down: CodingExecutionService = { capabilities: { available: false, languages: [] }, run: vi.fn() };
+    expect(withDeviceCSharp(down).capabilities.languages).toEqual([{ key: "csharp", languageVersion: 1 }]);
+  });
+  it("guard: the exam page and the exam preview never hand the TOOL BAR a run transport (its editor stays write-only in exams)", () => {
+    for (const f of ["src/StudentExamPage.tsx", "src/ExamPreview.tsx"]) {
+      expect({ f, wiresToolRunner: /csharpRunner|bookDeviceRunner/.test(readFileSync(f, "utf8")) }).toEqual({ f, wiresToolRunner: false });
+    }
+    // the exam coding renderers use the device ONLY through withDeviceCSharp (practice on the question's examples)
+    for (const f of ["src/questionTypes/student/CodingResponse.tsx", "src/questionTypes/student/CodingTemplateResponse.tsx"]) {
       const src = readFileSync(f, "utf8");
-      expect({ f, importsLab: /teacherCSharpLab/.test(src) }).toEqual({ f, importsLab: false });
-      if (f !== "src/learning/reader/LearningReader.tsx") expect({ f, setsTeacherLab: /teacherLab/.test(src) }).toEqual({ f, setsTeacherLab: false });
+      expect({ f, usesPracticeSeam: /withDeviceCSharp\(/.test(src), usesBookRunner: /bookDeviceRunner/.test(src) }).toEqual({ f, usesPracticeSeam: true, usesBookRunner: false });
     }
   });
 });

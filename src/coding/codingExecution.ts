@@ -38,7 +38,8 @@ const RUN_ERROR_MESSAGES: Readonly<Record<string, string>> = Object.freeze({
   RUNNER_BUSY: "بيئة التشغيل مشغولة حاليًا. حاول مرة أخرى بعد قليل.",
   CODE_SOURCE_TOO_LARGE: "الكود أكبر من الحد المسموح لهذا السؤال.",
   ATTEMPT_NOT_WRITABLE: "لا يمكن تشغيل الكود لأن المحاولة غير متاحة للكتابة الآن.",
-  NETWORK: "تعذّر الاتصال بالخادم. تحقّق من الاتصال وحاول مرة أخرى."
+  NETWORK: "تعذّر الاتصال بالخادم. تحقّق من الاتصال وحاول مرة أخرى.",
+  LAB_UNAVAILABLE: "تعذّر تحميل مترجم C# على هذا الجهاز. تحقّق من الاتصال وحاول مرة أخرى."
 });
 export const RUN_FAILED_MESSAGE = "تعذّر تشغيل الكود الآن. حاول مرة أخرى لاحقًا.";
 export function runErrorMessage(code: string, retryAfterSeconds?: number): string {

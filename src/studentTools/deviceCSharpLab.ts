@@ -1,9 +1,12 @@
 import { normalizeExecutionResult, type CodeExecutionResult } from "../codingContract";
 import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
+import type { CodingExecutionService } from "../coding/codingExecution";
 
-// Teacher C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «Teacher C# lab») — the TEACHER's book editor runs C#
-// on the teacher's own computer: Roslyn on .NET WebAssembly, served at /csharp-lab/ and loaded ONLY here, only for the teacher actor
-// (LearningReaderWithTraining actor="teacher"). Never students, never exams, never grading — those keep their server paths.
+// On-device C# lab (docs/enterprise-teacher-csharp-lab-spike.md; AGENTS.md §1 «On-device C# lab») — PRACTICE runs of C# on the user's
+// own computer: Roslyn on .NET WebAssembly, served at /csharp-lab/. Owner decisions, the only places it is used:
+//   • the C# editor of the tool bar in a COURSE BOOK, for the teacher and for students (bookDeviceRunner);
+//   • the «تشغيل» of a C# CODING QUESTION in an exam — practice on the question's visible examples only (withDeviceCSharp).
+// Never the tool bar's editor in an exam (write only), never grading: official grading stays on the server's Runner.
 //
 // Isolation: the lab page lives in a hidden iframe with sandbox="allow-scripts" — an OPAQUE origin, so the code it runs cannot reach
 // this app's storage, cookies or session; its runtime runs in a Web Worker the lab terminates after 10 s (an endless program never
@@ -97,8 +100,24 @@ function libraryLoader(courseId: string, headers: Record<string, string>): () =>
   };
 }
 
-/** The teacher's on-device runner for one book: `headers` are the teacher reader's session headers (for the book's classes only). */
-export function teacherLabRunner(courseId: string, headers: Record<string, string>): CSharpToolRunner {
+/** ONE practice run on this device (the lab is created on the first call). `library`: the book's classes, or "". */
+export async function deviceCSharpRun(source: string, stdin: string, library: string, signal?: AbortSignal): Promise<CodeExecutionResult> {
+  const l = ensureLab();
+  try { await l.ready; } catch { throw unavailable(); }
+  if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
+  const id = "run-" + (++seq);
+  return new Promise<CodeExecutionResult>((resolve, reject) => {
+    const timer = setTimeout(() => { l.pending.delete(id); reject(unavailable()); }, RUN_TIMEOUT_MS);
+    l.pending.set(id, { resolve, timer });
+    signal?.addEventListener("abort", () => { clearTimeout(timer); l.pending.delete(id); reject(new CSharpToolRunError("ABORTED", "")); }, { once: true });
+    l.frame.contentWindow?.postMessage({ type: "run", id, source, stdin, library }, "*");
+  });
+}
+
+/** The book editor's on-device runner (teacher and students): `headers` are the reader's session headers, used ONLY to read the
+ *  book's classes from the API, which checks the reader (a teacher entitled to the course; a student whose class offers the book
+ *  with running allowed). */
+export function bookDeviceRunner(courseId: string, headers: Record<string, string>): CSharpToolRunner {
   const library = libraryLoader(courseId, headers);
   return {
     where: "device",
@@ -106,22 +125,28 @@ export function teacherLabRunner(courseId: string, headers: Record<string, strin
     async run(source, stdin, signal) {
       let lib: string;
       try { lib = await library(); } catch { throw new CSharpToolRunError("LIBRARY_UNAVAILABLE", "تعذّر تحميل فئات الكتاب (Stack وQueue وNode…). تحقّق من الاتصال وحاول مرة أخرى."); }
-      const l = ensureLab();
-      try { await l.ready; } catch { throw unavailable(); }
-      if (signal?.aborted) throw new CSharpToolRunError("ABORTED", "");
-      const id = "run-" + (++seq);
-      return new Promise<CodeExecutionResult>((resolve, reject) => {
-        const timer = setTimeout(() => { l.pending.delete(id); reject(unavailable()); }, RUN_TIMEOUT_MS);
-        l.pending.set(id, { resolve, timer });
-        signal?.addEventListener("abort", () => { clearTimeout(timer); l.pending.delete(id); reject(new CSharpToolRunError("ABORTED", "")); }, { once: true });
-        l.frame.contentWindow?.postMessage({ type: "run", id, source, stdin, library: lib }, "*");
-      });
+      return deviceCSharpRun(source, stdin, lib, signal);
+    },
+  };
+}
+
+/** An exam coding question's practice service: C# (csharp@1) runs ON THIS DEVICE, with no course library — exactly the program
+ *  the Runner grades; every other language goes to `remote` (the server's practice route), or is unavailable without it.
+ *  Practice only: a result here is never a score (the server's grading is the only authority). */
+export function withDeviceCSharp(remote: CodingExecutionService | undefined): CodingExecutionService {
+  const others = (remote?.capabilities.available ? remote.capabilities.languages : []).filter(l => !(l.key === "csharp" && l.languageVersion === 1));
+  return {
+    capabilities: { available: true, languages: [{ key: "csharp", languageVersion: 1 }, ...others] },
+    async run(req, options = {}) {
+      if (req.language === "csharp" && req.languageVersion === 1) return deviceCSharpRun(req.source, req.stdin, "", options.signal);
+      if (!remote) throw new CSharpToolRunError("EXECUTION_UNAVAILABLE", "");
+      return remote.run(req, options);
     },
   };
 }
 
 /** Test seam: forget the page's lab (unit tests mount and unmount many readers). */
-export function resetTeacherLabForTests(): void {
+export function resetDeviceLabForTests(): void {
   lab?.frame.remove();
   lab = null;
 }

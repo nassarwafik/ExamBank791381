@@ -3,6 +3,7 @@ import type { StudentRendererProps } from "../registryTypes";
 import CodingWorkspace from "../../coding/workspace/CodingWorkspace";
 import { CodingExecutionContext, EXECUTION_STATUS_LABELS, PUBLIC_RUN_DISCLAIMER, RUN_PREVIEW_MESSAGE, RUN_STALE_MESSAGE, RUN_STDIN_MAX_BYTES, RUN_UNAVAILABLE_MESSAGE, canRun, runErrorMessage, type CodingCapabilities } from "../../coding/codingExecution";
 import { createApiCodingService, loadCodingCapabilities, type CodingRunFailure } from "../../coding/codingRunClient";
+import { withDeviceCSharp } from "../../studentTools/deviceCSharpLab";
 import { otherLanguageDrafts, readLanguageDraft, rememberLanguageDraft, type DraftScope, type LanguageDrafts } from "../../coding/codingDrafts";
 import { StudentAttemptContext, TeacherPreviewContext } from "../studentAttemptContext";
 import { CODE_SOURCE_MAX_BYTES, codingLanguage, isCodingLanguage, projectCodingConfigForStudent, utf8ByteLength } from "../../codingQuestion";
@@ -62,7 +63,9 @@ export default function CodingResponse({ q, id, answer, onAnswer, disabled, labe
     void loadCodingCapabilities(attempt).then(c => { if (live) setRemoteCaps(c); });   // cached per attempt seam: one request
     return () => { live = false; };
   }, [injected, attempt, preview]);
-  const exec = useMemo(() => injected ?? (attempt && remoteCaps && !preview ? createApiCodingService(attempt, id, remoteCaps) : undefined), [injected, attempt, remoteCaps, id, preview]);
+  // Owner decision: a C# practice run happens ON THE STUDENT'S DEVICE (deviceCSharpLab.ts — no Runner cost); other languages keep
+  // the server's practice route. Practice only: official grading stays on the server's Runner.
+  const exec = useMemo(() => injected ?? (attempt && !preview ? withDeviceCSharp(remoteCaps ? createApiCodingService(attempt, id, remoteCaps) : undefined) : undefined), [injected, attempt, remoteCaps, id, preview]);
 
   const allowed = cfg?.allowedLanguages ?? [];
   const valid = !!cfg && allowed.length > 0 && allowed.every(isCodingLanguage) && typeof cfg.defaultLanguage === "string" && allowed.includes(cfg.defaultLanguage);

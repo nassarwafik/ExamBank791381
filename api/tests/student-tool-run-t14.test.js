@@ -180,7 +180,7 @@ describe("T14 — runner, budget, telemetry", () => {
     expect((await get({ ...BUILDER_NO, requireStudentAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false } } }), container: ctx.container, env: {} })).status).toBe(401);
     expect(throttle(ctx)).toEqual([]);
   });
-  it("GET ?library=<course> — the teacher C# lab's book classes: teachers only, entitled course; never a student; nothing written", async () => {
+  it("GET ?library=<course> — the on-device lab's book classes: the book run's authority (entitled teacher; a student whose book allows running); nothing written", async () => {
     const ctx = seed();
     const get = (deps, q) => handler({ ...req("", "GET"), url: "https://x/api/student-tools/csharp-run?" + q }, deps);
     const t = await get(teacherDeps(ctx, provider()), "library=899271d");
@@ -189,9 +189,15 @@ describe("T14 — runner, budget, telemetry", () => {
     for (const h of ["public class Node<T>", "public class BinNode<T>", "public class Stack<T>", "public class Queue<T>", "public T Top()", "public void Insert(T x)"]) expect(t.jsonBody.library).toContain(h);
     expect((await get(teacherDeps(ctx, provider()), "library=791381")).jsonBody).toEqual({ ok: true, library: "" });   // a book without classes
     for (const q of ["library=000000", "library=..%2Fx", "library="]) expect((await get(teacherDeps(ctx, provider()), q)).status, q).toBe(404);
+    // a student: the SAME authority as a book run — their class offers the book and its tools let the C# editor run
     const s = await get(studentDeps(ctx, provider()), "library=899271d");
-    expect([s.status, s.jsonBody.code]).toEqual([403, "RUN_NOT_ALLOWED"]);                 // students never receive the classes this way
-    expect(s.jsonBody.library).toBeUndefined();
+    expect(s.status).toBe(200);
+    expect(s.jsonBody.library).toContain("public class Stack<T>");
+    const off = seed({ classroom: room({ learningMaterials: [{ courseId: "899271d", visibleModuleIds: [], studentTools: { version: 1, tools: [{ id: "csharpEditor", allowRun: false }] } }] }) });
+    expect((await get(studentDeps(off, provider()), "library=899271d")).jsonBody).toMatchObject({ ok: false, code: "RUN_NOT_ALLOWED" });
+    expect((await get(studentDeps(off, provider()), "library=899271d")).jsonBody.library).toBeUndefined();
+    const notMine = seed({ classroom: room({ learningMaterials: [] }) });
+    expect((await get(studentDeps(notMine, provider()), "library=899271d")).status).toBe(403);         // course not attached to the class
     expect((await get({ ...BUILDER_NO, requireStudentAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false } } }), container: ctx.container, env: {} }, "library=899271d")).status).toBe(401);
     expect(throttle(ctx)).toEqual([]);
   });
