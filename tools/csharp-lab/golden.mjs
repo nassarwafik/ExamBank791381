@@ -242,6 +242,10 @@ const BEYOND = [
       return t.status === "success" && !("pointers" in t) && last.objs.every(o => !("refs" in o) && o.k !== "array" && o.type !== "Student")
         && last.frames[0].vars.some(([n, v]) => n === "a" && v.t === "arr");
     } },
+  // Visual lab V6 — the trimmed lab: a program that needs a library the download leaves out is refused before it is recorded (LAB0001)
+  { name: "V6 a program needing a left-out library (System.Xml) is refused before it is recorded (LAB0001)", stdin: "", options: { rich: true },
+    source: "using System.Xml;\nclass P { static void Main() { Console.WriteLine(new XmlDocument().Name); } }",
+    check: (t, steps) => t.status === "compile-error" && /LAB0001: 'System\.Xml\.XmlDocument'/.test(t.stderr) && steps.length === 0 },
   { name: "a compile error: reported on the writer's line, nothing recorded", stdin: "",
     source: "static void Main()\n{\n    int x = 1\n}",
     check: (t, steps) => t.status === "compile-error" && /Program\.cs\(3,\d+\): error CS1002/.test(t.stderr) && steps.length === 0 },
