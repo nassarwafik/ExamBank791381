@@ -323,6 +323,24 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   }
   check(litX && !counterEarly, "V11: on «q.X = 9» only q's X is lit; Counter's statics never shown before its static constructor printed «init»");
   await shotOf(memory, "lab-teacher-visual-structs-1440");
+  // Phase E1 — «ملء الشاشة»: the editor's panel fills the screen (the program, its output and the steps it shows stay); Escape leaves.
+  // First, the fix it needed: a panel grown by a long recorded run kept its header under the app's top bar (✕ and the toggle unreachable)
+  const headTop = (await panel.locator(".stt-panel-head").boundingBox())?.y ?? -1;
+  const barBottom = await page.evaluate(() => { const b = document.querySelector(".eb-topbar")?.getBoundingClientRect(); return b ? b.bottom : 0; });
+  check(headTop >= barBottom, "E1: the grown C# panel keeps its header below the app's top bar (header at " + Math.round(headTop) + " px, bar ends at " + Math.round(barBottom) + ")");
+  await panel.getByRole("button", { name: "ملء الشاشة" }).click();
+  const fullBox = await panel.boundingBox();
+  const keptTrace = await panel.getByTestId("csharp-trace").count();
+  const scrollLocked = await page.evaluate(() => document.body.style.overflow === "hidden");
+  check(!!fullBox && fullBox.width >= 1440 * 0.99 && fullBox.height >= 900 * 0.99 && keptTrace === 1 && scrollLocked,
+    "E1: «ملء الشاشة» — the C# editor fills the screen (" + Math.round(fullBox?.width || 0) + "×" + Math.round(fullBox?.height || 0) + "), its recorded run still shown, the page behind locked");
+  await shotOf(panel, "lab-teacher-editor-fullscreen-1440");
+  await panel.getByRole("button", { name: "الخروج من ملء الشاشة" }).focus();
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector(".stt-panel.is-fullscreen"), null, { timeout: 5000 }).catch(() => {});
+  const backBox = await panel.boundingBox();
+  check(await panel.isVisible() && !!backBox && backBox.width < 1000 && await panel.getByTestId("csharp-trace").count() === 1,
+    "E1: Escape leaves full screen — the panel is back in its place (" + Math.round(backBox?.width || 0) + " px wide), still open, its run kept");
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");

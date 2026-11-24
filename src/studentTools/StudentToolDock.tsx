@@ -12,6 +12,8 @@ import TruthTableTool from "./TruthTableTool";
 import UnitConverterTool from "./UnitConverterTool";
 import PlaceValueBoxesTool from "./PlaceValueBoxesTool";
 import HexBinaryTableTool from "./HexBinaryTableTool";
+import { useFullscreenOverlay } from "../ui/useFullscreenOverlay";
+import { IconMaximize, IconMinimize } from "../icons";
 import "./studentTools.css";
 // Phase T4 — the plotter carries the graph engine: its own chunk, fetched the first time the student opens it.
 const GraphPlotterTool = lazy(() => import("./GraphPlotterTool"));
@@ -38,6 +40,8 @@ const CSharpEditorTool = lazy(() => import("./CSharpEditorTool"));
 type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner };
 type CSharpRun = { runner?: CSharpToolRunner };
 const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor"]);
+/** Phase E1 (owner request) — the tools whose panel can fill the screen («ملء الشاشة»), as the course's «وضع العرض» does. */
+const FULLSCREEN_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor"]);
 const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor"]);
 
 class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -49,7 +53,7 @@ class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 
-function ToolBody({ tool, csharp }: { tool: StudentToolConfigV1; csharp: CSharpRun }) {
+function ToolBody({ tool, csharp, full = false }: { tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean }) {
   switch (tool.id) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
@@ -64,7 +68,7 @@ function ToolBody({ tool, csharp }: { tool: StudentToolConfigV1; csharp: CSharpR
     case "hexBinaryTable": return <HexBinaryTableTool config={tool} />;
     case "periodicTable": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل الجدول الدوري…</p>}><PeriodicTableTool config={tool} /></Suspense>;
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
-    case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} /></Suspense>;
+    case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} full={full} /></Suspense>;
     default: return null;
   }
 }
@@ -88,7 +92,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef<{ pointer: number; startX: number; startY: number; base: { x: number; y: number }; bounds: { minX: number; maxX: number; minY: number; maxY: number } } | null>(null);
   const onHeadPointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button") || full.active) return;   // a full-screen panel does not move
     if (typeof window !== "undefined" && window.matchMedia?.("(max-width: 640px)").matches) return;
     const panel = (e.currentTarget as HTMLElement).closest(".stt-panel") as HTMLElement | null;
     const r = panel?.getBoundingClientRect();
@@ -119,6 +123,11 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
     return () => mq.removeEventListener?.("change", reset);
   }, [moved]);
   const panelRefs = useRef<Partial<Record<StudentToolId, HTMLElement | null>>>({});
+  // Phase E1 — «ملء الشاشة»: the open panel itself becomes the app-level overlay (useFullscreenOverlay, as the Reader's «وضع العرض»):
+  // the page behind does not scroll, Tab stays in the panel, Escape leaves full screen first (a second Escape closes the panel), and
+  // the browser's own full screen is asked for best-effort only — an exam that is already full screen is left as it is.
+  const fullRef = useRef<HTMLElement | null>(null);
+  const full = useFullscreenOverlay(fullRef);
 
   // A section that disables the open tool closes its panel (its state is kept for the sections that allow it). Adjusted during render
   // when the section changes (React's "adjusting state on a prop change" pattern), so returning to an allowing section does not reopen it.
@@ -136,6 +145,10 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
     (first || panel)?.focus();
   }, [openTool]);
 
+  // a full-screen panel that closes, or that a section disables, leaves full screen with it
+  const fullTool = full.active && openTool && openAllowed && FULLSCREEN_TOOLS.has(openTool) ? openTool : null;
+  useEffect(() => { if (full.active && !fullTool) full.exit(); }, [full, fullTool]);
+
   if (!all.length) return null;
 
   const open = (id: StudentToolId) => {
@@ -144,30 +157,38 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
     setOpenTool(id);
     setMenuOpen(false);
   };
-  const close = () => { setOpenTool(null); fabRef.current?.focus(); };
+  const close = () => { setOpenTool(null); fabRef.current?.focus(); };   // a full-screen panel that closes leaves full screen (the effect above)
+  const toggleFull = (id: StudentToolId) => { fullRef.current = panelRefs.current[id] ?? null; full.toggle(); };
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || full.active) return;   // in full screen, Escape leaves full screen (the overlay's own key) — the panel stays
     if (openTool) { e.stopPropagation(); close(); } else if (menuOpen) { e.stopPropagation(); setMenuOpen(false); fabRef.current?.focus(); }
   };
 
   return (
-    <div className="stt-dock" dir="rtl" onKeyDown={onKeyDown} data-testid="student-tool-dock">
+    <div className={"stt-dock" + (fullTool ? " has-fullscreen" : "")} dir="rtl" onKeyDown={onKeyDown} data-testid="student-tool-dock">
       {all.filter(t => mounted.has(t.id)).map(t => {
         const titleId = baseId + "-" + t.id + "-title";
         const visible = openTool === t.id && openAllowed;
+        const isFull = fullTool === t.id;
         return (
-          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (WIDE_TOOLS.has(t.id) ? " is-wide" : "") + (XWIDE_TOOLS.has(t.id) ? " is-xwide" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
+          <section key={t.id} ref={el => { panelRefs.current[t.id] = el; }} className={"stt-panel" + (WIDE_TOOLS.has(t.id) ? " is-wide" : "") + (XWIDE_TOOLS.has(t.id) ? " is-xwide" : "") + (isFull ? " is-fullscreen" : "")} role="dialog" aria-modal="false" aria-labelledby={titleId}
             hidden={!visible} tabIndex={-1} data-testid={"tool-panel-" + t.id}
-            style={moved ? { transform: "translate(" + offset.x + "px, " + offset.y + "px)" } : undefined}>
+            style={moved && !isFull ? { transform: "translate(" + offset.x + "px, " + offset.y + "px)" } : undefined}>
             <header className="stt-panel-head" onPointerDown={onHeadPointerDown} onPointerMove={onHeadPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}
               title="اسحب لتحريك النافذة">
               <h2 id={titleId} className="stt-panel-title">{toolTitle(t)}</h2>
               <span className="stt-head-actions">
-                {moved && <button type="button" className="stt-close" onClick={() => setOffset({ x: 0, y: 0 })} aria-label="إعادة النافذة إلى موضعها">↺</button>}
+                {FULLSCREEN_TOOLS.has(t.id) && (
+                  <button type="button" className="stt-close stt-full-toggle" onClick={() => toggleFull(t.id)} aria-pressed={isFull}
+                    aria-label={isFull ? "الخروج من ملء الشاشة" : "ملء الشاشة"} title={isFull ? "الخروج من ملء الشاشة (Esc)" : "ملء الشاشة"} data-testid="tool-fullscreen">
+                    {isFull ? <IconMinimize /> : <IconMaximize />}
+                  </button>
+                )}
+                {moved && !isFull && <button type="button" className="stt-close" onClick={() => setOffset({ x: 0, y: 0 })} aria-label="إعادة النافذة إلى موضعها">↺</button>}
                 <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
               </span>
             </header>
-            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} /></ToolBoundary></div>
+            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} /></ToolBoundary></div>
           </section>
         );
       })}

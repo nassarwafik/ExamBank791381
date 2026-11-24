@@ -47,9 +47,11 @@ const TRACED: Record<LabTraceResult["status"], string> = {
 type Props = {
   /** Present only when running is allowed HERE: a book whose tools allow it (the dock applies the rule). Absent → write only. */
   runner?: CSharpToolRunner;
+  /** Phase E1 — the panel fills the screen («ملء الشاشة»): the editor is taller (the state — code, input, output, steps — is the same). */
+  full?: boolean;
 };
 
-export default function CSharpEditorTool({ runner }: Props) {
+export default function CSharpEditorTool({ runner, full = false }: Props) {
   const [source, setSource] = useState(STARTER);
   const [stdin, setStdin] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -116,7 +118,7 @@ export default function CSharpEditorTool({ runner }: Props) {
   return (
     <div className="stt-cs" data-testid="csharp-editor-tool">
       <p className="stt-hint">مسودة برمجية للتجربة: لا تُحفظ ولا تُصحّح، وليست إجابتك. انسخ ما تحتاجه إلى مكان الإجابة.</p>
-      <CodingEditor value={source} onChange={v => { setSource(v); setCopied(""); }} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={10} />
+      <CodingEditor value={source} onChange={v => { setSource(v); setCopied(""); }} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={full ? 24 : 10} />
       <div className="stt-row stt-cs-actions">
         <button type="button" className="stt-btn" onClick={copy} disabled={!source.trim()}>نسخ الكود</button>
         <span className="stt-hint" role="status" data-testid="csharp-copy-status">{copied === "ok" ? "نُسخ الكود. الصقه في مكان الإجابة (Ctrl+V)." : copied === "failed" ? "تعذّر النسخ تلقائيًا؛ حدّد الكود وانسخه بـ Ctrl+C." : ""}</span>
