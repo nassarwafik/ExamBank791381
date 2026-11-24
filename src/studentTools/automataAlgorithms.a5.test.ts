@@ -75,6 +75,17 @@ describe("A5 — «حوّل إلى حتمي»: the book's conversion by sets", (
     expect(equivalence(r.machine, eps)).toEqual({ equal: true });
     expect(r.rows[1].members).toEqual(["q1", "q2"]);   // a from q0 reaches q1, and by ε q2
   });
+  it("an ε arrow from the start: the new start is the start's ε-closure (so ε is accepted here)", () => {
+    const eps = read({ kind: "NFA", states: ["q0", "q1"], alphabet: ["a"], start: "q0", accept: ["q1"], transitions: [["q0", "ε", "q1"], ["q1", "a", "q1"]] });
+    const r = ok(toDeterministic(eps));
+    expect([r.machine.start, r.rows[0].members, r.rows[0].accept]).toEqual(["q0q1", ["q0", "q1"], true]);
+    expect(equivalence(r.machine, eps)).toEqual({ equal: true });
+  });
+  it("a result too large for the lab is refused, never cut: 24 sets and the trap are 25 states", () => {
+    const states = Array.from({ length: 24 }, (_, i) => "q" + i);
+    const chain = read({ kind: "NFA", states, alphabet: ["a"], start: "q0", accept: ["q23"], transitions: states.slice(0, -1).map((q, i) => [q, "a", states[i + 1]]) });
+    expect(toDeterministic(chain)).toEqual({ ok: false, message: "الناتج 25 حالة، والمختبر يتّسع لـ 24 حالة على الأكثر." });
+  });
 });
 
 describe("A5 — «التقاطع» / «الاتحاد» and the book's step 5", () => {
