@@ -31,12 +31,13 @@ function loadWorker(opts: { pack?: unknown; failFile?: string } = {}) {
   };
   const caches = { open, keys: async () => [...stores.keys()], delete: vi.fn(async (n: string) => stores.delete(n)) };
   let online = true;
+  let deployed = "";   // what the server serves now; `redeploy` changes it (the stored copy keeps what was stored)
   const network = vi.fn(async (req: Request | string) => {
     const p = path(req);
     if (!online) throw new TypeError("Failed to fetch");
     if (p === "/offline-lab.json") return new Response(JSON.stringify(opts.pack ?? PACK), { status: 200 });
     if (p === opts.failFile) return new Response("missing", { status: 404 });
-    return new Response("network:" + p, { status: 200 });
+    return new Response("network:" + p + deployed, { status: 200 });
   });
   const self = {
     location: new URL(ORIGIN + "/sw.js"),
@@ -61,7 +62,8 @@ function loadWorker(opts: { pack?: unknown; failFile?: string } = {}) {
     preloadResponse: Promise.resolve(undefined) });
   const nav = (p: string) => dispatch("fetch", { request: { url: ORIGIN + p, mode: "navigate", method: "GET" }, preloadResponse: Promise.resolve(undefined) });
   const settle = () => new Promise(r => setTimeout(r, 0));
-  return { stores, caches, network, replies, message, get, nav, dispatch, settle, offline: () => { online = false; } };
+  const getUrl = (url: string) => dispatch("fetch", { request: new Request(url, { mode: "no-cors" }), preloadResponse: Promise.resolve(undefined) });
+  return { stores, caches, network, replies, message, get, getUrl, nav, dispatch, settle, offline: () => { online = false; }, redeploy: (v: string) => { deployed = v; } };
 }
 
 describe("V14 — the offline lab pack", () => {
@@ -121,8 +123,10 @@ describe("V14 — serving", () => {
   it("with the pack: its files network first; when the network fails, the stored copy; /api/ never", async () => {
     const w = loadWorker();
     await w.message("install");
+    w.redeploy("#v2");   // a newer deployment: a connected page must get IT, never the stored copy (_framework names carry no hash)
     const online = await w.get("/csharp-lab/_framework/dotnet.js");
-    expect(await (online.responded as Response).text()).toBe("network:/csharp-lab/_framework/dotnet.js");
+    expect(await (online.responded as Response).text()).toBe("network:/csharp-lab/_framework/dotnet.js#v2");
+    expect((await w.getUrl("https://cdn.example/csharp-lab/_framework/dotnet.js")).responded).toBeUndefined();   // another site's same path: not ours
     w.offline();
     const offline = await w.get("/csharp-lab/_framework/dotnet.js");
     expect(await (offline.responded as Response).text()).toBe("network:/csharp-lab/_framework/dotnet.js");   // the copy stored at install
