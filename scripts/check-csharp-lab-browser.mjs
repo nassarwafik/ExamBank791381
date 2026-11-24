@@ -116,6 +116,9 @@ async function openEditor(page) {
   return panel;
 }
 async function setCode(panel, page, source) {
+  // V15: after a visual run the program is folded to one line; open it to write the next program
+  const fold = panel.getByTestId("csharp-editor-fold");
+  if (await fold.count() && await fold.getAttribute("aria-expanded") === "false") await fold.click();
   const monaco = panel.locator(".monaco-editor .view-lines");
   if (await monaco.count()) {
     await monaco.first().click();
@@ -134,6 +137,9 @@ async function run(panel, page, source, timeout = 60000) {
   return { status: (await status.innerText()).trim(), out: await panel.getByTestId("csharp-output").textContent().catch(() => null), err: await panel.getByTestId("csharp-errors").textContent().catch(() => null) };
 }
 
+/** Visual lab V15 (plan §25): the player's navigation (from the start, previous / next, auto-play, speed, the step, its slider, the
+ *  player's note) is docked in the editor's sticky strip, above the drawing — not inside «csharp-trace». */
+const nav = panel => panel.getByTestId("csharp-run-strip").getByTestId("lab-trace-nav");
 /** Visual lab V3: «تشغيل مرئي» — the program recorded step by step on this device and drawn by the course's trace view. */
 async function visual(panel, page, source, timeout = 60000) {
   await setCode(panel, page, source);
@@ -142,9 +148,9 @@ async function visual(panel, page, source, timeout = 60000) {
   await status.filter({ hasNotText: /^$|جارٍ/ }).waitFor({ timeout });
   const view = panel.getByTestId("csharp-trace");
   await view.waitFor({ timeout: 20000 });
-  const counter = async () => (await view.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
+  const counter = async () => (await nav(panel).locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
   const total = Number((await counter()).split("/")[1]);
-  for (let i = 1; i < total; i++) await view.getByRole("button", { name: "الخطوة التالية" }).click();
+  for (let i = 1; i < total; i++) await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click();
   return { status: (await status.innerText()).trim(), total, last: await counter(), stack: await view.locator(".learning-ds-structures").innerText().catch(() => ""), out: await view.getByRole("region", { name: "الناتج حتى الآن" }).textContent() };
 }
 
@@ -176,16 +182,25 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   check(v.last === "الخطوة " + v.total + " / " + v.total + "" || v.last.endsWith(v.total + " / " + v.total), "the steps can be walked to the last one (" + v.last + ")");
   check(/3[\s\S]*2[\s\S]*1/.test(v.stack) && v.out === "[3,2,1]\n", "the last step draws the stack 3 2 1 and the output so far is [3,2,1] (" + JSON.stringify({ stack: v.stack.slice(0, 80), out: v.out }) + ")");
   await shot(page, "lab-teacher-visual-1440");
+  // Visual lab V15 — the program folded to one line, the navigation in the sticky strip with «تشغيل»; the fold opens it again
+  const fold = panel.getByTestId("csharp-editor-fold");
+  check(await panel.getByTestId("csharp-editor-program").isHidden() && await fold.getAttribute("aria-expanded") === "false"
+    && await panel.getByTestId("csharp-run-strip").getByRole("button", { name: "تشغيل", exact: true }).count() === 1
+    && await panel.getByTestId("csharp-run-strip").evaluate(e => getComputedStyle(e).position) === "sticky",
+    "V15: after «تشغيل مرئي» the program is folded and the run buttons with the steps' navigation form one sticky strip");
+  await fold.click();
+  check(await panel.getByTestId("csharp-editor-program").isVisible() && await fold.getAttribute("aria-expanded") === "true", "V15: «البرنامج» opens the program again");
+  await fold.click();
   // Visual lab V4 — the player: a breakpoint on line 5 (Console.WriteLine), auto-play from the start stops AT it; «توسيع»
   const tv = panel.getByTestId("csharp-trace");
-  await tv.getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
   await tv.getByRole("button", { name: "نقطة توقّف على السطر 5" }).click();
   check(await tv.getByRole("button", { name: "نقطة توقّف على السطر 5" }).getAttribute("aria-pressed") === "true", "V4: a click on line number 5 sets a breakpoint");
-  await tv.getByLabel("السرعة").selectOption("fast");
-  await tv.getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
-  await tv.getByText("توقف عند نقطة التوقف على السطر 5.").waitFor({ timeout: 30000 });
-  const stopAt = (await tv.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
-  const playLabel = await tv.locator(".learning-trace-btn.is-play").innerText();
+  await nav(panel).getByLabel("السرعة").selectOption("fast");
+  await nav(panel).getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
+  await nav(panel).getByText("توقف عند نقطة التوقف على السطر 5.").waitFor({ timeout: 30000 });
+  const stopAt = (await nav(panel).locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").trim();
+  const playLabel = await nav(panel).locator(".learning-trace-btn.is-play").innerText();
   check(/▶/.test(playLabel) && stopAt !== "الخطوة " + v.total + " / " + v.total && (await tv.locator(".learning-trace-line.is-current .learning-trace-linecode").innerText()).includes("Console.WriteLine"),
     "V4: auto-play stopped AT the breakpoint, on the Console.WriteLine line (" + stopAt + ")");
   await tv.getByRole("button", { name: "توسيع" }).click();
@@ -201,14 +216,14 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   // Visual lab V4 part 2 — Viz.Show / Viz.Pause in the program, «اكشف الداخل» (the book's Stack<T> as its Node<T> chain), «توقّع قبل أن ترى»
   await visual(panel, page, "static void Main()\n{\n    Stack<int> s = new Stack<int>();\n    s.Push(1); s.Push(2);\n    Viz.Show(\"بعد الإدخال\");\n    Viz.Pause(\"قبل الطباعة\");\n    Console.WriteLine(s);\n}");
   const pv = panel.getByTestId("csharp-trace");
-  await pv.getByRole("button", { name: "من البداية" }).click();
-  await pv.getByLabel("السرعة").selectOption("fast");
-  await pv.getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
-  await pv.getByText("توقف عند Viz.Pause على السطر 6.").waitFor({ timeout: 30000 });
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByLabel("السرعة").selectOption("fast");
+  await nav(panel).getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
+  await nav(panel).getByText("توقف عند Viz.Pause على السطر 6.").waitFor({ timeout: 30000 });
   const pauseLine = await pv.locator(".learning-trace-line.is-current .learning-trace-linecode").innerText();
   check(pauseLine.includes("Viz.Pause") && /قبل الطباعة/.test(await pv.locator(".learning-trace-note").first().innerText()),
     "V4b: auto-play stopped AT Viz.Pause (line 6), its reason shown");
-  await pv.getByRole("button", { name: "الخطوة السابقة" }).click();
+  await nav(panel).getByRole("button", { name: "الخطوة السابقة" }).click();
   check(/بعد الإدخال/.test(await pv.locator(".learning-trace-note").first().innerText()), "V4b: Viz.Show titles its step («بعد الإدخال»)");
   await pv.getByLabel(/اكشف الداخل/).check();
   await pv.getByText(/معروضان من الداخل/).waitFor({ timeout: 60000 });
@@ -219,8 +234,8 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   await pv.getByLabel(/اكشف الداخل/).uncheck();
   await pv.getByText(/رسمهما المعتاد/).waitFor({ timeout: 60000 });
   await pv.getByLabel(/توقّع قبل أن ترى/).check();
-  await pv.getByRole("button", { name: "من البداية" }).click();
-  await pv.getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "▶ تشغيل تلقائي" }).click();
   await pv.getByTestId("lab-trace-guess").waitFor({ timeout: 30000 });
   check(await pv.locator(".learning-ds-structures svg").count() === 0, "V4b: «توقّع قبل أن ترى»: auto-play halts at a covered step, nothing drawn");
   await shotOf(pv, "lab-teacher-visual-guess-1440");
@@ -230,16 +245,16 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   // refers to its Student object); a Stack of Queues (each item refers to its queue, drawn and named «#id»)
   await visual(panel, page, "class Student { public string Name; public int Grade; public Student(string n, int g) { Name = n; Grade = g; } }\nclass Program\n{\n    static void Main()\n    {\n        int[] a = { 5, 3, 8 };\n        for (int i = 0; i < a.Length; i++) a[i] = a[i] * 2;\n        Queue<Student> q = new Queue<Student>();\n        q.Insert(new Student(\"Ali\", 92));\n        Stack<Queue<int>> s = new Stack<Queue<int>>();\n        Queue<int> one = new Queue<int>(); one.Insert(1);\n        s.Push(one);\n        Console.WriteLine(a[2]);\n    }\n}");
   const rv = panel.getByTestId("csharp-trace");
-  await rv.getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
   let sawMark = false;
   for (let k = 0; k < 12 && !sawMark; k++) {
     sawMark = await rv.getByRole("img", { name: /^المصفوفة a \(int\[\]\): .*، i = 1$/ }).count() > 0;
-    if (!sawMark) await rv.getByRole("button", { name: "الخطوة التالية" }).click();
+    if (!sawMark) await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click();
   }
   check(sawMark, "V5: the array a (int[]) is drawn with its indices, and i points at its cell");
   if (sawMark) await shotOf(rv, "lab-teacher-visual-array-1440");
-  const total5 = Number((await rv.locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").split("/")[1]);
-  await rv.getByRole("slider", { name: "انتقل إلى الخطوة" }).fill(String(total5)).catch(async () => { for (let k = 0; k < total5; k++) await rv.getByRole("button", { name: "الخطوة التالية" }).click().catch(() => {}); });
+  const total5 = Number((await nav(panel).locator(".learning-trace-counter").innerText()).replace(/\s+/g, " ").split("/")[1]);
+  await nav(panel).getByRole("slider", { name: "انتقل إلى الخطوة" }).fill(String(total5)).catch(async () => { for (let k = 0; k < total5; k++) await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click().catch(() => {}); });
   const structures5 = await rv.locator(".learning-ds-structures").innerText();
   const heap5 = await rv.getByRole("region", { name: "الكائنات" }).innerText().catch(() => "");
   const imgs5 = await rv.locator(".learning-ds-structures [role=img]").evaluateAll(els => els.map(e => e.getAttribute("aria-label")));
@@ -261,10 +276,10 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   // Visual lab V9 — «أسس علم الحاسوب»: n % 10 / n / 10 noted with their values, n in place-value boxes, the types; then a 2D grid
   await visual(panel, page, "static void Main()\n{\n    int n = 352, sum = 0;\n    while (n > 0 && sum < 100)\n    {\n        sum = sum + n % 10;\n        n = n / 10;\n    }\n    Console.WriteLine(sum);\n}");
   const dv = panel.getByTestId("csharp-trace");
-  await dv.getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
   let sawDigit = false, sawEvals = "";
   for (let k = 0; k < 10 && !sawDigit; k++) {
-    await dv.getByRole("button", { name: "الخطوة التالية" }).click();
+    await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click();
     sawDigit = await dv.getByRole("img", { name: /^منازل n = 352 في الأساس 10: .*أُخذ الآن الرقم الأخير 2$/ }).count() > 0;
     if (sawDigit) sawEvals = await dv.getByRole("region", { name: "قيم التعابير في هذه الخطوة" }).innerText().catch(() => "");
   }
@@ -288,10 +303,10 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
     "V10: the object diagram: people → Person[] → Ali, Sara (a Student with its base's fields), ONE Address shared by both (" + endDiagram.slice(0, 120) + "…)");
   const rowImgs = await ov.locator(".learning-ds-structures [role=img]").evaluateAll(els => els.map(e => e.getAttribute("aria-label") || ""));
   check(!rowImgs.some(l => l.startsWith("المصفوفة people")), "V10: Person[] is drawn in the diagram, not a second time as a row");
-  await ov.getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
   let litAge = false;
   for (let k = 0; k < 40 && !litAge; k++) {
-    await ov.getByRole("button", { name: "الخطوة التالية" }).click();
+    await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click();
     const dg = await diagramOf();
     litAge = /Student #\d+: Name = "Sara"، Age = 23،/.test(dg) && /تغيّر في هذه الخطوة: Student #\d+\.Age\.$/.test(dg);
   }
@@ -325,10 +340,10 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const stDiagram = (await sv.getByRole("region", { name: "الكائنات" }).getByRole("img").getAttribute("aria-label").catch(() => "")) || "";
   check(/Shape #\d+: Name = "box"، Pos\.X = 9، Pos\.Y = 2\./.test(stDiagram) && /Counter\.All يشير إلى List<Shape> #\d+\./.test(stDiagram),
     "V11: in the diagram the struct is the Shape's own rows (Pos.X, Pos.Y), and the static Counter.All has its arrow (" + stDiagram.slice(0, 120) + "…)");
-  await sv.getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
   let litX = false, counterEarly = false;
   for (let k = 0; k < 30 && !litX; k++) {
-    await sv.getByRole("button", { name: "الخطوة التالية" }).click();
+    await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click();
     counterEarly = counterEarly || (!(await sv.getByRole("region", { name: "الناتج حتى الآن" }).textContent()).includes("init") && await memory.locator(".lab-statics").filter({ hasText: "Counter" }).count() > 0);
     litX = (await memory.locator(".lab-rec-field.is-changed").allInnerTexts()).map(x => x.replace(/\s+/g, "")).join() === "X9";
   }
@@ -339,10 +354,10 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const fl = await visual(panel, page, "class Program\n{\n    static int Max(int x, int y)\n    {\n        if (x > y) return x;\n        return y;\n    }\n    static void Swap(ref int a, ref int b)\n    {\n        int t = a;\n        a = b;\n        b = t;\n    }\n    static void Split(int n, out int tens, out int ones)\n    {\n        tens = n / 10;\n        ones = n % 10;\n    }\n    static int Fact(int n)\n    {\n        if (n <= 1) return 1;\n        return n * Fact(n - 1);\n    }\n    static void Main()\n    {\n        int a = 3, b = 7;\n        int m = Max(a, 5);\n        Swap(ref a, ref b);\n        Split(42, out int t, out var o);\n        int f = Fact(3);\n        Console.WriteLine(m + \" \" + a + \" \" + b + \" \" + t + o + \" \" + f);\n    }\n}");
   const fv = panel.getByTestId("csharp-trace");
   const flowOf = async () => (await fv.getByRole("region", { name: "الاستدعاءات" }).getByRole("img").getAttribute("aria-label", { timeout: 500 }).catch(() => "")) || "";
-  await fv.getByRole("button", { name: "من البداية" }).click();
+  await nav(panel).getByRole("button", { name: "من البداية" }).click();
   let sawCopy = "", sawRef = "", sawReturn = "", aliases = 0;
   for (let k = 0; k < 40 && !(sawCopy && sawRef && sawReturn); k++) {
-    await fv.getByRole("button", { name: "الخطوة التالية" }).click();
+    await nav(panel).getByRole("button", { name: "الخطوة التالية" }).click();
     const f = await flowOf();
     if (!sawCopy && /Max \(تعمل الآن\)، استُدعيت من السطر 27: Max\(a, 5\): x = 3 \(نسخة من a\)، y = 5 \(نسخة من 5\)/.test(f)) sawCopy = f;
     if (!sawRef && /Swap \(تعمل الآن\)، استُدعيت من السطر 28: Swap\(ref a, ref b\): a = \d+ \(هو a في Main، ref\)، b = \d+ \(هو b في Main، ref\)/.test(f)) {
