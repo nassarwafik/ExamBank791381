@@ -290,6 +290,35 @@ const BEYOND = [
     check: (t, steps) => t.status === "success" && t.stdout === "1\n" && !("digits" in t) && !("pointers" in t)
       && steps.every(s => !("evals" in s) && s.frames.every(f => !("types" in f)) && s.objs.every(o => o.k !== "grid")) },
   // Visual lab V6 — the trimmed lab: a program that needs a library the download leaves out is refused before it is recorded (LAB0001)
+  // V10 (§20): the object diagram draws what the recorder already records — objects inside objects, arrays of objects, an array
+  // inside an object, one object shared by two, a subclass with its base's fields — and objects that refer to each other
+  { name: "V10 composite objects: Person[] → Persons; a Person holds an Address and an int[]; one Address shared by two; a Student's inherited fields; List<Person>", stdin: "", options: { rich: true },
+    source: "class Address { public string City; public Address(string c) { City = c; } }\nclass Person\n{\n    public string Name;\n    public int Age;\n    public Address Home;\n    public int[] Marks;\n    public Person(string n, int a) { Name = n; Age = a; Marks = new int[3]; }\n}\nclass Student : Person { public Person Friend; public Student(string n, int a) : base(n, a) { } }\nclass Program\n{\n    static void Main()\n    {\n        Person[] people = new Person[2];\n        people[0] = new Person(\"Ali\", 20);\n        people[0].Home = new Address(\"Haifa\");\n        people[1] = new Student(\"Sara\", 22);\n        people[1].Home = people[0].Home;\n        ((Student)people[1]).Friend = people[0];\n        people[0].Marks[1] = 90;\n        people[1].Age = 23;\n        List<Person> all = new List<Person> { people[0] };\n        Console.WriteLine(people[1].Home.City);\n    }\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1), byId = new Map(last.objs.map(o => [o.id, o]));
+      const v = n => last.frames[0].vars.find(([x]) => x === n)?.[1];
+      const arr = byId.get(v("people")?.id), list = byId.get(v("all")?.id);
+      const [ali, sara] = (arr?.refs || []).map(id => byId.get(id));
+      const f = (o, n) => o?.fields.find(([x]) => x === n)?.[1];
+      return t.status === "success" && t.stdout === "Haifa\n" && arr?.k === "array" && arr.type === "Person[]"
+        && ali?.type === "Person" && sara?.type === "Student"
+        && JSON.stringify(sara.fields.map(([n]) => n)) === JSON.stringify(["Name", "Age", "Home", "Marks", "Friend"])
+        && f(ali, "Home")?.t === "ref" && f(ali, "Home").id === f(sara, "Home")?.id && byId.get(f(ali, "Home").id)?.type === "Address"
+        && byId.get(f(ali, "Marks")?.id)?.items.join(",") === "0,90,0" && f(sara, "Marks")?.id !== f(ali, "Marks")?.id
+        && f(sara, "Friend")?.id === arr.refs[0] && f(sara, "Age")?.s === "23"
+        && list?.type === "List<Person>" && JSON.stringify(list.refs) === JSON.stringify([arr.refs[0]])
+        && steps.some(s => s.objs.find(o => o.id === sara.id)?.fields.find(([n]) => n === "Age")?.[1].s === "22");
+    } },
+  { name: "V10 objects that refer to each other (a.Other = b, b.Other = a): recorded as such, and the run is the same as «تشغيل»", stdin: "", options: { rich: true },
+    source: "class Pal { public string Name; public Pal Other; public Pal(string n) { Name = n; } }\nclass Program\n{\n    static void Main()\n    {\n        Pal a = new Pal(\"A\");\n        Pal b = new Pal(\"B\");\n        a.Other = b;\n        b.Other = a;\n        List<Pal> all = new List<Pal> { a, b };\n        Console.WriteLine(all.Count);\n    }\n}",
+    check: (t, steps) => {
+      const last = steps.at(-1), byId = new Map((last?.objs || []).map(o => [o.id, o]));
+      const v = n => last?.frames[0].vars.find(([x]) => x === n)?.[1];
+      const a = byId.get(v("a")?.id), b = byId.get(v("b")?.id), list = byId.get(v("all")?.id);
+      const other = o => o?.fields.find(([n]) => n === "Other")?.[1];
+      return t.status === "success" && t.stdout === "2\n" && other(a)?.id === b?.id && other(b)?.id === a?.id
+        && JSON.stringify(list?.refs) === JSON.stringify([a.id, b.id]) && list.items.join("|") === "(A, (B, …))|(B, (A, …))";
+    } },
   { name: "V6 a program needing a left-out library (System.Xml) is refused before it is recorded (LAB0001)", stdin: "", options: { rich: true },
     source: "using System.Xml;\nclass P { static void Main() { Console.WriteLine(new XmlDocument().Name); } }",
     check: (t, steps) => t.status === "compile-error" && /LAB0001: 'System\.Xml\.XmlDocument'/.test(t.stderr) && steps.length === 0 },

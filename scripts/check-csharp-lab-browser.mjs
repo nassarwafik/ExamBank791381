@@ -277,7 +277,32 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const gridImgs = await gv.locator(".learning-ds-structures [role=img]").evaluateAll(els => els.map(e => e.getAttribute("aria-label")));
   check(gridImgs.some(l => /^المصفوفة الثنائية g \(int\[,\]\): الصف 0: 0، 1، 2؛ الصف 1: 1، 2، 3/.test(l || "")), "V9: int[,] drawn as a grid (" + gridImgs.filter(Boolean).map(l => l.slice(0, 60)).join(" | ") + ")");
   await shotOf(gv, "lab-teacher-visual-grid-1440");
-  const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
+  // Visual lab V10 — the object diagram: Person[] → Persons, a Person holding an Address and an int[], one Address shared by two, a
+  // Student with its base's fields; the field that changed in a step lit; then objects that refer to each other (no stack overflow)
+  await visual(panel, page, "class Address { public string City; public Address(string c) { City = c; } }\nclass Person\n{\n    public string Name;\n    public int Age;\n    public Address Home;\n    public int[] Marks;\n    public Person(string n, int a) { Name = n; Age = a; Marks = new int[3]; }\n}\nclass Student : Person { public Person Friend; public Student(string n, int a) : base(n, a) { } }\nclass Program\n{\n    static void Main()\n    {\n        Person[] people = new Person[2];\n        people[0] = new Person(\"Ali\", 20);\n        people[0].Home = new Address(\"Haifa\");\n        people[1] = new Student(\"Sara\", 22);\n        people[1].Home = people[0].Home;\n        ((Student)people[1]).Friend = people[0];\n        people[0].Marks[1] = 90;\n        people[1].Age = 23;\n        Console.WriteLine(people[1].Home.City);\n    }\n}");
+  const ov = panel.getByTestId("csharp-trace");
+  const diagramOf = async () => (await ov.getByRole("region", { name: "الكائنات" }).getByRole("img").getAttribute("aria-label").catch(() => "")) || "";
+  const endDiagram = await diagramOf();
+  check(/^مخطّط الكائنات\. people يشير إلى Person\[\] #\d+\./.test(endDiagram) && /Student #(\d+): Name = "Sara"، Age = 23، Home → Address #(\d+)، Marks → int\[\] #\d+، Friend → Person #\d+\./.test(endDiagram)
+    && (endDiagram.match(/Home → Address #\d+/g) || []).length === 2 && new Set(endDiagram.match(/Home → Address #\d+/g)).size === 1,
+    "V10: the object diagram: people → Person[] → Ali, Sara (a Student with its base's fields), ONE Address shared by both (" + endDiagram.slice(0, 120) + "…)");
+  const rowImgs = await ov.locator(".learning-ds-structures [role=img]").evaluateAll(els => els.map(e => e.getAttribute("aria-label") || ""));
+  check(!rowImgs.some(l => l.startsWith("المصفوفة people")), "V10: Person[] is drawn in the diagram, not a second time as a row");
+  await ov.getByRole("button", { name: "من البداية" }).click();
+  let litAge = false;
+  for (let k = 0; k < 40 && !litAge; k++) {
+    await ov.getByRole("button", { name: "الخطوة التالية" }).click();
+    const dg = await diagramOf();
+    litAge = /Student #\d+: Name = "Sara"، Age = 23،/.test(dg) && /تغيّر في هذه الخطوة: Student #\d+\.Age\.$/.test(dg);
+  }
+  const lit = await ov.locator(".lab-og-row.is-changed + .lab-og-key").allTextContents();
+  check(litAge && lit.join() === "Age", "V10: on «people[1].Age = 23» the Student's Age is lit, and only it (" + lit.join() + ")");
+  await shotOf(ov.getByRole("region", { name: "الكائنات" }), "lab-teacher-visual-objects-1440");
+  const cyc = await visual(panel, page, "class Pal { public string Name; public Pal Other; public Pal(string n) { Name = n; } }\nclass Program\n{\n    static void Main()\n    {\n        Pal a = new Pal(\"A\");\n        Pal b = new Pal(\"B\");\n        a.Other = b;\n        b.Other = a;\n        Console.WriteLine(a.Other.Other.Name);\n    }\n}");
+  const cycDiagram = await diagramOf();
+  check(/سُجّل التنفيذ خطوة خطوة/.test(cyc.status) && cyc.out === "A\n" && /Pal #(\d+): Name = "A"، Other → Pal #(\d+)\. Pal #\2: Name = "B"، Other → Pal #\1\./.test(cycDiagram),
+    "V10: objects that refer to each other are recorded and drawn (no stack overflow): " + cycDiagram.slice(0, 100));
+  const runs =traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");
   check(reads.length === 1 && reads[0].status === 200 && reads[0].query === "library=899271d", "exactly ONE server read: the book's classes (" + JSON.stringify(reads) + ")");

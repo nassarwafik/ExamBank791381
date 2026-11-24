@@ -429,10 +429,20 @@ internal static class __LabTrace
     }
 
     /// <summary>Inside a structure: as printed; a writer's object by its own ToString, else ""(field, field)"".</summary>
+    /// <summary>V10: the objects whose short text is being written now. One met again on its own path (a.Other = b, b.Other = a; a
+    /// list holding itself) is written ""…"": the text of an object graph with a cycle ends, as the program does.</summary>
+    static readonly global::System.Collections.Generic.HashSet<object> describing = new global::System.Collections.Generic.HashSet<object>(global::System.Collections.Generic.ReferenceEqualityComparer.Instance);
     static string Cell(object? v)
     {
         if (v == null) return ""null"";
         if (v is bool b) return b ? ""true"" : ""false"";
+        if (v is string || v.GetType().IsValueType) return CellOf(v);
+        if (!describing.Add(v)) return ""…"";
+        try { return CellOf(v); }
+        finally { describing.Remove(v); }
+    }
+    static string CellOf(object v)
+    {
         if (rich && CollectionKind(v, v.GetType()) is var ck && ck != """")   // V5: C#'s own collections and arrays, in short
         {
             if (ck == ""map"")

@@ -47,3 +47,18 @@
 .lab-evals-list{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); margin:0; padding:0; list-style:none; }
 .lab-eval{ padding:0 var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 .lab-var-type{ color:var(--eb-text-secondary); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-12); }
+
+/* V10 (docs/enterprise-csharp-visual-lab-plan.md §20) — the object diagram: boxes of fields, the changed field lit, a new object marked */
+.lab-og-section .lab-og{ margin-block-start:var(--eb-space-1); }
+.lab-og-box{ fill:var(--eb-surface); stroke:var(--eb-border-strong); stroke-width:1.5; }
+.lab-og-box.is-fresh{ stroke:var(--eb-primary); stroke-width:2.5; }
+.lab-og-row{ fill:var(--eb-surface-2); stroke:var(--eb-line-2); stroke-width:1; transition:fill 160ms ease; }
+.lab-og-row.is-changed{ fill:var(--eb-success-bg); stroke:var(--eb-success); stroke-width:2; }
+.lab-og-hot{ fill:var(--eb-success-tx); }
+.lab-og-title{ fill:var(--eb-text); font-size:13px; font-weight:700; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.lab-og-id{ fill:var(--eb-muted); font-weight:400; }
+.lab-og-new{ fill:var(--eb-primary-strong); font-size:12px; font-weight:700; }
+.lab-og-key{ fill:var(--eb-text-secondary); font-size:13px; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.lab-og-chip{ fill:var(--eb-primary-100); stroke:var(--eb-primary); stroke-width:1.5; }
+.lab-og-chip.is-dim{ fill:var(--eb-surface-2); stroke:var(--eb-border-strong); }
+@media (prefers-reduced-motion: reduce){ .lab-og-row{ transition:none; } }
