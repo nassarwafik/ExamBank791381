@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
   type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX, FORMULA_SHEET_MAX_IMAGES,
-  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, type CSharpEditorToolV1, type AutomataLabToolV1, type AutomataLabKind, AUTOMATA_LAB_KINDS, PLACE_VALUE_WIDTH_OPTIONS,
+  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, type CSharpEditorToolV1, type AutomataLabToolV1, type AutomataLabKind, type AutomataLabLevel, AUTOMATA_LAB_KINDS, PLACE_VALUE_WIDTH_OPTIONS,
   BIT_WIDTH_OPTIONS, UNIT_CATEGORY_IDS, TRUTH_MAX_VARIABLES_RANGE
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
@@ -279,6 +279,20 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                         );
                       })}
                     </fieldset>
+                    <label className="sb-field">
+                      <span className="sb-field-label">ما يتاح في المختبر</span>
+                      <select className="sb-input" value={tool.level ?? "all"} disabled={disabled}
+                        onChange={e => setTools(tools.map(t => {
+                          if (t.id !== "automataLab") return t;
+                          const { level: _drop, ...rest } = t;   // "all" is the absence of the key (the canonical form)
+                          void _drop;
+                          return (e.target.value === "all" ? rest : { ...rest, level: e.target.value as AutomataLabLevel }) as AutomataLabToolV1;
+                        }))}>
+                        <option value="all">كل شيء: البناء والتشغيل والفحوص والخوارزميات وأدوات الكلمات</option>
+                        <option value="noAlgorithms">بلا الخوارزميات وأدوات الكلمات (للامتحان)</option>
+                        <option value="runOnly">البناء والتشغيل فقط (للامتحان)</option>
+                      </select>
+                    </label>
                   </div>
                 )}
                 {tool?.id === "truthTable" && (

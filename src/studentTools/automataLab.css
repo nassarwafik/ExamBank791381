@@ -16,3 +16,8 @@
 .alab-algos { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
 .alab-result { display: flex; flex-direction: column; gap: var(--eb-space-2); padding: var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); }
 .alab-good { margin: 0; font-weight: 600; color: var(--eb-success-tx); }
+/* AUTO-A6 — «أدوات الكلمات». */
+.alab-facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--eb-space-1) var(--eb-space-3); margin: 0; }
+.alab-facts dt { font-weight: 600; }
+.alab-facts dd { margin: 0; min-width: 0; }
+@media (max-width: 640px) { .alab-facts { grid-template-columns: 1fr; } }

@@ -10,6 +10,8 @@ import {
 } from "./automataLab";
 import { LAB_EXAMPLES } from "./automataLabExamples";
 import AutomataLabAlgorithms, { type Shelf } from "./AutomataLabAlgorithms";
+import AutomataWordTools from "./AutomataWordTools";
+import SaveDrawing from "./SaveDrawing";
 import "../learning/activities/activities.css";
 import "../learning/activities/automatonDesign.css";
 import "./automataLab.css";
@@ -80,6 +82,11 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
   const addPda = () => edit({ ...draft, pda: [...draft.pda, { from: draft.start, read: draft.alphabet[0] ?? "", top: BOTTOM, op: "push", write: "", to: draft.start }] });
   const addTm = () => edit({ ...draft, tm: [...draft.tm, { from: draft.start, read: draft.alphabet[0] ?? BLANK, write: draft.alphabet[0] ?? BLANK, move: "R", to: draft.start }] });
 
+  // AUTO-A6 — the teacher's level (an exam): what the lab offers. The headings are numbered in order, so a hidden section leaves no gap.
+  const level = config.level;
+  const showChecks = level !== "runOnly", showLanguage = level !== "runOnly", showExtras = level === undefined;
+  const order = ["m", "s", "t", "c", "r", "b", ...(showLanguage ? ["l"] : []), ...(showExtras ? ["k", "g", "w"] : [])];
+  const num = (key: string) => (order.indexOf(key) + 1).toLocaleString("ar-EG") + ". ";
   const missing = missingArrows(draft);
   const nondet = draft.kind === "NFA" ? nondeterminism(draft) : [];
   const unreachable = machine ? unreachableStates(machine) : [];
@@ -93,7 +100,7 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
   return (
     <div className="alab" data-testid="tool-automataLab" dir="rtl">
       <section className="learning-autodesign-section" aria-labelledby={ids + "-m"}>
-        <h3 id={ids + "-m"} className="learning-autodesign-heading">١. الآلة</h3>
+        <h3 id={ids + "-m"} className="learning-autodesign-heading">{num("m")}الآلة</h3>
         {kinds.length > 1 ? (
           <fieldset className="alab-kinds">
             <legend className="stt-label">نوع الآلة</legend>
@@ -126,7 +133,7 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
       </section>
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-s"}>
-        <h3 id={ids + "-s"} className="learning-autodesign-heading">٢. الحالات</h3>
+        <h3 id={ids + "-s"} className="learning-autodesign-heading">{num("s")}الحالات</h3>
         <ul className="learning-autodesign-states">
           {draft.states.map(q => (
             <li key={q} className="learning-autodesign-staterow">
@@ -150,20 +157,20 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
       </section>
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-t"}>
-        <h3 id={ids + "-t"} className="learning-autodesign-heading">٣. الانتقالات</h3>
+        <h3 id={ids + "-t"} className="learning-autodesign-heading">{num("t")}الانتقالات</h3>
         {isFa ? <FaTable draft={draft} ids={ids} setCell={setCell} toggleCell={toggleCell} />
           : draft.kind === "PDA" ? <PdaRows draft={draft} ids={ids} symbols={symbolsFor("pda")} set={setPda} remove={i => edit({ ...draft, pda: draft.pda.filter((_, k) => k !== i) })} add={addPda} />
           : <TmRows draft={draft} ids={ids} symbols={symbolsFor("tm")} set={setTm} remove={i => edit({ ...draft, tm: draft.tm.filter((_, k) => k !== i) })} add={addTm} />}
       </section>
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-c"}>
-        <h3 id={ids + "-c"} className="learning-autodesign-heading">٤. الفحوص</h3>
+        <h3 id={ids + "-c"} className="learning-autodesign-heading">{num("c")}الفحوص</h3>
         {checked.issues.length > 0 ? (
           <div role="status">
             <p className="stt-error">الآلة غير جاهزة بعد:</p>
             <ul className="alab-list">{checked.issues.map((i, k) => <li key={k}>{i.text}</li>)}</ul>
           </div>
-        ) : (
+        ) : !showChecks ? <p className="stt-hint" role="status">✓ الآلة جاهزة للتشغيل.</p> : (
           <ul className="alab-list" role="status">
             {draft.kind === "DFA" && (missing.length === 0
               ? <li>✓ الأوتومات كامل: سهم من كل حالة بكل رمز.</li>
@@ -183,14 +190,14 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
       </section>
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-r"}>
-        <h3 id={ids + "-r"} className="learning-autodesign-heading">٥. الرسم والتشغيل خطوة خطوة</h3>
+        <h3 id={ids + "-r"} className="learning-autodesign-heading">{num("r")}الرسم والتشغيل خطوة خطوة</h3>
         {machine && scene
-          ? <AutomatonPlayer key={stamp} machine={machine} scene={scene} words={[]} initialWord="" />
+          ? <div className="lab-drawing"><SaveDrawing fileName="machine" /><AutomatonPlayer key={stamp} machine={machine} scene={scene} words={[]} initialWord="" /></div>
           : <p className="stt-hint">تظهر الآلة هنا حين تصبح جاهزة (انظر «الفحوص»).</p>}
       </section>
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-b"}>
-        <h3 id={ids + "-b"} className="learning-autodesign-heading">٦. كلمات كثيرة معًا</h3>
+        <h3 id={ids + "-b"} className="learning-autodesign-heading">{num("b")}كلمات كثيرة معًا</h3>
         <label className="stt-label" htmlFor={ids + "-batch"}>الكلمات (كلمة في كل سطر، أو بينها مسافات أو فواصل؛ ε للكلمة الفارغة)</label>
         {draft.kind === "TM" && <p className="stt-hint">لآلة تورنغ يظهر أيضًا الشريط عند التوقف، والجواب بين علامتي $ إن وُجدتا (كما في «حساب دوال»).</p>}
         <textarea id={ids + "-batch"} className="stt-input alab-batch" dir="ltr" rows={3} value={batchText} spellCheck={false} onChange={e => setBatchText(e.target.value)} />
@@ -219,8 +226,9 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
         ))}
       </section>
 
+      {showLanguage && (
       <section className="learning-autodesign-section" aria-labelledby={ids + "-l"}>
-        <h3 id={ids + "-l"} className="learning-autodesign-heading">٧. لغة آلتي</h3>
+        <h3 id={ids + "-l"} className="learning-autodesign-heading">{num("l")}لغة آلتي</h3>
         <div className="stt-row">
           <label className="stt-label" htmlFor={ids + "-len"}>كل الكلمات حتى الطول</label>
           <select id={ids + "-len"} className="stt-input alab-short" value={Math.min(lengthWanted, maxLength)} disabled={!machine} onChange={e => setLengthWanted(Number(e.target.value))}>
@@ -230,9 +238,13 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
         </div>
         {listingNow && <Listing listing={listingNow} />}
       </section>
+      )}
 
-      <AutomataLabAlgorithms ids={ids} draft={draft} machine={machine} stamp={stamp} shelf={shelf} setShelf={setShelf} kinds={kinds}
-        load={d => { setDraft(d); setAlphabetText(d.alphabet.join(", ")); setAlphabetError(""); }} />
+      {showExtras && <>
+        <AutomataLabAlgorithms ids={ids} draft={draft} machine={machine} stamp={stamp} shelf={shelf} setShelf={setShelf} kinds={kinds} num={num}
+          load={d => { setDraft(d); setAlphabetText(d.alphabet.join(", ")); setAlphabetError(""); }} />
+        <AutomataWordTools ids={ids} heading={num("w") + "أدوات الكلمات"} />
+      </>}
     </div>
   );
 }

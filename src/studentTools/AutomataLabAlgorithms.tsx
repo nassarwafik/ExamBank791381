@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Machine } from "../learning/activities/automaton";
 import { KIND_LABEL, type AutomatonKind, type LabDraft } from "./automataLab";
-import { complementOf, equivalence, mergeTraps, minimize, needsCompleteDfa, productOf, toDeterministic, type AlgoResult, type Equivalence } from "./automataAlgorithms";
+import { complementOf, concatenation, equivalence, mergeTraps, minimize, needsCompleteDfa, productOf, reversal, toDeterministic, unionByNewStart, type AlgoResult, type Equivalence } from "./automataAlgorithms";
 
 /**
  * AUTO-A5 (docs/enterprise-automata-lab-a4.md §7) — two sections of «مختبر الآلات»:
@@ -17,10 +17,12 @@ export const SHELF_MAX = 6;
 const SHELF_NAMES = ["A", "B", "C", "D", "E", "F"];
 type Shown = { stamp: string; title: string; result: AlgoResult; shown: number } | { stamp: string; title: string; eq: Equivalence; other: string };
 
-export default function AutomataLabAlgorithms({ ids, draft, machine, stamp, shelf, setShelf, load, kinds }: {
+export default function AutomataLabAlgorithms({ ids, draft, machine, stamp, shelf, setShelf, load, kinds, num }: {
   ids: string; draft: LabDraft; machine: Machine | null; stamp: string; shelf: Shelf; setShelf: (s: Shelf) => void; load: (d: LabDraft) => void;
   /** The machines the teacher offers: a result of another kind is shown, not opened. */
   kinds: readonly AutomatonKind[];
+  /** The heading's number in the panel («٨. »). */
+  num: (key: string) => string;
 }) {
   const [partner, setPartner] = useState(0);
   const [shown, setShown] = useState<Shown | null>(null);
@@ -48,7 +50,7 @@ export default function AutomataLabAlgorithms({ ids, draft, machine, stamp, shel
   return (
     <>
       <section className="learning-autodesign-section" aria-labelledby={ids + "-k"}>
-        <h3 id={ids + "-k"} className="learning-autodesign-heading">٨. آلاتي</h3>
+        <h3 id={ids + "-k"} className="learning-autodesign-heading">{num("k")}آلاتي</h3>
         <p className="stt-hint">احفظ آلة هنا لتبني التقاطع أو الاتحاد معها، أو لتقارنها بآلة أخرى. تبقى ما دامت الصفحة مفتوحة (حتى {SHELF_MAX} آلات).</p>
         <button type="button" className="stt-btn" disabled={!machine || !!sameAsKept || shelf.length >= SHELF_MAX} onClick={() => { const n = keep(); if (n) setSaid("حُفظت الآلة باسم " + n + "."); }}>
           {sameAsKept ? "الآلة محفوظة باسم " + sameAsKept.name : "احفظ هذه الآلة"}
@@ -69,7 +71,7 @@ export default function AutomataLabAlgorithms({ ids, draft, machine, stamp, shel
       </section>
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-g"}>
-        <h3 id={ids + "-g"} className="learning-autodesign-heading">٩. الخوارزميات خطوة خطوة</h3>
+        <h3 id={ids + "-g"} className="learning-autodesign-heading">{num("g")}الخوارزميات خطوة خطوة</h3>
         {!machine ? <p className="stt-hint">تعمل الخوارزميات حين تصبح الآلة جاهزة (انظر «الفحوص»).</p>
           : !fa ? <p className="stt-hint">الخوارزميات للأوتومات المنتهي (حتمي أو غير حتمي).</p> : (
             <>
@@ -78,6 +80,7 @@ export default function AutomataLabAlgorithms({ ids, draft, machine, stamp, shel
                 <button type="button" className="stt-btn" disabled={machine.kind !== "DFA"} onClick={() => run("اجمع حالات المصيدة", mergeTraps(machine))}>اجمع حالات المصيدة</button>
                 <button type="button" className="stt-btn" disabled={machine.kind !== "DFA"} onClick={() => run("المتمّم", complementOf(machine))}>المتمّم</button>
                 <button type="button" className="stt-btn" disabled={machine.kind !== "DFA"} onClick={() => run("التصغير", minimize(machine))}>التصغير</button>
+                <button type="button" className="stt-btn" onClick={() => run("العكس", reversal(machine))}>العكس</button>
               </div>
               {machine.kind === "DFA" && needsCompleteDfa(machine) && <p className="stt-hint">المتمّم والتصغير والتقاطع والاتحاد تحتاج أوتومات كاملًا: أضف حالة مصيدة أولًا (في «الفحوص»).</p>}
               {machine.kind === "NFA" && <p className="stt-hint">اجمع حالات المصيدة والمتمّم والتصغير لأوتومات حتمي: حوّل إلى حتمي أولًا.</p>}
@@ -88,9 +91,12 @@ export default function AutomataLabAlgorithms({ ids, draft, machine, stamp, shel
                 </select>
                 <button type="button" className="stt-btn" disabled={!other} onClick={() => other && run("التقاطع مع " + other.name, productOf(machine, other.machine, "intersection"))}>التقاطع</button>
                 <button type="button" className="stt-btn" disabled={!other} onClick={() => other && run("الاتحاد مع " + other.name, productOf(machine, other.machine, "union"))}>الاتحاد</button>
+                <button type="button" className="stt-btn" disabled={!other} onClick={() => other && run("الاتحاد بحالة بداية جديدة مع " + other.name, unionByNewStart(machine, other.machine))}>الاتحاد بحالة بداية جديدة</button>
+                <button type="button" className="stt-btn" disabled={!other} onClick={() => other && run("التسلسل مع " + other.name, concatenation(machine, other.machine))}>التسلسل</button>
                 <button type="button" className="stt-btn" disabled={!other} onClick={() => other && setShown({ stamp, title: "مقارنة مع " + other.name, eq: equivalence(machine, other.machine), other: other.name })}>هل آلتاي متكافئتان؟</button>
               </div>
-              {!shelf.length && <p className="stt-hint">للتقاطع والاتحاد والمقارنة: احفظ آلة في «آلاتي» أولًا.</p>}
+              <p className="stt-hint">«التقاطع» و«الاتحاد»: أوتومات الجداء لآلتين حتميتين كاملتين. «الاتحاد بحالة بداية جديدة» و«التسلسل» و«العكس»: إنشاءات الكتاب لخصائص الانغلاق، وناتجها غير حتمي.</p>
+              {!shelf.length && <p className="stt-hint">للعمليات على آلتين والمقارنة: احفظ آلة في «آلاتي» أولًا.</p>}
             </>
           )}
         {now && ("eq" in now ? <EquivalenceText eq={now.eq} other={now.other} /> : (
