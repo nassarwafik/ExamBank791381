@@ -15,7 +15,7 @@ const rowsH = (n: OgNode) => Math.max(1, n.rows.length + (n.more ? 1 : 0)) * ROW
 
 function measure(n: OgNode): { w: number; keyW: number } {
   const keyW = Math.max(26, ...n.rows.map(r => textW(r.key) + 14));
-  const valW = Math.max(44, ...n.rows.map(r => (r.ref !== null ? 26 : textW(r.text) + 16) + (r.marks.length ? textW("◂ " + r.marks.join(", ")) + 8 : 0)));
+  const valW = Math.max(44, ...n.rows.map(r => (r.ref !== null ? 26 : textW(r.text) + 24) + (r.marks.length ? textW("◂ " + r.marks.join(", ")) + 8 : 0)));
   const titleW = textW(n.title + " #" + n.id) + 20 + (n.fresh ? textW("جديد") + 10 : 0);
   return { w: Math.max(titleW, keyW + valW, textW("… و" + n.more) + 20), keyW };
 }
