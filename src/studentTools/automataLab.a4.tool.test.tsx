@@ -145,6 +145,17 @@ describe("A4 — the tool", () => {
     expect(within(player).getByText(/الكلمة مقبولة/)).toBeTruthy();
     expect(within(player).getByRole("img").getAttribute("aria-label")).toMatch(/^أوتومات/);
   });
+  it("switching a non-deterministic draft with ε to deterministic: its ε column stays shown, so the arrow can be cleared", () => {
+    render(<AutomataLabTool config={ALL} />);
+    fireEvent.click(screen.getByRole("radio", { name: "أوتومات منتهٍ غير حتمي" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "من q0 بالرمز ε إلى" })).getByRole("button", { name: "q0" }));
+    fireEvent.click(screen.getByRole("radio", { name: "أوتومات منتهٍ حتمي" }));
+    expect(section(/الفحوص/).textContent).toMatch(/في الأوتومات الحتمي لا انتقالات ε \(من q0\)/);
+    const eps = within(screen.getByRole("group", { name: "من q0 بالرمز ε إلى" })).getByRole("button", { name: "q0" });
+    fireEvent.click(eps);
+    expect(section(/الفحوص/).textContent).not.toMatch(/انتقالات ε/);
+    expect(screen.queryByRole("group", { name: "من q0 بالرمز ε إلى" })).toBeNull();   // cleared: the column goes
+  });
   it("an alphabet with a reserved mark is refused, said in words", () => {
     render(<AutomataLabTool config={ALL} />);
     fireEvent.change(screen.getByLabelText("الأبجدية Σ"), { target: { value: "a, ε" } });

@@ -24,6 +24,7 @@ await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "wa
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf", ".png": "image/png" };
 const server = http.createServer((req, res) => {
   const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  if (p === "/favicon.ico") { res.writeHead(204); res.end(); return; }   // the browser's own request (as check-code-editor-browser.mjs)
   const file = path.join(out, p);
   if (!file.startsWith(out) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
   res.writeHead(200, { "content-type": MIME[path.extname(file)] || "application/octet-stream" });
@@ -43,6 +44,7 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 900 }], ["pho
   page.on("pageerror", e => errors.push(String(e)));
   page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   page.on("request", r => { if (!r.url().startsWith(origin)) foreign.push(r.url()); });
+  page.on("response", r => { if (r.status() >= 400) errors.push(r.status() + " " + new URL(r.url()).pathname); });
   await page.goto(origin + "/browser-harness/automata-lab.html");
   await page.getByTestId("student-tools-button").click();
   await page.getByRole("button", { name: "مختبر الآلات" }).click();

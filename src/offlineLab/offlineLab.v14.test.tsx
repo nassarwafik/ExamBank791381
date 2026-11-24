@@ -175,6 +175,16 @@ describe("V14 — the build's pack list", () => {
     expect(buildPack(dist)).toEqual({ available: false, version: "", bytes: 0, files: [] });
     expect([offlineLabPackPlugin().name, offlineLabPackPlugin().apply]).toEqual(["offline-lab-pack", "build"]);   // never in dev or tests
   });
+  it("a build of another page (a browser harness): no manifest, or no lab page in it, is no pack — never a crash", () => {
+    const dist = mkdtempSync(join(tmpdir(), "olab-"));
+    mkdirSync(join(dist, "csharp-lab", "_framework"), { recursive: true });   // public/ is copied into every build: the lab files are there
+    writeFileSync(join(dist, "csharp-lab", "worker.js"), "w");
+    writeFileSync(join(dist, "csharp-lab", "_framework", "dotnet.js"), "d");
+    expect(buildPack(dist)).toEqual({ available: false, version: "", bytes: 0, files: [] });             // no manifest at all
+    mkdirSync(join(dist, ".vite"));
+    writeFileSync(join(dist, ".vite", "manifest.json"), JSON.stringify({ "browser-harness/x.html": { file: "assets/x.js" } }));
+    expect(buildPack(dist)).toEqual({ available: false, version: "", bytes: 0, files: [] });             // a manifest without the lab page
+  });
   it("the lab's files: worker.js and the runtime files — never the .br / .gz copies or a language folder; the version follows the bytes", () => {
     const dist = mkdtempSync(join(tmpdir(), "olab-"));
     mkdirSync(join(dist, ".vite"));

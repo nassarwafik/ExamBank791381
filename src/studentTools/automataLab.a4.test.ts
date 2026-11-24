@@ -155,6 +155,19 @@ describe("A4 — the draft becomes the machine, or says why not", () => {
     for (const bad of ["", "ε", BOTTOM, "a, bc", "a,|"]) expect(parseAlphabet(bad).ok).toBe(false);
     expect(parseAlphabet("abcdefghijklm").ok).toBe(false);   // 13 > 12
   });
+  it("an ε arrow after a symbol: the possible states take its ε-closure (as the course's runner)", () => {
+    // q0 -a-> q1 -ε-> q2 (accepting), q2 -b-> q3 -ε-> q0: «a» and «aba» are accepted only through ε
+    const m = built({ ...initialDraft("NFA"), states: ["q0", "q1", "q2", "q3"], accept: ["q2"],
+      cells: { "q0|a": ["q1"], "q1|ε": ["q2"], "q2|b": ["q3"], "q3|ε": ["q0"] } });
+    for (const w of ["a", "ab", "aba", "abab", "b", ""]) expect(verdictOf(m, [...w]), w).toBe(runAutomaton(m, [...w]).verdict);
+    expect(runBatch(m, ["a", "aba", "ab"]).map(r => r.verdict)).toEqual(["accept", "accept", "reject"]);
+  });
+  it("removing a state removes the push-down and Turing rows from or to it", () => {
+    const pda: LabDraft = { ...initialDraft("PDA"), states: ["q0", "q1"], pda: [{ from: "q0", read: "a", top: BOTTOM, op: "push", write: "A", to: "q1" }, { from: "q0", read: "b", top: BOTTOM, op: "none", write: "", to: "q0" }] };
+    expect(removeState(pda, "q1").pda).toEqual([pda.pda[1]]);
+    const tm: LabDraft = { ...initialDraft("TM"), states: ["q0", "q1"], tm: [{ from: "q1", read: "a", write: "a", move: "R", to: "q0" }, { from: "q0", read: "a", write: "b", move: "R", to: "q0" }] };
+    expect(removeState(tm, "q1").tm).toEqual([tm.tm[1]]);
+  });
   it("editing: removing a state removes its arrows and rows; changing the alphabet drops the arrows of a symbol gone", () => {
     const d = removeState(evenA(), "q1");
     expect([d.states, d.cells]).toEqual([["q0"], { "q0|a": [], "q0|b": ["q0"] }]);
