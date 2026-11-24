@@ -157,7 +157,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
     setOpenTool(id);
     setMenuOpen(false);
   };
-  const close = () => { if (full.active) full.exit(); setOpenTool(null); fabRef.current?.focus(); };
+  const close = () => { setOpenTool(null); fabRef.current?.focus(); };   // a full-screen panel that closes leaves full screen (the effect above)
   const toggleFull = (id: StudentToolId) => { fullRef.current = panelRefs.current[id] ?? null; full.toggle(); };
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== "Escape" || full.active) return;   // in full screen, Escape leaves full screen (the overlay's own key) — the panel stays
