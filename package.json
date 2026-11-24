@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -b",
-    "build": "npm run typecheck && vite build && node scripts/build-offline-lab-pack.mjs && npm run check:bundle && npm run check:csp && npm run check:protected-assets",
+    "build": "npm run typecheck && vite build && npm run check:bundle && npm run check:csp && npm run check:protected-assets",
     "lint": "oxlint",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:csp": "node scripts/check-csp-meta.mjs dist/index.html && node scripts/check-csp-meta.mjs dist/lab.html --lab",

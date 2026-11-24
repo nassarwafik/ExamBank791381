@@ -6,7 +6,7 @@ import CSharpEditorTool from "../studentTools/CSharpEditorTool";
 import { packChannel, readPackInfo, readReply } from "./offlinePack";
 import { DESKTOP_QUERY, inlineLabFrame, plainDeviceRunner, resetDeviceLabForTests } from "../studentTools/deviceCSharpLab";
 // @ts-expect-error — a plain ES module script of the build (no types)
-import { labClosure, buildPack } from "../../scripts/build-offline-lab-pack.mjs";
+import { labClosure, labRuntimeFiles, buildPack } from "../../scripts/build-offline-lab-pack.mjs";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -162,5 +162,20 @@ describe("V14 — the build's pack list", () => {
     mkdirSync(join(dist, ".vite"));
     writeFileSync(join(dist, ".vite", "manifest.json"), JSON.stringify({ "lab.html": { file: "assets/lab.js" } }));
     expect(buildPack(dist)).toEqual({ available: false, version: "", bytes: 0, files: [] });
+  });
+  it("the lab's files: worker.js and the runtime files — never the .br / .gz copies or a language folder; the version follows the bytes", () => {
+    const dist = mkdtempSync(join(tmpdir(), "olab-"));
+    mkdirSync(join(dist, ".vite"));
+    mkdirSync(join(dist, "assets"));
+    mkdirSync(join(dist, "csharp-lab", "_framework", "de"), { recursive: true });
+    writeFileSync(join(dist, ".vite", "manifest.json"), JSON.stringify({ "lab.html": { file: "assets/lab.js" } }));
+    for (const [f, body] of [["lab.html", "<p>"], ["assets/lab.js", "x"], ["csharp-lab/worker.js", "w"], ["csharp-lab/_framework/dotnet.js", "d"],
+      ["csharp-lab/_framework/dotnet.js.br", "b"], ["csharp-lab/_framework/a.wasm.gz", "g"], ["csharp-lab/_framework/a.wasm", "aa"], ["csharp-lab/_framework/de/r.dll", "r"]])
+      writeFileSync(join(dist, f), body);
+    expect(labRuntimeFiles(dist)).toEqual(["/csharp-lab/worker.js", "/csharp-lab/_framework/a.wasm", "/csharp-lab/_framework/dotnet.js"]);
+    const pack = buildPack(dist);
+    expect([pack.available, pack.bytes, pack.files]).toEqual([true, 8, ["/lab.html", "/assets/lab.js", ...labRuntimeFiles(dist)]]);
+    writeFileSync(join(dist, "csharp-lab", "_framework", "a.wasm"), "ab");
+    expect(buildPack(dist).version).not.toBe(pack.version);
   });
 });

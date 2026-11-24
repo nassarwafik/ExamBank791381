@@ -106,7 +106,7 @@ describe("V14 — the offline lab pack", () => {
   it("a message that is not a lab-pack message is ignored", async () => {
     const w = loadWorker();
     const replies: unknown[] = [];
-    await w.dispatch("message", { data: { type: "skip-waiting" }, source: { postMessage: (m: unknown) => replies.push(m) } });
+    await w.dispatch("message", { data: { type: "skip-waiting", action: "install" }, source: { postMessage: (m: unknown) => replies.push(m) } });
     expect(replies).toEqual([]);
     expect(w.network).not.toHaveBeenCalled();
   });

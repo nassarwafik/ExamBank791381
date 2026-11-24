@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-// Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — after `vite build`: the list of files the offline C# lab needs,
+// Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — a Vite plugin, at the end of `vite build` (vite.config.ts): the list of files the offline C# lab needs,
 // written to dist/offline-lab.json for the service worker (public/sw.js), which caches exactly these on the learner's explicit tap.
 //   • the page (/lab.html), its scripts and styles and everything they import, statically or lazily (Vite's manifest, from the `lab`
 //     entry), so every drawing of the visual run works offline;
@@ -56,11 +55,26 @@ export function buildPack(dist) {
   return { available: true, version: hash.digest("hex").slice(0, 16), bytes, files };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const dist = path.resolve(process.argv[2] || "dist");
+/** Writes dist/offline-lab.json and removes the manifest Vite wrote for it (dist/.vite is never deployed). */
+export function writePack(dist) {
   const pack = buildPack(dist);
   fs.writeFileSync(path.join(dist, "offline-lab.json"), JSON.stringify(pack) + "\n");
   fs.rmSync(path.join(dist, ".vite"), { recursive: true, force: true });
-  console.log(pack.available ? "offline lab pack: " + pack.files.length + " files, " + (pack.bytes / 1048576).toFixed(1) + " MB, version " + pack.version
-    : "offline lab pack: not available (no lab in this build)");
+  return pack;
+}
+
+/** The Vite plugin: once the build has written every file (the manifest included), the pack list is written — so `npm run build` is
+ *  unchanged and every build has its pack list. */
+export function offlineLabPackPlugin() {
+  let outDir = "dist";
+  return {
+    name: "offline-lab-pack",
+    apply: "build",
+    configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
+    closeBundle() {
+      const pack = writePack(outDir);
+      console.log(pack.available ? "offline lab pack: " + pack.files.length + " files, " + (pack.bytes / 1048576).toFixed(1) + " MB, version " + pack.version
+        : "offline lab pack: not available (no lab in this build)");
+    },
+  };
 }

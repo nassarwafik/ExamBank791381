@@ -1006,7 +1006,7 @@ Console.WriteLine(q);
 | الإطار المكتوب من نصّ (المختبر) | `tools/csharp-lab/wwwroot/main.js`، `worker.js` |
 | الإطار من نصّ، والمشغِّل بلا فئات الكتاب | `src/studentTools/deviceCSharpLab.ts` (`inlineLabFrame`، `plainDeviceRunner`) |
 | الصفحة | `lab.html`، `src/offlineLab/` |
-| قائمة الحزمة | `scripts/build-offline-lab-pack.mjs` (من بيان Vite) ← `dist/offline-lab.json` |
+| قائمة الحزمة | `scripts/build-offline-lab-pack.mjs` (إضافة Vite في آخر البناء، من بيانه؛ أمر `npm run build` لم يتغيّر) ← `dist/offline-lab.json` |
 | العامل | `public/sw.js` |
 | السياسة وبوابتها | `scripts/content-security-policy.ts`، `scripts/check-csp-meta.mjs` |
 | القاعدة | `AGENTS.md` §1 (الاستعمال الرابع للمختبر) |
@@ -1024,6 +1024,15 @@ Console.WriteLine(q);
   - «تشغيل» يطبع `sum 14`، و«تشغيل مرئي» يسجّل 21 خطوة ويرسم استدعاء `Sq(i)`؛
   - الإطار `allow-scripts` فقط ومكتوب من نصّ؛ وفتح التطبيق بلا اتصال يفتح المختبر؛ والحذف يزيل الحزمة.
   - يعمل في سير عمل المختبر (`csharp-lab-spike.yml`) أيضًا.
+
+**الاستثناء الوحيد في فحص 20G** (قرار المالك 2026-11-24):
+- يمنع الفحص كل كتابة HTML من نصّ في ملفات الإنتاج (`dangerouslySetInnerHTML`، `innerHTML`، `srcdoc`).
+- يسمح الآن **بواحدة فقط**: `srcdoc` إطار المختبر في `src/studentTools/deviceCSharpLab.ts`.
+- **ويثبت مصدر نصّها:**
+  - لا تكتب إلا `inlineScript`؛
+  - `inlineScript` لا يضعه إلا `inlineLabFrame`، الذي يرفض نصًّا يُغلق الوسم؛
+  - `inlineLabFrame` لا يستدعيه إلا `src/offlineLab/main.tsx`، بـ `main.js?raw` نفسه.
+- أي كتابة أخرى، أو ثانية، تُسقط الفحص كما كانت (`api/tests/certification-20g/cert-20g-ai-composer.test.js`).
 
 **حدود معروفة:**
 - **فئات الكتاب** (`Stack<T>` و`Queue<T>` في كتاب المادة) لا تعمل بلا إنترنت، بقرار المالك: لا محتوى محمي على الجهاز.
