@@ -20,9 +20,9 @@ const ok = (v: unknown) => validateStudentTools(v).ok;
 
 describe("T13 contract (additive within version 1)", () => {
   it("both ids join the contract after every earlier tool, with their defaults", () => {
-    // their exact place: after the eleven earlier ids (T14's csharpEditor was added after them, additively)
+    // their exact place: after the eleven earlier ids (T14's csharpEditor and AUTO-A4's automataLab were added after them, additively)
     expect(STUDENT_TOOL_IDS.slice(11, 13)).toEqual(["placeValueBoxes", "hexBinaryTable"]);
-    expect(STUDENT_TOOL_IDS.slice(13)).toEqual(["csharpEditor"]);
+    expect(STUDENT_TOOL_IDS.slice(13)).toEqual(["csharpEditor", "automataLab"]);
     expect(defaultStudentToolConfig("placeValueBoxes")).toEqual({ id: "placeValueBoxes", width: 8 });
     expect(defaultStudentToolConfig("hexBinaryTable")).toEqual({ id: "hexBinaryTable", showDecimal: true });
   });

@@ -44,10 +44,10 @@ export const COURSE_STUDENT_TOOLS: Readonly<Record<string, StudentToolsSpecV1>> 
       { ...csharpEditor }
     ]
   },
-  // الأتمتة
+  // الأتمتة — AUTO-A4: the automata lab first, with the course's four machines
   "899271": {
     version: 1,
-    tools: [{ ...scratchPad }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }]
+    tools: [{ id: "automataLab", kinds: ["DFA", "NFA", "PDA", "TM"] }, { ...scratchPad }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }]
   },
   // مبنى المعطيات
   "899271d": {
