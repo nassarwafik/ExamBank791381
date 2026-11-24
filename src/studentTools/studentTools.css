@@ -151,3 +151,15 @@
 .stt-full-toggle { display: inline-flex; align-items: center; justify-content: center; }
 .stt-full-toggle[aria-pressed="true"] { background: var(--eb-primary-050); color: var(--eb-primary-strong); }
 .stt-dock.has-fullscreen > .stt-fab, .stt-dock.has-fullscreen > .stt-menu { display: none; }   /* the editor alone on the screen; Esc / the toggle leave */
+
+/* Visual lab V15 (docs/enterprise-csharp-visual-lab-plan.md §25) — after «تشغيل مرئي»: the program folds to one line, and the run
+   buttons with the player's navigation form ONE strip that stays at the top of what scrolls (the page, or the tool panel). */
+.stt-cs-program[hidden], .stt-cs-field[hidden] { display: none; }
+.stt-cs-fold { display: inline-flex; align-items: center; gap: var(--eb-space-2); justify-self: start; min-block-size: 40px; padding: var(--eb-space-1) var(--eb-space-3); font: inherit; font-weight: var(--eb-fw-semibold); color: var(--eb-text); background: var(--eb-surface-2); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); cursor: pointer; }
+.stt-cs-fold:hover { border-color: var(--eb-primary); }
+.stt-cs-fold:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
+.stt-cs-fold-icon { font-size: 1.1em; line-height: 1; }
+.stt-cs-strip { display: grid; gap: var(--eb-space-1); }
+.stt-cs-strip.is-sticky { position: sticky; inset-block-start: 0; z-index: var(--eb-z-sticky, 10); padding-block: var(--eb-space-2); background: var(--eb-surface); border-block-end: 1px solid var(--eb-border-strong); box-shadow: var(--eb-sh-sm); }
+.stt-cs-strip.is-sticky .stt-cs-actions { gap: var(--eb-space-2); }
+.stt-cs-dock:empty { display: none; }

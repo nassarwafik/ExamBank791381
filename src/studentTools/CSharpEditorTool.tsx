@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import CodingEditor from "../coding/CodingEditor";
 import type { CodeExecutionResult } from "../codingContract";
 import { CSharpToolRunError, type CSharpToolRunner } from "./csharpToolRun";
@@ -15,6 +15,9 @@ const LabTraceView = lazy(() => import("./LabTraceView"));
 // stored, never the answer and never graded. The server decides whether a run is allowed; this panel only shows what it says.
 // Visual lab V3 (docs/enterprise-csharp-visual-lab-plan.md §11): when the runner can RECORD (runner.trace — the teacher's book reader
 // on a desktop), «تشغيل مرئي» runs the program on this device step by step and shows it as the course's trace activity does.
+// V15 (plan §25): «تشغيل مرئي» folds the program away (one line «▸ البرنامج» opens it again — the editor stays mounted, its text and
+// undo kept), and the run buttons with the player's navigation become ONE sticky strip: the steps scroll under it. A program changed
+// after it was recorded is said in the strip, with «أعد التشغيل المرئي».
 
 const STARTER = "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Console.WriteLine(\"مرحبا\");\n    }\n}\n";
 const SOURCE_MAX_BYTES = 16 * 1024;
@@ -55,6 +58,9 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
   const [source, setSource] = useState(STARTER);
   const [stdin, setStdin] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
+  const [editorOpen, setEditorOpen] = useState(true);
+  const programId = useId();
+  const [dock, setDock] = useState<HTMLDivElement | null>(null);
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => () => ctrl.current?.abort(), []);
   const canRun = !!runner;
@@ -100,13 +106,18 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
     setState({ kind: "running" });
     try {
       const traced = await runner.trace(source, stdin, c.signal);
-      if (!c.signal.aborted) setState(s => ({ kind: "traced", result: traced, epoch: (s.kind === "traced" ? s.epoch : 0) + 1, source, stdin }));
+      if (c.signal.aborted) return;
+      setState(s => ({ kind: "traced", result: traced, epoch: (s.kind === "traced" ? s.epoch : 0) + 1, source, stdin }));
+      if (traced.trace) setEditorOpen(false);   // the steps take the room; a run with no steps (a compile error) keeps the program open
     } catch (e) {
       if (c.signal.aborted) return;
       setState({ kind: "error", message: e instanceof CSharpToolRunError && e.message ? e.message : "تعذّر التسجيل الآن. حاول مرة أخرى." });
     }
   };
   const traced = state.kind === "traced" ? state : null;
+  const showing = !!traced?.result.trace;
+  const stale = !!traced && (traced.source !== source || traced.stdin !== stdin);
+  const lineCount = source.split("\n").length;
 
   const result = state.kind === "done" ? state.result : null;
   const needsInput = !!result && result.status === "runtime-error" && !stdin.trim() && READS_INPUT.test(source);
@@ -118,7 +129,15 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
   return (
     <div className="stt-cs" data-testid="csharp-editor-tool">
       <p className="stt-hint">مسودة برمجية للتجربة: لا تُحفظ ولا تُصحّح، وليست إجابتك. انسخ ما تحتاجه إلى مكان الإجابة.</p>
-      <CodingEditor value={source} onChange={v => { setSource(v); setCopied(""); }} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={full ? 24 : 10} />
+      {showing && (
+        <button type="button" className="stt-cs-fold" aria-expanded={editorOpen} aria-controls={programId} onClick={() => setEditorOpen(o => !o)} data-testid="csharp-editor-fold">
+          <span className="stt-cs-fold-icon" aria-hidden="true">{editorOpen ? "▾" : "◂"}</span>
+          {editorOpen ? "إخفاء البرنامج" : "البرنامج (" + lineCount + " سطرًا) — اضغط لعرضه وتعديله"}
+        </button>
+      )}
+      <div id={programId} className="stt-cs-program" hidden={showing && !editorOpen} data-testid="csharp-editor-program">
+        <CodingEditor value={source} onChange={v => { setSource(v); setCopied(""); }} language="csharp" label="كود C#" maxBytes={SOURCE_MAX_BYTES} minRows={full ? 24 : 10} />
+      </div>
       <div className="stt-row stt-cs-actions">
         <button type="button" className="stt-btn" onClick={copy} disabled={!source.trim()}>نسخ الكود</button>
         <span className="stt-hint" role="status" data-testid="csharp-copy-status">{copied === "ok" ? "نُسخ الكود. الصقه في مكان الإجابة (Ctrl+V)." : copied === "failed" ? "تعذّر النسخ تلقائيًا؛ حدّد الكود وانسخه بـ Ctrl+C." : ""}</span>
@@ -135,10 +154,11 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
           {onDevice && typeof location !== "undefined" && location.pathname !== "/lab.html" && (
             <p className="stt-hint"><a href="/lab.html" target="_blank" rel="noopener" data-testid="csharp-offline-lab">مختبر C# في صفحة مستقلة (يعمل بلا إنترنت بعد تنزيله)</a></p>
           )}
-          <label className="stt-cs-field">
+          <label className="stt-cs-field" hidden={showing && !editorOpen}>
             <span>المدخلات <small>(كل قيمة في سطر، بترتيب قراءتها بـ <bdi dir="ltr">Console.ReadLine</bdi>)</small></span>
             <textarea className="stt-cs-input" dir="ltr" lang="en" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />
           </label>
+          <div className={"stt-cs-strip" + (showing ? " is-sticky" : "")} data-testid="csharp-run-strip">
           <div className="stt-row stt-cs-actions">
             <button type="button" className="stt-btn is-primary" onClick={run} disabled={availability !== "up" || state.kind === "running" || !source.trim()}>تشغيل</button>
             {runner?.trace && (
@@ -148,6 +168,8 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
             <button type="button" className="stt-btn" onClick={() => { ctrl.current?.abort(); setState({ kind: "idle" }); }} disabled={state.kind === "idle"}>مسح الناتج</button>
             <button type="button" className="stt-btn" onClick={() => { setSource(STARTER); }} disabled={source === STARTER}>إعادة القالب</button>
           </div>
+          {showing && <div ref={setDock} className="stt-cs-dock" />}
+          </div>
           <p className={"stt-cs-status" + (result ? " is-" + result.status : traced ? " is-" + traced.result.status : state.kind === "error" ? " is-error" : "")} role="status">{status}</p>
           {needsInput && <p className="stt-cs-hint">البرنامج يقرأ مدخلات (<bdi dir="ltr">Console.ReadLine</bdi>) ولم تكتب شيئًا في مربع المدخلات.</p>}
           {traced && (
@@ -155,7 +177,7 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
               {traced.result.clipped && <p className="stt-hint" role="note" data-testid="csharp-trace-clipped">بعض القيم أو المباني أكبر من أن تُرسم كاملة، فعُرض أولها.</p>}
               {traced.result.trace && (
                 <Suspense fallback={<p className="stt-hint" role="status">جارٍ تجهيز العرض…</p>}>
-                  <LabTraceView trace={traced.result.trace} epoch={traced.epoch}
+                  <LabTraceView trace={traced.result.trace} epoch={traced.epoch} dock={dock} stale={stale} onRerun={traceRun} stderr={traced.result.stderr}
                     retrace={(options, signal) => runner!.trace!(traced.source, traced.stdin, signal, options)} />
                 </Suspense>
               )}

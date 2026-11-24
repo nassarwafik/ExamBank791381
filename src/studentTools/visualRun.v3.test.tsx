@@ -114,10 +114,12 @@ describe("V3 — «تشغيل مرئي» in the editor", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0][1]).toBe("");
     expect(panel.textContent).toContain("سُجّل التنفيذ خطوة خطوة");
-    expect(within(view).getByText("1 / 5")).toBeTruthy();
-    fireEvent.click(within(view).getByRole("button", { name: "الخطوة التالية" }));
-    fireEvent.click(within(view).getByRole("button", { name: "الخطوة التالية" }));
-    expect(within(view).getByText("3 / 5")).toBeTruthy();
+    // V15: the player's navigation is docked in the editor's sticky strip (above the steps), not inside the drawing
+    const nav = within(within(panel).getByTestId("csharp-run-strip")).getByTestId("lab-trace-nav");
+    expect(within(nav).getByText("1 / 5")).toBeTruthy();
+    fireEvent.click(within(nav).getByRole("button", { name: "الخطوة التالية" }));
+    fireEvent.click(within(nav).getByRole("button", { name: "الخطوة التالية" }));
+    expect(within(nav).getByText("3 / 5")).toBeTruthy();
     expect(within(view).getByRole("region", { name: "مباني المعطيات" })).toBeTruthy();   // the stack is drawn
   });
 

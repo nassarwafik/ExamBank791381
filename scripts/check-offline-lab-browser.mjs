@@ -84,10 +84,10 @@ check(out === "sum 14\n" && /انتهى التشغيل بنجاح/.test(said), "
 await page.getByRole("button", { name: "تشغيل مرئي", exact: true }).click();
 await page.locator(".stt-cs-status").filter({ hasText: /سُجّل التنفيذ خطوة خطوة|تعذّر|خطأ/ }).waitFor({ timeout: 180000 });
 const trace = page.getByTestId("csharp-trace");
-const total = Number(((await trace.locator(".learning-trace-counter").innerText({ timeout: 5000 }).catch(() => "0/0"))).replace(/\s+/g, " ").split("/")[1]) || 0;
+const total = Number(((await page.getByTestId("lab-trace-nav").locator(".learning-trace-counter").innerText({ timeout: 5000 }).catch(() => "0/0"))).replace(/\s+/g, " ").split("/")[1]) || 0;
 let sawFlow = "";
 for (let k = 0; k < total && !sawFlow; k++) {
-  await trace.getByRole("button", { name: "الخطوة التالية" }).click();
+  await page.getByTestId("lab-trace-nav").getByRole("button", { name: "الخطوة التالية" }).click();
   sawFlow = (await trace.getByRole("region", { name: "الاستدعاءات" }).getByRole("img").getAttribute("aria-label", { timeout: 300 }).catch(() => "")) || "";
 }
 check(total > 10 && /Sq \(تعمل الآن\)، استُدعيت من السطر 10: Sq\(i\)/.test(sawFlow), "«تشغيل مرئي» offline: " + total + " steps recorded and drawn, the call flow of Sq(i) (" + sawFlow.slice(0, 80) + "…)");
