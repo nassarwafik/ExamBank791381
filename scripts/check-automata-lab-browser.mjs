@@ -65,6 +65,19 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 900 }], ["pho
   check(/تقبل الآلة 16 كلمات من 31 حتى الطول 4/.test(await section(/لغة آلتي/).innerText()), "«لغة آلتي»: 16 of the 31 words up to length 4");
   if (name === "phone") check(await sideways() <= 1, "phone: the page never scrolls sideways (" + (await sideways()) + " px)");
 
+  // A5: «حوّل إلى حتمي» step by step, then the result opened in the editor (the NFA kept as A)
+  await lab.getByRole("radio", { name: "أوتومات منتهٍ غير حتمي" }).check();
+  await lab.getByRole("button", { name: /^افتح مثالًا: تنتهي بـ ab/ }).click();
+  const algos = section(/الخوارزميات خطوة خطوة/);
+  await algos.getByRole("button", { name: "حوّل إلى حتمي" }).click();
+  await algos.getByRole("button", { name: "أظهر كل الخطوات" }).click();
+  check(/أوتومات حتمي من 3 حالات/.test(await algos.innerText()), "«حوّل إلى حتمي»: the working row by row, a DFA of 3 states");
+  await algos.getByRole("button", { name: "افتح الناتج في المحرر" }).click();
+  check(await lab.getByRole("radio", { name: "أوتومات منتهٍ حتمي" }).isChecked(), "the result opens in the editor as a DFA (the NFA kept in «آلاتي»)");
+  await algos.getByRole("button", { name: "هل آلتاي متكافئتان؟" }).click();
+  check(/الآلتان متكافئتان/.test(await algos.innerText()), "the DFA and the kept NFA are equivalent");
+  if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the working table (" + (await sideways()) + " px)");
+
   // the push-down example, step by step
   await lab.getByRole("radio", { name: "أوتومات مكدّس" }).check();
   await lab.getByRole("button", { name: /^افتح مثالًا: aⁿbⁿ/ }).click();

@@ -39,6 +39,7 @@ describe("A4 — the contract", () => {
     const e = studentToolCatalogEntry("automataLab");
     expect([e.label, e.available, studentToolHasUi("automataLab")]).toEqual(["مختبر الآلات", true, true]);
     expect(e.answerRisk).toMatch(/هل تُقبل الكلمة/);
+    expect(e.answerRisk).toMatch(/التحويل إلى حتمي، والتقاطع والاتحاد، والمتمّم، والتصغير/);   // A5: the algorithms answer those questions
   });
   it("the automata book offers it first with the four machines; no other book does", () => {
     expect(courseStudentTools("899271")!.tools[0]).toEqual(ALL);

@@ -9,6 +9,7 @@ import {
   type AutomatonKind, type BatchRow, type LabDraft, type LanguageListing, type PdaRow, type TmRow,
 } from "./automataLab";
 import { LAB_EXAMPLES } from "./automataLabExamples";
+import AutomataLabAlgorithms, { type Shelf } from "./AutomataLabAlgorithms";
 import "../learning/activities/activities.css";
 import "../learning/activities/automatonDesign.css";
 import "./automataLab.css";
@@ -42,6 +43,7 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
   const [batch, setBatch] = useState<Stamped<BatchRow[]> | null>(null);
   const [lengthWanted, setLengthWanted] = useState(4);
   const [listing, setListing] = useState<Stamped<LanguageListing> | null>(null);
+  const [shelf, setShelf] = useState<Shelf>([]);
 
   const checked = useMemo(() => checkDraft(draft), [draft]);
   const machine = checked.machine;
@@ -228,6 +230,9 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
         </div>
         {listingNow && <Listing listing={listingNow} />}
       </section>
+
+      <AutomataLabAlgorithms ids={ids} draft={draft} machine={machine} stamp={stamp} shelf={shelf} setShelf={setShelf} kinds={kinds}
+        load={d => { setDraft(d); setAlphabetText(d.alphabet.join(", ")); setAlphabetError(""); }} />
     </div>
   );
 }
