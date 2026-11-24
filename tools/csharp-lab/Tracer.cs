@@ -40,7 +40,8 @@ public static partial class Lab
     /// steps fold into one closing step, as the course records them), "entry"?: the method to start from (default: Main),
     /// "quiet"?: names of methods that run without steps of their own, "maxSteps"?: at most TraceMaxSteps,
     /// "inside"?: true = «اكشف الداخل», the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain,
-    /// "rich"?: true = V5 rich types (TraceRuntime.cs header): items that are objects, C#'s collections and arrays as structures;
+    /// "rich"?: true = V5 rich types (TraceRuntime.cs header): items that are objects, C#'s collections and arrays as structures
+    /// (V11: the writer's structs as values with fields, and each step's "statics");
     /// with it the result also carries "pointers": [[array, index]] — every a[i] the writer's program writes (plain names only;
     /// V9: [array, row, column] for a[i, j]) — and "digits": [[variable, base]] — every `v % b` / `v / b` with b 2, 8, 10 or 16 (V9) }.
     /// A step marked by Viz.Pause() carries "pause": true; Viz.Show(title) gives it the writer's title as its note.
@@ -118,6 +119,8 @@ public static partial class Lab
         var libraryTypes = lib == null ? new List<string>() : lib.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>()
             .Select(t => t.Identifier.Text + (t.TypeParameterList == null ? "" : "`" + t.TypeParameterList.Parameters.Count)).ToList();
         recorder.GetMethod("Configure")!.Invoke(null, new object[] { stdout, shown, maxSteps, quiet.ToArray(), libraryTypes.ToArray(), inside, rich });
+        // V11: the types whose statics may be read from the first step (the others once their static constructor has started)
+        if (rich) recorder.GetMethod("StaticsReady")!.Invoke(null, new object[] { TraceInstrumenter.StaticsFromStart(program, plain.GetSemanticModel(program), lib).ToArray() });
         var (oldOut, oldErr) = (Console.Out, Console.Error);
         assembly.GetType("__LabStdin")?.GetField("In", BindingFlags.Public | BindingFlags.Static)?.SetValue(null, new StringReader(stdin ?? ""));
         Console.SetOut(stdout);
@@ -171,6 +174,67 @@ static class TraceInstrumenter
     }
 
     const string R = "global::__LabTrace";
+
+    /// <summary>
+    /// V11: the writer's types (classes and structs, not generic) with static fields whose statics the recorder may read FROM THE START:
+    /// no static constructor (one that has gets Ready planted), and every static initialiser only builds a value — literals, constants,
+    /// operators, arrays, C#'s own types (`new List&lt;int&gt;()`, `new Random()`) or the book's classes. Reading such a type early
+    /// runs nothing the program could see. A type with any other initialiser (`static int x = F();`) is left out: never read.
+    /// Metadata names (Outer+Inner, Ns.Type), as Assembly.GetType reads them.
+    /// </summary>
+    internal static List<string> StaticsFromStart(SyntaxTree program, SemanticModel model, SyntaxTree? library)
+    {
+        var names = new List<string>();
+        foreach (var type in program.GetRoot().DescendantNodes().OfType<TypeDeclarationSyntax>())
+        {
+            if (type is not (ClassDeclarationSyntax or StructDeclarationSyntax)) continue;
+            if (model.GetDeclaredSymbol(type) is not INamedTypeSymbol symbol || InGenericType(symbol)) continue;
+            var statics = type.Members.Where(m => m.Modifiers.Any(SyntaxKind.StaticKeyword) && !m.Modifiers.Any(SyntaxKind.ConstKeyword)).ToList();
+            bool hasFields = statics.Any(m => m is FieldDeclarationSyntax || m is PropertyDeclarationSyntax p && p.AccessorList?.Accessors.All(a => a.Body == null && a.ExpressionBody == null) == true);
+            if (!hasFields || statics.Any(m => m is ConstructorDeclarationSyntax)) continue;
+            var inits = statics.OfType<FieldDeclarationSyntax>().SelectMany(f => f.Declaration.Variables).Select(v => v.Initializer?.Value)
+                .Concat(statics.OfType<PropertyDeclarationSyntax>().Select(p => p.Initializer?.Value));
+            if (inits.All(e => e == null || BuildsOnly(e, model, library, symbol))) names.Add(MetadataName(symbol));
+        }
+        return names;
+    }
+    static bool InGenericType(INamedTypeSymbol? t) { for (; t != null; t = t.ContainingType) if (t.IsGenericType) return true; return false; }
+    static string MetadataName(INamedTypeSymbol s) => s.ContainingType != null ? MetadataName(s.ContainingType) + "+" + s.MetadataName
+        : (s.ContainingNamespace == null || s.ContainingNamespace.IsGlobalNamespace ? "" : s.ContainingNamespace.ToDisplayString() + ".") + s.MetadataName;
+    static bool BuildsOnly(ExpressionSyntax e, SemanticModel model, SyntaxTree? library, INamedTypeSymbol owner)
+    {
+        bool ours(ISymbol? sym) => sym != null && sym.DeclaringSyntaxReferences.Any(r => r.SyntaxTree != library);   // the writer's code
+        bool go(ExpressionSyntax x) => BuildsOnly(x, model, library, owner);
+        bool all(IEnumerable<ExpressionSyntax?> xs) => xs.All(x => x == null || go(x));
+        switch (e)
+        {
+            case LiteralExpressionSyntax: case DefaultExpressionSyntax: case TypeOfExpressionSyntax: case SizeOfExpressionSyntax: return true;
+            case ParenthesizedExpressionSyntax p: return go(p.Expression);
+            case CastExpressionSyntax c: return go(c.Expression) && !ours(model.GetSymbolInfo(c).Symbol);   // not a writer's conversion operator
+            case PrefixUnaryExpressionSyntax u: return !u.IsKind(SyntaxKind.PreIncrementExpression) && !u.IsKind(SyntaxKind.PreDecrementExpression) && go(u.Operand) && !ours(model.GetSymbolInfo(u).Symbol);
+            case BinaryExpressionSyntax b: return go(b.Left) && go(b.Right) && !ours(model.GetSymbolInfo(b).Symbol);
+            case ConditionalExpressionSyntax q: return all(new[] { q.Condition, q.WhenTrue, q.WhenFalse });
+            case IdentifierNameSyntax or MemberAccessExpressionSyntax:
+            {
+                var sym = model.GetSymbolInfo(e).Symbol;
+                // a constant, C#'s own field (string.Empty), or a static field of this very type (its initialisers run in order)
+                return sym is IFieldSymbol { IsConst: true } || sym is IFieldSymbol f && (!ours(f.ContainingType) || f.IsStatic && SymbolEqualityComparer.Default.Equals(f.ContainingType, owner));
+            }
+            case InitializerExpressionSyntax i: return all(i.Expressions);
+            case ArrayCreationExpressionSyntax a: return all(a.Type.RankSpecifiers.SelectMany(r => r.Sizes)) && (a.Initializer == null || go(a.Initializer));
+            case ImplicitArrayCreationExpressionSyntax ia: return go(ia.Initializer);
+            case CollectionExpressionSyntax ce: return ce.Elements.All(x => x is ExpressionElementSyntax el && go(el.Expression));
+            case BaseObjectCreationExpressionSyntax o:
+            {
+                var created = model.GetTypeInfo(o).Type;
+                if (created == null || ours(created)) return false;   // a writer's constructor may print
+                if (model.GetSymbolInfo(o).Symbol is IMethodSymbol ctor && ours(ctor)) return false;
+                return all(o.ArgumentList?.Arguments.Select(a => a.Expression) ?? Enumerable.Empty<ExpressionSyntax>()) && (o.Initializer == null || go(o.Initializer));
+            }
+            case InterpolatedStringExpressionSyntax s: return s.Contents.OfType<InterpolationSyntax>().All(x => go(x.Expression));
+            default: return false;
+        }
+    }
     static int LineOf(SyntaxToken t) => t.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
     static int LineOf(SyntaxNode n) => n.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
     static string Lit(string s) => SymbolDisplay.FormatLiteral(s, true);
@@ -232,9 +296,16 @@ static class TraceInstrumenter
         public override SyntaxNode? VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
         {
             var symbol = model.GetDeclaredSymbol(node);
+            // V11: a static constructor is not traced; in the visual run its FIRST statement tells the recorder that the type's
+            // statics may now be read (reading them earlier would start this constructor early). Same line: nothing moves.
+            if (rich && symbol != null && symbol.IsStatic && node.Body != null && !InGeneric(symbol.ContainingType))
+                return node.WithBody(node.Body.WithStatements(node.Body.Statements.Insert(0,
+                    ParseStatement(R + ".Ready(typeof(" + symbol.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + "));"))));
             if (node.Body == null || symbol == null || symbol.IsStatic || !Traceable(symbol, node)) return node;
             return node.WithBody(InstrumentBody(symbol, node.Body, node.Identifier.Text, LineOf(node.Identifier), true));
         }
+
+        static bool InGeneric(INamedTypeSymbol? t) { for (; t != null; t = t.ContainingType) if (t.IsGenericType) return true; return false; }
 
         static bool Traceable(IMethodSymbol symbol, SyntaxNode node) =>
             !symbol.IsAsync && symbol.ContainingType.TypeKind == TypeKind.Class && !symbol.ReturnsByRef && !symbol.ReturnsByRefReadonly

@@ -1,4 +1,4 @@
-import type { DsTrace, DsVal } from "../learning/activities/ds";
+import { recText, type DsTrace, type DsVal } from "../learning/activities/ds";
 
 // Visual lab V8 (docs/enterprise-csharp-visual-lab-plan.md §17) — «شجرة الاستدعاءات»: every call of the recorded run, as a tree, at
 // the step the player shows. Built ONLY from the recorder's own data (rich mode): each frame's `call` (the same call keeps its number
@@ -13,7 +13,7 @@ export type CallNode = { call: number; name: string; args: string[]; parent: num
 export type CallTree = { nodes: Map<number, CallNode>; roots: number[]; total: number; clipped: boolean };
 export const CALL_TREE_MAX = 150;
 
-const text = (v: DsVal): string => (v.t === "v" ? v.s : v.t === "null" ? "null" : v.t === "arr" ? "{" + v.items.join(", ") + "}" : "#" + v.id);
+const text = (v: DsVal): string => (v.t === "v" ? v.s : v.t === "null" ? "null" : v.t === "arr" ? "{" + v.items.join(", ") + "}" : v.t === "rec" ? recText(v, text) : "#" + v.id);
 
 /** The call tree as it stands at step `at` (calls not started yet are absent). null when the trace has no call numbers. */
 export function callTreeOf(trace: DsTrace, at: number): CallTree | null {

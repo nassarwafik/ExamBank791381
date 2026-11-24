@@ -3,7 +3,9 @@
 // ds-figure / v1). Pure: strict readers (anything unexpected → null, the activity then says it is unavailable), the scene a
 // program state is drawn as, the tree layout and the binary-search-tree operations of the lab. No React, nothing executed.
 
-export type DsVal = { t: "v"; s: string } | { t: "null" } | { t: "ref"; id: number } | { t: "arr"; items: string[] };
+export type DsVal = { t: "v"; s: string } | { t: "null" } | { t: "ref"; id: number } | { t: "arr"; items: string[] }
+  // V11 (the visual run only, read with `rich`): a value of the writer's own struct — its fields, a struct inside it up to 3 deep
+  | { t: "rec"; type: string; fields: [string, DsVal][] };
 /** V5 (the teacher's visual run only, read with `rich`): `refs` beside `items` — the object each item refers to (null = a plain value). */
 type DsRefs = { refs?: (number | null)[] };
 export type DsObj =
@@ -23,7 +25,9 @@ export type DsFrame = { name: string; vars: [string, DsVal][]; call?: number; ty
 /** `pause` (visual lab V4, optional; never in a course trace): the writer's Viz.Pause() — a stop for the teacher's player. */
 /** `ret` (V8, rich only): on the step where the running method returns, the value it returns (as a literal). */
 /** `evals` (V9, rich only): the value of every `/`, `%`, comparison, `&&`, `||`, `!` evaluated since the step before. */
-export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean; ret?: string; evals?: [string, string][] };
+/** `statics` (V11, rich only): the static fields of the writer's types that may be read at this step, type by type. */
+export type DsStatics = { name: string; vars: [string, DsVal][] };
+export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean; ret?: string; evals?: [string, string][]; statics?: DsStatics[] };
 /** `pointers` (V5, rich only): the [array, index] pairs the program writes as a[i] — the drawing marks the cell i points at. */
 /** V9: a pointer may be [array, row, column] (a[i, j]); `digits` = [variable, base] — a number the program takes apart (n % 10, n / 10). */
 export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: string[][]; digits?: [string, number][] };
@@ -34,20 +38,25 @@ const isInt = (v: unknown): v is number => Number.isInteger(v);
 const short = (v: unknown): v is string => isStr(v) && v.length <= DS_LIMITS.text;
 const rec = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
 
-function readVal(raw: unknown): DsVal | null {
+function readVal(raw: unknown, rich = false, depth = 0): DsVal | null {
   const o = rec(raw);
+  if (o.t === "rec") {   // V11: rich only, at most 3 deep
+    if (!rich || depth >= 3 || !short(o.type)) return null;
+    const fields = readPairs(o.fields, rich, depth + 1);
+    return fields ? { t: "rec", type: o.type, fields } : null;
+  }
   if (o.t === "v" && short(o.s)) return { t: "v", s: o.s };
   if (o.t === "null") return { t: "null" };
   if (o.t === "ref" && isInt(o.id)) return { t: "ref", id: o.id };
   if (o.t === "arr" && Array.isArray(o.items) && o.items.length <= DS_LIMITS.items && o.items.every(short)) return { t: "arr", items: o.items as string[] };
   return null;
 }
-function readPairs(raw: unknown): [string, DsVal][] | null {
+function readPairs(raw: unknown, rich = false, depth = 0): [string, DsVal][] | null {
   if (!Array.isArray(raw) || raw.length > DS_LIMITS.vars) return null;
   const out: [string, DsVal][] = [];
   for (const p of raw) {
     if (!Array.isArray(p) || p.length !== 2 || !short(p[0])) return null;
-    const v = readVal(p[1]);
+    const v = readVal(p[1], rich, depth);
     if (!v) return null;
     out.push([p[0], v]);
   }
@@ -57,7 +66,7 @@ function readFrames(raw: unknown, rich: boolean): DsFrame[] | null {
   if (!Array.isArray(raw) || !raw.length || raw.length > DS_LIMITS.frames) return null;
   const out: DsFrame[] = [];
   for (const f of raw) {
-    const o = rec(f), vars = readPairs(o.vars);
+    const o = rec(f), vars = readPairs(o.vars, rich);
     if (!short(o.name) || !vars) return null;
     if (o.call !== undefined && (!rich || !isInt(o.call) || o.call < 1)) return null;   // V8: rich only, a positive whole number
     // V9: each variable's type, beside its value (rich only; null = not known)
@@ -88,7 +97,7 @@ function readObjs(raw: unknown, rich: boolean): DsObj[] | null {
     if ((o.k === "stack" || o.k === "queue") && cells(o.items)) out.push({ id: o.id, k: o.k, items: o.items, ...withRefs });
     else if (o.k === "node" && short(o.v) && idOrNull(o.next) && !refs) out.push({ id: o.id, k: "node", v: o.v, next: o.next, ...withRef });
     else if (o.k === "bin" && short(o.v) && idOrNull(o.l) && idOrNull(o.r) && !refs) out.push({ id: o.id, k: "bin", v: o.v, l: o.l, r: o.r, ...withRef });
-    else if (o.k === "obj" && short(o.type) && !refs && o.ref === undefined) { const fields = readPairs(o.fields); if (!fields) return null; out.push({ id: o.id, k: "obj", type: o.type, fields }); }
+    else if (o.k === "obj" && short(o.type) && !refs && o.ref === undefined) { const fields = readPairs(o.fields, rich); if (!fields) return null; out.push({ id: o.id, k: "obj", type: o.type, fields }); }
     else if (rich && (o.k === "array" || o.k === "set") && short(o.type) && cells(o.items)) out.push({ id: o.id, k: o.k, type: o.type, items: o.items, ...withRefs });
     else if (rich && o.k === "map" && short(o.type) && cells(o.keys) && cells(o.items) && o.keys.length === o.items.length) out.push({ id: o.id, k: "map", type: o.type, keys: o.keys, items: o.items, ...withRefs });
     else if (rich && o.k === "grid" && short(o.type) && !refs && Array.isArray(o.rows) && o.rows.length <= 20 && o.rows.every(r => cells(r) && r.length <= 20)) out.push({ id: o.id, k: "grid", type: o.type, rows: o.rows as string[][] });
@@ -121,6 +130,7 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
   if (lines.length > limits.lines) return null;
   const steps: DsStep[] = [];
   let frames: DsFrame[] | null = null, objs: DsObj[] | null = null, printed = 0;
+  let statics: DsStatics[] | undefined;   // V11: kept from step to step like frames (`s` omitted = unchanged)
   for (const raw of c.steps) {
     const s = rec(raw);
     if (!isInt(s.l) || s.l < 0 || s.l > lines.length || !isStr(s.n) || s.n.length > 600 || !isInt(s.o) || s.o < printed || s.o > c.out.length) return null;
@@ -129,12 +139,19 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
     // V9: the expressions' values, rich only: at most 12 [expression, value] pairs
     if (s.x !== undefined && (!rich || !Array.isArray(s.x) || s.x.length > 12 || !s.x.every(p => Array.isArray(p) && p.length === 2 && short(p[0]) && short(p[1])))) return null;
     if (s.h !== undefined) objs = readObjs(s.h, rich);
+    if (s.s !== undefined) {   // V11: rich only — at most 10 types, each { name, vars }
+      if (!rich || !Array.isArray(s.s) || s.s.length > 10) return null;
+      const list: DsStatics[] = [];
+      for (const t of s.s) { const o = rec(t), vars = readPairs(o.vars, rich); if (!short(o.name) || !vars) return null; list.push({ name: o.name, vars }); }
+      statics = list;
+    }
     if (!frames || !objs) return null;
     const ids = new Set(objs.map(o => o.id));
-    const refs = [...frames.flatMap(f => f.vars), ...objs.flatMap(o => (o.k === "obj" ? o.fields : []))];
-    if (refs.some(([, v]) => v.t === "ref" && !ids.has(v.id))) return null;
+    const refs = [...frames.flatMap(f => f.vars), ...objs.flatMap(o => (o.k === "obj" ? o.fields : [])), ...(statics ?? []).flatMap(t => t.vars)];
+    const dangling = (v: DsVal): boolean => (v.t === "ref" ? !ids.has(v.id) : v.t === "rec" ? v.fields.some(([, x]) => dangling(x)) : false);
+    if (refs.some(([, v]) => dangling(v))) return null;
     printed = s.o;
-    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}), ...(isStr(s.r) ? { ret: s.r } : {}), ...(Array.isArray(s.x) && s.x.length ? { evals: s.x as [string, string][] } : {}) });
+    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}), ...(isStr(s.r) ? { ret: s.r } : {}), ...(Array.isArray(s.x) && s.x.length ? { evals: s.x as [string, string][] } : {}), ...(statics && statics.length ? { statics } : {}) });
   }
   const ident = (v: unknown) => isStr(v) && /^[A-Za-z_][A-Za-z0-9_]{0,40}$/.test(v);
   let pointers: string[][] | undefined;
@@ -166,6 +183,10 @@ export type DsRow = { id: number; k: "array" | "set"; type: string; items: strin
 export type DsMapScene = { id: number; type: string; keys: string[]; items: string[]; labels: DsLabel[] };
 export type DsScene = { stacks: DsBoxes[]; queues: DsBoxes[]; chains: DsChain[]; trees: DsTree[]; objects: Extract<DsObj, { k: "obj" }>[];
   rows: DsRow[]; maps: DsMapScene[] };
+
+/** V11: a struct's value on one line, as C# writes a record: Point { X = 1, Y = 2 } (`inner` writes each field's value). */
+export const recText = (v: Extract<DsVal, { t: "rec" }>, inner: (x: DsVal) => string): string =>
+  v.type + " { " + v.fields.map(([n, x]) => n + " = " + inner(x)).join(", ") + " }";
 
 /** V5: an item that refers to an object is drawn with its text and «→#id»; the object it refers to is drawn too, named «#id». */
 export const refText = (text: string, ref: number | null | undefined) => (ref === null || ref === undefined ? text : text + " →#" + ref);

@@ -62,3 +62,13 @@
 .lab-og-chip{ fill:var(--eb-primary-100); stroke:var(--eb-primary); stroke-width:1.5; }
 .lab-og-chip.is-dim{ fill:var(--eb-surface-2); stroke:var(--eb-border-strong); }
 @media (prefers-reduced-motion: reduce){ .lab-og-row{ transition:none; } }
+
+/* V11 (docs/enterprise-csharp-visual-lab-plan.md §21) — a struct's value as a small box of its fields; the static fields of a type */
+.learning-trace-box.is-rec{ padding:0; border:0; background:none; }
+.lab-rec{ display:inline-flex; flex-wrap:wrap; align-items:stretch; gap:2px; padding:2px; border:1.5px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.lab-rec-type{ align-self:center; padding:0 var(--eb-space-1); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:700; }
+.lab-rec-field{ display:inline-flex; align-items:center; gap:var(--eb-space-1); padding:0 var(--eb-space-1); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
+.lab-rec-field.is-changed{ border-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.lab-rec-name{ color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.lab-rec-value{ font-weight:700; }
+.lab-statics{ border-style:dashed; }

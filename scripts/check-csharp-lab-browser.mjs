@@ -302,7 +302,28 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const cycDiagram = await diagramOf();
   check(/سُجّل التنفيذ خطوة خطوة/.test(cyc.status) && cyc.out === "A\n" && /Pal #(\d+): Name = "A"، Other → Pal #(\d+)\. Pal #\2: Name = "B"، Other → Pal #\1\./.test(cycDiagram),
     "V10: objects that refer to each other are recorded and drawn (no stack overflow): " + cycDiagram.slice(0, 100));
-  const runs =traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
+  // Visual lab V11 — structs as boxes of their fields (q = p copies), the static fields of each type («الحقول الثابتة»), a static
+  // constructor never run early (its type's statics appear once it ran), a struct inside an object as its rows, a static's arrow
+  const st = await visual(panel, page, "struct Point { public int X; public int Y; public Point(int x, int y) { X = x; Y = y; } }\nclass Shape { public string Name = \"box\"; public Point Pos; }\nclass Counter\n{\n    public static int Made;\n    public static List<Shape> All = new List<Shape>();\n    static Counter() { Console.WriteLine(\"init\"); }\n    public static void Add(Shape s) { Made++; All.Add(s); }\n}\nclass Program\n{\n    static int total = 5;\n    static void Main()\n    {\n        Console.WriteLine(\"start\");\n        Point p = new Point(1, 2);\n        Point q = p;\n        q.X = 9;\n        Shape s = new Shape();\n        s.Pos = q;\n        Counter.Add(s);\n        total = total + Counter.Made;\n        Console.WriteLine(p.X + \" \" + q.X + \" \" + total);\n    }\n}");
+  const sv = panel.getByTestId("csharp-trace");
+  const memory = sv.getByRole("region", { name: "المتغيّرات" });
+  const statics = (await memory.locator(".lab-statics .learning-trace-framename").allInnerTexts()).map(x => x.replace(/\s+/g, " ").trim());
+  const fieldsOf = async n => (await memory.locator(".learning-trace-var").filter({ has: page.locator(".learning-trace-name", { hasText: new RegExp("^" + n + "$") }) }).first().locator(".lab-rec-field").allInnerTexts()).map(x => x.replace(/\s+/g, ""));
+  check(st.out === "start\ninit\n1 9 6\n" && statics.join("|") === "Program — الحقول الثابتة|Counter — الحقول الثابتة" && (await fieldsOf("p")).join() === "X1,Y2" && (await fieldsOf("q")).join() === "X9,Y2",
+    "V11: p and q are boxes of their fields (q = p copied: p.X 1, q.X 9); «الحقول الثابتة» of Program and Counter; output as «تشغيل» (" + JSON.stringify({ out: st.out, statics }) + ")");
+  const stDiagram = (await sv.getByRole("region", { name: "الكائنات" }).getByRole("img").getAttribute("aria-label").catch(() => "")) || "";
+  check(/Shape #\d+: Name = "box"، Pos\.X = 9، Pos\.Y = 2\./.test(stDiagram) && /Counter\.All يشير إلى List<Shape> #\d+\./.test(stDiagram),
+    "V11: in the diagram the struct is the Shape's own rows (Pos.X, Pos.Y), and the static Counter.All has its arrow (" + stDiagram.slice(0, 120) + "…)");
+  await sv.getByRole("button", { name: "من البداية" }).click();
+  let litX = false, counterEarly = false;
+  for (let k = 0; k < 30 && !litX; k++) {
+    await sv.getByRole("button", { name: "الخطوة التالية" }).click();
+    counterEarly = counterEarly || (!(await sv.getByRole("region", { name: "الناتج حتى الآن" }).textContent()).includes("init") && await memory.locator(".lab-statics").filter({ hasText: "Counter" }).count() > 0);
+    litX = (await memory.locator(".lab-rec-field.is-changed").allInnerTexts()).map(x => x.replace(/\s+/g, "")).join() === "X9";
+  }
+  check(litX && !counterEarly, "V11: on «q.X = 9» only q's X is lit; Counter's statics never shown before its static constructor printed «init»");
+  await shotOf(memory, "lab-teacher-visual-structs-1440");
+  const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");
   check(reads.length === 1 && reads[0].status === 200 && reads[0].query === "library=899271d", "exactly ONE server read: the book's classes (" + JSON.stringify(reads) + ")");
