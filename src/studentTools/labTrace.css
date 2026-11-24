@@ -88,3 +88,49 @@
 /* V13 (§23) — «حفظ صورة» above a drawing */
 .lab-drawing{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
 .lab-drawing-tools{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+
+/* V15 (§25) — the player's navigation as one compact bar (docked in the editor's sticky strip, or on top of the player); the other
+   choices in a row of their own; the keys it answers to */
+.lab-trace-bar.is-nav{ display:grid; gap:var(--eb-space-1); }
+.lab-trace-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.lab-trace-row .learning-trace-slider{ flex:1 1 12rem; min-inline-size:8rem; }
+.lab-trace-bar.is-nav .lab-trace-note{ margin-block:0; font-size:var(--eb-fs-13); }
+.lab-trace > .lab-trace-bar.is-nav{ position:sticky; inset-block-start:0; z-index:var(--eb-z-sticky, 10); padding-block:var(--eb-space-2); background:var(--eb-surface); border-block-end:1px solid var(--eb-border-strong); }
+.lab-trace-options{ margin-block:var(--eb-space-2); padding-block-end:var(--eb-space-2); border-block-end:1px dashed var(--eb-line-2); }
+.lab-trace-keys{ color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.lab-trace-keys kbd{ display:inline-block; min-inline-size:1.5em; padding:0 .3em; text-align:center; font-family:inherit; border:1px solid var(--eb-border-strong); border-block-end-width:2px; border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
+.lab-trace-stale{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin:0; padding:var(--eb-space-1) var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-weight:600; }
+.lab-trace .learning-trace-line{ scroll-margin-block:10rem 2rem; }
+
+/* the condition with its values; an error explained; a value's former value; what this step printed */
+.lab-test{ display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-1) var(--eb-space-2); margin-block:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:4px solid; border-radius:var(--eb-r-sm); }
+.lab-test code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-weight:600; }
+.lab-test.is-true{ border-color:var(--eb-success); background:var(--eb-success-bg); }
+.lab-test.is-true .lab-test-verdict{ color:var(--eb-success-tx); }
+.lab-test.is-false{ border-color:var(--eb-danger); background:var(--eb-danger-bg); }
+.lab-test.is-false .lab-test-verdict{ color:var(--eb-danger-tx); }
+.lab-test-label{ color:var(--eb-text-secondary); }
+.lab-error{ margin-block:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-danger); border-inline-start-width:4px; border-radius:var(--eb-r-sm); background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-trace-line.is-current.is-error{ background:var(--eb-danger-bg); outline:2px solid var(--eb-danger); outline-offset:-2px; }
+.lab-var-was{ color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.lab-var-was bdi{ text-decoration:line-through; }
+.lab-out-new{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-weight:700; border-radius:2px; padding-inline:1px; }
+.lab-out-note{ margin:var(--eb-space-1) 0 0; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+
+/* «جدول التتبّع» */
+.lab-trace-table{ display:grid; gap:var(--eb-space-2); margin-block-start:var(--eb-space-3); padding:var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); }
+.lab-trace-table-head{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.lab-trace-table-wrap{ max-block-size:22rem; overflow:auto; border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); }
+.lab-tt{ inline-size:100%; border-collapse:collapse; font-size:var(--eb-fs-13); }
+.lab-tt th, .lab-tt td{ padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); text-align:center; white-space:nowrap; }
+.lab-tt td{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.lab-tt thead th{ position:sticky; inset-block-start:0; z-index:1; background:var(--eb-surface-2); font-weight:700; }
+.lab-tt tbody tr{ cursor:pointer; }
+.lab-tt tbody tr:hover{ background:var(--eb-surface-2); }
+.lab-tt tbody tr.is-current{ background:var(--eb-primary-050); outline:2px solid var(--eb-primary); outline-offset:-2px; }
+.lab-tt td.is-changed{ font-weight:700; color:var(--eb-success-tx); }
+.lab-tt td.is-true{ color:var(--eb-success-tx); }
+.lab-tt td.is-false{ color:var(--eb-danger-tx); }
+.lab-tt-out{ text-align:start; }
+.lab-tt-go{ font:inherit; min-inline-size:2rem; padding:0 .3rem; background:none; border:1px solid transparent; border-radius:var(--eb-r-sm); cursor:pointer; color:inherit; }
+.lab-tt-go:focus-visible{ outline:2px solid var(--eb-primary); }
