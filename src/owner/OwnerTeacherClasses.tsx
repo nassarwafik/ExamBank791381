@@ -6,11 +6,12 @@ import { SAVE_LABELS } from "../teacher/saveLabels";
 import OwnerClassStudents from "./OwnerClassStudents";   // Tadris+ P5-B4
 import OwnerClassTransfer from "./OwnerClassTransfer";   // Tadris+ P5-B3a
 import OwnerClassRoster from "./OwnerClassRoster";   // Tadris+ P5-B3b
+import OwnerClassCopy from "./OwnerClassCopy";   // Tadris+ P11-D
 
 /**
  * Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The «الصفوف» tab of a teacher's page in the Owner Console:
  * the teacher's classes (active first, then archived), a form to create a class for them, and per class: edit its labels, archive /
- * restore, graduate, and (P5-B4) add students — one, or a list after the server preview (OwnerClassStudents.tsx). The class belongs to the teacher, who sees it and adds students to it. Every change goes through the page's
+ * restore, graduate, (P11-D) copy its students into another teacher's class, and (P5-B4) add students — one, or a list after the server preview (OwnerClassStudents.tsx). The class belongs to the teacher, who sees it and adds students to it. Every change goes through the page's
  * `send` (a recent second-factor check is asked inline, then the same change is retried); the server decides everything.
  */
 
@@ -88,6 +89,7 @@ function ClassCard({ c, accountId, busy, token, send, done }: { c: OwnerClass; a
   const [studentsOpen, setStudentsOpen] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
+  const [copying, setCopying] = useState(false);
   const act = (action: OwnerClassLifecycle) => send(() => ownerClassesApi.lifecycle(token, action, c.classId), () => { setConfirm(null); done(LIFECYCLE_DONE[action]); });
   return (
     <li className="eb-owner-teacher" aria-label={c.name}>
@@ -102,6 +104,8 @@ function ClassCard({ c, accountId, busy, token, send, done }: { c: OwnerClass; a
           onSubmit={fields => send(() => ownerClassesApi.update(token, c.classId, fields), d => { setEditing(false); done(d.changed ? "حُفظت بيانات الصف." : "لا تغيير."); })} />
       ) : transferring ? (
         <OwnerClassTransfer token={token} c={c} fromAccountId={accountId} busy={busy} send={send} onCancel={() => setTransferring(false)} onDone={text => { setTransferring(false); done(text); }} />
+      ) : copying ? (
+        <OwnerClassCopy token={token} c={c} fromAccountId={accountId} busy={busy} send={send} onCancel={() => setCopying(false)} onDone={text => { setCopying(false); done(text); }} />
       ) : confirm ? (
         <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + c.name}>
           <p>{confirm === "graduate" ? "سيُؤرشف الصف كصف متخرج. يبقى كل شيء محفوظًا: الطلاب ونتائجهم." : "سيُؤرشف الصف. يبقى كل شيء محفوظًا، ويمكن استعادته."} لا تُؤرشف الصفوف التي لديها تصحيح معلّق.</p>
@@ -123,6 +127,7 @@ function ClassCard({ c, accountId, busy, token, send, done }: { c: OwnerClass; a
             <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => void act("unarchive")}>استعادة</button>
           )}
           <button type="button" className="eb-owner-secondary" aria-expanded={rosterOpen} onClick={() => setRosterOpen(o => !o)}>{rosterOpen ? "إخفاء الطلاب" : "الطلاب"}</button>
+          <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setCopying(true)}>نسخ الطلاب إلى معلم آخر</button>
           <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setTransferring(true)}>نقل إلى معلم آخر</button>
         </div>
       )}
