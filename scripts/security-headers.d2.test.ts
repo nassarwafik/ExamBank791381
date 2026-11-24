@@ -55,7 +55,8 @@ describe("the application's Content-Security-Policy", () => {
     expect(plugin.apply).toBe("build");
     expect(plugin.transformIndexHtml.handler(INDEX, { path: "/index.html" })).toMatch(/Content-Security-Policy/);
     expect(plugin.transformIndexHtml.handler(INDEX, { path: "/browser-harness/code-editor.html" })).toBe(INDEX);
-    expect(read("vite.config.ts")).toMatch(/plugins: \[react\(\), contentSecurityPolicyPlugin\(\)\]/);
+    // V14 appended the offline lab's pack-list plugin (build only, writes dist/offline-lab.json); the policy plugin keeps its place
+    expect(read("vite.config.ts")).toMatch(/plugins: \[react\(\), contentSecurityPolicyPlugin\(\), offlineLabPackPlugin\(\)\]/);
   });
 });
 

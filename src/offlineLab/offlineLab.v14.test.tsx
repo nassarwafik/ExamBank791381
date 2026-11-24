@@ -5,7 +5,7 @@ import OfflineLabPage from "./OfflineLabPage";
 import CSharpEditorTool from "../studentTools/CSharpEditorTool";
 import { packChannel, readPackInfo, readReply } from "./offlinePack";
 import { DESKTOP_QUERY, inlineLabFrame, plainDeviceRunner, resetDeviceLabForTests } from "../studentTools/deviceCSharpLab";
-import { labClosure, labRuntimeFiles, buildPack } from "../../scripts/build-offline-lab-pack.mjs";
+import { labClosure, labRuntimeFiles, buildPack, offlineLabPackPlugin } from "../../scripts/build-offline-lab-pack.mjs";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -161,6 +161,7 @@ describe("V14 — the build's pack list", () => {
     mkdirSync(join(dist, ".vite"));
     writeFileSync(join(dist, ".vite", "manifest.json"), JSON.stringify({ "lab.html": { file: "assets/lab.js" } }));
     expect(buildPack(dist)).toEqual({ available: false, version: "", bytes: 0, files: [] });
+    expect([offlineLabPackPlugin().name, offlineLabPackPlugin().apply]).toEqual(["offline-lab-pack", "build"]);   // never in dev or tests
   });
   it("the lab's files: worker.js and the runtime files — never the .br / .gz copies or a language folder; the version follows the bytes", () => {
     const dist = mkdtempSync(join(tmpdir(), "olab-"));
