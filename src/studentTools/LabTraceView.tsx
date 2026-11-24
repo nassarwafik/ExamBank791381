@@ -63,12 +63,12 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
   const reduced = usePrefersReducedMotion();
   const heap = useCallback<HeapDiagram>((step, prev, marks) => {
     const graph = objectGraphOf(step, prev, marks);
-    return graph ? { node: <ObjectDiagram graph={graph} motion={!reduced} />, drawn: new Set(graph.nodes.map(n => n.id)) } : null;
-  }, [reduced]);
+    return graph ? { node: <ObjectDiagram key={at} graph={graph} motion={!reduced} fileName={"objects-step-" + (at + 1)} />, drawn: new Set(graph.nodes.map(n => n.id)) } : null;
+  }, [reduced, at]);
   const flow = useCallback<FlowDiagram>((step, prev, cfg, text) => {   // V12: the running methods, while one called another
     const f = callFlowOf(step, prev, cfg, text);
-    return f ? <CallFlowDrawing flow={f} names={i => step.frames[i]?.name ?? ""} /> : null;
-  }, []);
+    return f ? <CallFlowDrawing key={at} flow={f} names={i => step.frames[i]?.name ?? ""} fileName={"calls-step-" + (at + 1)} /> : null;
+  }, [at]);
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => () => ctrl.current?.abort(), []);
 
