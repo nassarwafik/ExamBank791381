@@ -258,6 +258,25 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const treeLabel = await tree.getByRole("img").getAttribute("aria-label");
   check(await tree.locator(".lab-call").count() === 10 && /Fib\(4\) أعاد 3/.test(treeLabel || ""), "V8: the call tree of Fib(4): Main and 9 calls, Fib(4) returned 3 (" + (treeLabel || "").slice(0, 90) + ")");
   await shotOf(ct, "lab-teacher-visual-calltree-1440");
+  // Visual lab V9 — «أسس علم الحاسوب»: n % 10 / n / 10 noted with their values, n in place-value boxes, the types; then a 2D grid
+  await visual(panel, page, "static void Main()\n{\n    int n = 352, sum = 0;\n    while (n > 0 && sum < 100)\n    {\n        sum = sum + n % 10;\n        n = n / 10;\n    }\n    Console.WriteLine(sum);\n}");
+  const dv = panel.getByTestId("csharp-trace");
+  await dv.getByRole("button", { name: "من البداية" }).click();
+  let sawDigit = false, sawEvals = "";
+  for (let k = 0; k < 10 && !sawDigit; k++) {
+    await dv.getByRole("button", { name: "الخطوة التالية" }).click();
+    sawDigit = await dv.getByRole("img", { name: /^منازل n = 352 في الأساس 10: .*أُخذ الآن الرقم الأخير 2$/ }).count() > 0;
+    if (sawDigit) sawEvals = await dv.getByRole("region", { name: "قيم التعابير في هذه الخطوة" }).innerText().catch(() => "");
+  }
+  check(sawDigit && /n % 10 → 2/.test(sawEvals), "V9: n = 352 drawn in place values, its last digit lit as n % 10 → 2 is noted (" + sawEvals.replace(/\s+/g, " ").slice(0, 80) + ")");
+  const typeTags = await dv.locator(".lab-var-type").allInnerTexts();
+  check(typeTags.includes("int"), "V9: each variable shows its type (" + typeTags.join(",") + ")");
+  await shotOf(dv, "lab-teacher-visual-digits-1440");
+  await visual(panel, page, "static void Main()\n{\n    int[,] g = new int[2, 3];\n    for (int i = 0; i < 2; i++)\n        for (int j = 0; j < 3; j++)\n            g[i, j] = i + j;\n    Console.WriteLine(g[1, 2]);\n}");
+  const gv = panel.getByTestId("csharp-trace");
+  const gridImgs = await gv.locator(".learning-ds-structures [role=img]").evaluateAll(els => els.map(e => e.getAttribute("aria-label")));
+  check(gridImgs.some(l => /^المصفوفة الثنائية g \(int\[,\]\): الصف 0: 0، 1، 2؛ الصف 1: 1، 2، 3/.test(l || "")), "V9: int[,] drawn as a grid (" + gridImgs.filter(Boolean).map(l => l.slice(0, 60)).join(" | ") + ")");
+  await shotOf(gv, "lab-teacher-visual-grid-1440");
   const runs = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "POST");
   const reads = traffic.filter(t => t.path === "/api/student-tools/csharp-run" && t.method === "GET");
   check(runs.length === 0, "no program was sent to a server (" + runs.length + " run requests)");

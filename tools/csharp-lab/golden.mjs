@@ -255,6 +255,40 @@ const BEYOND = [
       return t.status === "success" && t.stdout === "3\n" && fibs.length === 9 && fibs.map(c => c.n).join(",") === "4,3,2,1,0,1,2,1,0"
         && rets.length === 9 && rets.at(-1) === root[0] + "=3" && steps.every(s => s.frames.every(f => Number.isInteger(f.call)));
     } },
+  // Visual lab V9 — «أسس علم الحاسوب» (rich only): expression values, variable types, digits, a 2D array, string indexing
+  { name: "V9 digits: n % 10 and n / 10 noted with their values each turn; the program names n as taken apart in base 10; types", stdin: "", options: { rich: true },
+    source: "static void Main()\n{\n    int n = 1234, sum = 0;\n    while (n > 0)\n    {\n        sum += n % 10;\n        n = n / 10;\n    }\n    Console.WriteLine(sum);\n}",
+    check: (t, steps) => {
+      const ev = steps.flatMap(s => s.evals || []).map(([e, v]) => e + "=" + v);
+      const types = steps.find(s => s.frames[0].types)?.frames[0].types;
+      return t.status === "success" && t.stdout === "10\n" && JSON.stringify(t.digits) === JSON.stringify([["n", 10]])
+        && ev.includes("n % 10=4") && ev.includes("n / 10=123") && ev.includes("n % 10=1") && ev.includes("n > 0=true") && ev.includes("n > 0=false")
+        && JSON.stringify(types) === JSON.stringify(["int", "int"]);
+    } },
+  { name: "V9 booleans: each part of && / || / ! with its value; short-circuit unchanged (the right side is not run)", stdin: "", options: { rich: true },
+    source: "static bool Side() { Console.WriteLine(\"side\"); return true; }\nstatic void Main()\n{\n    int a = 3, b = 7;\n    bool ok = a > 0 && b < 5;\n    bool skip = a < 0 && Side();\n    bool not = !(a == b) || Side();\n    Console.WriteLine(ok + \" \" + skip + \" \" + not);\n}",
+    check: (t, steps) => {
+      const on = line => (steps.find(s => s.line === line && s.evals)?.evals || []).map(([e, v]) => e + "=" + v).join(" | ");
+      return t.status === "success" && t.stdout === "False False True\n"
+        && on(5) === "a > 0=true | b < 5=false | a > 0 && b < 5=false"
+        && on(6) === "a < 0=false | a < 0 && Side()=false"
+        && on(7) === "a == b=false | !(a == b)=true | !(a == b) || Side()=true";
+    } },
+  { name: "V9 a two-dimensional array is a grid of rows, and a[i, j] gives the pointer triple", stdin: "", options: { rich: true },
+    source: "static void Main()\n{\n    int[,] g = new int[2, 3];\n    for (int i = 0; i < 2; i++)\n        for (int j = 0; j < 3; j++)\n            g[i, j] = i * 3 + j;\n    Console.WriteLine(g[1, 2]);\n}",
+    check: (t, steps) => {
+      const grid = steps.at(-1).objs.find(o => o.k === "grid");
+      return t.status === "success" && t.stdout === "5\n" && grid?.type === "int[,]" && JSON.stringify(grid.rows) === JSON.stringify([["0", "1", "2"], ["3", "4", "5"]])
+        && JSON.stringify(t.pointers) === JSON.stringify([["g", "i", "j"]]);
+    } },
+  { name: "V9 a string indexed by s[i] gives the pointer pair; its type is string", stdin: "", options: { rich: true },
+    source: "static void Main()\n{\n    string s = \"abc\";\n    for (int i = 0; i < s.Length; i++) Console.Write(s[i]);\n}",
+    check: (t, steps) => t.status === "success" && t.stdout === "abc" && JSON.stringify(t.pointers) === JSON.stringify([["s", "i"]])
+      && steps.some(s => s.frames[0].types?.join(",") === "string,int") },
+  { name: "V9 without rich: no evals, no types, no digits, and a 2D array stays a value", stdin: "",
+    source: "static void Main()\n{\n    int n = 12;\n    int[,] g = new int[1, 2];\n    if (n % 10 > 1) g[0, 1] = n / 10;\n    Console.WriteLine(g[0, 1]);\n}",
+    check: (t, steps) => t.status === "success" && t.stdout === "1\n" && !("digits" in t) && !("pointers" in t)
+      && steps.every(s => !("evals" in s) && s.frames.every(f => !("types" in f)) && s.objs.every(o => o.k !== "grid")) },
   // Visual lab V6 — the trimmed lab: a program that needs a library the download leaves out is refused before it is recorded (LAB0001)
   { name: "V6 a program needing a left-out library (System.Xml) is refused before it is recorded (LAB0001)", stdin: "", options: { rich: true },
     source: "using System.Xml;\nclass P { static void Main() { Console.WriteLine(new XmlDocument().Name); } }",

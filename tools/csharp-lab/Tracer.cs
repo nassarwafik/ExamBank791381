@@ -41,7 +41,8 @@ public static partial class Lab
     /// "quiet"?: names of methods that run without steps of their own, "maxSteps"?: at most TraceMaxSteps,
     /// "inside"?: true = «اكشف الداخل», the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain,
     /// "rich"?: true = V5 rich types (TraceRuntime.cs header): items that are objects, C#'s collections and arrays as structures;
-    /// with it the result also carries "pointers": [[array, index]] — every a[i] the writer's program writes (plain names only) }.
+    /// with it the result also carries "pointers": [[array, index]] — every a[i] the writer's program writes (plain names only;
+    /// V9: [array, row, column] for a[i, j]) — and "digits": [[variable, base]] — every `v % b` / `v / b` with b 2, 8, 10 or 16 (V9) }.
     /// A step marked by Viz.Pause() carries "pause": true; Viz.Show(title) gives it the writer's title as its note.
     /// → { status, stdout, stderr, compileMs, runMs, steps: [{ line, note, frames, objs, out, error? }] }
     /// status: success | compile-error | runtime-error | output-limit | step-limit | trace-unsupported
@@ -63,9 +64,17 @@ public static partial class Lab
         var parsed = CSharpSyntaxTree.ParseText(Wrap(source), ParseOptions, "Program.cs");
         // V5: the array / index pairs the program writes (a[i], list[mid]): the drawing marks the cell an index variable points at
         var pointers = !rich ? null : parsed.GetRoot().DescendantNodes().OfType<ElementAccessExpressionSyntax>()
-            .Where(x => x.Expression is IdentifierNameSyntax && x.ArgumentList.Arguments.Count == 1 && x.ArgumentList.Arguments[0].Expression is IdentifierNameSyntax)
-            .Select(x => (((IdentifierNameSyntax)x.Expression).Identifier.Text, ((IdentifierNameSyntax)x.ArgumentList.Arguments[0].Expression).Identifier.Text))
-            .Distinct().Take(20).ToList();
+            .Where(x => x.Expression is IdentifierNameSyntax && (x.ArgumentList.Arguments.Count == 1 || x.ArgumentList.Arguments.Count == 2)
+                && x.ArgumentList.Arguments.All(a => a.Expression is IdentifierNameSyntax))
+            .Select(x => string.Join("\u0001", new[] { ((IdentifierNameSyntax)x.Expression).Identifier.Text }
+                .Concat(x.ArgumentList.Arguments.Select(a => ((IdentifierNameSyntax)a.Expression).Identifier.Text))))
+            .Distinct().Take(20).Select(p => p.Split('\u0001')).ToList();
+        // V9: the number a program takes apart digit by digit (n % 10, n / 10; base 2 for binary, 8, 16)
+        var digits = !rich ? null : parsed.GetRoot().DescendantNodes().OfType<BinaryExpressionSyntax>()
+            .Where(x => (x.IsKind(SyntaxKind.ModuloExpression) || x.IsKind(SyntaxKind.DivideExpression)) && x.Left is IdentifierNameSyntax
+                && x.Right is LiteralExpressionSyntax lit && lit.Token.Value is int b && (b == 2 || b == 8 || b == 10 || b == 16))
+            .Select(x => (((IdentifierNameSyntax)x.Left).Identifier.Text, (int)((LiteralExpressionSyntax)x.Right).Token.Value!))
+            .Distinct().Take(10).ToList();
         var lib = LibraryFor(library, parsed);
         var program = RedirectStdin(parsed, lib);
         // A library, not a console program: a traced program may start from another method (the course's hidden driver «__Run»)
@@ -79,7 +88,7 @@ public static partial class Lab
         if (errors.Count > 0) return TraceResult("compile-error", "", string.Join("\n", errors.Select(d => d.ToString())), total.ElapsedMilliseconds, 0, null);
 
         SyntaxTree traced;
-        try { traced = TraceInstrumenter.Instrument(program, plain.GetSemanticModel(program)); }
+        try { traced = TraceInstrumenter.Instrument(program, plain.GetSemanticModel(program), rich); }
         catch (Exception x) { return TraceResult("trace-unsupported", "", "The recorder could not prepare this program: " + x.Message, total.ElapsedMilliseconds, 0, null); }
         var trees = new List<SyntaxTree>(support) { traced };
         if (lib != null) trees.Add(lib);
@@ -137,7 +146,8 @@ public static partial class Lab
         var result = TraceResult(status, stdout.ToString(), stderr.ToString(), compileMs, run.ElapsedMilliseconds, steps);
         if (pointers == null) return result;
         var withPointers = JsonNode.Parse(result)!.AsObject();
-        withPointers["pointers"] = new JsonArray(pointers.Select(p => (JsonNode)new JsonArray(p.Item1, p.Item2)).ToArray());
+        withPointers["pointers"] = new JsonArray(pointers.Select(p => (JsonNode)new JsonArray(p.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray())).ToArray());
+        withPointers["digits"] = new JsonArray(digits!.Select(d => (JsonNode)new JsonArray(d.Item1, d.Item2)).ToArray());
         return withPointers.ToJsonString();
     }
 
@@ -153,10 +163,10 @@ public static partial class Lab
 /// contains a line break.</summary>
 static class TraceInstrumenter
 {
-    internal static SyntaxTree Instrument(SyntaxTree program, SemanticModel model)
+    internal static SyntaxTree Instrument(SyntaxTree program, SemanticModel model, bool rich = false)
     {
         var root = (CSharpSyntaxNode)program.GetRoot();
-        var rewritten = new Rewriter(model).Visit(root);
+        var rewritten = new Rewriter(model, rich).Visit(root);
         return program.WithRootAndOptions(rewritten, program.Options);
     }
 
@@ -168,10 +178,41 @@ static class TraceInstrumenter
     sealed class Rewriter : CSharpSyntaxRewriter
     {
         readonly SemanticModel model;
+        readonly bool rich;             // V9: expression values and variable types (the visual run only)
         IMethodSymbol? method;          // the method being instrumented (null: outside one → nothing is planted)
         bool hasThis;
 
-        public Rewriter(SemanticModel model) { this.model = model; }
+        public Rewriter(SemanticModel model, bool rich) { this.model = model; this.rich = rich; }
+
+        // ── V9: the values of `/`, `%`, comparisons, `&&`, `||`, `!` — E returns its value unchanged (an operand of && / || is wrapped
+        //    on its own, so short-circuit stays exactly as written); constants (case labels, const) are left alone ──
+        static readonly HashSet<SyntaxKind> Noted = new HashSet<SyntaxKind> {
+            SyntaxKind.DivideExpression, SyntaxKind.ModuloExpression, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression,
+            SyntaxKind.LessThanExpression, SyntaxKind.LessThanOrEqualExpression, SyntaxKind.GreaterThanExpression,
+            SyntaxKind.GreaterThanOrEqualExpression, SyntaxKind.LogicalAndExpression, SyntaxKind.LogicalOrExpression };
+        bool Notable(ExpressionSyntax e)
+        {
+            if (!rich || method == null) return false;
+            try
+            {
+                if (model.GetConstantValue(e).HasValue) return false;
+                var type = model.GetTypeInfo(e).Type;
+                return type != null && type.TypeKind != TypeKind.Error && !type.IsRefLikeType && type.TypeKind != TypeKind.Pointer && type.SpecialType != SpecialType.System_Void;
+            }
+            catch { return false; }
+        }
+        ExpressionSyntax Noting(ExpressionSyntax original, ExpressionSyntax visited) =>
+            ParseExpression(R + ".E(" + visited.ToString() + ", " + Lit(Shorten(original.ToString())) + ")");
+        public override SyntaxNode? VisitBinaryExpression(BinaryExpressionSyntax node)
+        {
+            var visited = (ExpressionSyntax)base.VisitBinaryExpression(node)!;
+            return Noted.Contains(node.Kind()) && Notable(node) ? Noting(node, visited) : visited;
+        }
+        public override SyntaxNode? VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
+        {
+            var visited = (ExpressionSyntax)base.VisitPrefixUnaryExpression(node)!;
+            return node.IsKind(SyntaxKind.LogicalNotExpression) && Notable(node) ? Noting(node, visited) : visited;
+        }
 
         // ── never inside: lambdas, anonymous methods, local functions (their steps would not belong to a frame) ──
         public override SyntaxNode? VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => node;
@@ -495,9 +536,11 @@ static class TraceInstrumenter
             var names = new List<string>();
             var exprs = new List<string>();
             if (hasThis) { names.Add("this"); exprs.Add("this"); }
-            foreach (var p in parms) { names.Add(p.Name); exprs.Add("@" + p.Name); }
+            // V9 (rich): «name|type» — the declared type rides with the name, as C# writes it
+            string Typed(string name, ITypeSymbol t) => rich ? name + "|" + t.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat) : name;
+            foreach (var p in parms) { names.Add(Typed(p.Name, p.Type)); exprs.Add("@" + p.Name); }
             // «?a»: declared without a value and not definitely assigned here — shown once a step has written it
-            foreach (var l in locals) { names.Add(assigned!.Contains(l) ? l.Name : "?" + l.Name); exprs.Add("@" + l.Name); }
+            foreach (var l in locals) { names.Add(assigned!.Contains(l) ? Typed(l.Name, l.Type) : "?" + Typed(l.Name, l.Type)); exprs.Add("@" + l.Name); }
             // «+a» (after the values): this step wrote `a`
             foreach (var w in (written ?? Array.Empty<ISymbol>()).OfType<ILocalSymbol>().Where(DeclaredUnset).Select(x => x.Name).Distinct()) names.Add("+" + w);
             var namesSrc = "new string[] { " + string.Join(", ", names.Select(Lit)) + " }";

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { sceneOf, type DsObj, type DsTrace, type DsVal } from "./ds";
-import { ChainDrawing, MapDrawing, Marked, QueueDrawing, RowDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
+import { extrasOf, sceneOf, type DsObj, type DsTrace, type DsVal } from "./ds";
+import { ChainDrawing, GridDrawing, MapDrawing, Marked, PlaceValueDrawing, QueueDrawing, RowDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
 import { freshOf, motionOf } from "./dsMotion";
 
 /**
@@ -39,6 +39,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     onStep?.(next + 1, total);
   };
   const scene = sceneOf(step.frames, step.objs, cfg.pointers);
+  const extra = extrasOf(step, cfg.pointers, cfg.digits);   // V9 (rich traces only: a course trace has none of it)
   const moves = motion ? motionOf(prev, step) : null;
   const fresh = motion ? freshOf(prev, step) : null;
   // with motion a stack / queue drawing is a new element at every step, so its entry / exit animation starts again (the course,
@@ -54,12 +55,13 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     const o: DsObj | undefined = byId.get(v.id);
     if (!o) return "?";
     if (o.k === "stack" || o.k === "queue") return (o.k === "stack" ? "راصّة [" : "دور [") + o.items.join(",") + "]";
-    if (o.k === "array" || o.k === "set" || o.k === "map") return o.type + " #" + o.id;   // V5: drawn beside, named by the variable
+    if (o.k === "array" || o.k === "set" || o.k === "map" || o.k === "grid") return o.type + " #" + o.id;   // V5 / V9: drawn beside, named by the variable
     return o.k === "obj" ? o.type + " #" + o.id : "خلية " + o.v;
   };
   const frames = step.frames.map((f, i) => ({ f, i })).reverse();   // the running method on top
   const was = (frame: number, name: string) => (prev?.frames[frame]?.name === step.frames[frame]?.name ? prev?.frames[frame]?.vars.find(p => p[0] === name)?.[1] : undefined);
-  const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length + scene.rows.length + scene.maps.length;
+  const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length + scene.rows.length + scene.maps.length
+    + extra.grids.length + extra.texts.length + extra.places.length;
 
   return (
     <div className="learning-trace learning-ds">
@@ -77,6 +79,14 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
         {step.line > 0 && <span className="learning-trace-noteline">السطر <span dir="ltr">{step.line}</span>: </span>}
         <Marked text={step.note || "ننفّذ السطر."} />
       </p>
+      {step.evals && !hidden && (
+        <section className="lab-evals" aria-label="قيم التعابير في هذه الخطوة">
+          <span className="learning-trace-label">قيم التعابير:</span>
+          <ul className="lab-evals-list">
+            {step.evals.map(([e, v], k) => <li key={k} className="lab-eval" dir="ltr"><code>{e}</code> → <strong>{v}</strong></li>)}
+          </ul>
+        </section>
+      )}
       <div className="learning-trace-grid">
         <ol className="learning-trace-code" dir="ltr" tabIndex={0} aria-label="البرنامج">
           {cfg.lines.map((l, i) => {
@@ -110,6 +120,13 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
                 {scene.stacks.map(s => <StackDrawing key={motion ? s.id + ":" + at : s.id} items={s.items} labels={s.labels} changed={changed(s.id)} motion={moves?.get(s.id)} />)}
                 {scene.queues.map(q => <QueueDrawing key={motion ? q.id + ":" + at : q.id} items={q.items} labels={q.labels} changed={changed(q.id)} motion={moves?.get(q.id)} />)}
               </div>
+              {(extra.places.length > 0 || extra.texts.length > 0 || extra.grids.length > 0) && (
+                <div className="learning-ds-row">
+                  {extra.places.map(p => <PlaceValueDrawing key={p.name + p.base} name={p.name} base={p.base} value={p.value} digits={p.digits} hot={p.hot} />)}
+                  {extra.texts.map(t => <RowDrawing key={"s" + t.name} kind="string" type="string" items={t.chars} labels={[{ name: t.name }]} indexed marks={t.marks} />)}
+                  {extra.grids.map(g => <GridDrawing key={g.id} type={g.type} rows={g.rows} labels={g.labels} mark={g.mark} />)}
+                </div>
+              )}
               {(scene.rows.length > 0 || scene.maps.length > 0) && (
                 <div className="learning-ds-row">
                   {scene.rows.map(r => <RowDrawing key={r.id} kind={r.k} type={r.type} items={r.items} labels={r.labels} indexed={r.indexed} marks={r.marks} />)}
@@ -127,11 +144,13 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
                 <p className="learning-trace-framename"><span dir="ltr">{f.name}</span>{step.frames.length > 1 && i === step.frames.length - 1 ? " — تعمل الآن" : ""}</p>
                 {f.vars.length === 0 ? <p className="learning-trace-none">لا متغيرات</p> : (
                   <ul className="learning-trace-vars">
-                    {f.vars.map(([name, v]) => {
+                    {f.vars.map(([name, v], j) => {
                       const old = was(i, name);
                       const moved = !!prev && !same(old, v);
+                      const type = f.types?.[j];   // V9: the declared type (rich traces only)
                       return (
                         <li key={name} className={"learning-trace-var" + (moved ? " is-changed" : "")}>
+                          {type && <span className="lab-var-type" dir="ltr">{type}</span>}
                           <span className="learning-trace-name" dir="ltr">{name}</span>
                           <span className={"learning-trace-box" + (v.t === "ref" ? " is-ref" : "")} dir={v.t === "ref" ? undefined : "ltr"}>{v.t === "ref" ? "→ " + told(v) : told(v)}</span>
                           {moved && <span className="learning-trace-tag">تغيّر</span>}
