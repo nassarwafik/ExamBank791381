@@ -133,6 +133,8 @@ for (const c of cases) {
 // Each program is traced AND run: the traced output must equal the plain run's output (the recorder adds nothing to stdout).
 // V11: structs and static fields — a static constructor that prints (Counter), safe static initialisers (Program)
 const V11_SOURCE = "struct Point { public int X; public int Y; public Point(int x, int y) { X = x; Y = y; } }\nstruct Seg { public Point A; public Point B; }\nclass Shape { public string Name = \"box\"; public Point Pos; public Point[] Corners = new Point[2]; }\nclass Counter\n{\n    public static int Made;\n    public static List<Shape> All = new List<Shape>();\n    static Counter() { Console.WriteLine(\"init\"); }\n    public static void Add(Shape s) { Made++; All.Add(s); }\n}\nclass Program\n{\n    static int total = 5;\n    static int[] marks = new int[3];\n    static void Main()\n    {\n        Console.WriteLine(\"start\");\n        Point p = new Point(1, 2);\n        Point q = p;\n        q.X = 9;\n        Seg seg = new Seg { A = p, B = q };\n        Shape s = new Shape();\n        s.Pos = q;\n        s.Corners[1] = new Point(3, 4);\n        Counter.Add(s);\n        total = total + Counter.Made;\n        marks[0] = 7;\n        Console.WriteLine(p.X + \" \" + q.X + \" \" + total);\n    }\n}";
+// V12: methods and functions — by value, ref, out (declared in the call), a recursion
+const V12_SOURCE = "class Program\n{\n    static int Max(int x, int y)\n    {\n        if (x > y) return x;\n        return y;\n    }\n    static void Swap(ref int a, ref int b)\n    {\n        int t = a;\n        a = b;\n        b = t;\n    }\n    static void Split(int n, out int tens, out int ones)\n    {\n        tens = n / 10;\n        ones = n % 10;\n    }\n    static int Fact(int n)\n    {\n        if (n <= 1) return 1;\n        return n * Fact(n - 1);\n    }\n    static void Main()\n    {\n        int a = 3, b = 7;\n        int m = Max(a, 5);\n        Swap(ref a, ref b);\n        Split(42, out int t, out var o);\n        int f = Fact(3);\n        Console.WriteLine(m + \" \" + a + \" \" + b + \" \" + t + o + \" \" + f);\n    }\n}";
 const BEYOND = [
   { name: "foreach, List<T>, LINQ, string interpolation", stdin: "",
     source: "static void Main()\n{\n    var list = new List<int> { 4, 1, 3 };\n    int sum = 0;\n    foreach (var x in list) sum += x;\n    Console.WriteLine($\"{sum} {list.Where(v => v > 1).Count()} {string.Join(\",\", list.OrderBy(v => v))}\");\n}",
@@ -354,6 +356,29 @@ const BEYOND = [
     source: V11_SOURCE,
     check: (t, steps) => t.status === "success" && steps.every(s => s.statics === undefined && s.frames.every(f => f.vars.every(([, v]) => v.t !== "rec")))
       && steps.at(-1).frames[0].vars.find(([n]) => n === "p")?.[1].s === "Point" },
+  // V12 (§22): «العمليات والدوال» — each frame's caller line, and the compiler's own table of call sites (how each parameter is passed)
+  { name: "V12 calls: Max(a, 5) by value, Swap(ref a, ref b), Split(42, out int t, out var o), Fact(n - 1) — the table as the compiler binds it; each frame's caller line; the returns", stdin: "", options: { rich: true },
+    source: V12_SOURCE,
+    check: (t, steps) => {
+      const site = (name, line) => (t.calls || []).find(c => c[2] === name && c[0] === line);
+      const fromOf = name => steps.flatMap(s => s.frames).filter(f => f.name === name).map(f => f.from);
+      return t.status === "success" && t.stdout === "5 7 3 42 6\n"
+        && JSON.stringify(site("Max", 27)) === JSON.stringify([27, 27, "Max", [["x", "value", "a", "a"], ["y", "value", "5", null]]])
+        && JSON.stringify(site("Swap", 28)?.[3]) === JSON.stringify([["a", "ref", "a", "a"], ["b", "ref", "b", "b"]])
+        && JSON.stringify(site("Split", 29)?.[3]) === JSON.stringify([["n", "value", "42", null], ["tens", "out", "int t", "t"], ["ones", "out", "var o", "o"]])
+        && JSON.stringify(site("Fact", 22)?.[3]) === JSON.stringify([["n", "value", "n - 1", null]])
+        && fromOf("Main").every(f => f === 0) && new Set(fromOf("Max")).has(27) && new Set(fromOf("Fact")).has(30) && new Set(fromOf("Fact")).has(22)
+        && steps.filter(s => s.ret !== undefined).map(s => s.frames.at(-1).name + "=" + s.ret).join(",") === "Max=5,Fact=1,Fact=2,Fact=6"
+        && steps.some(s => s.frames.length === 4);
+    } },
+  { name: "V12 a constructor with named arguments: its parameters in their own order, bound as the compiler binds them", stdin: "", options: { rich: true },
+    source: "class Person\n{\n    public string Name; public int Age;\n    public Person(string name, int age) { Name = name; Age = age; }\n}\nclass Program\n{\n    static void Main()\n    {\n        int years = 20;\n        Person p = new Person(age: years, name: \"Ali\");\n        Console.WriteLine(p.Age);\n    }\n}",
+    check: (t, steps) => t.status === "success" && t.stdout === "20\n"
+      && JSON.stringify((t.calls || []).find(c => c[2] === "Person")) === JSON.stringify([11, 11, "Person", [["name", "value", "\"Ali\"", null], ["age", "value", "years", "years"]]])
+      && steps.some(s => s.frames.length === 2 && s.frames[1].name === "Person" && s.frames[1].from === 11) },
+  { name: "V12 without rich: no caller line on a frame and no call table (the course's recording)", stdin: "",
+    source: V12_SOURCE,
+    check: (t, steps) => t.status === "success" && t.calls === undefined && steps.every(s => s.frames.every(f => f.from === undefined)) },
   { name: "V6 a program needing a left-out library (System.Xml) is refused before it is recorded (LAB0001)", stdin: "", options: { rich: true },
     source: "using System.Xml;\nclass P { static void Main() { Console.WriteLine(new XmlDocument().Name); } }",
     check: (t, steps) => t.status === "compile-error" && /LAB0001: 'System\.Xml\.XmlDocument'/.test(t.stderr) && steps.length === 0 },

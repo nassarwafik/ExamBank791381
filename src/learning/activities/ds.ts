@@ -21,7 +21,12 @@ export type DsObj =
   // V9: a two-dimensional array, row by row
   | { id: number; k: "grid"; type: string; rows: string[][] };
 /** `call` (V8, rich only): one number per call for the whole run — the same call keeps it from step to step (the call tree). */
-export type DsFrame = { name: string; vars: [string, DsVal][]; call?: number; types?: (string | null)[] };
+/** `from` (V12, rich only): the line of the CALLER where this method was called (0: where the run starts). */
+export type DsFrame = { name: string; vars: [string, DsVal][]; call?: number; types?: (string | null)[]; from?: number };
+/** V12 (rich only): one call of a writer's method in the program — its line, its statement's line, the method (the frame's name), and
+ *  for each parameter how it is passed, the argument as written and the caller's variable it names (or null). */
+export type DsPass = "value" | "ref" | "out" | "in";
+export type DsCallSite = { line: number; stmt: number; name: string; params: { name: string; kind: DsPass; arg: string; v: string | null }[] };
 /** `pause` (visual lab V4, optional; never in a course trace): the writer's Viz.Pause() — a stop for the teacher's player. */
 /** `ret` (V8, rich only): on the step where the running method returns, the value it returns (as a literal). */
 /** `evals` (V9, rich only): the value of every `/`, `%`, comparison, `&&`, `||`, `!` evaluated since the step before. */
@@ -30,7 +35,7 @@ export type DsStatics = { name: string; vars: [string, DsVal][] };
 export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean; ret?: string; evals?: [string, string][]; statics?: DsStatics[] };
 /** `pointers` (V5, rich only): the [array, index] pairs the program writes as a[i] — the drawing marks the cell i points at. */
 /** V9: a pointer may be [array, row, column] (a[i, j]); `digits` = [variable, base] — a number the program takes apart (n % 10, n / 10). */
-export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: string[][]; digits?: [string, number][] };
+export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: string[][]; digits?: [string, number][]; calls?: DsCallSite[] };
 
 export const DS_LIMITS = { lines: 120, steps: 260, objs: 80, items: 40, text: 80, frames: 40, vars: 30 } as const;
 const isStr = (v: unknown): v is string => typeof v === "string";
@@ -71,7 +76,8 @@ function readFrames(raw: unknown, rich: boolean): DsFrame[] | null {
     if (o.call !== undefined && (!rich || !isInt(o.call) || o.call < 1)) return null;   // V8: rich only, a positive whole number
     // V9: each variable's type, beside its value (rich only; null = not known)
     if (o.types !== undefined && (!rich || !Array.isArray(o.types) || o.types.length !== vars.length || !o.types.every(t => t === null || short(t)))) return null;
-    out.push({ name: o.name, vars, ...(isInt(o.call) ? { call: o.call } : {}), ...(Array.isArray(o.types) ? { types: o.types as (string | null)[] } : {}) });
+    if (o.from !== undefined && (!rich || !isInt(o.from) || o.from < 0)) return null;   // V12: rich only, a line (0 = where the run starts)
+    out.push({ name: o.name, vars, ...(isInt(o.call) ? { call: o.call } : {}), ...(Array.isArray(o.types) ? { types: o.types as (string | null)[] } : {}), ...(isInt(o.from) ? { from: o.from } : {}) });
   }
   return out;
 }
@@ -164,8 +170,23 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
     if (!rich || !Array.isArray(c.digits) || c.digits.length > 10 || !c.digits.every(p => Array.isArray(p) && p.length === 2 && ident(p[0]) && [2, 8, 10, 16].includes(p[1] as number))) return null;
     digits = c.digits as [string, number][];
   }
+  let calls: DsCallSite[] | undefined;   // V12: rich only — at most 300 call sites, 10 parameters each, lines inside the program
+  if (c.calls !== undefined) {
+    if (!rich || !Array.isArray(c.calls) || c.calls.length > 300) return null;
+    calls = [];
+    const inProgram = (n: unknown): n is number => isInt(n) && n >= 1 && n <= lines.length;
+    for (const x of c.calls) {
+      if (!Array.isArray(x) || x.length !== 4 || !inProgram(x[0]) || !inProgram(x[1]) || !short(x[2]) || !Array.isArray(x[3]) || x[3].length > 10) return null;
+      const params: DsCallSite["params"] = [];
+      for (const p of x[3] as unknown[]) {
+        if (!Array.isArray(p) || p.length !== 4 || !short(p[0]) || !["value", "ref", "out", "in"].includes(p[1] as string) || !short(p[2]) || !(p[3] === null || short(p[3]))) return null;
+        params.push({ name: p[0], kind: p[1] as DsPass, arg: p[2], v: p[3] as string | null });
+      }
+      calls.push({ line: x[0], stmt: x[1], name: x[2], params });
+    }
+  }
   return { lines, ...(short(c.given) || (isStr(c.given) && c.given.length <= 300) ? { given: c.given as string } : {}), ...(isStr(c.stdin) ? { stdin: c.stdin } : {}), steps,
-    ...(pointers && pointers.length ? { pointers } : {}), ...(digits && digits.length ? { digits } : {}) };
+    ...(pointers && pointers.length ? { pointers } : {}), ...(digits && digits.length ? { digits } : {}), ...(calls && calls.length ? { calls } : {}) };
 }
 
 // ── what a state is drawn as ──────────────────────────────────────────────────────────────────────────────────────────

@@ -78,7 +78,7 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
     const dropped = new Set(objsRaw.slice(objsKept.length).map(o => rec(o).id).filter((id): id is number => typeof id === "number"));
     const framesRaw = Array.isArray(s.frames) ? s.frames : [];
     const framesKept = framesRaw.length > DS_LIMITS.frames ? (clipped = true, framesRaw.slice(framesRaw.length - DS_LIMITS.frames)) : framesRaw;
-    const frames = framesKept.map(f => { const fr = rec(f); return { name: clip(fr.name), vars: pairs(fr.vars, dropped), ...(fr.call !== undefined ? { call: fr.call } : {}),
+    const frames = framesKept.map(f => { const fr = rec(f); return { name: clip(fr.name), vars: pairs(fr.vars, dropped), ...(fr.call !== undefined ? { call: fr.call } : {}), ...(fr.from !== undefined ? { from: fr.from } : {}),
       // V9: the types stay aligned with the (clipped) variables
       ...(Array.isArray(fr.types) ? { types: fr.types.slice(0, DS_LIMITS.vars).map(t => (typeof t === "string" ? clip(t) : t)) } : {}) }; });
     const objs = objsKept.map(o => {
@@ -107,6 +107,9 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
   const consistent = r.steps.every(sRaw => out.startsWith(str(rec(sRaw).out)));
   const pointers = Array.isArray(r.pointers) ? r.pointers : undefined;
   const digits = Array.isArray(r.digits) ? r.digits : undefined;   // V9
-  const trace = consistent ? readDsTrace({ code: source, ...(stdin ? { stdin } : {}), out, steps, ...(pointers ? { pointers } : {}), ...(digits ? { digits } : {}) }, LAB_TRACE_LIMITS, true) : null;
+  // V12: the call sites — an argument's text clipped like any value; more than 300 are cut to 300 (said)
+  const calls = Array.isArray(r.calls) ? (r.calls.length > 300 ? (clipped = true, r.calls.slice(0, 300)) : r.calls)
+    .map(x => (Array.isArray(x) && Array.isArray(x[3]) ? [x[0], x[1], x[2], x[3].map(p => (Array.isArray(p) ? [p[0], p[1], clip(p[2]), p[3]] : p))] : x)) : undefined;
+  const trace = consistent ? readDsTrace({ code: source, ...(stdin ? { stdin } : {}), out, steps, ...(pointers ? { pointers } : {}), ...(digits ? { digits } : {}), ...(calls ? { calls } : {}) }, LAB_TRACE_LIMITS, true) : null;
   return { ...base, trace, clipped: clipped && !!trace };
 }

@@ -24,13 +24,18 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  *  it draws (`drawn`) are then not drawn a second time among the structures. The course passes none: its «الكائنات» list is unchanged. */
 export type HeapDiagram = (step: DsStep, prev: DsStep | undefined, marks: ReadonlyMap<number, DsMark[]>) => { node: ReactNode; drawn: ReadonlySet<number> } | null;
 
-export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal, heap }: {
+/** Visual lab V12 (§22), the player only: the running methods drawn — frames, how each parameter was passed, a value returned. The
+ *  course passes none. `text` writes a value as this view writes it. */
+export type FlowDiagram = (step: DsStep, prev: DsStep | undefined, cfg: DsTrace, text: (v: DsVal) => string) => ReactNode | null;
+
+export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal, heap, flow }: {
   cfg: DsTrace; epoch: number; onStep?: (step: number, of: number) => void;
   at?: number; controls?: boolean; breakpoints?: ReadonlySet<number>; onToggleBreakpoint?: (line: number) => void; motion?: boolean;
   /** V4 part 2, «توقّع قبل أن ترى»: the structures, variables and objects of this step are covered until `onReveal` (a variable
    *  that refers to a stack says its contents, so it would give the answer away). */
   hidden?: boolean; onReveal?: () => void;
   heap?: HeapDiagram;
+  flow?: FlowDiagram;
 }) {
   const [state, setState] = useState({ at: 0, epoch: 0 });
   const total = cfg.steps.length;
@@ -71,6 +76,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     return o.k === "obj" ? o.type + " #" + o.id : "خلية " + o.v;
   };
   const frames = step.frames.map((f, i) => ({ f, i })).reverse();   // the running method on top
+  const flowDrawing = flow && !hidden ? flow(step, prev, cfg, told) : null;   // V12
   /** V11: a struct's value as a small box of its fields (a field that changed in this step is lit; a struct inside, a box inside). */
   const recBox = (v: Extract<DsVal, { t: "rec" }>, old: DsVal | undefined): ReactNode => {
     const was = old?.t === "rec" && old.type === v.type ? new Map(old.fields) : undefined;
@@ -225,6 +231,12 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
           </section>
         </div>
       </div>
+      {flowDrawing && (   // V12: the methods running now, drawn (while a method called another)
+        <section className="learning-trace-heap lab-flow-section" aria-label="الاستدعاءات">
+          <h4 className="learning-trace-heading">العمليات والدوال الآن</h4>
+          {flowDrawing}
+        </section>
+      )}
       {diagram && (   // V10: under the program and its state, the whole width — a diagram of several columns needs it
         <section className="learning-trace-heap lab-og-section" aria-label="الكائنات">
           <h4 className="learning-trace-heading">الكائنات</h4>

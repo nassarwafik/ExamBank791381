@@ -28,6 +28,8 @@
 //   • a step carries "statics": [{ name, vars }] — the static fields of the writer's types, read ONLY when reading them cannot run
 //     anything early: a type with no static constructor whose static initialisers do nothing but build values (Tracer.cs decides,
 //     StaticsReady), or a type whose static constructor has started (Tracer.cs plants Ready(typeof(T)) as its first statement).
+// Visual lab V12 (plan §22) — also in RICH mode: every frame carries "from", the line of its CALLER where the call was made (0 for the
+//     method the run starts from); with Tracer.cs's table of call sites ("calls") the drawing knows which argument each parameter got.
 internal static class TraceRuntime
 {
     /// <summary>Visual lab V4 — the class a teacher's program may call IN THE VISUAL RUN ONLY (it is compiled into traced programs, never
@@ -48,7 +50,7 @@ internal static class __LabTrace
 {
     sealed class Frame
     {
-        public string Name = """"; public bool Quiet; public int Call; public string[] Names = new string[0]; public global::System.Func<object?[]> Values = () => new object?[0];
+        public string Name = """"; public bool Quiet; public int Call, From; public string[] Names = new string[0]; public global::System.Func<object?[]> Values = () => new object?[0];
         public readonly global::System.Collections.Generic.HashSet<string> Written = new global::System.Collections.Generic.HashSet<string>();
     }
     sealed class Box { public int Id; }
@@ -91,7 +93,7 @@ internal static class __LabTrace
     }
     public static object Enter(string name)
     {
-        var f = new Frame { Name = name, Quiet = quiet.Contains(name), Call = ++calls };
+        var f = new Frame { Name = name, Quiet = quiet.Contains(name), Call = ++calls, From = frames.Count > 0 ? line : 0 };   // V12: the caller's line
         if (f.Quiet) muted++;
         frames.Add(f);
         return f;
@@ -190,7 +192,7 @@ internal static class __LabTrace
                 try { vals = f.Values(); } catch { vals = new object?[0]; }
                 if (i > 0) sb.Append(',');
                 sb.Append(""{\""name\"":"").Append(Json(f.Name));
-                if (rich) sb.Append("",\""call\"":"").Append(f.Call);
+                if (rich) sb.Append("",\""call\"":"").Append(f.Call).Append("",\""from\"":"").Append(f.From);
                 sb.Append("",\""vars\"":["");
                 bool firstVar = true;
                 var types = new global::System.Collections.Generic.List<string>();   // V9: «name|type» in rich mode
