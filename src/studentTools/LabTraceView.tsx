@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import CallTreeView from "./CallTreeView";
+import { callTreeOf, CALL_TREE_MAX } from "./callTree";
 import "../learning/activities/activities.css";
 import "./labTrace.css";
 import DsTraceView from "../learning/activities/DsTraceView";
@@ -48,6 +50,7 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
   const [inside, setInside] = useState(false);
   const [recording, setRecording] = useState(false);
   const [predict, setPredict] = useState(false);
+  const [showCalls, setShowCalls] = useState(false);
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(new Set());
   const reduced = usePrefersReducedMotion();
   const ctrl = useRef<AbortController | null>(null);
@@ -58,6 +61,9 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
   const pool = useMemo(() => (opsOnly ? trace.steps.map((_, i) => i).filter(i => ops.includes(i) || trace.steps[i].pause === true) : trace.steps.map((_, i) => i)),
     [opsOnly, ops, trace]);
   const isHidden = (i: number) => predict && !revealed.has(i) && changesStructures(trace, i);
+  // V8 «شجرة الاستدعاءات»: offered when the run called something besides its entry (a method, a recursion)
+  const hasCalls = useMemo(() => { const t = callTreeOf(trace, trace.steps.length - 1); return !!t && t.total > 1; }, [trace]);
+  const calls = useMemo(() => (showCalls && hasCalls ? callTreeOf(trace, at) : null), [showCalls, hasCalls, trace, at]);
   const after = (i: number) => pool.find(p => p > i) ?? null;
   const before = (i: number) => [...pool].reverse().find(p => p < i) ?? null;
 
@@ -139,6 +145,7 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
           </label>
         )}
         <label className="lab-trace-check"><input type="checkbox" checked={predict} onChange={e => setGuess(e.target.checked)} /> توقّع قبل أن ترى</label>
+        {hasCalls && <label className="lab-trace-check"><input type="checkbox" checked={showCalls} onChange={e => setShowCalls(e.target.checked)} /> شجرة الاستدعاءات</label>}
         {!expanded && <button type="button" className="learning-trace-btn" onClick={() => setExpanded(true)}>توسيع</button>}
         <span className="learning-trace-counter">الخطوة <span dir="ltr">{at + 1} / {total}</span></span>
         {total > 12 && (
@@ -149,6 +156,13 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
       <p className="lab-trace-note" role="status" aria-live="polite">{note || (breakpoints.size ? "نقاط التوقف: السطر " + [...breakpoints].sort((a, b) => a - b).join("، ") + "." : "انقر رقم سطر في البرنامج لتضع نقطة توقّف.")}</p>
       <DsTraceView cfg={trace} epoch={epoch} at={at} controls={false} breakpoints={breakpoints} onToggleBreakpoint={toggle} motion={!reduced}
         hidden={isHidden(at)} onReveal={reveal} />
+      {calls && !isHidden(at) && (
+        <section className="lab-trace-calls" aria-label="شجرة الاستدعاءات">
+          <h4 className="learning-trace-heading">شجرة الاستدعاءات</h4>
+          {calls.clipped && <p className="stt-hint" role="note">الاستدعاءات أكثر من {CALL_TREE_MAX}: تُعرض أول {CALL_TREE_MAX} استدعاءً.</p>}
+          <CallTreeView tree={calls} />
+        </section>
+      )}
     </div>
   );
 
