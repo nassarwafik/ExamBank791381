@@ -13,9 +13,39 @@
 // • The course library (the book's classes) arrives IN the message: the parent reads it from the API with the teacher's session —
 //   course content is never a public file, and this opaque-origin page has no session of its own.
 // • Only messages from the parent window are answered.
+// • Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — this same script also runs INLINE, as the `srcdoc` of the offline
+//   lab page's sandboxed frame (/lab.html): a frame loaded from a URL never reaches the service worker, so it could not start
+//   offline. Inline (this document is about:srcdoc), the worker's own modules — worker.js and the runtime's dotnet.js,
+//   dotnet.native.js, dotnet.runtime.js — are asked from the parent like the heavy files, made into blob: URLs here, and handed to the
+//   worker (self.__labModules). The runtime's modules locate files from their own URL, which a blob: URL cannot give: their
+//   `import.meta.url` is replaced by a fixed base that is never fetched (every file goes through the loader). The frame is the same
+//   opaque-origin sandbox, the worker is sealed after boot as before.
 const RUN_LIMIT_MS = 10000;        // compile + run of one program (the first run also starts the runtime: not counted)
 const FILE_NAME = /^[A-Za-z0-9._-]{1,128}$/;
-const base = new URL(".", import.meta.url).href;
+const inline = location.href === "about:srcdoc";   // written from text (its base URL, and so import.meta.url, is the parent's)
+const base = inline ? null : new URL(".", import.meta.url).href;
+const MODULES = ["worker.js", "dotnet.js", "dotnet.native.js", "dotnet.runtime.js"];
+const NEVER_FETCHED = "https://csharp-lab.invalid/_framework/";
+let modules = null;                // inline: the blob: URLs of the worker's modules (made once for this frame)
+const own = new Map();             // inline: this page's own parent fetches (its modules) → their resolvers
+let ownSeq = 0;
+function fromParent(name) {
+  return new Promise((resolve, reject) => {
+    const id = "m" + (++ownSeq);
+    own.set(id, { resolve, reject });
+    window.parent.postMessage({ type: "fetch", id, name }, "*");
+  });
+}
+async function inlineModules() {
+  if (modules) return modules;
+  const urls = {};
+  for (const name of MODULES) {
+    let text = new TextDecoder().decode(await fromParent(name));
+    if (name !== "worker.js") text = text.split("import.meta.url").join(JSON.stringify(NEVER_FETCHED + name));
+    urls[name] = URL.createObjectURL(new Blob([text], { type: "text/javascript" }));
+  }
+  return (modules = urls);
+}
 let worker = null, workerReady = null, onResult = null;
 const queue = [];
 let busy = false;
@@ -25,12 +55,16 @@ const fetches = new Map();         // parent fetch id → the worker that asked 
 // A CLASSIC worker from a blob that loads worker.js (an ES module) with a dynamic import(): in an opaque-origin page a MODULE worker
 // from a blob fails to start (Chromium, proven by the lab's probe), while a classic one with import() works.
 function startWorker() {
-  const src = JSON.stringify(new URL("worker.js", base).href);
-  const blob = new Blob(["import(" + src + ").catch(e => postMessage({ type: \"boot-error\", message: String(e && e.message || e) }));"], { type: "text/javascript" });
-  const url = URL.createObjectURL(blob);
-  const w = new Worker(url);
-  worker = w;
-  workerReady = new Promise((resolve, reject) => {
+  workerReady = (async () => {
+    const mods = inline ? await inlineModules() : null;
+    const src = JSON.stringify(mods ? mods["worker.js"] : new URL("worker.js", base).href);
+    const blob = new Blob([(mods ? "self.__labModules = " + JSON.stringify(mods) + ";" : "")
+      + "import(" + src + ").catch(e => postMessage({ type: \"boot-error\", message: String(e && e.message || e) }));"], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob);
+    const w = new Worker(url);
+    worker = w;
+    return { w, url };
+  })().then(({ w, url }) => new Promise((resolve, reject) => {
     w.onmessage = e => {
       const m = e.data || {};
       if (m.type === "ready") { URL.revokeObjectURL(url); resolve(); }
@@ -44,7 +78,7 @@ function startWorker() {
       }
     };
     w.onerror = e => reject(new Error(e.message || "worker failed"));
-  });
+  }));
 }
 
 function runOnce(m) {
@@ -91,6 +125,12 @@ async function pump() {
 window.addEventListener("message", event => {
   if (event.source !== window.parent) return;
   const m = event.data || {};
+  if (m.type === "fetched" && typeof m.id === "string" && own.has(m.id)) {   // V14 inline: one of this page's own modules
+    const { resolve, reject } = own.get(m.id);
+    own.delete(m.id);
+    if (m.buffer instanceof ArrayBuffer) resolve(m.buffer); else reject(new Error("the lab's files are not available"));
+    return;
+  }
   if (m.type === "fetched" && typeof m.id === "string" && fetches.has(m.id)) {
     const { w, workerId } = fetches.get(m.id);
     fetches.delete(m.id);

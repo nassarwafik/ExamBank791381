@@ -6,7 +6,9 @@
 //   → { type: "fetch", id, name }   ← { type: "fetched", id, buffer | error }
 // so the browser's normal HTTP cache keeps them between visits (an opaque-origin frame's own cache does not survive the visit).
 // Any failure of that path falls back to the loader's own fetch: the lab still works, it only downloads again.
-import { dotnet } from "./_framework/dotnet.js";
+// V14 (plan §24): inline in the offline lab's frame, the lab page hands this worker its modules as blob: URLs (self.__labModules).
+const MODS = self.__labModules || null;
+const { dotnet } = await import(MODS ? MODS["dotnet.js"] : "./_framework/dotnet.js");
 
 const ASK_TIMEOUT_MS = 60000;
 const asks = new Map();
@@ -28,9 +30,13 @@ function viaPage(name) {
   });
 }
 const typeOf = name => (name.endsWith(".wasm") ? "application/wasm" : name.endsWith(".json") ? "application/json" : "application/octet-stream");
-// JavaScript modules (dotnet.js, dotnet.native.js, dotnet.runtime.js: small) keep the loader's default; binaries go through the page.
+// JavaScript modules (dotnet.js, dotnet.native.js, dotnet.runtime.js: small) keep the loader's default — or, inline, the blob: URL the
+// lab page made of them; binaries go through the page.
 const loader = (type, name, defaultUri) => {
-  if (type === "dotnetjs" || String(type).startsWith("js-module")) return undefined;
+  if (type === "dotnetjs" || String(type).startsWith("js-module")) {
+    const file = String(defaultUri || name).split("?")[0].split("/").pop();
+    return MODS && MODS[file] ? MODS[file] : undefined;
+  }
   const file = String(defaultUri || name).split("?")[0].split("/").pop();
   return viaPage(file)
     .then(buffer => new Response(buffer, { headers: { "Content-Type": typeOf(file) } }))

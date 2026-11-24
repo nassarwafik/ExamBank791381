@@ -64,7 +64,8 @@ describe("check:csp — the build gate on dist/index.html", () => {
   it("runs inside npm run build", () => {
     const pkg = JSON.parse(read("package.json"));
     expect(pkg.scripts.build).toMatch(/&& npm run check:csp && npm run check:protected-assets$/);   // Tadris+ P5-C appended the protected-assets gate after it
-    expect(pkg.scripts["check:csp"]).toBe("node scripts/check-csp-meta.mjs dist/index.html");
+    // V14 appended the offline lab page's own gate (scripts/offline-lab-csp.v14.test.ts); index.html's comes first, unchanged
+    expect(pkg.scripts["check:csp"]).toBe("node scripts/check-csp-meta.mjs dist/index.html && node scripts/check-csp-meta.mjs dist/lab.html --lab");
   });
   it("fails a page without a policy, with two, or with the policy after a script", () => {
     expect(checkCspMeta(INDEX)[0]).toMatch(/exactly one/);

@@ -11,8 +11,15 @@
  * default: never message content), and clicking it focuses an open Tadris+ window or opens the app. The page asks
  * for permission and subscribes only after an explicit student action; this worker never does.
  *
- * What it deliberately does NOT do: no asset/app-shell caching, no API caching, no background sync, no message
- * handling, no app badges.
+ * Visual lab V14 — the OFFLINE C# LAB (owner decision 2026-11-24; docs/enterprise-csharp-visual-lab-plan.md §24): when, and only when,
+ * the learner taps «تنزيل للعمل بلا إنترنت» on /lab.html, the page asks this worker (a `lab-pack` message) to store the files listed
+ * in /offline-lab.json — the lab page, its scripts and styles, and the C# lab's runtime: static public files only, never /api/, never
+ * book content — in one cache (examBank-pwa-lab-<version>). Those files are then served NETWORK FIRST and from that cache only when
+ * the network fails, so a page that is online always gets the deployed files. An offline navigation, when the pack is stored, opens
+ * the lab page (else offline.html as before). «حذف من الجهاز» deletes the cache.
+ *
+ * What it deliberately does NOT do: no app-shell caching (outside the lab pack the learner asked for), no API caching, no background
+ * sync, no app badges.
  *
  * Kill switch: if this worker ever needs to be removed, deploy a sw.js that calls self.registration.unregister().
  */
@@ -32,8 +39,9 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    // Remove only this worker's OWN outdated caches; never touch anything else on the origin.
-    await Promise.all(names.filter(n => n.startsWith(CACHE_PREFIX) && n !== OFFLINE_CACHE).map(n => caches.delete(n)));
+    // Remove only this worker's OWN outdated caches; never touch anything else on the origin. The lab pack the learner stored is
+    // theirs (V14): it stays until they remove it or download a newer one.
+    await Promise.all(names.filter(n => n.startsWith(CACHE_PREFIX) && n !== OFFLINE_CACHE && !n.startsWith(LAB_CACHE_PREFIX)).map(n => caches.delete(n)));
     if (self.registration.navigationPreload) {
       try { await self.registration.navigationPreload.enable(); } catch { /* unsupported → plain fetch below */ }
     }
@@ -49,8 +57,103 @@ function isHandledNavigation(request) {
   return !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/.auth/");
 }
 
+// ---------- V14: the offline C# lab pack ----------
+const LAB_CACHE_PREFIX = CACHE_PREFIX + "lab-";
+const LAB_PACK_URL = "/offline-lab.json";
+const LAB_PAGE = "/lab.html";
+/** The only paths a pack may list: the lab page, the built assets, the lab's worker and runtime files. Never /api/ or content. */
+const LAB_ALLOWED = /^\/(?:lab\.html|assets\/[A-Za-z0-9._-]{1,200}|csharp-lab\/worker\.js|csharp-lab\/_framework\/[A-Za-z0-9._-]{1,200})$/;
+const LAB_MAX_FILES = 2000;
+
+/** Whether a pack is stored: unknown (null) until looked up (at start, then by every offline navigation and pack message). Files
+ *  are intercepted ONLY once a pack is known to be stored: without one, nothing outside navigations is ever intercepted. */
+let labStored = null;
+async function labCache() {
+  const name = (await caches.keys()).find(n => n.startsWith(LAB_CACHE_PREFIX));
+  labStored = !!name;
+  return name ? { name, cache: await caches.open(name) } : null;
+}
+function isLabFile(request) {
+  if (request.method !== "GET" || request.mode === "navigate") return false;
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && LAB_ALLOWED.test(url.pathname);
+}
+/** A pack file: the network first (the deployed file), the stored copy only when the network fails. */
+async function labFile(request) {
+  try { return await fetch(request); }
+  catch (error) {
+    const stored = await labCache();
+    const hit = stored && await stored.cache.match(new URL(request.url).pathname);
+    if (hit) return hit;
+    throw error;
+  }
+}
+
+/** Reads and checks /offline-lab.json: every listed path must be one LAB_ALLOWED allows. */
+async function readPack() {
+  const res = await fetch(LAB_PACK_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error("pack " + res.status);
+  const pack = await res.json();
+  if (!pack || pack.available !== true || typeof pack.version !== "string" || !/^[0-9a-f]{8,64}$/.test(pack.version)) throw new Error("no pack");
+  if (!Array.isArray(pack.files) || pack.files.length < 2 || pack.files.length > LAB_MAX_FILES || !pack.files.includes(LAB_PAGE)
+    || !pack.files.every(f => typeof f === "string" && LAB_ALLOWED.test(f))) throw new Error("bad pack");
+  return pack;
+}
+async function installPack(report) {
+  const pack = await readPack();
+  const name = LAB_CACHE_PREFIX + pack.version;
+  const cache = await caches.open(name);
+  try {
+    let done = 0;
+    for (const f of pack.files) {
+      if (!(await cache.match(f))) {
+        const res = await fetch(new Request(f, { cache: "reload" }));
+        if (!res.ok) throw new Error(f + " " + res.status);
+        await cache.put(f, res);
+      }
+      report({ state: "installing", done: ++done, total: pack.files.length });
+    }
+  } catch (error) {
+    await caches.delete(name);                         // never a half pack
+    throw error;
+  }
+  const names = await caches.keys();
+  await Promise.all(names.filter(n => n.startsWith(LAB_CACHE_PREFIX) && n !== name).map(n => caches.delete(n)));
+  labStored = true;
+  return { version: pack.version, files: pack.files.length, bytes: pack.bytes };
+}
+async function packStatus() {
+  const stored = await labCache();
+  return stored ? { state: "installed", version: stored.name.slice(LAB_CACHE_PREFIX.length), files: (await stored.cache.keys()).length } : { state: "none" };
+}
+
+labCache().catch(() => null);   // known from the start whenever possible
+
+self.addEventListener("message", event => {
+  const m = event.data || {};
+  if (m.type !== "lab-pack" || !event.source) return;
+  const reply = data => event.source.postMessage({ type: "lab-pack", ...data });
+  event.waitUntil((async () => {
+    try {
+      if (m.action === "status") reply(await packStatus());
+      else if (m.action === "install") reply({ state: "installed", ...(await installPack(p => reply(p))) });
+      else if (m.action === "remove") {
+        const names = await caches.keys();
+        await Promise.all(names.filter(n => n.startsWith(LAB_CACHE_PREFIX)).map(n => caches.delete(n)));
+        labStored = false;
+        reply({ state: "none" });
+      }
+    } catch (error) {
+      reply({ state: "error", message: String(error && error.message || error) });
+    }
+  })());
+});
+
 self.addEventListener("fetch", event => {
   const { request } = event;
+  // V14 — a pack file, when a pack is stored: the network first, the stored copy offline (no pack: not intercepted at all)
+  if (labStored === null && typeof caches !== "undefined") event.waitUntil(labCache().catch(() => null));
+  if (labStored === true && isLabFile(request)) { event.respondWith(labFile(request)); return; }
   if (!isHandledNavigation(request)) return;          // not intercepted → the browser's normal network path
   event.respondWith((async () => {
     try {
@@ -59,6 +162,10 @@ self.addEventListener("fetch", event => {
       return await fetch(request);
     } catch {
       // Network failure only (an HTTP error status is returned above unchanged).
+      // V14: with the lab pack stored, an offline navigation opens the offline C# lab.
+      const stored = await labCache();
+      const page = stored && await stored.cache.match(LAB_PAGE);
+      if (page) return new URL(request.url).pathname === LAB_PAGE ? page : Response.redirect(new URL(LAB_PAGE, self.location.origin).href, 302);
       const cache = await caches.open(OFFLINE_CACHE);
       const offline = await cache.match(OFFLINE_URL);
       return offline || new Response("يتطلب هذا التطبيق اتصالًا بالإنترنت.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });

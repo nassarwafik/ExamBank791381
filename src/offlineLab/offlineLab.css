@@ -1,0 +1,11 @@
+/* Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — the offline C# lab page. Design tokens only. */
+body { margin: 0; background: var(--eb-bg, var(--eb-surface)); color: var(--eb-text); }
+.olab { max-width: 1200px; margin: 0 auto; padding: var(--eb-space-5) var(--eb-space-4); display: flex; flex-direction: column; gap: var(--eb-space-4); }
+.olab-head h1 { margin: 0 0 var(--eb-space-2); font-size: var(--eb-fs-24, 1.5rem); color: var(--eb-text-heading); }
+.olab-head p { margin: 0; color: var(--eb-text-secondary); line-height: var(--eb-lh-body); }
+.olab-offline { margin-block-start: var(--eb-space-2) !important; padding: var(--eb-space-2) var(--eb-space-3); border-radius: var(--eb-r); background: var(--eb-primary-050); color: var(--eb-primary-strong) !important; font-weight: 600; }
+.olab-pack { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2) var(--eb-space-3); padding: var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); background: var(--eb-surface); }
+.olab-pack progress { inline-size: min(320px, 100%); }
+.olab-ready { margin: 0; font-weight: 600; color: var(--eb-success-tx); }
+.olab-note { margin: 0; color: var(--eb-text-secondary); font-size: var(--eb-fs-14); }
+.olab-editor { padding: var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); background: var(--eb-surface); }

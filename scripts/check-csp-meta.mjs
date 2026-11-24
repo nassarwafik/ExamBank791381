@@ -18,7 +18,9 @@ export function parseCsp(text) {
   return out;
 }
 
-export function checkCspMeta(html) {
+/** `lab` (V14, dist/lab.html only): the exact hash of the lab frame's script. That page's script-src may add exactly
+ *  'wasm-unsafe-eval', blob: and that hash to the app's — nothing else; every other rule is the same. */
+export function checkCspMeta(html, lab) {
   const issues = [];
   const metas = [...html.matchAll(/<meta\s+http-equiv=["']Content-Security-Policy["']\s+content="([^"]*)"\s*\/?>/gi)];
   if (metas.length !== 1) return [`expected exactly one Content-Security-Policy meta, found ${metas.length}`];
@@ -28,7 +30,10 @@ export function checkCspMeta(html) {
   const csp = parseCsp(meta[1]);
   const scriptSrc = csp["script-src"] || [];
   for (const [name, values] of Object.entries(csp)) if (values.includes("'unsafe-eval'")) issues.push(name + " must not allow 'unsafe-eval'");
-  if (scriptSrc.includes("'unsafe-inline'") || scriptSrc.includes("*") || scriptSrc.some(v => /^(?:https?:|data:|blob:)/.test(v))) issues.push("script-src must stay 'self' + exact hashes");
+  const labExtra = lab ? ["'wasm-unsafe-eval'", "blob:", "'" + lab.frameHash + "'"] : [];
+  const scriptRest = scriptSrc.filter(v => !labExtra.includes(v));
+  if (lab && !labExtra.every(v => scriptSrc.includes(v))) issues.push("the lab page's script-src must allow 'wasm-unsafe-eval', blob: and the lab frame's exact hash");
+  if (scriptRest.includes("'unsafe-inline'") || scriptRest.includes("*") || scriptRest.some(v => /^(?:https?:|data:|blob:)/.test(v) || v === "'wasm-unsafe-eval'")) issues.push("script-src must stay 'self' + exact hashes");
   if ((csp["object-src"] || []).join(" ") !== "'none'") issues.push("object-src must be 'none'");
   if (!(csp["default-src"] || []).length) issues.push("default-src missing");
   for (const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
@@ -36,12 +41,17 @@ export function checkCspMeta(html) {
     const hash = "'" + sha256Source(m[2]) + "'";
     if (!scriptSrc.includes(hash)) issues.push("inline script not allowed by its hash: " + hash);
   }
+  // the only hashes allowed are the page's own inline scripts' (and, on the lab page, the lab frame's)
+  const own = new Set([...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m => !/\bsrc\s*=/i.test(m[1])).map(m => "'" + sha256Source(m[2]) + "'"));
+  for (const v of scriptRest) if (/^'sha(256|384|512)-/.test(v) && !own.has(v)) issues.push("script-src allows a hash no inline script of this page has: " + v);
   return issues;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const file = path.resolve(process.argv[2] || "dist/index.html");
-  const issues = checkCspMeta(fs.readFileSync(file, "utf8"));
+  const labFrame = process.argv.includes("--lab")
+    ? { frameHash: sha256Source(fs.readFileSync(fileURLToPath(new URL("../tools/csharp-lab/wwwroot/main.js", import.meta.url)), "utf8")) } : undefined;
+  const issues = checkCspMeta(fs.readFileSync(file, "utf8"), labFrame);
   if (issues.length) { console.error("CSP check FAILED for " + file + ":\n - " + issues.join("\n - ")); process.exit(1); }
   console.log("CSP check passed (" + path.relative(process.cwd(), file) + ")");
 }

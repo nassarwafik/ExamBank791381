@@ -26,7 +26,11 @@ export default defineConfig({
     environmentOptions: { happyDOM: { settings: { enableIframePageLoading: true } } },
   },
   build: {
+    // Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — a second page, the offline C# lab (lab.html). The manifest lets
+    // scripts/build-offline-lab-pack.mjs list exactly the files that page needs (it removes dist/.vite afterwards).
+    manifest: true,
     rollupOptions: {
+      input: { index: fileURLToPath(new URL('./index.html', import.meta.url)), lab: fileURLToPath(new URL('./lab.html', import.meta.url)) },
       // Content hashes in emitted file names use base-36 (0-9a-z, 8 characters ≈ 41 bits) instead of base-64. The initial bundle's
       // lazy-import tables carry ~250 hashed names; base-64 ones are near-random bytes that gzip cannot shrink and that re-roll whenever
       // a lazy chunk changes, which moved the measured initial graph by ±15 bytes around a budget it met by 8. Code is unchanged.

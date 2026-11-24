@@ -20,6 +20,13 @@ on:
       - "src/learning/training/LearningReaderWithTraining.tsx"
       - "public/staticwebapp.config.json"
       - "scripts/check-csharp-lab-browser.mjs"
+      # Visual lab V14: the offline C# lab page — its page, its policy, its pack and the service worker that stores it
+      - "lab.html"
+      - "src/offlineLab/**"
+      - "public/sw.js"
+      - "scripts/content-security-policy.ts"
+      - "scripts/build-offline-lab-pack.mjs"
+      - "scripts/check-offline-lab-browser.mjs"
       - ".github/workflows/csharp-lab-spike.yml"
   workflow_dispatch:
 permissions:
@@ -87,6 +94,14 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           SHOT_DIR: csharp-lab-report
         run: node scripts/check-csharp-lab-browser.mjs
+      # Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24): the offline C# lab with the NETWORK CUT — stored by the real
+      # service worker on the learner's tap, then «تشغيل» and «تشغيل مرئي» on the device, the frame still an opaque-origin sandbox
+      - name: Prove the offline C# lab (lab.html) with the network cut
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          SHOT_DIR: csharp-lab-report
+        run: node scripts/check-offline-lab-browser.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:
