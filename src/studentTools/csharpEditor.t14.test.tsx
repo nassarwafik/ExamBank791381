@@ -39,8 +39,10 @@ const code = (panel: HTMLElement) => within(panel).getByLabelText("كود C#") a
 const runReady = (panel: HTMLElement) => waitFor(() => expect((within(panel).getByRole("button", { name: "تشغيل" }) as HTMLButtonElement).disabled).toBe(false));
 
 describe("T14 — contract", () => {
-  it("csharpEditor is the last contract id, has a UI, defaults to write only, and validates with closed keys", () => {
-    expect(STUDENT_TOOL_IDS.at(-1)).toBe("csharpEditor");
+  it("csharpEditor follows every earlier contract id, has a UI, defaults to write only, and validates with closed keys", () => {
+    // its exact place: the fourteenth id, after T13's (AUTO-A4's automataLab was added after it, additively)
+    expect(STUDENT_TOOL_IDS.indexOf("csharpEditor")).toBe(13);
+    expect(STUDENT_TOOL_IDS.slice(14)).toEqual(["automataLab"]);
     expect(studentToolHasUi("csharpEditor")).toBe(true);
     expect(defaultStudentToolConfig("csharpEditor")).toEqual({ id: "csharpEditor", allowRun: false });
     expect(validateStudentTools(RUN)).toMatchObject({ ok: true, value: RUN });

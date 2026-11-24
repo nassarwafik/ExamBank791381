@@ -22,8 +22,10 @@ export const STUDENT_TOOLS_VERSION = 1 as const;
 // Phase T6 — five subject tools, added additively in the same way.
 // Phase T13 — the owner's two binary-conversion aids (place-value boxes, the hex ↔ binary table), added additively in the same way.
 // Phase T14 — the C# editor (docs/enterprise-student-tools-csharp-editor-design.md), added additively in the same way.
+// AUTO-A4 — the automata lab «مختبر الآلات» (docs/enterprise-automata-lab-a4.md), added additively in the same way.
 export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
-  "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor"] as const;
+  "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor",
+  "automataLab"] as const;
 export type StudentToolId = (typeof STUDENT_TOOL_IDS)[number];
 
 export const NUMBER_BASES = [2, 8, 10, 16] as const;
@@ -37,6 +39,10 @@ export type UnitCategoryId = (typeof UNIT_CATEGORY_IDS)[number];
 export const TRUTH_MAX_VARIABLES_RANGE = { min: 2, max: 6 } as const;
 /** Phase T13 — how many place-value boxes the student gets (4: one hex digit, 8: one byte, 16: two bytes). */
 export const PLACE_VALUE_WIDTH_OPTIONS = [4, 8, 16] as const;
+/** AUTO-A4 — the machines the automata lab may offer, in the course's order (a deterministic and a non-deterministic finite automaton,
+ *  a push-down automaton, a Turing machine). Kept here, not imported from the engine, so the contract stays a leaf module. */
+export const AUTOMATA_LAB_KINDS = ["DFA", "NFA", "PDA", "TM"] as const;
+export type AutomataLabKind = (typeof AUTOMATA_LAB_KINDS)[number];
 export const MAX_SECTION_OVERRIDES = 100;
 export const MAX_SECTION_ID_LENGTH = 120;
 /** Phase T5 — formula sheet bounds: a short title and a light document (it travels inside every delivered exam). */
@@ -77,9 +83,12 @@ export type HexBinaryTableToolV1 = { id: "hexBinaryTable"; showDecimal: boolean 
  *  step ON THE STUDENT'S OWN DEVICE, desktop only, and drawn). Off by default; the canonical form carries the key only when true, so
  *  every spec saved before keeps its exact shape. Never in an exam or an assignment (the editor never runs there), never a mark. */
 export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean; allowVisual?: true };
+/** AUTO-A4 — the automata lab: the learner builds a machine of one of `kinds` and runs it on words (step by step, many at once, «لغة آلتي»).
+ *  The machine is data the learner builds: nothing is executed, nothing is stored or sent, nothing is graded. At least one kind. */
+export type AutomataLabToolV1 = { id: "automataLab"; kinds: AutomataLabKind[] };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
-  | CSharpEditorToolV1;
+  | CSharpEditorToolV1 | AutomataLabToolV1;
 
 export type StudentToolsSectionOverrideV1 = { disabled: StudentToolId[] };
 export type StudentToolsSpecV1 = {
@@ -120,6 +129,7 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "placeValueBoxes": return { id, width: 8 };
     case "hexBinaryTable": return { id, showDecimal: true };
     case "csharpEditor": return { id, allowRun: false };   // exams: always write only; a book's teacher may switch running on
+    case "automataLab": return { id, kinds: [...AUTOMATA_LAB_KINDS] };
   }
 }
 
@@ -138,7 +148,8 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   periodicTable: ["id", "showMass", "showConfiguration", "range"],
   placeValueBoxes: ["id", "width"],
   hexBinaryTable: ["id", "showDecimal"],
-  csharpEditor: ["id", "allowRun", "allowVisual"]
+  csharpEditor: ["id", "allowRun", "allowVisual"],
+  automataLab: ["id", "kinds"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -296,6 +307,17 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
       if ("allowVisual" in raw && typeof raw.allowVisual !== "boolean") add("STUDENT_TOOLS_INVALID_VALUE", path + ".allowVisual", "القيمة «allowVisual» يجب أن تكون نعم / لا.");
       else if (raw.allowVisual === true && !allowRun) add("STUDENT_TOOLS_INVALID_VALUE", path + ".allowVisual", "التشغيل المرئي يحتاج السماح بتشغيل الكود أولًا.");
       value = { id, allowRun, ...(raw.allowVisual === true ? { allowVisual: true as const } : {}) };
+      break;
+    }
+    case "automataLab": {
+      const kinds: AutomataLabKind[] = [];
+      if (!Array.isArray(raw.kinds) || raw.kinds.length === 0) add("STUDENT_TOOLS_INVALID_VALUE", path + ".kinds", "اختر آلة واحدة على الأقل لمختبر الآلات.");
+      else for (const k of raw.kinds) {
+        if (!(AUTOMATA_LAB_KINDS as readonly unknown[]).includes(k)) { add("STUDENT_TOOLS_INVALID_VALUE", path + ".kinds", "نوع آلة غير معروف: «" + String(k) + "»."); continue; }
+        if (kinds.includes(k as AutomataLabKind)) { add("STUDENT_TOOLS_DUPLICATE_VALUE", path + ".kinds", "نوع الآلة «" + String(k) + "» مكرر."); continue; }
+        kinds.push(k as AutomataLabKind);
+      }
+      value = { id, kinds: AUTOMATA_LAB_KINDS.filter(k => kinds.includes(k)) };   // canonical: the course's order
       break;
     }
   }

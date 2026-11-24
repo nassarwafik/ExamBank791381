@@ -39,11 +39,16 @@ export function labRuntimeFiles(dist) {
 }
 
 export function buildPack(dist) {
+  const none = { available: false, version: "", bytes: 0, files: [] };
+  // A build of another page (a browser harness, its own input) has no manifest, or a manifest without the lab page: no pack, never a
+  // crash. public/ is copied into every build, so the lab's runtime files alone do not make a pack.
   const manifestPath = path.join(dist, ".vite", "manifest.json");
+  if (!fs.existsSync(manifestPath)) return none;
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  if (!manifest["lab.html"] || !fs.existsSync(path.join(dist, "lab.html"))) return none;
   const page = ["/lab.html", ...labClosure(manifest)];
   const runtime = labRuntimeFiles(dist);
-  if (!runtime) return { available: false, version: "", bytes: 0, files: [] };
+  if (!runtime) return none;
   const files = [...page, ...runtime];
   const hash = createHash("sha256");
   let bytes = 0;

@@ -36,7 +36,7 @@ exports.COURSE_STUDENT_TOOLS = Object.freeze({
     },
     "899271": {
         version: 1,
-        tools: [{ ...scratchPad }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }]
+        tools: [{ id: "automataLab", kinds: ["DFA", "NFA", "PDA", "TM"] }, { ...scratchPad }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }]
     },
     "899271d": {
         version: 1,

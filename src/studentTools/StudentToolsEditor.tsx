@@ -2,13 +2,15 @@ import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import {
   STUDENT_TOOL_IDS, NUMBER_BASES, defaultStudentToolConfig, validateStudentTools,
   type StudentToolConfigV1, type StudentToolId, type StudentToolsSpecV1, type CalculatorToolV1, type Ipv4CalculatorToolV1, type BaseConverterToolV1, type GraphPlotterToolV1, type ScratchPadToolV1, type FormulaSheetToolV1, type NumberBase, GRAPH_MAX_FUNCTIONS_LIMIT, FORMULA_SHEET_TITLE_MAX, FORMULA_SHEET_MAX_IMAGES,
-  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, type CSharpEditorToolV1, PLACE_VALUE_WIDTH_OPTIONS,
+  type AsciiTableToolV1, type BitwiseCalculatorToolV1, type TruthTableToolV1, type UnitConverterToolV1, type PeriodicTableToolV1, type UnitCategoryId, type PlaceValueBoxesToolV1, type HexBinaryTableToolV1, type CSharpEditorToolV1, type AutomataLabToolV1, type AutomataLabKind, AUTOMATA_LAB_KINDS, PLACE_VALUE_WIDTH_OPTIONS,
   BIT_WIDTH_OPTIONS, UNIT_CATEGORY_IDS, TRUTH_MAX_VARIABLES_RANGE
 } from "./studentToolsSpec";
 import { studentToolCatalogEntry } from "./studentToolsCatalog";
 import { studentToolAnswerRisks } from "./studentToolsRisk";
 import { BASE_LABEL } from "./baseConverter";
 import { UNIT_CATEGORY_LABEL } from "./unitConverter";
+/** AUTO-A4 — the automata lab's machines as the teacher reads them (the lab's own labels live in its chunk). */
+const AUTOMATA_KIND_LABEL: Record<AutomataLabKind, string> = { DFA: "أوتومات منتهٍ حتمي", NFA: "أوتومات منتهٍ غير حتمي", PDA: "أوتومات مكدّس", TM: "آلة تورنغ" };
 import type { RichContentV1 } from "../richContent/richContentModel";
 
 const MAX_RISK_LABELS = 5;
@@ -262,6 +264,23 @@ export default function StudentToolsEditor({ value, sections, onChange, disabled
                 ) : (
                   <p className="sb-hint">في الامتحانات والوظائف: محرر لكتابة الكود فقط، ينسخ منه الطالب إلى مكان الإجابة. لا تشغيل.</p>
                 ))}
+                {tool?.id === "automataLab" && (
+                  <div className="sb-tool-options">
+                    <fieldset className="sb-tool-bases">
+                      <legend className="sb-field-label">الآلات المتاحة (واحدة على الأقل)</legend>
+                      {AUTOMATA_LAB_KINDS.map(k => {
+                        const checked = tool.kinds.includes(k);
+                        return (
+                          <label key={k} className="sb-check">
+                            <input type="checkbox" checked={checked} disabled={disabled || (checked && tool.kinds.length <= 1)}
+                              onChange={e => patchTool(id, { kinds: AUTOMATA_LAB_KINDS.filter(x => (x === k ? e.target.checked : tool.kinds.includes(x))) as AutomataLabKind[] } as Partial<AutomataLabToolV1>)} />
+                            <span>{AUTOMATA_KIND_LABEL[k]}</span>
+                          </label>
+                        );
+                      })}
+                    </fieldset>
+                  </div>
+                )}
                 {tool?.id === "truthTable" && (
                   <div className="sb-tool-options">
                     <label className="sb-field">

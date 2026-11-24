@@ -43,6 +43,8 @@ const BITWISE_TERMS = /bitwise|إزاحة|على مستوى البت|عمليا�
 const TRUTH_TERMS = /جدول\s*(?:ال)?حقيقة|truth\s*table|بوابات?\s*(?:ال)?منطقية|(?:ال)?دارة\s*(?:ال)?منطقية|logic\s*gates?/i;
 // Phase T13 — the hex ↔ binary list answers a question about hexadecimal digits outright.
 const HEX_TERMS = /الست\s*عشري|السادس\s*عشر|السداسي\s*عشر|hexadecimal|\bhex\b|\b0x[0-9a-f]+\b|\(\s*[0-9A-F]+\s*\)\s*(?:₁₆|_?16\b)/i;
+// AUTO-A4 — the automata lab runs a machine the student copies from the question: any automata question is named.
+const AUTOMATA_TERMS = /أوتومات|اوتومات|آلة\s*تورنغ|آلة\s*تورينغ|حالة\s*(?:ال)?قبول|دالة\s*(?:ال)?انتقالات?|مكدّس|مكدس|\b(?:DFA|NFA|PDA)\b|automat|turing\s*machine/i;
 const PERIODIC_TERMS = /العدد\s*الذري|الكتلة\s*الذرية|التوزيع\s*الإلكتروني|الجدول\s*الدوري|atomic\s*(?:number|mass)|electron\s*configuration/i;
 
 function questionType(q: Record<string, unknown>): string {
@@ -67,6 +69,7 @@ export function questionRiskFor(tool: StudentToolId, q: unknown): boolean {
     case "placeValueBoxes": return false; // computes nothing: the student does the arithmetic
     case "hexBinaryTable": return HEX_TERMS.test(text);
     case "csharpEditor": return false;    // T14: in an exam it never runs code — a writing aid answers nothing
+    case "automataLab": return AUTOMATA_TERMS.test(text);
   }
 }
 
