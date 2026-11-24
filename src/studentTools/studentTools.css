@@ -138,3 +138,14 @@
 .stt-cs-hint { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
 .stt-cs-result { display: grid; gap: var(--eb-space-1); }
 .stt-cs-label { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-bold); }
+
+/* Phase E1 (owner request) — «ملء الشاشة»: the panel (the C# editor) fills the screen, over the page and the Reader's «وضع العرض»,
+   as the Reader presents a book. Its state is the same element's: nothing is moved or remounted. Placed last: it wins over the
+   wide / phone sizes above. */
+.stt-dock.has-fullscreen { z-index: var(--eb-z-modal); }
+.stt-panel.is-fullscreen { position: fixed; inset: 0; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; transform: none; }
+.stt-panel.is-fullscreen .stt-panel-head { cursor: default; touch-action: auto; }
+.stt-panel.is-fullscreen .stt-panel-body { flex: 1 1 auto; min-height: 0; padding-inline: max(var(--eb-space-4), 2vw); }
+.stt-full-toggle { display: inline-flex; align-items: center; justify-content: center; }
+.stt-full-toggle[aria-pressed="true"] { background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.stt-dock.has-fullscreen > .stt-fab, .stt-dock.has-fullscreen > .stt-menu { display: none; }   /* the editor alone on the screen; Esc / the toggle leave */
