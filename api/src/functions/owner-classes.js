@@ -18,7 +18,8 @@ const {
 const { recordAuditEvent } = require("../lib/audit-log");
 const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON, classStudents, previewStudentTransfer, transferStudent, ownerOfStudent } = require("../lib/teacher-transfer");   // Tadris+ P5-B3a / P5-B3b
 const { isStudentSharedIn } = require("../lib/class-membership");
-const { enrollStudents, unenrollStudent, EnrollmentRefusal } = require("../lib/shared-enrollment");   // Tadris+ P11-A
+const { enrollStudents, unenrollStudent, EnrollmentRefusal, MAX_SHARED_CLASSES } = require("../lib/shared-enrollment");   // Tadris+ P11-A
+const { sharedClassIds } = require("../lib/class-membership");
 
 // Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The owner creates and manages a teacher's classes.
 // Route: /api/owner-classes/{action?}   (owner session only)
@@ -38,6 +39,10 @@ const { enrollStudents, unenrollStudent, EnrollmentRefusal } = require("../lib/s
 //   POST transfer        { classId, toAccountId, expectedFromAccountId, reason? }  → the class and every one of its students move
 //                          to that teacher, with the class's whole history (owner decision §19.21); resumable; one ledger record
 //   GET  students?classId=                                (P5-B3b) the class's students (names, identity, status) for the owner
+//   GET  copy-students-preview?fromClassId=&classId=     (P11-D) what copying the students of a class into another class would do
+//                          (classId empty: into a NEW class); no write
+//   POST copy-students   { fromClassId, classId }          (P11-D) every non-archived student of that class joins this class too, with
+//                          the same account (the P11-A shared class): the source class, its teacher and its history are not touched
 //   GET  student-transfer-preview?userId=&toClassId=      what moving ONE student into another teacher's class would do
 //   POST student-transfer { userId, fromClassId, toClassId, reason? } → the student moves (D16: the new teacher sees learning
 //                          progress, not the old class's grades nor the conversation before the transfer; the former teacher keeps
@@ -58,6 +63,10 @@ const { enrollStudents, unenrollStudent, EnrollmentRefusal } = require("../lib/s
 // enroll-students adds the SAME account to this class as a shared class (lib/shared-enrollment.js). Only the owner can do this: a
 // teacher's own import still reports another teacher's student as taken, unnamed. Never by identity number in the request — by the
 // user ids the preview returned.
+// Tadris+ P11-D — «نسخ طلاب صف كامل»: the owner copies the students of one teacher's class into a class of another teacher, so the
+// class shows at both. It is enroll-students for the whole roster, chosen by the SERVER from the source class (the roster the owner
+// sees: the home students of that class's teacher and the students added to it; archived students are not copied). Nothing of the
+// source class moves: its teacher, assignments, results and conversations stay; each teacher sees their own class's results (D16).
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 const bad = (code, error) => reply(400, { ok: false, code, error });
@@ -76,6 +85,38 @@ function ownerClassView(c) {
     classId: String(c.classId), name: String(c.name || ""), grade: String(c.grade || ""), schoolYear: String(c.schoolYear || ""),
     status: normalizeClassStatus(c), studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0,
     programCodes: getClassProgramCodes(c), createdAt: String(c.createdAt || ""), archivedAt: String(c.archivedAt || "")
+  };
+}
+
+/** The class's roster as the owner sees it: its teacher's home students, then the students ADDED to it (P11-A). */
+function ownerRosterDocs(allUsers, classroom) {
+  const classId = String(classroom.classId);
+  const home = classStudents(allUsers, classId).filter(st => ownerOfStudent(st, classroom) === classroom.ownerId).map(st => ({ st, shared: false }));
+  const added = allUsers.filter(st => st && typeof st.userId === "string" && st.userId && isStudentSharedIn(st, classId)).map(st => ({ st, shared: true }));
+  return home.concat(added);
+}
+
+/**
+ * P11-D — what copying the students of `source` into `target` would do (`target` null: a new, empty class). Archived students of the
+ * source are counted, never copied. → { candidates: [userId], preview }
+ */
+function copyPlan(allUsers, source, target) {
+  const targetId = target ? String(target.classId) : "";
+  const candidates = [];
+  let already = 0, atLimit = 0, archived = 0;
+  for (const { st, shared } of ownerRosterDocs(allUsers, source)) {
+    if (!shared && st.archived === true) { archived++; continue; }
+    if (targetId && (String(st.classId || "") === targetId || sharedClassIds(st).includes(targetId))) { already++; continue; }
+    if (sharedClassIds(st).length >= MAX_SHARED_CLASSES) atLimit++;
+    candidates.push(String(st.userId));
+  }
+  return {
+    candidates,
+    preview: {
+      fromClassId: String(source.classId), fromClassName: String(source.name || ""), from: String(source.ownerId),
+      classId: targetId, className: target ? String(target.name || "") : "", to: target ? String(target.ownerId) : "",
+      total: candidates.length + already + archived, toAdd: candidates.length - atLimit, already, archived, atLimit
+    }
   };
 }
 
@@ -99,6 +140,23 @@ async function studentTransferContext(container, userId, toClassId, deps) {
   if (String(target.ownerId) === from) return { refusal: bad("SAME_TEACHER", "اختر صفًا لمعلم آخر. النقل بين صفوف المعلم نفسه يتم من صفحته.") };
   if (normalizeClassStatus(target) === "archived") return { refusal: reply(400, { ok: false, code: "CLASS_ARCHIVED", error: "الصف الهدف مؤرشف." }) };
   return { student, fromClass: { ...fromClass, classId: fromId }, target: { ...target, classId: toClassId }, from };
+}
+
+/** P11-D — the source class and the target class of a copy, both owned by existing teacher accounts; the target active. */
+async function copyContext(container, fromClassId, classId, deps, { allowNew }) {
+  const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  const load = async id => {
+    const doc = isSafeId(id) ? await dl(container, CLASS_PREFIX + id + ".json") : null;
+    return doc && String(doc.classId || id) === id && (await teacherOf(container, String(doc.ownerId || ""), deps)) ? { ...doc, classId: id } : null;
+  };
+  const source = await load(fromClassId);
+  if (!source) return { refusal: CLASS_NOT_FOUND() };
+  if (!classId && allowNew) return { source, target: null };
+  if (classId === fromClassId) return { refusal: bad("SAME_CLASS", "اختر صفًا آخر غير الصف الذي تنسخ منه.") };
+  const target = await load(classId);
+  if (!target) return { refusal: CLASS_NOT_FOUND() };
+  if (normalizeClassStatus(target) === "archived") return { refusal: reply(400, { ok: false, code: "CLASS_ARCHIVED", error: "الصف الهدف مؤرشف. استعده أولًا لإضافة طلاب." }) };
+  return { source, target };
 }
 
 async function handler(request, deps = {}, obs = null) {
@@ -144,14 +202,16 @@ async function handler(request, deps = {}, obs = null) {
       const current = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
       if (!current || String(current.classId || classId) !== classId || !(await teacherOf(container, String(current.ownerId || ""), deps))) return CLASS_NOT_FOUND();
       const allUsers = await ls(container, "platform/users/");
-      const roster = classStudents(allUsers, classId)
-        .filter(st => ownerOfStudent(st, current) === current.ownerId)
-        .map(st => ({ userId: st.userId, displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || ""), active: st.active !== false, archived: st.archived === true }))
-        // P11-A — the students ADDED to this class from another class (their account belongs to their home teacher)
-        .concat(allUsers.filter(st => st && typeof st.userId === "string" && st.userId && isStudentSharedIn(st, classId))
-          .map(st => ({ userId: st.userId, displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || ""), active: st.active !== false, archived: false, shared: true })))
+      // P11-A — the students ADDED to this class from another class (their account belongs to their home teacher) are marked shared
+      const roster = ownerRosterDocs(allUsers, { ...current, classId })
+        .map(({ st, shared }) => ({ userId: st.userId, displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || ""), active: st.active !== false, archived: shared ? false : st.archived === true, ...(shared ? { shared: true } : {}) }))
         .sort((x, y) => x.displayName.localeCompare(y.displayName, "ar"));
       return reply(200, { ok: true, classId, students: roster });
+    }
+    if (method === "GET" && action === "copy-students-preview") {
+      const found = await copyContext(container, queryParam(request, "fromClassId"), queryParam(request, "classId"), deps, { allowNew: true });
+      if (found.refusal) return found.refusal;
+      return reply(200, { ok: true, preview: copyPlan(await ls(container, "platform/users/"), found.source, found.target).preview });
     }
     if (method === "GET" && action === "student-transfer-preview") {
       const userId = queryParam(request, "userId"), toClassId = queryParam(request, "toClassId");
@@ -293,6 +353,32 @@ async function handler(request, deps = {}, obs = null) {
         return {
           ...reply(200, {
             ok: true, enrolled: r.enrolled.length, already: r.already.length, failed: r.errors.length, rosterSynced: r.rosterSynced,
+            students: r.enrolled.map(st => ({ userId: String(st.userId), displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || "") })),
+            errors: r.errors
+          }),
+          ...(r.enrolled.length ? {} : { notApplied: "nothing-enrolled" })
+        };
+      });
+    }
+
+    if (action === "copy-students") {
+      const found = await copyContext(container, String(body.fromClassId || "").trim(), String(body.classId || "").trim(), deps, { allowNew: false });
+      if (found.refusal) return found.refusal;
+      const { source, target } = found;
+      const { candidates, preview: plan } = copyPlan(await ls(container, "platform/users/"), source, target);
+      if (candidates.length > MAX_IMPORT_ROWS) return bad("STUDENTS_TOO_MANY", "يمكن نسخ " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة.");
+      const accountId = String(target.ownerId);
+      const record = resultRecorder(accountId);
+      const where = { targetType: "class", targetId: target.classId, targetLabel: String(target.name || target.classId) };
+      const counts = { fromClassId: source.classId, fromAccountId: String(source.ownerId) };
+      if (!candidates.length) return reply(200, { ok: true, enrolled: 0, already: plan.already, archived: plan.archived, failed: 0, rosterSynced: true, students: [], errors: [] });
+      return await atWrite({ actor, action: "owner.students.copy.requested", ...where, details: { accountId, ...counts, rows: candidates.length } }, async guarded => {
+        const r = await enrollStudents(guarded, target, candidates, { actor, nowMs, obs }, { mutateJsonWithRetry: deps.mutateJsonWithRetry });
+        // the completion detail: counts only — never a name or an identity number
+        if (r.enrolled.length) await record({ action: "student.enroll", ...where, details: { classId: target.classId, ...counts, enrolledCount: r.enrolled.length, alreadyCount: r.already.length, failedCount: r.errors.length } });
+        return {
+          ...reply(200, {
+            ok: true, enrolled: r.enrolled.length, already: plan.already + r.already.length, archived: plan.archived, failed: r.errors.length, rosterSynced: r.rosterSynced,
             students: r.enrolled.map(st => ({ userId: String(st.userId), displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || "") })),
             errors: r.errors
           }),

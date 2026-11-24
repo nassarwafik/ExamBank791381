@@ -335,6 +335,19 @@ export const ownerTransferApi = {
     call<{ ok: true; ledger: ClassTransferLedger }>("/api/owner-classes/transfer", { method: "POST", token, body: { classId, toAccountId, expectedFromAccountId, reason } })
 };
 
+// Tadris+ P11-D — the students of a whole class join another teacher's class too (the same accounts: a shared class, P11-A). The source
+// class stays with its teacher. classId "" in the preview: a NEW class (created first by the screen).
+export type ClassCopyPreview = {
+  fromClassId: string; fromClassName: string; from: string; classId: string; className: string; to: string;
+  total: number; toAdd: number; already: number; archived: number; atLimit: number;
+};
+export const ownerClassCopyApi = {
+  preview: (token: string, fromClassId: string, classId: string) =>
+    call<{ ok: true; preview: ClassCopyPreview }>("/api/owner-classes/copy-students-preview?fromClassId=" + encodeURIComponent(fromClassId) + (classId ? "&classId=" + encodeURIComponent(classId) : ""), { token }),
+  copy: (token: string, fromClassId: string, classId: string) =>
+    call<OwnerEnrollResult & { archived?: number }>("/api/owner-classes/copy-students", { method: "POST", token, body: { fromClassId, classId } })
+};
+
 // Tadris+ P5-B3b — one student into another teacher's class (/api/owner-classes).
 export type OwnerRosterStudent = { userId: string; displayName: string; identityNumber: string; active: boolean; archived: boolean; shared?: boolean };   // P11-A: shared = added from another class
 export type StudentTransferPreview = { userId: string; displayName: string; archived: boolean; fromClassId: string; fromClassName: string; from: string; toClassId: string; toClassName: string; to: string; pendingGrading: number };
