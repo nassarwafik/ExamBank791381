@@ -16,6 +16,10 @@ import type { DsMark, DsObj, DsStep, DsVal } from "../learning/activities/ds";
  * Columns: the boxes a variable refers to are in column 1, what they refer to in column 2 … (breadth first); a box no variable
  * reaches starts its own column 1. Bounded: at most OG_NODES boxes, OG_ROWS rows a box and OG_ROOTS variables; what is left out
  * is counted (`more`, `hidden`) and said, never dropped silently.
+ *
+ * V11 (§21): a struct is a VALUE: inside an object it is that object's own rows (Pos.X, Pos.Y — no box, no arrow), and a struct
+ * variable whose field refers to an object starts an arrow from «p.Owner». The static fields of the writer's types that refer to a
+ * box are variables too, named «Type.field».
  */
 export type OgRow = { key: string; text: string; ref: number | null; changed: boolean; marks: string[] };
 export type OgNode = { id: number; kind: "obj" | "array" | "set" | "map"; title: string; rows: OgRow[]; more: number; col: number; fresh: boolean; changed: boolean };
@@ -30,9 +34,14 @@ type Drawn = Extract<DsObj, { k: "obj" | "array" | "set" | "map" }>;
 const isDrawn = (o: DsObj | undefined): o is Drawn => !!o && (o.k === "obj" || o.k === "array" || o.k === "set" || o.k === "map");
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+/** V11: fields with each struct's fields spread out under its name (Pos.X, Pos.Y), as the rows of a box. */
+function flat(fields: [string, DsVal][], prefix = ""): [string, DsVal][] {
+  return fields.flatMap(([n, v]): [string, DsVal][] => (v.t === "rec" ? flat(v.fields, prefix + n + ".") : [[prefix + n, v]]));
+}
+
 /** The boxes an object refers to (any kind: the caller keeps the ones it draws). */
 function targets(o: Drawn): number[] {
-  if (o.k === "obj") return o.fields.flatMap(([, v]) => (v.t === "ref" ? [v.id] : []));
+  if (o.k === "obj") return flat(o.fields).flatMap(([, v]) => (v.t === "ref" ? [v.id] : []));
   return (o.refs ?? []).filter((r): r is number => r !== null);
 }
 
@@ -66,14 +75,16 @@ export function objectGraphOf(step: DsStep, prev?: DsStep, marks?: ReadonlyMap<n
   }
   if (!inGraph.size) return null;
 
-  // the variables that refer to a box: the running method first
+  // the variables that refer to a box: the running method first, then its callers, then the static fields (V11)
   const roots: OgRoot[] = [];
-  for (let i = step.frames.length - 1; i >= 0 && roots.length < OG_ROOTS; i--) {
-    for (const [name, v] of step.frames[i].vars) {
+  const root = (vars: [string, DsVal][], top: boolean, prefix = "") => {
+    for (const [name, v] of flat(vars, prefix)) {
       if (v.t !== "ref" || !inGraph.has(v.id) || roots.length >= OG_ROOTS) continue;
-      if (!roots.some(r => r.name === name && r.target === v.id)) roots.push({ name, top: i === step.frames.length - 1, target: v.id });
+      if (!roots.some(r => r.name === name && r.target === v.id)) roots.push({ name, top, target: v.id });
     }
-  }
+  };
+  for (let i = step.frames.length - 1; i >= 0; i--) root(step.frames[i].vars, i === step.frames.length - 1);
+  for (const t of step.statics ?? []) root(t.vars, true, t.name + ".");
   // columns, breadth first from the variables; then from each box no variable reaches (in the order recorded)
   const col = new Map<number, number>();
   const order: number[] = [];
@@ -103,8 +114,8 @@ export function objectGraphOf(step: DsStep, prev?: DsStep, marks?: ReadonlyMap<n
       ref === null || ref === undefined ? { text: plain, ref: null } : kept.has(ref) ? { text: "", ref } : { text: inGraph.has(ref) ? "#" + ref : "→ " + outside(byId.get(ref)), ref: null };
     let rows: OgRow[];
     if (o.k === "obj") {
-      const oldFields = old?.k === "obj" ? new Map(old.fields) : undefined;
-      rows = o.fields.map(([name, v]) => ({ key: name, ...link(v.t === "ref" ? v.id : null, text(v)), changed: !!prev && !!old && !same(oldFields?.get(name), v), marks: [] }));
+      const oldFields = old?.k === "obj" ? new Map(flat(old.fields)) : undefined;
+      rows = flat(o.fields).map(([name, v]) => ({ key: name, ...link(v.t === "ref" ? v.id : null, text(v)), changed: !!prev && !!old && !same(oldFields?.get(name), v), marks: [] }));
     } else {
       const keys = o.k === "map" ? o.keys : o.k === "set" ? o.items.map(() => "•") : o.items.map((_, i) => String(i));
       const oldItems = old && old.k !== "obj" ? old.items : undefined, oldRefs = old && old.k !== "obj" ? old.refs : undefined;
@@ -122,7 +133,7 @@ export function objectGraphOf(step: DsStep, prev?: DsStep, marks?: ReadonlyMap<n
         marks: at.get(i) ?? [] }));
     }
     const shown = rows.slice(0, OG_ROWS);
-    const removed = !!old && (old.k === "obj" ? old.fields.length : old.items.length) > rows.length;
+    const removed = !!old && (old.k === "obj" ? flat(old.fields).length : old.items.length) > rows.length;
     return { id, kind: o.k, title: o.type, rows: shown, more: rows.length - shown.length, col: col.get(id)!,
       fresh: !!prev && !was, changed: rows.some(r => r.changed) || removed };
   });

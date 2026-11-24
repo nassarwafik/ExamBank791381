@@ -131,6 +131,8 @@ for (const c of cases) {
 
 // ── beyond the course: the recorder must never change what a program does, and must keep its own limits ──
 // Each program is traced AND run: the traced output must equal the plain run's output (the recorder adds nothing to stdout).
+// V11: structs and static fields — a static constructor that prints (Counter), safe static initialisers (Program)
+const V11_SOURCE = "struct Point { public int X; public int Y; public Point(int x, int y) { X = x; Y = y; } }\nstruct Seg { public Point A; public Point B; }\nclass Shape { public string Name = \"box\"; public Point Pos; public Point[] Corners = new Point[2]; }\nclass Counter\n{\n    public static int Made;\n    public static List<Shape> All = new List<Shape>();\n    static Counter() { Console.WriteLine(\"init\"); }\n    public static void Add(Shape s) { Made++; All.Add(s); }\n}\nclass Program\n{\n    static int total = 5;\n    static int[] marks = new int[3];\n    static void Main()\n    {\n        Console.WriteLine(\"start\");\n        Point p = new Point(1, 2);\n        Point q = p;\n        q.X = 9;\n        Seg seg = new Seg { A = p, B = q };\n        Shape s = new Shape();\n        s.Pos = q;\n        s.Corners[1] = new Point(3, 4);\n        Counter.Add(s);\n        total = total + Counter.Made;\n        marks[0] = 7;\n        Console.WriteLine(p.X + \" \" + q.X + \" \" + total);\n    }\n}";
 const BEYOND = [
   { name: "foreach, List<T>, LINQ, string interpolation", stdin: "",
     source: "static void Main()\n{\n    var list = new List<int> { 4, 1, 3 };\n    int sum = 0;\n    foreach (var x in list) sum += x;\n    Console.WriteLine($\"{sum} {list.Where(v => v > 1).Count()} {string.Join(\",\", list.OrderBy(v => v))}\");\n}",
@@ -319,6 +321,39 @@ const BEYOND = [
       return t.status === "success" && t.stdout === "2\n" && other(a)?.id === b?.id && other(b)?.id === a?.id
         && JSON.stringify(list?.refs) === JSON.stringify([a.id, b.id]) && list.items.join("|") === "(A, (B, …))|(B, (A, …))";
     } },
+  // V11 (§21): the writer's structs as values with fields; the static fields of the writer's types — read only when reading them
+  // runs nothing early (the output is compared with «تشغيل» for every case, so a static constructor run early would show)
+  { name: "V11 structs: a Point is a value with its fields (q = p copies it), a struct inside a struct, a struct field of an object, Point[] cells as (x, y)", stdin: "", options: { rich: true },
+    source: V11_SOURCE,
+    check: (t, steps) => {
+      const last = steps.at(-1), v = n => last.frames[0].vars.find(([x]) => x === n)?.[1];
+      const f = (r, n) => r?.fields?.find(([x]) => x === n)?.[1];
+      const shape = last.objs.find(o => o.k === "obj" && o.type === "Shape"), corners = last.objs.find(o => o.k === "array" && o.type === "Point[]");
+      return t.status === "success" && v("p")?.t === "rec" && v("p").type === "Point" && f(v("p"), "X")?.s === "1" && f(v("q"), "X")?.s === "9" && f(v("q"), "Y")?.s === "2"
+        && f(v("seg"), "A")?.t === "rec" && f(f(v("seg"), "B"), "X")?.s === "9"
+        && f(shape, "Pos")?.t === "rec" && f(f(shape, "Pos"), "X")?.s === "9" && corners?.items.join("|") === "(0, 0)|(3, 4)"
+        && JSON.stringify(last.frames[0].types) === JSON.stringify(["Point", "Point", "Seg", "Shape"]);
+    } },
+  { name: "V11 statics: Program's from the first step (total 5 → 6, marks → int[]); Counter's only once its static constructor ran; output order as «تشغيل»", stdin: "", options: { rich: true },
+    source: V11_SOURCE,
+    check: (t, steps) => {
+      const of = (s, type) => (s.statics || []).find(x => x.name === type);
+      const sv = (s, type, n) => of(s, type)?.vars.find(([x]) => x === n)?.[1];
+      const firstCounter = steps.findIndex(s => of(s, "Counter"));
+      const last = steps.at(-1), all = last.objs.find(o => o.id === sv(last, "Counter", "All")?.id);
+      return t.status === "success" && t.stdout === "start\ninit\n1 9 6\n"
+        && sv(steps[0], "Program", "total")?.s === "5" && sv(last, "Program", "total")?.s === "6"
+        && last.objs.find(o => o.id === sv(last, "Program", "marks")?.id)?.items.join(",") === "7,0,0"
+        && firstCounter > 0 && steps[firstCounter].out === "start\ninit\n" && steps.slice(0, firstCounter).every(s => !of(s, "Counter"))
+        && sv(last, "Counter", "Made")?.s === "1" && all?.type === "List<Shape>" && all.refs?.length === 1;
+    } },
+  { name: "V11 a static initialiser that calls a method (it may print) is never read early: that type's statics are left out", stdin: "", options: { rich: true },
+    source: "class Log\n{\n    public static int N = Make();\n    static int Make() { Console.WriteLine(\"made\"); return 3; }\n}\nclass Program\n{\n    static void Main()\n    {\n        Console.WriteLine(\"a\");\n        int n = Log.N;\n        Console.WriteLine(n);\n    }\n}",
+    check: (t, steps) => t.status === "success" && /a\n(made\n)?3\n|made\na\n3\n/.test(t.stdout) && steps.every(s => !(s.statics || []).some(x => x.name === "Log")) },
+  { name: "V11 without rich: a struct stays its text, no statics (the course's recording)", stdin: "",
+    source: V11_SOURCE,
+    check: (t, steps) => t.status === "success" && steps.every(s => s.statics === undefined && s.frames.every(f => f.vars.every(([, v]) => v.t !== "rec")))
+      && steps.at(-1).frames[0].vars.find(([n]) => n === "p")?.[1].s === "Point" },
   { name: "V6 a program needing a left-out library (System.Xml) is refused before it is recorded (LAB0001)", stdin: "", options: { rich: true },
     source: "using System.Xml;\nclass P { static void Main() { Console.WriteLine(new XmlDocument().Name); } }",
     check: (t, steps) => t.status === "compile-error" && /LAB0001: 'System\.Xml\.XmlDocument'/.test(t.stderr) && steps.length === 0 },

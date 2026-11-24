@@ -22,6 +22,12 @@
 //     comparison, `&&`, `||` and `!` the writer's code evaluated since the step before (Tracer.cs wraps them in E, which returns the
 //     value unchanged, short-circuit kept); a frame carries "types" beside "vars" (each variable's declared type, as C# writes it);
 //     a two-dimensional array is an object { k: "grid", type, rows: [[cells]] }.
+// Visual lab V11 (plan §21) — also in RICH mode:
+//   • a value of the writer's own struct is { t: "rec", type, fields: [[name, value]] } (a value, not an object: no id, no arrow;
+//     a struct inside a struct up to 3 deep); its short text is "(field, field)" like a class's, not the bare type name;
+//   • a step carries "statics": [{ name, vars }] — the static fields of the writer's types, read ONLY when reading them cannot run
+//     anything early: a type with no static constructor whose static initialisers do nothing but build values (Tracer.cs decides,
+//     StaticsReady), or a type whose static constructor has started (Tracer.cs plants Ready(typeof(T)) as its first statement).
 internal static class TraceRuntime
 {
     /// <summary>Visual lab V4 — the class a teacher's program may call IN THE VISUAL RUN ONLY (it is compiled into traced programs, never
@@ -56,7 +62,9 @@ internal static class __LabTrace
     static int nextId = 1;
     static readonly global::System.Text.StringBuilder steps = new global::System.Text.StringBuilder();
     static string lastFrames = ""[]"", lastObjs = ""[]"";
+    static string? lastStatics, pendingStatics;
     static string? pendingFrames, pendingObjs;
+    static readonly global::System.Collections.Generic.List<global::System.Type> staticTypes = new global::System.Collections.Generic.List<global::System.Type>();   // V11, in the order they became readable
 
     static bool rich;              // V5: rich types (see the header)
     static int calls;              // V8: the calls so far (a frame's call number)
@@ -115,6 +123,13 @@ internal static class __LabTrace
         if (rich && muted == 0 && evals.Count < 12) evals.Add(""["" + Json(text) + "","" + Json(Lit(value)) + ""]"");
         return value;
     }
+    /// <summary>V11: the first statement of a writer's static constructor (Tracer.cs plants it): from now on its statics may be read.</summary>
+    public static void Ready(global::System.Type t) { if (rich && !staticTypes.Contains(t)) staticTypes.Add(t); }
+    /// <summary>V11: the types whose statics may be read from the start (no static constructor; initialisers that only build values).</summary>
+    public static void StaticsReady(string[] names)
+    {
+        foreach (var n in names) { var t = typeof(__LabTrace).Assembly.GetType(n); if (t != null) Ready(t); }
+    }
     public static void StepValue<T>(T value, int l, string[] names, global::System.Func<object?[]> values) => Record(l, names, values, """");
     public static void StepAfter(global::System.Action a, int l, string[] names, global::System.Func<object?[]> values) { a(); Record(l, names, values, """"); }
 
@@ -126,19 +141,19 @@ internal static class __LabTrace
         top.Names = names; top.Values = values;
         foreach (var n in names) if (n.Length > 1 && n[0] == '+') top.Written.Add(n.Substring(1));   // «+a»: this step wrote a
         if (muted > 0) { evals.Clear(); return; }
-        var (fr, ob) = Snapshot();
-        if (l > shown) { pendingFrames = fr; pendingObjs = ob; evals.Clear(); return; }
-        pendingFrames = pendingObjs = null;
+        var (fr, ob, st) = Snapshot();
+        if (l > shown) { pendingFrames = fr; pendingObjs = ob; pendingStatics = st; evals.Clear(); return; }
+        pendingFrames = pendingObjs = pendingStatics = null;
         if (count >= maxSteps) throw new __LabTraceLimit();
         bool pause = markPause;
         if (markNote != null) note = markNote;
         markNote = null; markPause = false;
-        Append(l, note, fr, ob, false, pause, returning, evals.Count > 0 ? ""["" + string.Join("","", evals) + ""]"" : null);
+        Append(l, note, fr, ob, false, pause, returning, evals.Count > 0 ? ""["" + string.Join("","", evals) + ""]"" : null, st);
         evals.Clear();
-        lastFrames = fr; lastObjs = ob;
+        lastFrames = fr; lastObjs = ob; lastStatics = st;
     }
 
-    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false, string? ret = null, string? evalsJson = null)
+    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false, string? ret = null, string? evalsJson = null, string? statics = null)
     {
         if (count > 0) steps.Append(',');
         steps.Append(""{\""line\"":"").Append(l).Append("",\""note\"":"").Append(Json(note)).Append("",\""frames\"":"").Append(fr)
@@ -147,19 +162,20 @@ internal static class __LabTrace
         if (pause) steps.Append("",\""pause\"":true"");
         if (ret != null) steps.Append("",\""ret\"":"").Append(Json(ret));
         if (evalsJson != null) steps.Append("",\""evals\"":"").Append(evalsJson);
+        if (statics != null) steps.Append("",\""statics\"":"").Append(statics);
         steps.Append('}');
         count++;
     }
 
-    public static void Finish() { if (pendingFrames != null) Append(0, ""انتهى التنفيذ."", pendingFrames, pendingObjs!, false); }
-    public static void Fail() { if (line <= shown) Append(line, ""خطأ في التشغيل: البرنامج يتوقّف هنا."", lastFrames, lastObjs, true); }
+    public static void Finish() { if (pendingFrames != null) Append(0, ""انتهى التنفيذ."", pendingFrames, pendingObjs!, false, statics: pendingStatics); }
+    public static void Fail() { if (line <= shown) Append(line, ""خطأ في التشغيل: البرنامج يتوقّف هنا."", lastFrames, lastObjs, true, statics: lastStatics); }
     public static string StepsJson() => ""["" + steps + ""]"";
     /// <summary>Viz.Show / Viz.Pause (the visual run's own class, TraceRuntime.VizSource): marks the step of the statement that called it.</summary>
     public static void Show(string title) { markNote = string.IsNullOrWhiteSpace(title) ? null : title; }
     public static void Pause(string? reason) { markPause = true; if (!string.IsNullOrWhiteSpace(reason)) markNote = reason; }
 
     // ── the snapshot ──
-    static (string frames, string objs) Snapshot()
+    static (string frames, string objs, string? statics) Snapshot()
     {
         muted++;
         try
@@ -197,9 +213,63 @@ internal static class __LabTrace
                 sb.Append('}');
             }
             sb.Append(']');
-            return (sb.ToString(), ""["" + string.Join("","", objs.Values) + ""]"");
+            var statics = rich && staticTypes.Count > 0 ? StaticsOf(objs) : null;
+            return (sb.ToString(), ""["" + string.Join("","", objs.Values) + ""]"", statics);
         }
         finally { muted--; }
+    }
+
+    /// <summary>V11: [{ name, vars }] — each readable type's static fields (not const), declaration order; at most 10 types × 30.</summary>
+    static string StaticsOf(global::System.Collections.Generic.SortedDictionary<int, string> objs)
+    {
+        var sb = new global::System.Text.StringBuilder(""["");
+        int shownTypes = 0;
+        foreach (var t in staticTypes)
+        {
+            if (shownTypes == 10) break;
+            var fs = global::System.Array.FindAll(t.GetFields(global::System.Reflection.BindingFlags.Static | global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.NonPublic | global::System.Reflection.BindingFlags.DeclaredOnly),
+                f => !f.IsLiteral && (!f.Name.Contains(""<"") || f.Name.EndsWith("">k__BackingField"")));
+            if (fs.Length == 0) continue;
+            global::System.Array.Sort(fs, (a, b) => a.MetadataToken.CompareTo(b.MetadataToken));
+            var vars = new global::System.Text.StringBuilder();
+            int n = 0;
+            foreach (var f in fs)
+            {
+                if (n == 30) break;
+                object? v;
+                try { v = f.GetValue(null); } catch { continue; }
+                if (n++ > 0) vars.Append(',');
+                vars.Append('[').Append(Json(FieldName(f.Name))).Append(',').Append(Val(v)).Append(']');
+                Visit(v, objs);
+            }
+            if (shownTypes++ > 0) sb.Append(',');
+            var tn = t.Name; int tick = tn.IndexOf('`'); if (tick > 0) tn = tn.Substring(0, tick);
+            sb.Append(""{\""name\"":"").Append(Json(tn)).Append("",\""vars\"":["").Append(vars).Append(""]}"");
+        }
+        return sb.Append(']').ToString();
+    }
+
+    /// <summary>V11: a value of one of the writer's own structs (rich mode): drawn as its fields, not as its type's name.</summary>
+    static bool IsStruct(object v)
+    {
+        if (!rich) return false;
+        var t = v.GetType();
+        return t.IsValueType && !t.IsEnum && !t.IsPrimitive && t.Assembly == typeof(__LabTrace).Assembly && !t.Name.StartsWith(""__Lab"") && !t.Name.Contains(""<"");
+    }
+    static string Rec(object v, int depth)
+    {
+        var t = v.GetType();
+        var tn = t.Name; int tick = tn.IndexOf('`'); if (tick > 0) tn = tn.Substring(0, tick);
+        var sb = new global::System.Text.StringBuilder(""{\""t\"":\""rec\"",\""type\"":"").Append(Json(tn)).Append("",\""fields\"":["");
+        var fs = Fields(t);
+        for (int i = 0; i < fs.Length && i < 30; i++)
+        {
+            if (i > 0) sb.Append(',');
+            var x = fs[i].GetValue(v);
+            sb.Append('[').Append(Json(FieldName(fs[i].Name))).Append(',')
+              .Append(x != null && IsStruct(x) && depth >= 2 ? ""{\""t\"":\""v\"",\""s\"":"" + Json(Cell(x)) + ""}"" : Val(x, depth + 1)).Append(']');
+        }
+        return sb.Append(""]}"").ToString();
     }
 
     static string Kind(object o)
@@ -312,6 +382,7 @@ internal static class __LabTrace
     static void Visit(object? v, global::System.Collections.Generic.SortedDictionary<int, string> objs)
     {
         if (v == null) return;
+        if (IsStruct(v)) { foreach (var f in Fields(v.GetType())) Visit(f.GetValue(v), objs); return; }   // V11: what a struct's fields refer to
         var kind = Kind(v);
         if (kind == """") return;
         int id = IdOf(v);
@@ -402,9 +473,10 @@ internal static class __LabTrace
     }
 
     // ── values, as the course writes them ──
-    static string Val(object? v)
+    static string Val(object? v, int depth = 0)
     {
         if (v == null) return ""{\""t\"":\""null\""}"";
+        if (IsStruct(v)) return Rec(v, depth);   // V11
         if (Kind(v) != """") return ""{\""t\"":\""ref\"",\""id\"":"" + IdOf(v) + ""}"";
         if (v is global::System.Array a && a.Rank == 1)
         {
@@ -424,7 +496,7 @@ internal static class __LabTrace
         if (v is string s) return ""\"""" + s + ""\"""";
         if (v is char c) return ""'"" + c + ""'"";
         if (v is global::System.Array a) { var parts = new global::System.Collections.Generic.List<string>(); foreach (var x in a) parts.Add(Lit(x)); return ""{"" + string.Join("", "", parts) + ""}""; }
-        if (Kind(v) == ""obj"") return Cell(v);
+        if (Kind(v) == ""obj"" || IsStruct(v)) return Cell(v);
         return Str(v);
     }
 
@@ -456,11 +528,11 @@ internal static class __LabTrace
             foreach (var x in items) { if (few.Count == 6) { few.Add(""…""); break; } few.Add(Cell(x)); }
             return ck == ""stack"" || ck == ""queue"" ? ""["" + string.Join("","", few) + ""]"" : ""{"" + string.Join("", "", few) + ""}"";
         }
-        if (Kind(v) == ""obj"")
+        if (Kind(v) == ""obj"" || IsStruct(v))   // V11: a struct's short text is its fields too
         {
             var t = v.GetType();
             var ts = t.GetMethod(""ToString"", global::System.Type.EmptyTypes);
-            if (ts != null && ts.DeclaringType != typeof(object)) return Str(v);
+            if (ts != null && ts.DeclaringType != typeof(object) && ts.DeclaringType != typeof(global::System.ValueType)) return Str(v);   // the writer's own ToString
             var parts = new global::System.Collections.Generic.List<string>();
             foreach (var f in Fields(t)) parts.Add(Cell(f.GetValue(v)));
             return ""("" + string.Join("", "", parts) + "")"";

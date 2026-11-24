@@ -48,9 +48,10 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
     if (o.t === "v") return { t: "v", s: clip(o.s) };
     if (o.t === "arr") return { t: "arr", items: clipList(o.items, DS_LIMITS.items) };
     if (o.t === "ref" && typeof o.id === "number" && dropped.has(o.id)) { clipped = true; return { t: "v", s: ELLIPSIS }; }
+    if (o.t === "rec") return { t: "rec", type: clip(o.type), fields: pairs(o.fields, dropped) };   // V11: a struct's fields, clipped alike
     return v;
   };
-  const pairs = (list: unknown, dropped: Set<number>): unknown => {
+  const pairs = (list: unknown, dropped: Set<number>): unknown => {   // (val and pairs call each other: a struct's fields are pairs)
     if (!Array.isArray(list)) return list;
     const kept = list.length > DS_LIMITS.vars ? (clipped = true, list.slice(0, DS_LIMITS.vars)) : list;
     return kept.map(p => (Array.isArray(p) && p.length === 2 ? [clip(p[0]), val(p[1], dropped)] : p));
@@ -91,12 +92,16 @@ export function readLabTrace(raw: unknown, source: string, stdin: string): LabTr
       if (x.k === "obj") return { ...x, type: clip(x.type), fields: pairs(x.fields, dropped) };
       return x;
     });
+    // V11: the static fields, type by type (at most 10 types; their values clipped as a frame's)
+    const statics = Array.isArray(s.statics) ? (s.statics.length > 10 ? (clipped = true, s.statics.slice(0, 10)) : s.statics)
+      .map(t => { const x = rec(t); return { name: clip(x.name), vars: pairs(x.vars, dropped) }; }) : undefined;
     const printed = str(s.out);
     if (printed.length > out.length) out = printed;
     const line = typeof s.line === "number" && s.line >= 0 ? s.line : -1;
     return { l: line, n: str(s.note).slice(0, 600), f: frames, h: objs, o: printed.length, ...(s.error === true ? { e: true } : {}), ...(s.pause === true ? { p: true } : {}), ...(s.ret !== undefined ? { r: clip(s.ret) } : {}),
       // V9: the expressions' values (at most 12, each text clipped)
-      ...(Array.isArray(s.evals) ? { x: s.evals.slice(0, 12).map(p => (Array.isArray(p) ? [clip(p[0]), clip(p[1])] : p)) } : {}) };
+      ...(Array.isArray(s.evals) ? { x: s.evals.slice(0, 12).map(p => (Array.isArray(p) ? [clip(p[0]), clip(p[1])] : p)) } : {}),
+      ...(statics ? { s: statics } : {}) };
   });
   // every step's output must be a prefix of the last one (the course reader checks offsets into ONE output)
   const consistent = r.steps.every(sRaw => out.startsWith(str(rec(sRaw).out)));

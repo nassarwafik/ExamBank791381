@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { extrasOf, sceneOf, type DsMark, type DsObj, type DsStep, type DsTrace, type DsVal } from "./ds";
+import { extrasOf, recText, sceneOf, type DsFrame, type DsMark, type DsObj, type DsStep, type DsTrace, type DsVal } from "./ds";
 import { ChainDrawing, GridDrawing, MapDrawing, Marked, PlaceValueDrawing, QueueDrawing, RowDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
 import { freshOf, motionOf } from "./dsMotion";
 
@@ -43,7 +43,10 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     setState({ at: next, epoch });
     onStep?.(next + 1, total);
   };
-  const scene = sceneOf(step.frames, step.objs, cfg.pointers);
+  // V11: a static field that refers to a structure names it too («Program.items»), as a variable of a method below the running one
+  const sceneFrames: DsFrame[] = step.statics?.length
+    ? [{ name: "static", vars: step.statics.flatMap(t => t.vars.map(([n, v]): [string, DsVal] => [t.name + "." + n, v])) }, ...step.frames] : step.frames;
+  const scene = sceneOf(sceneFrames, step.objs, cfg.pointers);
   const extra = extrasOf(step, cfg.pointers, cfg.digits);   // V9 (rich traces only: a course trace has none of it)
   const diagram = heap && !hidden ? heap(step, prev, new Map(scene.rows.map(r => [r.id, r.marks]))) : null;   // V10
   const rows = diagram ? scene.rows.filter(r => !diagram.drawn.has(r.id)) : scene.rows;
@@ -60,6 +63,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     if (v.t === "v") return v.s;
     if (v.t === "null") return "null";
     if (v.t === "arr") return "{" + v.items.join(", ") + "}";
+    if (v.t === "rec") return recText(v, told);   // V11
     const o: DsObj | undefined = byId.get(v.id);
     if (!o) return "?";
     if (o.k === "stack" || o.k === "queue") return (o.k === "stack" ? "راصّة [" : "دور [") + o.items.join(",") + "]";
@@ -67,6 +71,37 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
     return o.k === "obj" ? o.type + " #" + o.id : "خلية " + o.v;
   };
   const frames = step.frames.map((f, i) => ({ f, i })).reverse();   // the running method on top
+  /** V11: a struct's value as a small box of its fields (a field that changed in this step is lit; a struct inside, a box inside). */
+  const recBox = (v: Extract<DsVal, { t: "rec" }>, old: DsVal | undefined): ReactNode => {
+    const was = old?.t === "rec" && old.type === v.type ? new Map(old.fields) : undefined;
+    return (
+      <span className="lab-rec" dir="ltr">
+        <span className="lab-rec-type">{v.type}</span>
+        {v.fields.map(([n, x]) => {
+          const hot = !!prev && !!was && !same(was.get(n), x);
+          return (
+            <span key={n} className={"lab-rec-field" + (hot ? " is-changed" : "")}>
+              <span className="lab-rec-name">{n}</span>
+              {x.t === "rec" ? recBox(x, was?.get(n)) : <span className="lab-rec-value">{x.t === "ref" ? "→ " + told(x) : told(x)}</span>}
+            </span>
+          );
+        })}
+      </span>
+    );
+  };
+  /** One variable (or static field): its type (V9), name, value, and «تغيّر» when this step changed it. */
+  const varRow = (name: string, v: DsVal, old: DsVal | undefined, type?: string | null) => {
+    const moved = !!prev && !same(old, v);
+    return (
+      <li key={name} className={"learning-trace-var" + (moved ? " is-changed" : "")}>
+        {type && <span className="lab-var-type" dir="ltr">{type}</span>}
+        <span className="learning-trace-name" dir="ltr">{name}</span>
+        {v.t === "rec" ? <span className="learning-trace-box is-rec">{recBox(v, old)}</span>
+          : <span className={"learning-trace-box" + (v.t === "ref" ? " is-ref" : "")} dir={v.t === "ref" ? undefined : "ltr"}>{v.t === "ref" ? "→ " + told(v) : told(v)}</span>}
+        {moved && <span className="learning-trace-tag">تغيّر</span>}
+      </li>
+    );
+  };
   const was = (frame: number, name: string) => (prev?.frames[frame]?.name === step.frames[frame]?.name ? prev?.frames[frame]?.vars.find(p => p[0] === name)?.[1] : undefined);
   const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length + rows.length + maps.length
     + extra.grids.length + extra.texts.length + extra.places.length;
@@ -152,23 +187,22 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
                 <p className="learning-trace-framename"><span dir="ltr">{f.name}</span>{step.frames.length > 1 && i === step.frames.length - 1 ? " — تعمل الآن" : ""}</p>
                 {f.vars.length === 0 ? <p className="learning-trace-none">لا متغيرات</p> : (
                   <ul className="learning-trace-vars">
-                    {f.vars.map(([name, v], j) => {
-                      const old = was(i, name);
-                      const moved = !!prev && !same(old, v);
-                      const type = f.types?.[j];   // V9: the declared type (rich traces only)
-                      return (
-                        <li key={name} className={"learning-trace-var" + (moved ? " is-changed" : "")}>
-                          {type && <span className="lab-var-type" dir="ltr">{type}</span>}
-                          <span className="learning-trace-name" dir="ltr">{name}</span>
-                          <span className={"learning-trace-box" + (v.t === "ref" ? " is-ref" : "")} dir={v.t === "ref" ? undefined : "ltr"}>{v.t === "ref" ? "→ " + told(v) : told(v)}</span>
-                          {moved && <span className="learning-trace-tag">تغيّر</span>}
-                        </li>
-                      );
-                    })}
+                    {f.vars.map(([name, v], j) => varRow(name, v, was(i, name), f.types?.[j]))}
                   </ul>
                 )}
               </div>
             ))}
+            {step.statics?.map(t => {   // V11: the static fields of the writer's types (the visual run only)
+              const before = prev?.statics?.find(x => x.name === t.name);
+              return (
+                <div key={"static:" + t.name} className="learning-trace-frame lab-statics">
+                  <p className="learning-trace-framename"><span dir="ltr">{t.name}</span> — الحقول الثابتة</p>
+                  <ul className="learning-trace-vars">
+                    {t.vars.map(([name, v]) => varRow(name, v, before ? before.vars.find(p => p[0] === name)?.[1] : v))}
+                  </ul>
+                </div>
+              );
+            })}
           </section>}
           {!hidden && !diagram && scene.objects.length > 0 && (
             <section className="learning-trace-heap" aria-label="الكائنات">
