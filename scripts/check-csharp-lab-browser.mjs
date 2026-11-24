@@ -323,6 +323,27 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   }
   check(litX && !counterEarly, "V11: on «q.X = 9» only q's X is lit; Counter's statics never shown before its static constructor printed «init»");
   await shotOf(memory, "lab-teacher-visual-structs-1440");
+  // Visual lab V12 — «العمليات والدوال»: the running methods drawn; Max(a, 5) — x a copy of a; Swap(ref a, ref b) — the caller's very
+  // variables (two solid arrows); a value returned going back to Main
+  const fl = await visual(panel, page, "class Program\n{\n    static int Max(int x, int y)\n    {\n        if (x > y) return x;\n        return y;\n    }\n    static void Swap(ref int a, ref int b)\n    {\n        int t = a;\n        a = b;\n        b = t;\n    }\n    static void Split(int n, out int tens, out int ones)\n    {\n        tens = n / 10;\n        ones = n % 10;\n    }\n    static int Fact(int n)\n    {\n        if (n <= 1) return 1;\n        return n * Fact(n - 1);\n    }\n    static void Main()\n    {\n        int a = 3, b = 7;\n        int m = Max(a, 5);\n        Swap(ref a, ref b);\n        Split(42, out int t, out var o);\n        int f = Fact(3);\n        Console.WriteLine(m + \" \" + a + \" \" + b + \" \" + t + o + \" \" + f);\n    }\n}");
+  const fv = panel.getByTestId("csharp-trace");
+  const flowOf = async () => (await fv.getByRole("region", { name: "الاستدعاءات" }).getByRole("img").getAttribute("aria-label", { timeout: 500 }).catch(() => "")) || "";
+  await fv.getByRole("button", { name: "من البداية" }).click();
+  let sawCopy = "", sawRef = "", sawReturn = "", aliases = 0;
+  for (let k = 0; k < 40 && !(sawCopy && sawRef && sawReturn); k++) {
+    await fv.getByRole("button", { name: "الخطوة التالية" }).click();
+    const f = await flowOf();
+    if (!sawCopy && /Max \(تعمل الآن\)، استُدعيت من السطر 27: Max\(a, 5\): x = 3 \(نسخة من a\)، y = 5 \(نسخة من 5\)/.test(f)) sawCopy = f;
+    if (!sawRef && /Swap \(تعمل الآن\)، استُدعيت من السطر 28: Swap\(ref a, ref b\): a = \d+ \(هو a في Main، ref\)، b = \d+ \(هو b في Main، ref\)/.test(f)) {
+      sawRef = f;
+      aliases = await fv.locator("path.lab-flow-link.is-alias:not(.learning-ds-head)").count();
+      await shotOf(fv.getByRole("region", { name: "الاستدعاءات" }), "lab-teacher-visual-calls-1440");
+    }
+    if (!sawReturn && /Max تُعيد 5 إلى Main\./.test(f)) sawReturn = f;
+  }
+  check(fl.out === "5 7 3 42 6\n" && !!sawCopy, "V12: Max(a, 5) drawn — x a copy of a, y = 5, called from line 27 (" + sawCopy.slice(0, 90) + "…)");
+  check(!!sawRef && aliases === 2, "V12: Swap(ref a, ref b) — each parameter IS Main's variable, two solid arrows (" + aliases + ")");
+  check(!!sawReturn, "V12: on its return, Max gives 5 back to Main");
   // Phase E1 — «ملء الشاشة»: the editor's panel fills the screen (the program, its output and the steps it shows stay); Escape leaves.
   // First, the fix it needed: a panel grown by a long recorded run kept its header under the app's top bar (✕ and the toggle unreachable)
   const headTop = (await panel.locator(".stt-panel-head").boundingBox())?.y ?? -1;

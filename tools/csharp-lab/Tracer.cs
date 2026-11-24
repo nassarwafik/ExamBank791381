@@ -24,6 +24,7 @@ using System.Text.Json.Nodes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 public static partial class Lab
@@ -41,7 +42,8 @@ public static partial class Lab
     /// "quiet"?: names of methods that run without steps of their own, "maxSteps"?: at most TraceMaxSteps,
     /// "inside"?: true = «اكشف الداخل», the book's Stack<T> / Queue<T> recorded as objects with their Node<T> chain,
     /// "rich"?: true = V5 rich types (TraceRuntime.cs header): items that are objects, C#'s collections and arrays as structures
-    /// (V11: the writer's structs as values with fields, and each step's "statics");
+    /// (V11: the writer's structs as values with fields, and each step's "statics"; V12: each frame's "from", and the result's
+    /// "calls": [[line, statementLine, method, [[parameter, value|ref|out|in, argument as written, the caller's variable or null]]]]);
     /// with it the result also carries "pointers": [[array, index]] — every a[i] the writer's program writes (plain names only;
     /// V9: [array, row, column] for a[i, j]) — and "digits": [[variable, base]] — every `v % b` / `v / b` with b 2, 8, 10 or 16 (V9) }.
     /// A step marked by Viz.Pause() carries "pause": true; Viz.Show(title) gives it the writer's title as its note.
@@ -151,6 +153,7 @@ public static partial class Lab
         var withPointers = JsonNode.Parse(result)!.AsObject();
         withPointers["pointers"] = new JsonArray(pointers.Select(p => (JsonNode)new JsonArray(p.Select(x => (JsonNode?)JsonValue.Create(x)).ToArray())).ToArray());
         withPointers["digits"] = new JsonArray(digits!.Select(d => (JsonNode)new JsonArray(d.Item1, d.Item2)).ToArray());
+        withPointers["calls"] = new JsonArray(TraceInstrumenter.CallSites(program, plain.GetSemanticModel(program)).ToArray());   // V12
         return withPointers.ToJsonString();
     }
 
@@ -174,6 +177,50 @@ static class TraceInstrumenter
     }
 
     const string R = "global::__LabTrace";
+
+    /// <summary>
+    /// V12: every call, in the writer's program, of one of the writer's own methods or constructors (the ones that get a frame):
+    /// [line of the call, line of its statement, the frame's name, [[parameter, how it is passed — value | ref | out | in, the
+    /// argument as written, the caller's variable it names (a local or a parameter; out var x included) or null]]]. From Roslyn's
+    /// operations, so named arguments, defaults and conversions are resolved as the compiler resolves them. At most 300 × 10.
+    /// </summary>
+    internal static List<JsonNode> CallSites(SyntaxTree program, SemanticModel model)
+    {
+        var list = new List<JsonNode>();
+        foreach (var node in program.GetRoot().DescendantNodes())
+        {
+            if (list.Count >= 300) break;
+            if (node is not InvocationExpressionSyntax && node is not BaseObjectCreationExpressionSyntax) continue;
+            IOperation? op;
+            try { op = model.GetOperation(node); } catch { continue; }
+            IMethodSymbol target; IEnumerable<IArgumentOperation> args; string name;
+            if (op is IInvocationOperation inv) { target = inv.TargetMethod; args = inv.Arguments; name = target.Name == "__Run" ? "Main" : target.Name; }
+            else if (op is IObjectCreationOperation oc && oc.Constructor != null) { target = oc.Constructor; args = oc.Arguments; name = oc.Constructor.ContainingType.Name; }
+            else continue;
+            if (!target.OriginalDefinition.DeclaringSyntaxReferences.Any(r => r.SyntaxTree == program)) continue;   // the writer's own: they get a frame
+            var parameters = new JsonArray();
+            foreach (var a in args.Where(a => a.Parameter != null).OrderBy(a => a.Parameter!.Ordinal).Take(10))
+            {
+                var kind = a.Parameter!.RefKind switch { RefKind.Ref => "ref", RefKind.Out => "out", RefKind.In => "in", _ => "value" };
+                var text = a.ArgumentKind == ArgumentKind.Explicit && a.Syntax is ArgumentSyntax arg ? Short(arg.Expression.ToString())
+                    : a.ArgumentKind == ArgumentKind.DefaultValue ? "(default)" : "…";
+                var value = a.Value;
+                while (value is IConversionOperation c && c.IsImplicit) value = c.Operand;
+                string? variable = value switch
+                {
+                    ILocalReferenceOperation l => l.Local.Name,
+                    IParameterReferenceOperation p => p.Parameter.Name,
+                    IDeclarationExpressionOperation { Expression: ILocalReferenceOperation dl } => dl.Local.Name,
+                    _ => null,
+                };
+                parameters.Add(new JsonArray(a.Parameter.Name, kind, text, variable == null ? null : JsonValue.Create(variable)));
+            }
+            var statement = node.FirstAncestorOrSelf<StatementSyntax>();
+            list.Add(new JsonArray(LineOf(node), statement == null ? LineOf(node) : LineOf(statement), name, parameters));
+        }
+        return list;
+    }
+    static string Short(string s) { s = string.Join(" ", s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)); return s.Length > 60 ? s.Substring(0, 57) + "..." : s; }
 
     /// <summary>
     /// V11: the writer's types (classes and structs, not generic) with static fields whose statics the recorder may read FROM THE START:

@@ -72,3 +72,14 @@
 .lab-rec-name{ color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
 .lab-rec-value{ font-weight:700; }
 .lab-statics{ border-style:dashed; }
+
+/* V12 (docs/enterprise-csharp-visual-lab-plan.md §22) — «العمليات والدوال»: frames as boxes, how a parameter was passed, the arrows */
+.lab-flow-box{ fill:var(--eb-surface); stroke:var(--eb-border-strong); stroke-width:1.5; }
+.lab-flow-box.is-running{ stroke:var(--eb-primary); stroke-width:2.5; }
+.lab-flow-badge{ font-size:11px; font-weight:700; fill:var(--eb-text-secondary); }
+.lab-flow-badge.is-ref, .lab-flow-badge.is-out, .lab-flow-badge.is-in{ fill:var(--eb-primary-strong); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.lab-flow-link{ fill:none; stroke-width:1.8; }
+.lab-flow-link.is-alias{ stroke:var(--eb-primary); }
+.lab-flow-link.is-copy{ stroke:var(--eb-text-secondary); stroke-dasharray:5 4; }
+.lab-flow-link.is-alias.learning-ds-head{ fill:var(--eb-primary); stroke:none; }
+.lab-flow-link.is-copy.learning-ds-head{ fill:var(--eb-text-secondary); stroke:none; stroke-dasharray:none; }
