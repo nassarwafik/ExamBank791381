@@ -83,3 +83,4 @@
 .lab-flow-link.is-copy{ stroke:var(--eb-text-secondary); stroke-dasharray:5 4; }
 .lab-flow-link.is-alias.learning-ds-head{ fill:var(--eb-primary); stroke:none; }
 .lab-flow-link.is-copy.learning-ds-head{ fill:var(--eb-text-secondary); stroke:none; stroke-dasharray:none; }
+.lab-flow-site{ fill:var(--eb-text); font-size:12px; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }

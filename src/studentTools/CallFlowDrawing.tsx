@@ -11,10 +11,11 @@ const MONO = 8.6, AR = 7.4, PAD = 8, LEFT = 74, HEAD = 24, CAP = 18, ROW = 24, G
 const mono = (s: string) => [...s].length * MONO;
 const ar = (s: string) => [...s].length * AR;
 const BADGE: Record<string, string> = { value: "نسخة", ref: "ref", out: "out", in: "in" };
-// The drawing is left to right (like the code); an Arabic run inside it is isolated (RLI … PDI) and the code run too (LRI … PDI), so
-// «من السطر 28: Swap(ref a, ref b)» reads in its order instead of the browser's bidi reordering of the mixed line.
-const RTL = (s: string) => "\u2067" + s + "\u2069", LTR = (s: string) => "\u2066" + s + "\u2069";
-const caption = (f: FlowFrame) => (f.site ? RTL("من السطر " + f.from + ":") + " " + LTR(f.site) : f.from ? RTL("من السطر " + f.from) : "");
+// The drawing is left to right (like the code). An SVG <text> that MIXES Arabic and code is reordered by the browser's bidi (and
+// Chromium's SVG text ignores the isolate controls), so every Arabic phrase and every code piece is a <text> of its own, placed one
+// after the other: «من السطر 28» then «Swap(ref a, ref b)»; «Swap» then «تعمل الآن».
+const fromText = (f: FlowFrame) => (f.from ? "من السطر " + f.from : "");
+const caption = (f: FlowFrame) => (f.from ? fromText(f) + (f.site ? "  " + f.site : "") : "");   // its width only
 
 /** An arrowhead at (x, y), pointing left (into a box's right side) or right (into its left side). Drawn by hand: no <marker> ids. */
 function Head({ x, y, className, left }: { x: number; y: number; className: string; left?: boolean }) {
@@ -26,7 +27,8 @@ export default function CallFlowDrawing({ flow, names }: { flow: CallFlow; names
   const badgeW = Math.max(0, ...flow.frames.flatMap(f => f.vars.map(v => (v.param ? ar(BADGE[v.param.kind]) + 14 : 0))));
   const nameW = Math.max(24, ...flow.frames.flatMap(f => f.vars.map(v => mono(v.name) + 14)));
   const valW = Math.max(40, ...flow.frames.flatMap(f => f.vars.map(v => mono(v.text) + 18)));
-  const W = Math.max(badgeW + nameW + valW, ...flow.frames.map(f => Math.max(mono(f.name) + (f.running ? ar(" — تعمل الآن") : 0) + 20, ar(caption(f)) + 20)));
+  const W = Math.max(badgeW + nameW + valW, ar("السهم المتّصل: المتغيّر نفسه · السهم المتقطّع: نسخة من القيمة"),
+    ...flow.frames.map(f => Math.max(mono(f.name) + (f.running ? ar("تعمل الآن") + 12 : 0) + 20, ar(fromText(f)) + (f.site ? mono(f.site) + 10 : 0) + 20)));
   const x = PAD + LEFT;
   const boxes = new Map<number, { y: number; h: number; f: FlowFrame }>();
   let y = PAD;
@@ -58,8 +60,10 @@ export default function CallFlowDrawing({ flow, names }: { flow: CallFlow; names
           return (
             <g key={f.index}>
               <rect className={"lab-flow-box" + (f.running ? " is-running" : "")} x={x} y={by} width={W} height={h} rx="6" />
-              <text className="lab-og-title" x={x + 10} y={by + HEAD / 2 + 5}>{f.name}{f.running && <tspan className="lab-og-new">{" — " + RTL("تعمل الآن")}</tspan>}</text>
-              {cap && <text className="learning-ds-tag" x={x + 10} y={by + HEAD + CAP / 2 + 3}>{cap}</text>}
+              <text className="lab-og-title" x={x + 10} y={by + HEAD / 2 + 5}>{f.name}</text>
+              {f.running && <text className="lab-og-new" x={x + 10 + mono(f.name) + 12} y={by + HEAD / 2 + 5}>تعمل الآن</text>}
+              {cap && <text className="learning-ds-tag" x={x + 10} y={by + HEAD + CAP / 2 + 3}>{fromText(f)}</text>}
+              {cap && f.site && <text className="lab-flow-site" x={x + 10 + ar(fromText(f)) + 10} y={by + HEAD + CAP / 2 + 3}>{f.site}</text>}
               {f.vars.length === 0 && <text className="learning-ds-muted" x={x + 10} y={top + ROW / 2 + 4}>لا متغيرات</text>}
               {f.vars.map((v, i) => {
                 const ry = top + i * ROW;
@@ -93,7 +97,7 @@ export default function CallFlowDrawing({ flow, names }: { flow: CallFlow; names
           </g>
         )}
         {flow.hidden > 0 && <text className="learning-ds-muted" x={x} y={y - GAP + PAD + 14}>{"و" + flow.hidden + " استدعاءات أقدم"}</text>}
-        <text className="learning-ds-tag" x={R} y={height - 8} textAnchor="end" direction="rtl">متّصل: المتغيّر نفسه (ref / out) · متقطّع: نسخة من القيمة</text>
+        <text className="learning-ds-tag" x={x} y={height - 8}>السهم المتّصل: المتغيّر نفسه · السهم المتقطّع: نسخة من القيمة</text>
       </svg>
     </div>
   );
