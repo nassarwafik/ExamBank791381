@@ -10,3 +10,9 @@
 .alab-notation { white-space: nowrap; color: var(--eb-text-secondary); font-family: var(--eb-font-mono, ui-monospace, monospace); }
 .alab-rows td { padding: var(--eb-space-1); vertical-align: middle; }
 .alab-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* AUTO-A5 — «آلاتي» and «الخوارزميات خطوة خطوة». */
+.alab-shelf { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-1); }
+.alab-shelf li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
+.alab-algos { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
+.alab-result { display: flex; flex-direction: column; gap: var(--eb-space-2); padding: var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); }
+.alab-good { margin: 0; font-weight: 600; color: var(--eb-success-tx); }
