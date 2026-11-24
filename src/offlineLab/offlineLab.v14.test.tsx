@@ -92,6 +92,18 @@ describe("V14 — the page", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("تعذّر التنزيل. تحقّق من الاتصال وحاول مرة أخرى.");
     expect(screen.getByRole("button", { name: /^تنزيل للعمل بلا إنترنت/ })).toBeTruthy();
   });
+  it("going offline after the deployed pack was read: the download is no longer offered (it could not finish)", async () => {
+    desktop(true); deployed(PACK);
+    const w = fakeWorker();
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    render(<OfflineLabPage />);
+    await w.reply({ state: "none" });
+    await screen.findByRole("button", { name: /^تنزيل للعمل بلا إنترنت/ });
+    onLine.mockReturnValue(false);
+    act(() => { window.dispatchEvent(new Event("offline")); });
+    expect(screen.getByText(/^أنت الآن بلا اتصال/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /تنزيل/ })).toBeNull();
+  });
   it("on a phone or tablet: no lab (desktop only, as every use of the lab); a build without a lab offers no download", async () => {
     desktop(false); deployed({ available: false, version: "", bytes: 0, files: [] });
     const w = fakeWorker();
