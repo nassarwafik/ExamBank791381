@@ -295,7 +295,9 @@ export function parseWords(text: string): string[] {
   return out;
 }
 
-export type BatchRow = { word: string; verdict: Verdict | null; bad?: string; tooLong?: boolean };
+/** For a Turing machine that halted: the tape at the halt (its written part, ├ and the blanks around it left out) and, by the book's
+ *  convention for «حساب دوال» («الجواب يظهر على الشريط بين علامتي $»), the answer between the first two $ when there are two. */
+export type BatchRow = { word: string; verdict: Verdict | null; bad?: string; tooLong?: boolean; tape?: string; answer?: string };
 
 /** Each word's verdict on the machine (the runners of the course: the same as a step-by-step run), or why it could not run. */
 export function runBatch(m: Machine, words: readonly string[]): BatchRow[] {
@@ -303,8 +305,20 @@ export function runBatch(m: Machine, words: readonly string[]): BatchRow[] {
     if ([...word].length > LIMITS.word) return { word, verdict: null, tooLong: true };
     const split = splitWord(m, word);
     if (!split.ok) return { word, verdict: null, bad: split.bad };
-    return { word, verdict: verdictOf(m, split.symbols) };
+    if (m.kind !== "TM") return { word, verdict: verdictOf(m, split.symbols) };
+    const halt = tmHalt(m as TmMachine, split.symbols);
+    if (halt.verdict === "nohalt") return { word, verdict: halt.verdict };
+    const answer = answerOnTape(halt.tape);
+    return { word, verdict: halt.verdict, tape: halt.tape, ...(answer !== null ? { answer } : {}) };
   });
+}
+
+/** The answer of «حساب دوال»: what lies between the first two $ on the tape (the book's convention), or null without two $. */
+export function answerOnTape(tape: string): string | null {
+  const cells = [...tape];
+  const first = cells.indexOf("$");
+  const second = first < 0 ? -1 : cells.indexOf("$", first + 1);
+  return second < 0 ? null : cells.slice(first + 1, second).join("");
 }
 
 /**
@@ -344,20 +358,32 @@ export function verdictOf(m: Machine, symbols: readonly string[]): Verdict {
     }
     return m.accept.includes(q) ? "accept" : "reject";
   }
-  const tm = m as TmMachine;
+  return tmHalt(m as TmMachine, symbols).verdict;
+}
+
+/** A Turing machine run to its halt (or the runners' step limit): the verdict and the written part of the tape, ├ and outer blanks left out. */
+export function tmHalt(tm: TmMachine, symbols: readonly string[]): { verdict: Verdict; tape: string } {
   const tape = new Map<number, string>();
   symbols.forEach((s, i) => tape.set(i, s));
   if (tm.leftEnd !== undefined) tape.set(-1, tm.leftEnd);
   let head = 0, q = tm.start;
+  const written = () => {
+    const at = [...tape.keys()].filter(k => k >= 0 && tape.get(k) !== tm.blank);
+    if (!at.length) return "";
+    const lo = Math.min(...at), hi = Math.max(...at);
+    let out = "";
+    for (let p = lo; p <= hi; p++) out += tape.get(p) ?? tm.blank;
+    return out;
+  };
   for (let n = 0; n < LIMITS.tmSteps; n++) {
     const under = tape.get(head) ?? tm.blank;
     const t = tm.transitions.find(x => x.from === q && x.read === under);
-    if (!t) return tm.accept.includes(q) ? "accept" : "reject";
+    if (!t) return { verdict: tm.accept.includes(q) ? "accept" : "reject", tape: written() };
     tape.set(head, t.write);
     head += t.move === "R" ? 1 : t.move === "L" ? -1 : 0;
     q = t.to;
   }
-  return "nohalt";
+  return { verdict: "nohalt", tape: "" };
 }
 
 /** The number of words of length 0 … n over k symbols. */

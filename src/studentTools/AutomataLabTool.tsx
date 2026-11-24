@@ -190,18 +190,24 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-b"}>
         <h3 id={ids + "-b"} className="learning-autodesign-heading">٦. كلمات كثيرة معًا</h3>
         <label className="stt-label" htmlFor={ids + "-batch"}>الكلمات (كلمة في كل سطر، أو بينها مسافات أو فواصل؛ ε للكلمة الفارغة)</label>
+        {draft.kind === "TM" && <p className="stt-hint">لآلة تورنغ يظهر أيضًا الشريط عند التوقف، والجواب بين علامتي $ إن وُجدتا (كما في «حساب دوال»).</p>}
         <textarea id={ids + "-batch"} className="stt-input alab-batch" dir="ltr" rows={3} value={batchText} spellCheck={false} onChange={e => setBatchText(e.target.value)} />
         <button type="button" className="stt-btn is-primary" disabled={!machine} onClick={() => machine && setBatch({ stamp, value: runBatch(machine, parseWords(batchText)) })}>شغّل الكل</button>
         {batchNow && (batchNow.length === 0 ? <p className="stt-hint" role="status">اكتب كلمة واحدة على الأقل.</p> : (
           <div className="learning-autodesign-tablewrap" role="region" aria-label="نتائج الكلمات" tabIndex={0}>
             <table className="learning-autodesign-table" role="status">
-              <thead><tr><th scope="col">الكلمة</th><th scope="col">النتيجة</th></tr></thead>
+              <thead><tr><th scope="col">الكلمة</th><th scope="col">النتيجة</th>
+                {draft.kind === "TM" && <><th scope="col">الشريط عند التوقف</th>{batchNow.some(r => r.answer !== undefined) && <th scope="col">الجواب (بين $)</th>}</>}</tr></thead>
               <tbody>
                 {batchNow.map(r => (
                   <tr key={r.word}>
                     <td dir="ltr">{shown(r.word)}</td>
                     <td>{r.tooLong ? "طويلة: 40 رمزًا على الأكثر" : r.bad !== undefined ? "الرمز " + r.bad + " ليس في الأبجدية"
                       : r.verdict === "accept" ? "✓ تُقبل" : r.verdict === "nohalt" ? "لم تتوقف (1000 خطوة)" : "✗ تُرفض"}</td>
+                    {draft.kind === "TM" && <>
+                      <td dir="ltr" className="alab-notation">{r.tape === undefined ? "—" : r.tape === "" ? BLANK : r.tape}</td>
+                      {batchNow.some(x => x.answer !== undefined) && <td dir="ltr" className="alab-notation">{r.answer === undefined ? "—" : r.answer === "" ? "ε" : r.answer}</td>}
+                    </>}
                   </tr>
                 ))}
               </tbody>

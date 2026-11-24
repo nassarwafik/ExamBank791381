@@ -9,21 +9,22 @@ import { describe, it, expect } from "vitest";
 import { readAutomatonConfig, runAutomaton, splitWord, type Machine } from "../learning/activities/automaton";
 import {
   addState, addTrapState, checkDraft, draftFromMachine, initialDraft, languageMaxLength, languageUpTo, missingArrows, nondeterminism,
-  parseAlphabet, parseWords, removeState, runBatch, runWord, setAlphabet, unreachableStates, verdictOf, cellKey, BOTTOM, LEFT_END, BLANK,
+  parseAlphabet, parseWords, removeState, runBatch, answerOnTape, runWord, setAlphabet, unreachableStates, verdictOf, cellKey, BOTTOM, LEFT_END, BLANK,
   type LabDraft,
 } from "./automataLab";
 const MODULES = import.meta.glob("../learning/content/899271/modules/*.ts", { eager: true }) as Record<string, { default: unknown }>;
 
 type Block = { activity?: { simulationType?: string; config?: unknown }; [k: string]: unknown };
-function courseMachines(): { id: string; config: Record<string, unknown>; machine: Machine; words: string[] }[] {
-  const out: { id: string; config: Record<string, unknown>; machine: Machine; words: string[] }[] = [];
+type CourseMachine = { id: string; title: string; config: Record<string, unknown>; machine: Machine; words: string[] };
+function courseMachines(): CourseMachine[] {
+  const out: CourseMachine[] = [];
   const walk = (node: unknown, id: string) => {
     if (Array.isArray(node)) { node.forEach((n, i) => walk(n, id + "/" + i)); return; }
     if (!node || typeof node !== "object") return;
     const o = node as Block & Record<string, unknown>;
     if (o.simulationType === "automaton-trace" && o.config && typeof o.config === "object") {
       const read = readAutomatonConfig(o.config);
-      if (read) out.push({ id, config: o.config as Record<string, unknown>, machine: read.machine, words: read.words });
+      if (read) out.push({ id, title: typeof o.title === "string" ? o.title : "", config: o.config as Record<string, unknown>, machine: read.machine, words: read.words });
     }
     for (const [k, v] of Object.entries(o)) if (v && typeof v === "object") walk(v, id + "." + k);
   };
@@ -75,6 +76,22 @@ describe("A4 — the book's machines in the lab", () => {
       }
     }
     expect(compared).toBeGreaterThan(2000);
+  });
+  it("«حساب دوال»: the book's machines f(x) = x + 2 and X + Y give the answer between the two $ (unary)", () => {
+    const find = (title: string) => {
+      const found = machines.find(m => m.title === title);
+      if (!found) throw new Error("no machine " + title);
+      return built(draftFromMachine(found.machine));
+    };
+    const plus2 = find("آلة f(x) = x + 2"), sum = find("آلة X + Y");
+    for (let x = 0; x <= 5; x++) {
+      const [r] = runBatch(plus2, ["1".repeat(x)]);
+      expect([r.verdict, r.answer], "x = " + x).toEqual(["accept", "1".repeat(x + 2)]);
+    }
+    for (const [x, y] of [[0, 0], [1, 0], [0, 3], [2, 4], [5, 1]]) {
+      const [r] = runBatch(sum, ["1".repeat(x) + "#" + "1".repeat(y)]);
+      expect([r.verdict, r.answer], x + " + " + y).toEqual(["accept", "1".repeat(x + y)]);
+    }
   });
 });
 
@@ -128,6 +145,10 @@ describe("A4 — the draft becomes the machine, or says why not", () => {
     expect(verdictOf(forever, ["a"])).toBe("nohalt");
     const lang = languageUpTo(forever, 2);
     expect([lang.accepted, lang.nohalt]).toEqual([[], ["", "a", "aa"]]);
+    // the tape at the halt: its written part (├ and the blanks around it left out); no tape for a machine that did not halt
+    expect(runBatch(built(even), ["aa", ""])).toEqual([{ word: "aa", verdict: "accept", tape: "aa" }, { word: "", verdict: "accept", tape: "" }]);
+    expect(runBatch(forever, ["a"])).toEqual([{ word: "a", verdict: "nohalt" }]);
+    expect([answerOnTape("1$11$1"), answerOnTape("$$"), answerOnTape("11$1")]).toEqual(["11", "", null]);
   });
   it("the alphabet as typed: «a, b», «ab», «a b»; a reserved mark, a long symbol or an empty one refused", () => {
     expect(["a, b", "ab", "a b", " a ,b,a "].map(t => parseAlphabet(t))).toEqual(Array(4).fill({ ok: true, alphabet: ["a", "b"] }));

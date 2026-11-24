@@ -127,11 +127,13 @@ describe("A4 — the tool", () => {
     fireEvent.click(screen.getByRole("radio", { name: "آلة تورنغ" }));
     fireEvent.click(screen.getByRole("button", { name: /^افتح مثالًا: كلمات من a طولها زوجي/ }));
     expect(within(section(/الانتقالات/)).getAllByText(/^(a\/a,R|∆\/∆,S)$/).map(e => e.textContent)).toEqual(["a/a,R", "a/a,R", "∆/∆,S"]);
-    expect(runAll("ε a aa")).toEqual(["ε✓ تُقبل", "a✗ تُرفض", "aa✓ تُقبل"]);
+    // a Turing machine's rows add the tape at the halt (∆ for an empty tape); no $ on any tape → no answer column
+    expect(runAll("ε a aa")).toEqual(["ε✓ تُقبل∆", "a✗ تُرفضa", "aa✓ تُقبلaa"]);
+    expect(within(section(/كلمات كثيرة/)).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["الكلمة", "النتيجة", "الشريط عند التوقف"]);
     // the blank row now moves right and stays in q0: on the blank the machine runs forever
     fireEvent.change(screen.getByLabelText("الانتقال 3: الحركة"), { target: { value: "R" } });
     fireEvent.change(screen.getByLabelText("الانتقال 3: إلى"), { target: { value: "q0" } });
-    expect(runAll("aa")).toEqual(["aaلم تتوقف (1000 خطوة)"]);
+    expect(runAll("aa")).toEqual(["aaلم تتوقف (1000 خطوة)—"]);
   });
   it("one word step by step with the book's own player: the verdict in words at the end", () => {
     render(<AutomataLabTool config={ALL} />);
