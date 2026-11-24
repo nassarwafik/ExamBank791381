@@ -131,6 +131,10 @@ export default function CSharpEditorTool({ runner, full = false }: Props) {
       ) : canRun ? (
         <>
           {onDevice && <p className="stt-hint" data-testid="csharp-on-device">يعمل على جهازك: بلا مشغّل وبلا تكلفة. أول تشغيل يحمّل المترجم مرة واحدة (نحو 10 ميغابايت)، ثم يبقى محفوظًا في المتصفح.</p>}
+          {/* V14 (docs/enterprise-csharp-visual-lab-plan.md §24): the same lab on a page of its own, which can work offline */}
+          {onDevice && typeof location !== "undefined" && location.pathname !== "/lab.html" && (
+            <p className="stt-hint"><a href="/lab.html" target="_blank" rel="noopener" data-testid="csharp-offline-lab">مختبر C# في صفحة مستقلة (يعمل بلا إنترنت بعد تنزيله)</a></p>
+          )}
           <label className="stt-cs-field">
             <span>المدخلات <small>(كل قيمة في سطر، بترتيب قراءتها بـ <bdi dir="ltr">Console.ReadLine</bdi>)</small></span>
             <textarea className="stt-cs-input" dir="ltr" lang="en" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />

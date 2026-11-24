@@ -172,7 +172,29 @@ describe("20G AI composer — modes B–E on CERTIFIED exams (private keys prese
     expect(typeof allQs(a.exam)[0].text).toBe("string");
     const fs = require_("node:fs"), path = require_("node:path");
     const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : /\.tsx?$/.test(e.name) && !/\.test\./.test(e.name) ? [path.join(d, e.name)] : []);
-    const sinks = walk(path.resolve(__dirname, "../../../src")).filter(f => /dangerouslySetInnerHTML\s*=|\.innerHTML\s*=|srcdoc\s*=/.test(fs.readFileSync(f, "utf8").replace(/\/\/.*$/gm, "")));
-    expect(sinks).toEqual([]);
+    const SRC = path.resolve(__dirname, "../../../src");
+    const code = f => fs.readFileSync(f, "utf8").replace(/\/\/.*$/gm, "");
+    const SINK = /dangerouslySetInnerHTML\s*=|\.innerHTML\s*=|srcdoc\s*=/g;
+    const files = walk(SRC);
+    const sinks = files.filter(f => (code(f).match(SINK) || []).length > 0);
+    // The ONE bounded exception (owner decision 2026-11-24, docs/enterprise-csharp-visual-lab-plan.md §24): the offline C# lab's
+    // isolated frame (sandbox="allow-scripts") is written from text, because a frame loaded from a URL cannot open offline. Its text is
+    // never data: only the lab's own built-in script (tools/csharp-lab/wwwroot/main.js, pinned by its hash in lab.html's policy).
+    // Proven here: exactly that one sink, in that one file, writing only `inlineScript`; `inlineScript` set only by inlineLabFrame (which
+    // refuses a closing script tag); inlineLabFrame called only by the lab page, with main.js imported raw. Any other sink still fails.
+    const LAB = path.join(SRC, "studentTools", "deviceCSharpLab.ts");
+    expect(sinks).toEqual([LAB]);
+    const lab = code(LAB);
+    expect(lab.match(SINK)).toEqual(["srcdoc ="]);
+    expect(lab).toContain(`frame.srcdoc = '<!doctype html><meta charset="utf-8"><title>C# lab</title><script type="module">' + inlineScript + "</script>";`);
+    expect(lab.match(/\binlineScript\s*=(?!=)\s*\w+/g)).toEqual(["inlineScript = script", "inlineScript = null"]);
+    expect(lab).toMatch(/export function inlineLabFrame\(script: string\): void \{\n\s+if \(\/<\\\/script\/i\.test\(script\)\) throw new Error\([^)]*\);\n\s+inlineScript = script;\n\}/);
+    expect(lab).toContain(`inlineScript = null;`);
+    const callers = files.filter(f => f !== LAB && /\binlineLabFrame\s*\(/.test(code(f)));
+    expect(callers).toEqual([path.join(SRC, "offlineLab", "main.tsx")]);
+    const caller = code(callers[0]);
+    expect(caller).toMatch(/^import (\w+) from "\.\.\/\.\.\/tools\/csharp-lab\/wwwroot\/main\.js\?raw";$/m);
+    const raw = /^import (\w+) from "\.\.\/\.\.\/tools\/csharp-lab\/wwwroot\/main\.js\?raw";$/m.exec(caller)[1];
+    expect(caller.match(/\binlineLabFrame\s*\([^)]*\)/g)).toEqual(["inlineLabFrame(" + raw + ")"]);
   });
 });

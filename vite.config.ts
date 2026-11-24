@@ -4,11 +4,13 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import { contentSecurityPolicyPlugin } from './scripts/content-security-policy.ts'
+import { offlineLabPackPlugin } from './scripts/build-offline-lab-pack.mjs'
 
 // https://vite.dev/config/
 export default defineConfig({
   // D2 — the built index.html carries the application's Content-Security-Policy (scripts/content-security-policy.ts).
-  plugins: [react(), contentSecurityPolicyPlugin()],
+  // Visual lab V14 — after the build, the offline lab's pack list (dist/offline-lab.json; scripts/build-offline-lab-pack.mjs).
+  plugins: [react(), contentSecurityPolicyPlugin(), offlineLabPackPlugin()],
   // Phase L.6a — in the deployed app a learning module body comes ONLY from the API (src/learning/content/moduleBodySource.ts →
   // moduleBodySource.server.ts). Under Vitest that one module resolves to the authored-content loader instead, so suites that read
   // the real book need no server; the API transport is tested on its own. Never applies to `vite build`.
@@ -26,7 +28,11 @@ export default defineConfig({
     environmentOptions: { happyDOM: { settings: { enableIframePageLoading: true } } },
   },
   build: {
+    // Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — a second page, the offline C# lab (lab.html). The manifest lets
+    // the pack plugin (scripts/build-offline-lab-pack.mjs) list exactly the files that page needs (it removes dist/.vite afterwards).
+    manifest: true,
     rollupOptions: {
+      input: { index: fileURLToPath(new URL('./index.html', import.meta.url)), lab: fileURLToPath(new URL('./lab.html', import.meta.url)) },
       // Content hashes in emitted file names use base-36 (0-9a-z, 8 characters ≈ 41 bits) instead of base-64. The initial bundle's
       // lazy-import tables carry ~250 hashed names; base-64 ones are near-random bytes that gzip cannot shrink and that re-roll whenever
       // a lazy chunk changes, which moved the measured initial graph by ±15 bytes around a budget it met by 8. Code is unchanged.

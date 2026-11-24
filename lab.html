@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/pwa/favicon-32.png?v=tadris1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>مختبر C# — Tadris+</title>
+    <!-- Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — the offline C# lab: the learner's own programs on their own
+         computer, with «تشغيل مرئي». No sign-in, no request to the API, no book content. Its policy (scripts/content-security-policy.ts)
+         adds 'wasm-unsafe-eval', blob: and the lab frame's hash to the app's. The dark mode the viewer chose, before the first paint. -->
+    <script>try{if(localStorage.getItem("examBankTheme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#031c40" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/offlineLab/main.tsx"></script>
+  </body>
+</html>

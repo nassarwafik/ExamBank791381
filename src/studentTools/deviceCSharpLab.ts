@@ -36,12 +36,24 @@ const OUTPUT_BYTES = 16 * 1024;
 export const LAB_FILES = "/csharp-lab/_framework/";
 const FILE_NAME = /^[A-Za-z0-9._-]{1,128}$/;
 
+/**
+ * Visual lab V14 (docs/enterprise-csharp-visual-lab-plan.md §24) — the offline lab page (/lab.html) writes the lab's frame FROM TEXT
+ * (`srcdoc`: tools/csharp-lab/wwwroot/main.js, byte for byte, which that page's policy allows by its hash): a frame loaded from a URL
+ * never reaches the service worker, so it could not start offline. Same sandbox (allow-scripts only: an opaque origin). In that mode
+ * the frame also asks for the lab's worker.js (its other modules are runtime files). Never used by the app's own pages.
+ */
+let inlineScript: string | null = null;
+export function inlineLabFrame(script: string): void {
+  if (/<\/script/i.test(script)) throw new Error("the lab frame's script cannot be written inline");
+  inlineScript = script;
+}
+
 /** A runtime file the lab asked for, from this page's cache; anything else (or any failure) is a refusal the lab falls back from. */
 async function answerFetch(frame: HTMLIFrameElement, id: string, name: unknown): Promise<void> {
   const reply = (msg: Record<string, unknown>, transfer?: Transferable[]) => frame.contentWindow?.postMessage(msg, "*", transfer);
   if (typeof name !== "string" || !FILE_NAME.test(name) || name.startsWith(".")) { reply({ type: "fetched", id, error: true }); return; }
   try {
-    const res = await fetch(LAB_FILES + name);
+    const res = await fetch(inlineScript !== null && name === "worker.js" ? "/csharp-lab/worker.js" : LAB_FILES + name);
     if (!res.ok) throw new Error(String(res.status));
     const buffer = await res.arrayBuffer();
     reply({ type: "fetched", id, buffer }, [buffer]);
@@ -61,7 +73,8 @@ const unavailable = () => new CSharpToolRunError("LAB_UNAVAILABLE", "تعذّر 
 function ensureLab(): Lab {
   if (lab) return lab;
   const frame = document.createElement("iframe");
-  frame.src = LAB_URL;
+  if (inlineScript !== null) frame.srcdoc = '<!doctype html><meta charset="utf-8"><title>C# lab</title><script type="module">' + inlineScript + "</script>";
+  else frame.src = LAB_URL;
   frame.setAttribute("sandbox", "allow-scripts");
   frame.setAttribute("aria-hidden", "true");
   frame.tabIndex = -1;
@@ -180,8 +193,20 @@ export async function viaRunner(labResult: CodeExecutionResult, runner: () => Pr
   catch (e) { if (signal?.aborted || (e instanceof CSharpToolRunError && e.code === "ABORTED")) throw e; return labResult; }
 }
 
+/** V14 — the offline lab page's runner: the learner's own program on this device, no book classes (no request at all), and the
+ *  visual run. A program needing a library the lab leaves out is refused by the lab (LAB0001): offline there is no Runner to ask. */
+export function plainDeviceRunner(): CSharpToolRunner {
+  return {
+    where: "device",
+    available: async () => true,
+    run: (source, stdin, signal) => deviceCSharpRun(source, stdin, "", signal),
+    trace: (source, stdin, signal, options) => deviceCSharpTrace(source, stdin, "", signal, options),
+  };
+}
+
 /** Test seam: forget the page's lab (unit tests mount and unmount many readers). */
 export function resetDeviceLabForTests(): void {
   lab?.frame.remove();
   lab = null;
+  inlineScript = null;
 }

@@ -100,12 +100,16 @@ describe("service worker — installation only, never stale, never private data"
     expect(err.responded!.status).toBe(500);
   });
 
-  it("no sync, message or badge handling; never subscribes or asks permission; no tokens in the worker", () => {
+  it("no sync or badge handling; never subscribes or asks permission; no tokens in the worker; one cache write: the lab pack", () => {
     const w = loadWorker();
-    // Phase 6B adds ONLY push → notification and its click (tested in serviceWorker.6b.test.ts).
-    expect(Object.keys(w.handlers).sort()).toEqual(["activate", "fetch", "install", "notificationclick", "push"]);
+    // Phase 6B adds ONLY push → notification and its click (tested in serviceWorker.6b.test.ts). Visual lab V14 (owner decision
+    // 2026-11-24) adds ONLY the `lab-pack` message (the offline C# lab the learner asks to store; serviceWorker.v14.test.ts) and its
+    // ONE cache write, inside installPack.
+    expect(Object.keys(w.handlers).sort()).toEqual(["activate", "fetch", "install", "message", "notificationclick", "push"]);
     expect(SW_SOURCE).not.toMatch(/pushManager|requestPermission|new Notification\(|setAppBadge|examBankBuilderToken|Authorization|localStorage|sessionStorage|indexedDB/);
-    expect(SW_SOURCE).not.toMatch(/cache\.put|cache\.addAll|importScripts/);
+    expect(SW_SOURCE).not.toMatch(/cache\.addAll|importScripts/);
+    expect(SW_SOURCE.match(/cache\.put\(/g)).toHaveLength(1);
+    expect(SW_SOURCE.slice(SW_SOURCE.indexOf("async function installPack"), SW_SOURCE.indexOf("async function packStatus"))).toContain("cache.put(");
   });
 });
 
