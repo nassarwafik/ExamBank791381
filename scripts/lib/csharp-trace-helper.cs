@@ -3,7 +3,8 @@
 // Tr.SL(line, note, name, value, …) records the state AFTER the display line `line` ran: the call-stack frames with their
 // variables, the objects they reach (fields by reflection) and the output so far. Values are written as C# prints them. A name that
 // is not a plain identifier («b > max», «12 % i») is an expression evaluated for THIS step only (shown, never kept as a variable);
-// Tr.Drop(name) removes a variable whose scope ended (a loop counter after its loop).
+// Tr.Drop(name) removes a variable whose scope ended (a loop counter after its loop). Tr.Up(name, value) sets a variable of the CALLER's
+// frame (the one under the running method): a ref / out parameter IS the caller's variable, so writing it changes the caller's box too.
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
@@ -19,6 +20,12 @@ public static class Tr
     public static void Enter(string name) { frames.Add(new KeyValuePair<string, List<KeyValuePair<string, object>>>(name, new List<KeyValuePair<string, object>>())); }
     public static void Leave() { frames.RemoveAt(frames.Count - 1); }
     public static void Drop(string name) { frames[frames.Count - 1].Value.RemoveAll(p => p.Key == name); }
+    public static void Up(string name, object value)
+    {
+        var vars = frames[frames.Count - 2].Value;
+        int at = vars.FindIndex(p => p.Key == name);
+        if (at >= 0) vars[at] = new KeyValuePair<string, object>(name, value); else vars.Add(new KeyValuePair<string, object>(name, value));
+    }
     public static void SL(int line, string note, params object[] kv)
     {
         var vars = frames[frames.Count - 1].Value;

@@ -12,6 +12,8 @@ on:
       - "scripts/ds-course/**"
       - "scripts/build-ds-course.mjs"
       - "api/src/data/course-libraries/**"
+      # Visual lab V9b: the 22 C# traces of «أسس علم الحاسوب» are proven against the recorder (golden.mjs) — an edit to them re-proves
+      - "api/src/data/learning-content/899371/**"
       - "api/src/functions/student-tool-run.js"
       - "src/studentTools/**"
       - "src/learning/reader/LearningReader.tsx"
