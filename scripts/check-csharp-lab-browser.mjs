@@ -298,6 +298,17 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   const lit = await ov.locator(".lab-og-row.is-changed + .lab-og-key").allTextContents();
   check(litAge && lit.join() === "Age", "V10: on «people[1].Age = 23» the Student's Age is lit, and only it (" + lit.join() + ")");
   await shotOf(ov.getByRole("region", { name: "الكائنات" }), "lab-teacher-visual-objects-1440");
+  // Visual lab V13 — the layout: no two boxes overlap; «حفظ صورة»: a real PNG (signature, twice the drawing's width) named by the step
+  const boxRects = await ov.locator("rect.lab-og-box").evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; }));
+  const overlap = boxRects.some((a, i) => boxRects.some((b, j) => j > i && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]));
+  check(boxRects.length >= 5 && !overlap, "V13: the object diagram's " + boxRects.length + " boxes never overlap");
+  const svgW = await ov.getByRole("region", { name: "الكائنات" }).locator("svg").evaluate(s => s.viewBox.baseVal.width);
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 20000 }), ov.getByRole("region", { name: "الكائنات" }).getByRole("button", { name: "حفظ صورة" }).click()]);
+  const png = fs.readFileSync(await dl.path());
+  const pngW = png.length > 24 ? png.readUInt32BE(16) : 0;
+  check(/^objects-step-\d+\.png$/.test(dl.suggestedFilename()) && png.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) && pngW === Math.round(svgW * 2) && png.length > 4000,
+    "V13: «حفظ صورة» saves " + dl.suggestedFilename() + " — a PNG " + pngW + " px wide (twice the drawing), " + png.length + " bytes");
+  if (process.env.SHOT_DIR) fs.writeFileSync(path.join(process.env.SHOT_DIR, "lab-teacher-saved-objects.png"), png);
   const cyc = await visual(panel, page, "class Pal { public string Name; public Pal Other; public Pal(string n) { Name = n; } }\nclass Program\n{\n    static void Main()\n    {\n        Pal a = new Pal(\"A\");\n        Pal b = new Pal(\"B\");\n        a.Other = b;\n        b.Other = a;\n        Console.WriteLine(a.Other.Other.Name);\n    }\n}");
   const cycDiagram = await diagramOf();
   check(/سُجّل التنفيذ خطوة خطوة/.test(cyc.status) && cyc.out === "A\n" && /Pal #(\d+): Name = "A"، Other → Pal #(\d+)\. Pal #\2: Name = "B"، Other → Pal #\1\./.test(cycDiagram),

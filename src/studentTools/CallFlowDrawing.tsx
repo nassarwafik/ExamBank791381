@@ -1,4 +1,5 @@
 import { flowSentence, type CallFlow, type FlowFrame } from "./callFlow";
+import SaveDrawing from "./SaveDrawing";
 
 /**
  * Visual lab V12 (docs/enterprise-csharp-visual-lab-plan.md §22) — the call flow (callFlow.ts) drawn: one box per running method, the
@@ -23,7 +24,7 @@ function Head({ x, y, className, left }: { x: number; y: number; className: stri
   return <path className={className + " learning-ds-head"} d={d} />;
 }
 
-export default function CallFlowDrawing({ flow, names }: { flow: CallFlow; names: (i: number) => string }) {
+export default function CallFlowDrawing({ flow, names, fileName = "calls" }: { flow: CallFlow; names: (i: number) => string; fileName?: string }) {
   const badgeW = Math.max(0, ...flow.frames.flatMap(f => f.vars.map(v => (v.param ? ar(BADGE[v.param.kind]) + 14 : 0))));
   const nameW = Math.max(24, ...flow.frames.flatMap(f => f.vars.map(v => mono(v.name) + 14)));
   const valW = Math.max(40, ...flow.frames.flatMap(f => f.vars.map(v => mono(v.text) + 18)));
@@ -51,6 +52,8 @@ export default function CallFlowDrawing({ flow, names }: { flow: CallFlow; names
   const ret = flow.returning && boxes.get(flow.returning.from) && boxes.get(flow.returning.to)
     ? { s: boxes.get(flow.returning.from)!.y + HEAD / 2, t: boxes.get(flow.returning.to)!.y + HEAD / 2, value: flow.returning.value } : null;
   return (
+    <div className="lab-drawing">
+    <SaveDrawing fileName={fileName} />
     <div className="learning-ds-canvas lab-flow" dir="ltr">
       <svg className="learning-ds-svg" viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={{ minWidth: Math.round(width * 0.72) }}
         role="img" aria-label={flowSentence(flow, names)}>
@@ -99,6 +102,7 @@ export default function CallFlowDrawing({ flow, names }: { flow: CallFlow; names
         {flow.hidden > 0 && <text className="learning-ds-muted" x={x} y={y - GAP + PAD + 14}>{"و" + flow.hidden + " استدعاءات أقدم"}</text>}
         <text className="learning-ds-tag" x={x} y={height - 8}>السهم المتّصل: المتغيّر نفسه · السهم المتقطّع: نسخة من القيمة</text>
       </svg>
+    </div>
     </div>
   );
 }

@@ -1,16 +1,18 @@
 import { graphSentence, type OgGraph, type OgNode } from "./objectGraph";
+import { layoutObjects, OL } from "./objectLayout";
+import SaveDrawing from "./SaveDrawing";
 
 /**
  * Visual lab V10 (docs/enterprise-csharp-visual-lab-plan.md §20) — the object diagram of one step (objectGraph.ts): the variables
  * on the left, then each object, array or Dictionary as a box of rows (fields / cells / keys). A row that refers to another box has
  * a dot and an ARROW to that box; a row that changed in this step is lit, a box that `new` just made says «جديد». One SVG with
  * `role="img"` and the whole diagram in words. Left to right like the code. No timers, no state.
+ * V13 (§23): the boxes are placed by objectLayout.ts (each level with the rows that refer to it, the variables level with their box),
+ * and «حفظ صورة» saves the drawing as a picture (SaveDrawing).
  */
 const MONO = 8.7;   // the bold monospace of the values at 14px (a little wider than the plain drawings' 8.2)
 const textW = (s: string) => [...s].length * MONO;
-const HEAD = 26, ROW = 24, GAP_X = 72, GAP_Y = 22, CHIP = 24, PAD = 8;
-
-type Box = { n: OgNode; x: number; y: number; w: number; keyW: number; h: number };
+const { HEAD, ROW, CHIP, PAD } = OL;
 const rowsH = (n: OgNode) => Math.max(1, n.rows.length + (n.more ? 1 : 0)) * ROW;
 
 function measure(n: OgNode): { w: number; keyW: number } {
@@ -45,27 +47,20 @@ function Link({ sx, sy, right = sx, to, className }: { sx: number; sy: number; r
   );
 }
 
-export default function ObjectDiagram({ graph, motion }: { graph: OgGraph; motion?: boolean }) {
+export default function ObjectDiagram({ graph, motion, fileName = "objects" }: { graph: OgGraph; motion?: boolean; fileName?: string }) {
   const rootW = graph.roots.length ? Math.max(40, ...graph.roots.map(r => textW(r.name) + 18)) : 0;
-  const cols = Math.max(1, ...graph.nodes.map(n => n.col));
-  const sizes = new Map(graph.nodes.map(n => [n.id, measure(n)]));
-  const colW = Array.from({ length: cols }, (_, c) => Math.max(0, ...graph.nodes.filter(n => n.col === c + 1).map(n => sizes.get(n.id)!.w)));
-  const colX = colW.map((_, c) => PAD + (rootW ? rootW + GAP_X : 0) + colW.slice(0, c).reduce((a, w) => a + w + GAP_X, 0));
-  const boxes = new Map<number, Box>();
-  const colY = colW.map(() => PAD);
-  for (const n of graph.nodes) {
-    const { w, keyW } = sizes.get(n.id)!, c = n.col - 1, h = HEAD + rowsH(n);
-    boxes.set(n.id, { n, x: colX[c], y: colY[c], w, keyW, h });
-    colY[c] += h + GAP_Y;
-  }
-  const rootsH = PAD + graph.roots.length * (CHIP + 12);
-  const w = colX[cols - 1] + colW[cols - 1] + 90, h = Math.max(rootsH, ...colY) + PAD + (graph.hidden ? 20 : 0);
+  const layout = layoutObjects(graph, measure, rootW);
+  const byId = new Map(graph.nodes.map(n => [n.id, n]));
+  const boxes = new Map([...layout.boxes.values()].map(b => [b.id, { ...b, n: byId.get(b.id)! }]));
+  const w = layout.width, h = layout.height + (graph.hidden ? 20 : 0);
   const into = (id: number) => { const b = boxes.get(id)!; return { x: b.x, y: b.y, w: b.w }; };
   return (
+    <div className="lab-drawing">
+    <SaveDrawing fileName={fileName} />
     <div className="learning-ds-canvas lab-og" dir="ltr">
       <svg className="learning-ds-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h} style={{ minWidth: Math.round(w * 0.72) }} role="img" aria-label={graphSentence(graph)}>
-        {graph.roots.map((r, i) => {
-          const y = PAD + i * (CHIP + 12);
+        {layout.roots.map(r => {
+          const y = r.y;
           return (
             <g key={r.name + ":" + r.target}>
               <rect className={"lab-og-chip" + (r.top ? "" : " is-dim")} x={PAD} y={y} width={rootW} height={CHIP} rx="4" />
@@ -100,6 +95,7 @@ export default function ObjectDiagram({ graph, motion }: { graph: OgGraph; motio
           : <Link key={n.id + ":" + i} className="learning-ds-link" sx={x + keyW + 13} sy={y + HEAD + i * ROW + ROW / 2} right={x + bw} to={into(r.ref)} />)))}
         {graph.hidden > 0 && <text className="learning-ds-muted" x={PAD} y={h - 8}>{"و" + graph.hidden + " كائنات أخرى لا تتسع لها الصورة"}</text>}
       </svg>
+    </div>
     </div>
   );
 }
