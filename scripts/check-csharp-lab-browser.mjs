@@ -323,7 +323,11 @@ console.log("1. teacher, desktop: the book's C# editor runs on this computer");
   }
   check(litX && !counterEarly, "V11: on «q.X = 9» only q's X is lit; Counter's statics never shown before its static constructor printed «init»");
   await shotOf(memory, "lab-teacher-visual-structs-1440");
-  // Phase E1 — «ملء الشاشة»: the editor's panel fills the screen (the program, its output and the steps it shows stay); Escape leaves
+  // Phase E1 — «ملء الشاشة»: the editor's panel fills the screen (the program, its output and the steps it shows stay); Escape leaves.
+  // First, the fix it needed: a panel grown by a long recorded run kept its header under the app's top bar (✕ and the toggle unreachable)
+  const headTop = (await panel.locator(".stt-panel-head").boundingBox())?.y ?? -1;
+  const barBottom = await page.evaluate(() => { const b = document.querySelector(".eb-topbar")?.getBoundingClientRect(); return b ? b.bottom : 0; });
+  check(headTop >= barBottom, "E1: the grown C# panel keeps its header below the app's top bar (header at " + Math.round(headTop) + " px, bar ends at " + Math.round(barBottom) + ")");
   await panel.getByRole("button", { name: "ملء الشاشة" }).click();
   const fullBox = await panel.boundingBox();
   const keptTrace = await panel.getByTestId("csharp-trace").count();

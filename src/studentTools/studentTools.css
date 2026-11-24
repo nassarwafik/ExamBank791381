@@ -7,7 +7,9 @@
 .stt-menu { display: flex; flex-direction: column; gap: var(--eb-space-1); min-width: 200px; padding: var(--eb-space-2); background: var(--eb-surface); border: 1px solid var(--eb-border); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-lg); }
 .stt-menu-item { min-height: 40px; padding: 0 var(--eb-space-3); text-align: start; border: 0; border-radius: var(--eb-r); background: transparent; color: var(--eb-text); font: inherit; cursor: pointer; }
 .stt-menu-item:hover, .stt-menu-item.is-active { background: var(--eb-primary-050); color: var(--eb-primary-strong); }
-.stt-panel { width: min(360px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(70vh, 640px); display: flex; flex-direction: column; background: var(--eb-surface); color: var(--eb-text); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-xl); box-shadow: var(--eb-sh-lg); }
+/* Phase E1 fix: a panel never grows under the app's top bar — its header (✕, «ملء الشاشة», the drag handle) stays reachable. The
+   room above the dock = the viewport − the top bar − the dock's offset from the bottom (--eb-space-7 + 56px) − the 44px tools button under the panel and its gap − a margin. */
+.stt-panel { --stt-room: calc(100vh - var(--eb-topbar-h, 58px) - var(--eb-space-7) - 56px - 44px - var(--eb-space-2) - var(--eb-space-3)); width: min(360px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(70vh, 640px, var(--stt-room)); display: flex; flex-direction: column; background: var(--eb-surface); color: var(--eb-text); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-xl); box-shadow: var(--eb-sh-lg); }
 .stt-panel[hidden] { display: none; }
 .stt-panel:focus { outline: none; }
 .stt-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2); padding: var(--eb-space-3) var(--eb-space-4); border-block-end: 1px solid var(--eb-border); }
@@ -77,7 +79,7 @@
 @media (max-width: 640px) { .stt-panel-head { cursor: default; touch-action: auto; } }
 /* Phase T4 — function plotter. */
 /* Wide panels on wider screens only: on a phone every panel is the full-width bottom sheet (T14: these rules used to override it). */
-@media (min-width: 641px) { .stt-panel.is-wide { width: min(560px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(85vh, 860px); } }
+@media (min-width: 641px) { .stt-panel.is-wide { width: min(560px, calc(100vw - 2 * var(--eb-space-4))); max-height: min(85vh, 860px, var(--stt-room)); } }
 .stt-plot-field + .stt-plot-field { margin-block-start: var(--eb-space-2); }
 .stt-plot-field .stt-error { margin-block: var(--eb-space-1) 0; }
 .stt-window { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--eb-space-2); margin-block-start: var(--eb-space-2); }
