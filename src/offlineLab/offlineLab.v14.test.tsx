@@ -5,7 +5,6 @@ import OfflineLabPage from "./OfflineLabPage";
 import CSharpEditorTool from "../studentTools/CSharpEditorTool";
 import { packChannel, readPackInfo, readReply } from "./offlinePack";
 import { DESKTOP_QUERY, inlineLabFrame, plainDeviceRunner, resetDeviceLabForTests } from "../studentTools/deviceCSharpLab";
-// @ts-expect-error — a plain ES module script of the build (no types)
 import { labClosure, labRuntimeFiles, buildPack } from "../../scripts/build-offline-lab-pack.mjs";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -174,7 +173,7 @@ describe("V14 — the build's pack list", () => {
       writeFileSync(join(dist, f), body);
     expect(labRuntimeFiles(dist)).toEqual(["/csharp-lab/worker.js", "/csharp-lab/_framework/a.wasm", "/csharp-lab/_framework/dotnet.js"]);
     const pack = buildPack(dist);
-    expect([pack.available, pack.bytes, pack.files]).toEqual([true, 8, ["/lab.html", "/assets/lab.js", ...labRuntimeFiles(dist)]]);
+    expect([pack.available, pack.bytes, pack.files]).toEqual([true, 8, ["/lab.html", "/assets/lab.js", ...labRuntimeFiles(dist)!]]);
     writeFileSync(join(dist, "csharp-lab", "_framework", "a.wasm"), "ab");
     expect(buildPack(dist).version).not.toBe(pack.version);
   });
