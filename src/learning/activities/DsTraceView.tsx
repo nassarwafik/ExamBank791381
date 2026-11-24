@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { extrasOf, recText, sceneOf, type DsFrame, type DsMark, type DsObj, type DsStep, type DsTrace, type DsVal } from "./ds";
 import { ChainDrawing, GridDrawing, MapDrawing, Marked, PlaceValueDrawing, QueueDrawing, RowDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
 import { freshOf, motionOf } from "./dsMotion";
+import { conditionOf } from "../../studentTools/traceInsights";
 
 /**
  * DS-A1 (docs/enterprise-data-structures-course.md) — a recorded C# program, one step at a time: the line that ran, one Arabic
@@ -28,7 +29,7 @@ export type HeapDiagram = (step: DsStep, prev: DsStep | undefined, marks: Readon
  *  course passes none. `text` writes a value as this view writes it. */
 export type FlowDiagram = (step: DsStep, prev: DsStep | undefined, cfg: DsTrace, text: (v: DsVal) => string) => ReactNode | null;
 
-export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal, heap, flow }: {
+export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal, heap, flow, explain = false, errorText }: {
   cfg: DsTrace; epoch: number; onStep?: (step: number, of: number) => void;
   at?: number; controls?: boolean; breakpoints?: ReadonlySet<number>; onToggleBreakpoint?: (line: number) => void; motion?: boolean;
   /** V4 part 2, «توقّع قبل أن ترى»: the structures, variables and objects of this step are covered until `onReveal` (a variable
@@ -36,6 +37,10 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
   hidden?: boolean; onReveal?: () => void;
   heap?: HeapDiagram;
   flow?: FlowDiagram;
+  /** Visual lab V15, the player only (the course passes none — its traces read and look as before): the tested condition written
+   *  with the step's values and its result, a changed variable's value before («كانت»), what this step printed marked, the current
+   *  line kept in sight; `errorText` = the run's error in Arabic, on the error step. */
+  explain?: boolean; errorText?: string | null;
 }) {
   const [state, setState] = useState({ at: 0, epoch: 0 });
   const total = cfg.steps.length;
@@ -43,6 +48,15 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
 
   const step = cfg.steps[Math.min(at, total - 1)];
   const prev = at > 0 ? cfg.steps[at - 1] : undefined;
+  const test = explain && !hidden ? conditionOf(step) : null;
+  const printed = explain && prev && step.out.length > prev.out.length ? step.out.slice(prev.out.length) : "";
+  // V15: the line that ran stays in sight inside the program (the player's bar is sticky: each line keeps a margin under it)
+  const codeRef = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    if (!explain) return;
+    const li = codeRef.current?.querySelector<HTMLElement>(".learning-trace-line.is-current");
+    if (li && typeof li.scrollIntoView === "function") li.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [explain, at, step.line]);
   const go = (n: number) => {
     const next = Math.max(0, Math.min(total - 1, n));
     setState({ at: next, epoch });
@@ -105,6 +119,9 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
         {v.t === "rec" ? <span className="learning-trace-box is-rec">{recBox(v, old)}</span>
           : <span className={"learning-trace-box" + (v.t === "ref" ? " is-ref" : "")} dir={v.t === "ref" ? undefined : "ltr"}>{v.t === "ref" ? "→ " + told(v) : told(v)}</span>}
         {moved && <span className="learning-trace-tag">تغيّر</span>}
+        {moved && explain && old && (old.t === "v" || old.t === "null") && (v.t === "v" || v.t === "null") && (
+          <span className="lab-var-was" data-testid="lab-var-was">كانت <bdi dir="ltr">{told(old)}</bdi></span>
+        )}
       </li>
     );
   };
@@ -128,6 +145,14 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
         {step.line > 0 && <span className="learning-trace-noteline">السطر <span dir="ltr">{step.line}</span>: </span>}
         <Marked text={step.note || "ننفّذ السطر."} />
       </p>
+      {test && (
+        <p className={"lab-test " + (test.value ? "is-true" : "is-false")} data-testid="lab-trace-test">
+          <span className="learning-trace-label">الشرط:</span> <code dir="ltr">{test.text}</code>
+          {test.withValues && <> <span aria-hidden="true">←</span> <span className="lab-test-label">بالقيم:</span> <code dir="ltr">{test.withValues}</code></>}
+          {" "}<span aria-hidden="true">←</span> <strong className="lab-test-verdict">{test.value ? "صحيح ✓" : "غير صحيح ✗"}</strong>
+        </p>
+      )}
+      {explain && step.error && errorText && <p className="lab-error" role="alert" data-testid="lab-trace-error"><strong>خطأ أثناء التشغيل في السطر <bdi dir="ltr">{step.line}</bdi>:</strong> {errorText}</p>}
       {step.evals && !hidden && (
         <section className="lab-evals" aria-label="قيم التعابير في هذه الخطوة">
           <span className="learning-trace-label">قيم التعابير:</span>
@@ -137,11 +162,11 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
         </section>
       )}
       <div className="learning-trace-grid">
-        <ol className="learning-trace-code" dir="ltr" tabIndex={0} aria-label="البرنامج">
+        <ol ref={codeRef} className="learning-trace-code" dir="ltr" tabIndex={0} aria-label="البرنامج">
           {cfg.lines.map((l, i) => {
             const current = i + 1 === step.line;
             return (
-              <li key={i} className={"learning-trace-line" + (current ? " is-current" : "")} aria-current={current ? "step" : undefined}>
+              <li key={i} className={"learning-trace-line" + (current ? " is-current" : "") + (current && step.error && explain ? " is-error" : "")} aria-current={current ? "step" : undefined}>
                 {onToggleBreakpoint ? (
                   <button type="button" className={"learning-trace-lineno is-toggle" + (breakpoints?.has(i + 1) ? " is-break" : "")} aria-pressed={!!breakpoints?.has(i + 1)}
                     aria-label={"نقطة توقّف على السطر " + (i + 1)} onClick={() => onToggleBreakpoint(i + 1)}>{i + 1}</button>
@@ -227,7 +252,10 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
           )}
           <section className="learning-trace-output" aria-label="الناتج">
             <h4 className="learning-trace-heading">الناتج</h4>
-            <pre className="learning-trace-out" dir="ltr" tabIndex={0} role="region" aria-label="الناتج حتى الآن">{step.out || " "}</pre>
+            <pre className="learning-trace-out" dir="ltr" tabIndex={0} role="region" aria-label="الناتج حتى الآن">{printed
+              ? <>{step.out.slice(0, step.out.length - printed.length)}<mark className="lab-out-new" data-testid="lab-trace-printed">{printed}</mark></>
+              : step.out || " "}</pre>
+            {printed && <p className="lab-out-note">المظلَّل طُبع في هذه الخطوة.</p>}
           </section>
         </div>
       </div>

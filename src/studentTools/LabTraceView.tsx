@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import CallTreeView from "./CallTreeView";
 import ObjectDiagram from "./ObjectDiagram";
 import CallFlowDrawing from "./CallFlowDrawing";
@@ -13,6 +14,7 @@ import { changesStructures, isStop, nextBreak, PLAY_SPEEDS as SPEEDS, structureS
 import type { LabTraceOptions, LabTraceResult } from "./labTrace";
 import Dialog from "../ui/Dialog";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
+import { runtimeErrorOf, traceKey, traceTable, traceTableText, TRACE_TABLE_MAX } from "./traceInsights";
 
 // Visual lab V3–V4 (docs/enterprise-csharp-visual-lab-plan.md §11, §12) — the teacher's «تشغيل مرئي»: the recorded run in the COURSE'S
 // OWN trace view (DsTraceView), driven by a player:
@@ -32,19 +34,29 @@ import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 // variable), and the value a method returns going back (callFlow.ts, CallFlowDrawing.tsx).
 // V10 (§20): the objects of the writer's classes as an object diagram (objectGraph.ts, ObjectDiagram.tsx) — boxes of fields, arrows to
 // the objects / arrays they refer to, the field that changed in this step lit, a new object marked «جديد».
+// V15 (plan §25) — the player made for long programs:
+//   • its navigation (from the start, previous / next, auto-play, speed, to the next breakpoint, the step and its slider, the note)
+//     is ONE compact bar the editor docks into its sticky strip (`dock`): it stays at the top while the program and the drawing scroll
+//     under it; the other choices stay in a row of their own below it;
+//   • the keyboard: ← next, → previous (the page is RTL), Home / End, the space bar plays / pauses — never inside an input;
+//   • the condition with its values, a changed value's former value, what a step printed, a run-time error explained (DsTraceView
+//     `explain`); «جدول التتبّع»: the running values step by step, built up to the step shown, copied as a table;
+//   • `stale`: the program was changed after it was recorded — the drawing is of the old program, said in the bar, with «أعد».
 // Its own lazy chunk (with its CSS): the editor and the reader carry none of it until a visual run is asked for.
 type Speed = keyof typeof SPEEDS;
 const SPEED_NAMES: Record<Speed, string> = { slow: "بطيء", normal: "عادي", fast: "سريع" };
 
 type Retrace = (options: LabTraceOptions, signal: AbortSignal) => Promise<LabTraceResult>;
 
-export default function LabTraceView({ trace, epoch, retrace }: { trace: DsTrace; epoch: number; retrace?: Retrace }) {
-  return <Player key={epoch} first={trace} epoch={epoch} retrace={retrace} />;
+type Extra = { dock?: HTMLElement | null; stale?: boolean; onRerun?: () => void; stderr?: string };
+
+export default function LabTraceView({ trace, epoch, retrace, ...extra }: { trace: DsTrace; epoch: number; retrace?: Retrace } & Extra) {
+  return <Player key={epoch} first={trace} epoch={epoch} retrace={retrace} {...extra} />;
 }
 
 const stopNote = (line: number, isBreak: boolean) => (isBreak ? "توقف عند نقطة التوقف على السطر " + line + "." : "توقف عند Viz.Pause على السطر " + line + ".");
 
-function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retrace?: Retrace }) {
+function Player({ first, epoch, retrace, dock, stale = false, onRerun, stderr = "" }: { first: DsTrace; epoch: number; retrace?: Retrace } & Extra) {
   const [trace, setTrace] = useState(first);
   const total = trace.steps.length;
   const [atRaw, setAt] = useState(0);
@@ -60,6 +72,10 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
   const [predict, setPredict] = useState(false);
   const [showCalls, setShowCalls] = useState(false);
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(new Set());
+  const [showTable, setShowTable] = useState(false);
+  const [tableCopied, setTableCopied] = useState<"" | "ok" | "failed">("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const reduced = usePrefersReducedMotion();
   const heap = useCallback<HeapDiagram>((step, prev, marks) => {
     const graph = objectGraphOf(step, prev, marks);
@@ -138,14 +154,47 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
     if (on && !kept(at)) setAt(trace.steps.map((_, i) => i).filter(i => i <= at && kept(i)).pop() ?? 0);
   };
   const isLast = after(at) === null, isFirst = before(at) === null;
+  const table = useMemo(() => (showTable ? traceTable(trace, at) : null), [showTable, trace, at]);
+  const errorText = useMemo(() => runtimeErrorOf(stderr, trace.steps[at], trace.lines), [stderr, trace, at]);
+  const copyTable = async () => {
+    if (!table) return;
+    try { await navigator.clipboard.writeText(traceTableText(table)); setTableCopied("ok"); }
+    catch { setTableCopied("failed"); }
+  };
 
-  const body = (
-    <div className={"lab-trace" + (reduced ? "" : " has-motion")} data-testid={expanded ? "csharp-trace-wide" : "csharp-trace"}>
-      <div className="lab-trace-bar" role="toolbar" aria-label="التحكم بالتشغيل المرئي">
-        <button type="button" className="learning-trace-btn" onClick={() => { setAt(pool[0] ?? 0); setPlaying(false); setNote(""); }} disabled={at === (pool[0] ?? 0)}>من البداية</button>
-        <button type="button" className="learning-trace-btn" onClick={() => move(before(at))} disabled={isFirst}>الخطوة السابقة</button>
-        <button type="button" className="learning-trace-btn is-next" onClick={() => move(after(at))} disabled={isLast}>الخطوة التالية</button>
-        <button type="button" className="learning-trace-btn is-play" aria-pressed={playing} onClick={() => { setNote(""); setPlaying(p => !p); }} disabled={!playing && isLast}>
+  // V15: the keyboard — taken only when the key is pressed on the page itself or inside this player (never in the editor, an input,
+  // another tool), with no modifier
+  const keys = useRef<(k: ReturnType<typeof traceKey>) => void>(() => {});
+  const onKeyAction = (k: ReturnType<typeof traceKey>) => {
+    if (k === "next") move(after(at));
+    else if (k === "prev") move(before(at));
+    else if (k === "first") { setAt(pool[0] ?? 0); setPlaying(false); setNote(""); }
+    else if (k === "last") { setPlaying(false); move(pool.at(-1) ?? null); }
+    else if (k === "play" && (playing || !isLast)) { setNote(""); setPlaying(p => !p); }
+  };
+  useLayoutEffect(() => { keys.current = onKeyAction; });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const t = e.target as Node | null;
+      const own = !t || t === document.body || t === document.documentElement || !!rootRef.current?.contains(t) || !!barRef.current?.contains(t);
+      if (!own) return;
+      const k = traceKey(e, e.target);
+      if (!k) return;
+      e.preventDefault();
+      keys.current(k);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const bar: ReactNode = (
+    <div ref={barRef} className={"lab-trace-bar is-nav" + (stale ? " is-stale" : "")} role="toolbar" aria-label="التحكم بالتشغيل المرئي" data-testid="lab-trace-nav">
+      <div className="lab-trace-row">
+        <button type="button" className="learning-trace-btn" onClick={() => onKeyAction("first")} disabled={at === (pool[0] ?? 0)} aria-keyshortcuts="Home">من البداية</button>
+        <button type="button" className="learning-trace-btn" onClick={() => move(before(at))} disabled={isFirst} aria-keyshortcuts="ArrowRight">الخطوة السابقة</button>
+        <button type="button" className="learning-trace-btn is-next" onClick={() => move(after(at))} disabled={isLast} aria-keyshortcuts="ArrowLeft">الخطوة التالية</button>
+        <button type="button" className="learning-trace-btn is-play" aria-pressed={playing} onClick={() => { setNote(""); setPlaying(p => !p); }} disabled={!playing && isLast} aria-keyshortcuts="Space">
           {playing ? "⏸ إيقاف" : "▶ تشغيل تلقائي"}
         </button>
         <label className="lab-trace-speed">السرعة
@@ -154,6 +203,27 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
           </select>
         </label>
         <button type="button" className="learning-trace-btn" onClick={toBreak}>إلى نقطة التوقف التالية</button>
+        <span className="learning-trace-counter">الخطوة <span dir="ltr">{at + 1} / {total}</span></span>
+        {total > 12 && (
+          <input type="range" className="learning-trace-slider" dir="ltr" min={1} max={total} value={at + 1} aria-label="انتقل إلى الخطوة"
+            aria-valuetext={"الخطوة " + (at + 1) + " من " + total} onChange={e => { setAt(Number(e.target.value) - 1); setNote(""); }} />
+        )}
+      </div>
+      {stale && (
+        <p className="lab-trace-stale" role="status" data-testid="lab-trace-stale">
+          تغيّر الكود بعد التسجيل: الخطوات المعروضة للبرنامج السابق.
+          {onRerun && <button type="button" className="learning-trace-btn is-next" onClick={onRerun}>أعد التشغيل المرئي</button>}
+        </p>
+      )}
+      <p className="lab-trace-note" role="status" aria-live="polite">{note || (breakpoints.size ? "نقاط التوقف: السطر " + [...breakpoints].sort((a, b) => a - b).join("، ") + "." : "انقر رقم سطر في البرنامج لتضع نقطة توقّف.")}</p>
+    </div>
+  );
+  const docked = !expanded && !!dock;
+
+  const body = (
+    <div ref={rootRef} className={"lab-trace" + (reduced ? "" : " has-motion")} data-testid={expanded ? "csharp-trace-wide" : "csharp-trace"}>
+      {docked ? createPortal(bar, dock) : bar}
+      <div className="lab-trace-bar lab-trace-options" aria-label="خيارات التشغيل المرئي" role="group">
         <label className="lab-trace-check"><input type="checkbox" checked={opsOnly} onChange={e => setOps(e.target.checked)} /> عمليات المباني فقط</label>
         {retrace && (
           <label className="lab-trace-check" title="يرسم Stack و Queue الخاصّين بالكتاب كعقد مترابطة كما بُنيا">
@@ -162,16 +232,41 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
         )}
         <label className="lab-trace-check"><input type="checkbox" checked={predict} onChange={e => setGuess(e.target.checked)} /> توقّع قبل أن ترى</label>
         {hasCalls && <label className="lab-trace-check"><input type="checkbox" checked={showCalls} onChange={e => setShowCalls(e.target.checked)} /> شجرة الاستدعاءات</label>}
+        <label className="lab-trace-check"><input type="checkbox" checked={showTable} onChange={e => { setShowTable(e.target.checked); setTableCopied(""); }} /> جدول التتبّع</label>
         {!expanded && <button type="button" className="learning-trace-btn" onClick={() => setExpanded(true)}>توسيع</button>}
-        <span className="learning-trace-counter">الخطوة <span dir="ltr">{at + 1} / {total}</span></span>
-        {total > 12 && (
-          <input type="range" className="learning-trace-slider" dir="ltr" min={1} max={total} value={at + 1} aria-label="انتقل إلى الخطوة"
-            aria-valuetext={"الخطوة " + (at + 1) + " من " + total} onChange={e => { setAt(Number(e.target.value) - 1); setNote(""); }} />
-        )}
+        <span className="lab-trace-keys" data-testid="lab-trace-keys">لوحة المفاتيح: <kbd>←</kbd> التالية · <kbd>→</kbd> السابقة · <kbd>Home</kbd> البداية · <kbd>End</kbd> النهاية · <kbd>مسافة</kbd> تشغيل / إيقاف</span>
       </div>
-      <p className="lab-trace-note" role="status" aria-live="polite">{note || (breakpoints.size ? "نقاط التوقف: السطر " + [...breakpoints].sort((a, b) => a - b).join("، ") + "." : "انقر رقم سطر في البرنامج لتضع نقطة توقّف.")}</p>
       <DsTraceView cfg={trace} epoch={epoch} at={at} controls={false} breakpoints={breakpoints} onToggleBreakpoint={toggle} motion={!reduced}
-        hidden={isHidden(at)} onReveal={reveal} heap={heap} flow={flow} />
+        hidden={isHidden(at)} onReveal={reveal} heap={heap} flow={flow} explain errorText={errorText} />
+      {table && !isHidden(at) && (
+        <section className="lab-trace-table" aria-label="جدول التتبّع" data-testid="lab-trace-table">
+          <div className="lab-trace-table-head">
+            <h4 className="learning-trace-heading">جدول التتبّع</h4>
+            <span className="stt-hint">يُبنى مع الخطوات حتى الخطوة المعروضة. انقر سطرًا للانتقال إلى خطوته.</span>
+            <button type="button" className="learning-trace-btn" onClick={() => void copyTable()} disabled={!table.rows.length}>نسخ الجدول</button>
+            <span className="stt-hint" role="status">{tableCopied === "ok" ? "نُسخ الجدول: الصقه في Word أو Excel." : tableCopied === "failed" ? "تعذّر النسخ تلقائيًا." : ""}</span>
+          </div>
+          {table.columns.length === 0 && !table.rows.length ? <p className="stt-hint">لا متغيّرات بسيطة في العملية الرئيسية لعرضها في جدول.</p> : (
+            <div className="lab-trace-table-wrap">
+              <table className="lab-tt">
+                <thead><tr><th scope="col">الخطوة</th><th scope="col">السطر</th>{table.columns.map(c => <th key={c} scope="col" dir="ltr">{c}</th>)}<th scope="col">الشرط</th><th scope="col">الناتج</th></tr></thead>
+                <tbody>
+                  {table.rows.map(r => (
+                    <tr key={r.step} className={r.step === at ? "is-current" : undefined} aria-current={r.step === at ? "step" : undefined} onClick={() => move(r.step)}>
+                      <td><button type="button" className="lab-tt-go" onClick={e => { e.stopPropagation(); move(r.step); }} aria-label={"انتقل إلى الخطوة " + (r.step + 1)}>{r.step + 1}</button></td>
+                      <td dir="ltr">{r.line}</td>
+                      {r.cells.map((c, j) => <td key={j} dir="ltr" className={r.changed[j] && c !== null ? "is-changed" : undefined}>{c ?? ""}</td>)}
+                      <td dir="ltr" className={r.test ? (r.test.value ? "is-true" : "is-false") : undefined}>{r.test ? (r.test.withValues ?? r.test.text) + " → " + (r.test.value ? "true" : "false") : ""}</td>
+                      <td dir="ltr" className="lab-tt-out">{r.printed.trimEnd()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {table.clipped && <p className="stt-hint" role="note">الجدول أطول من {TRACE_TABLE_MAX} سطرًا: عُرض أوّلها.</p>}
+        </section>
+      )}
       {calls && !isHidden(at) && (
         <section className="lab-trace-calls" aria-label="شجرة الاستدعاءات">
           <h4 className="learning-trace-heading">شجرة الاستدعاءات</h4>
