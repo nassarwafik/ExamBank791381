@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CallTreeView from "./CallTreeView";
+import ObjectDiagram from "./ObjectDiagram";
+import { objectGraphOf } from "./objectGraph";
 import { callTreeOf, CALL_TREE_MAX } from "./callTree";
 import "../learning/activities/activities.css";
 import "./labTrace.css";
-import DsTraceView from "../learning/activities/DsTraceView";
+import DsTraceView, { type HeapDiagram } from "../learning/activities/DsTraceView";
 import type { DsTrace } from "../learning/activities/ds";
 import { changesStructures, isStop, nextBreak, PLAY_SPEEDS as SPEEDS, structureSteps } from "../learning/activities/dsMotion";
 import type { LabTraceOptions, LabTraceResult } from "./labTrace";
@@ -24,6 +26,8 @@ import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 //   • «اكشف الداخل»: records the SAME program again with the book's Stack<T> / Queue<T> as objects (their Node<T> chain) — the step,
 //     the breakpoints and the other choices stay; a failed re-recording keeps the drawing it had and says so;
 //   • «توقّع قبل أن ترى»: every step whose structures changed is covered until «اكشف» (auto-play halts at it) — the class predicts first.
+// V10 (§20): the objects of the writer's classes as an object diagram (objectGraph.ts, ObjectDiagram.tsx) — boxes of fields, arrows to
+// the objects / arrays they refer to, the field that changed in this step lit, a new object marked «جديد».
 // Its own lazy chunk (with its CSS): the editor and the reader carry none of it until a visual run is asked for.
 type Speed = keyof typeof SPEEDS;
 const SPEED_NAMES: Record<Speed, string> = { slow: "بطيء", normal: "عادي", fast: "سريع" };
@@ -53,6 +57,10 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
   const [showCalls, setShowCalls] = useState(false);
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(new Set());
   const reduced = usePrefersReducedMotion();
+  const heap = useCallback<HeapDiagram>((step, prev, marks) => {
+    const graph = objectGraphOf(step, prev, marks);
+    return graph ? { node: <ObjectDiagram graph={graph} motion={!reduced} />, drawn: new Set(graph.nodes.map(n => n.id)) } : null;
+  }, [reduced]);
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => () => ctrl.current?.abort(), []);
 
@@ -155,7 +163,7 @@ function Player({ first, epoch, retrace }: { first: DsTrace; epoch: number; retr
       </div>
       <p className="lab-trace-note" role="status" aria-live="polite">{note || (breakpoints.size ? "نقاط التوقف: السطر " + [...breakpoints].sort((a, b) => a - b).join("، ") + "." : "انقر رقم سطر في البرنامج لتضع نقطة توقّف.")}</p>
       <DsTraceView cfg={trace} epoch={epoch} at={at} controls={false} breakpoints={breakpoints} onToggleBreakpoint={toggle} motion={!reduced}
-        hidden={isHidden(at)} onReveal={reveal} />
+        hidden={isHidden(at)} onReveal={reveal} heap={heap} />
       {calls && !isHidden(at) && (
         <section className="lab-trace-calls" aria-label="شجرة الاستدعاءات">
           <h4 className="learning-trace-heading">شجرة الاستدعاءات</h4>

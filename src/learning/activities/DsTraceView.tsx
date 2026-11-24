@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { extrasOf, sceneOf, type DsObj, type DsTrace, type DsVal } from "./ds";
+import { useState, type ReactNode } from "react";
+import { extrasOf, sceneOf, type DsMark, type DsObj, type DsStep, type DsTrace, type DsVal } from "./ds";
 import { ChainDrawing, GridDrawing, MapDrawing, Marked, PlaceValueDrawing, QueueDrawing, RowDrawing, StackDrawing, TreeDrawing } from "./DsDraw";
 import { freshOf, motionOf } from "./dsMotion";
 
@@ -20,12 +20,17 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * `at` = the step the player shows (it then owns the navigation: `controls={false}` hides this view's own buttons); `breakpoints` /
  * `onToggleBreakpoint` = a line number becomes a toggle; `motion` = what just entered / left is marked for the player's animation.
  */
-export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal }: {
+/** Visual lab V10 (§20), the player only: the step's objects drawn as an object diagram (`node`); the arrays / Lists / Dictionaries
+ *  it draws (`drawn`) are then not drawn a second time among the structures. The course passes none: its «الكائنات» list is unchanged. */
+export type HeapDiagram = (step: DsStep, prev: DsStep | undefined, marks: ReadonlyMap<number, DsMark[]>) => { node: ReactNode; drawn: ReadonlySet<number> } | null;
+
+export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls = true, breakpoints, onToggleBreakpoint, motion = false, hidden, onReveal, heap }: {
   cfg: DsTrace; epoch: number; onStep?: (step: number, of: number) => void;
   at?: number; controls?: boolean; breakpoints?: ReadonlySet<number>; onToggleBreakpoint?: (line: number) => void; motion?: boolean;
   /** V4 part 2, «توقّع قبل أن ترى»: the structures, variables and objects of this step are covered until `onReveal` (a variable
    *  that refers to a stack says its contents, so it would give the answer away). */
   hidden?: boolean; onReveal?: () => void;
+  heap?: HeapDiagram;
 }) {
   const [state, setState] = useState({ at: 0, epoch: 0 });
   const total = cfg.steps.length;
@@ -40,6 +45,9 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
   };
   const scene = sceneOf(step.frames, step.objs, cfg.pointers);
   const extra = extrasOf(step, cfg.pointers, cfg.digits);   // V9 (rich traces only: a course trace has none of it)
+  const diagram = heap && !hidden ? heap(step, prev, new Map(scene.rows.map(r => [r.id, r.marks]))) : null;   // V10
+  const rows = diagram ? scene.rows.filter(r => !diagram.drawn.has(r.id)) : scene.rows;
+  const maps = diagram ? scene.maps.filter(m => !diagram.drawn.has(m.id)) : scene.maps;
   const moves = motion ? motionOf(prev, step) : null;
   const fresh = motion ? freshOf(prev, step) : null;
   // with motion a stack / queue drawing is a new element at every step, so its entry / exit animation starts again (the course,
@@ -60,7 +68,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
   };
   const frames = step.frames.map((f, i) => ({ f, i })).reverse();   // the running method on top
   const was = (frame: number, name: string) => (prev?.frames[frame]?.name === step.frames[frame]?.name ? prev?.frames[frame]?.vars.find(p => p[0] === name)?.[1] : undefined);
-  const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length + scene.rows.length + scene.maps.length
+  const drawings = scene.stacks.length + scene.queues.length + scene.chains.length + scene.trees.length + rows.length + maps.length
     + extra.grids.length + extra.texts.length + extra.places.length;
 
   return (
@@ -127,10 +135,10 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
                   {extra.grids.map(g => <GridDrawing key={g.id} type={g.type} rows={g.rows} labels={g.labels} mark={g.mark} />)}
                 </div>
               )}
-              {(scene.rows.length > 0 || scene.maps.length > 0) && (
+              {(rows.length > 0 || maps.length > 0) && (
                 <div className="learning-ds-row">
-                  {scene.rows.map(r => <RowDrawing key={r.id} kind={r.k} type={r.type} items={r.items} labels={r.labels} indexed={r.indexed} marks={r.marks} />)}
-                  {scene.maps.map(m => <MapDrawing key={m.id} type={m.type} keys={m.keys} items={m.items} labels={m.labels} />)}
+                  {rows.map(r => <RowDrawing key={r.id} kind={r.k} type={r.type} items={r.items} labels={r.labels} indexed={r.indexed} marks={r.marks} />)}
+                  {maps.map(m => <MapDrawing key={m.id} type={m.type} keys={m.keys} items={m.items} labels={m.labels} />)}
                 </div>
               )}
               {scene.chains.map((c, i) => <ChainDrawing key={"c" + i} cells={c.nodes.map(n => ({ key: n.id, v: n.v, labels: n.labels, hi: changed(n.id), fresh: fresh?.has(n.id) }))} end={c.end} join={c.join} />)}
@@ -162,7 +170,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
               </div>
             ))}
           </section>}
-          {!hidden && scene.objects.length > 0 && (
+          {!hidden && !diagram && scene.objects.length > 0 && (
             <section className="learning-trace-heap" aria-label="الكائنات">
               <h4 className="learning-trace-heading">الكائنات</h4>
               {scene.objects.map(o => (
@@ -183,6 +191,12 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
           </section>
         </div>
       </div>
+      {diagram && (   // V10: under the program and its state, the whole width — a diagram of several columns needs it
+        <section className="learning-trace-heap lab-og-section" aria-label="الكائنات">
+          <h4 className="learning-trace-heading">الكائنات</h4>
+          {diagram.node}
+        </section>
+      )}
     </div>
   );
 }
