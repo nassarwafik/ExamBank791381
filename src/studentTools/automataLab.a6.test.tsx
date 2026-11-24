@@ -74,6 +74,13 @@ describe("A6 — the book's closure constructions", () => {
     expect(equivalence(ok(concatenation(aOnly, epsAcc)), read({ kind: "DFA", states: ["t0", "t1"], alphabet: ["a"], start: "t0", accept: ["t1"], transitions: [["t0", "a", "t1"], ["t1", "a", "t1"]] }))).toEqual({ equal: true });   // a · a* = a⁺
     expect(ok(reversal(epsAcc)).accept).toContain("q0new");
   });
+  it("concatenation with a second machine whose START accepts (no ε): the first's accepting states stay accepting (a · a* = a⁺)", () => {
+    const aOnly = read({ kind: "DFA", states: ["s0", "s1"], alphabet: ["a"], start: "s0", accept: ["s1"], transitions: [["s0", "a", "s1"]] });
+    const aStar = read({ kind: "DFA", states: ["t0"], alphabet: ["a"], start: "t0", accept: ["t0"], transitions: [["t0", "a", "t0"]] });
+    const c = ok(concatenation(aOnly, aStar));
+    expect(c.accept).toEqual(["s1", "t0"]);
+    expect(languageUpTo(c, 3).accepted).toEqual(["a", "aa", "aaa"]);
+  });
   it("two machines with the same state names: the second is named apart (p0, p1 …), said in the summary; the language is still L1 ∪ L2", () => {
     const r = unionByNewStart(read(ENDS_A), read(ENDS_A));
     if (!r.ok) throw new Error(r.message);
