@@ -111,7 +111,7 @@ export function QueueDrawing({ items, labels, changed, motion }: { items: string
  * as arrows above it) or a set (braces, no order to number). Only the teacher's visual run draws it; the course never has one.
  */
 export function RowDrawing({ kind, type, items, labels, indexed, marks }: {
-  kind: "array" | "set"; type: string; items: string[]; labels?: DrawLabel[]; indexed: boolean; marks?: { name: string; at: number; top?: boolean }[];
+  kind: "array" | "set" | "string"; type: string; items: string[]; labels?: DrawLabel[]; indexed: boolean; marks?: { name: string; at: number; top?: boolean }[];
 }) {
   const ws = items.map(v => Math.max(40, textW(v) + 18));
   const cellW = (i: number) => ws[i] ?? 40;
@@ -126,7 +126,7 @@ export function RowDrawing({ kind, type, items, labels, indexed, marks }: {
   const w = Math.max(x0 + inner + (kind === "set" ? 24 : 12) + (byCell.has(items.length) ? 40 : 0), textW(type) + 20, 90);
   const h = top + ch + (indexed ? 18 : 4) + (name ? 20 : 6);
   const mx = (at: number) => (at < items.length ? xs[at] + cellW(at) / 2 : x0 + inner + 18);
-  const say = (kind === "set" ? "المجموعة " : "المصفوفة ") + (name ? name + " " : "") + "(" + type + "): "
+  const say = (kind === "set" ? "المجموعة " : kind === "string" ? "النص " : "المصفوفة ") + (name ? name + " " : "") + "(" + type + "): "
     + (items.length ? items.map((v, i) => (indexed ? i + ": " : "") + v).join("، ") : "فارغة")
     + [...(marks ?? [])].map(m => "، " + m.name + " = " + m.at).join("");
   return (
@@ -153,6 +153,61 @@ export function RowDrawing({ kind, type, items, labels, indexed, marks }: {
         </g>
       ))}
       {name && <text className="learning-ds-name" x={x0 + inner / 2} y={h - 5} textAnchor="middle">{name}</text>}
+    </Canvas>
+  );
+}
+
+/** Visual lab V9 — a two-dimensional array: a grid with its row and column numbers; the a[i, j] cell its index variables point at. */
+export function GridDrawing({ type, rows, labels, mark }: { type: string; rows: string[][]; labels?: string[]; mark?: { r: number; c: number; names: string } | null }) {
+  const cols = Math.max(1, ...rows.map(r => r.length));
+  const cw = Math.max(40, ...rows.flat().map(v => textW(v) + 16)), ch = 30, x0 = 34, top = 34;
+  const w = Math.max(x0 + cols * cw + 10, textW(type) + 20), name = (labels ?? []).join(", ");
+  const h = top + rows.length * ch + (name ? 22 : 8);
+  const say = "المصفوفة الثنائية " + (name ? name + " " : "") + "(" + type + "): " + rows.map((r, i) => "الصف " + i + ": " + r.join("، ")).join("؛ ")
+    + (mark ? "؛ [" + mark.names + "] = [" + mark.r + ", " + mark.c + "]" : "");
+  return (
+    <Canvas w={w} h={h} label={say}>
+      <text className="learning-ds-tag" x={x0} y={12}>{type}</text>
+      {Array.from({ length: cols }, (_, c) => <text key={"c" + c} className="learning-ds-tag" x={x0 + c * cw + cw / 2} y={top - 6} textAnchor="middle">{c}</text>)}
+      {rows.map((r, i) => (
+        <g key={i}>
+          <text className="learning-ds-tag" x={x0 - 8} y={top + i * ch + ch / 2 + 4} textAnchor="end">{i}</text>
+          {r.map((v, c) => {
+            const hot = !!mark && mark.r === i && mark.c === c;
+            return (
+              <g key={c}>
+                <rect className={"learning-ds-cell" + (hot ? " is-head" : "")} x={x0 + c * cw + 1} y={top + i * ch + 1} width={cw - 2} height={ch - 2} rx="2" />
+                <text className="learning-ds-value" x={x0 + c * cw + cw / 2} y={top + i * ch + ch / 2 + 5} textAnchor="middle">{v}</text>
+              </g>
+            );
+          })}
+        </g>
+      ))}
+      {mark && <text className="learning-ds-name" x={x0 + cols * cw} y={12} textAnchor="end">{"[" + mark.names + "]"}</text>}
+      {name && <text className="learning-ds-name" x={x0 + (cols * cw) / 2} y={h - 6} textAnchor="middle">{name}</text>}
+    </Canvas>
+  );
+}
+
+/** Visual lab V9 — a number in its place values (base 10: … 100 10 1; base 2: … 4 2 1); «hot»: this step took its last digit (n % base). */
+export function PlaceValueDrawing({ name, base, value, digits, hot }: { name: string; base: number; value: string; digits: string[]; hot: boolean }) {
+  const cw = 46, ch = 34, x0 = 8, top = 22;
+  const places = digits.map((_, i) => String(Math.pow(base, digits.length - 1 - i)));
+  const w = Math.max(x0 + digits.length * cw + 8, textW(name + " = " + value) + 20), h = top + ch + 40;
+  const say = "منازل " + name + " = " + value + " في الأساس " + base + ": " + digits.map((d, i) => d + " × " + places[i]).join(" + ") + (hot ? "؛ أُخذ الآن الرقم الأخير " + digits[digits.length - 1] : "");
+  return (
+    <Canvas w={w} h={h} label={say}>
+      <text className="learning-ds-name" x={x0} y={14}>{name + " = " + value + (base !== 10 ? " (أساس " + base + ")" : "")}</text>
+      {digits.map((d, i) => {
+        const last = i === digits.length - 1;
+        return (
+          <g key={i}>
+            <rect className={"learning-ds-cell" + (hot && last ? " is-head" : "")} x={x0 + i * cw + 2} y={top} width={cw - 4} height={ch} rx="4" />
+            <text className="learning-ds-value" x={x0 + i * cw + cw / 2} y={top + ch / 2 + 5} textAnchor="middle">{d}</text>
+            <text className="learning-ds-tag" x={x0 + i * cw + cw / 2} y={top + ch + 16} textAnchor="middle">{places[i]}</text>
+          </g>
+        );
+      })}
     </Canvas>
   );
 }

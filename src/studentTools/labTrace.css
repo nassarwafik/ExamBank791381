@@ -41,3 +41,9 @@
 /* «شجرة الاستدعاءات» (V8): under the player's drawing; a finished call is quiet */
 .lab-trace-calls{ display:flex; flex-direction:column; gap:var(--eb-space-2); margin-block-start:var(--eb-space-3); padding:var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); }
 .lab-call.is-done .learning-ds-cell{ opacity:.75; }
+
+/* V9 «أسس علم الحاسوب»: the expressions' values of the step, and each variable's type (rich traces only) */
+.lab-evals{ display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); margin-block:var(--eb-space-2); }
+.lab-evals-list{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); margin:0; padding:0; list-style:none; }
+.lab-eval{ padding:0 var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.lab-var-type{ color:var(--eb-text-secondary); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-12); }

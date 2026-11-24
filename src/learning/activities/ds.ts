@@ -15,14 +15,18 @@ export type DsObj =
   // V5 rich types: an array / List<T> / LinkedList<T>, a HashSet<T> / SortedSet<T>, a Dictionary (keys and their values)
   | ({ id: number; k: "array"; type: string; items: string[] } & DsRefs)
   | ({ id: number; k: "set"; type: string; items: string[] } & DsRefs)
-  | ({ id: number; k: "map"; type: string; keys: string[]; items: string[] } & DsRefs);
+  | ({ id: number; k: "map"; type: string; keys: string[]; items: string[] } & DsRefs)
+  // V9: a two-dimensional array, row by row
+  | { id: number; k: "grid"; type: string; rows: string[][] };
 /** `call` (V8, rich only): one number per call for the whole run — the same call keeps it from step to step (the call tree). */
-export type DsFrame = { name: string; vars: [string, DsVal][]; call?: number };
+export type DsFrame = { name: string; vars: [string, DsVal][]; call?: number; types?: (string | null)[] };
 /** `pause` (visual lab V4, optional; never in a course trace): the writer's Viz.Pause() — a stop for the teacher's player. */
 /** `ret` (V8, rich only): on the step where the running method returns, the value it returns (as a literal). */
-export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean; ret?: string };
+/** `evals` (V9, rich only): the value of every `/`, `%`, comparison, `&&`, `||`, `!` evaluated since the step before. */
+export type DsStep = { line: number; note: string; frames: DsFrame[]; objs: DsObj[]; out: string; error: boolean; pause?: boolean; ret?: string; evals?: [string, string][] };
 /** `pointers` (V5, rich only): the [array, index] pairs the program writes as a[i] — the drawing marks the cell i points at. */
-export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: [string, string][] };
+/** V9: a pointer may be [array, row, column] (a[i, j]); `digits` = [variable, base] — a number the program takes apart (n % 10, n / 10). */
+export type DsTrace = { lines: string[]; given?: string; stdin?: string; steps: DsStep[]; pointers?: string[][]; digits?: [string, number][] };
 
 export const DS_LIMITS = { lines: 120, steps: 260, objs: 80, items: 40, text: 80, frames: 40, vars: 30 } as const;
 const isStr = (v: unknown): v is string => typeof v === "string";
@@ -56,7 +60,9 @@ function readFrames(raw: unknown, rich: boolean): DsFrame[] | null {
     const o = rec(f), vars = readPairs(o.vars);
     if (!short(o.name) || !vars) return null;
     if (o.call !== undefined && (!rich || !isInt(o.call) || o.call < 1)) return null;   // V8: rich only, a positive whole number
-    out.push({ name: o.name, vars, ...(isInt(o.call) ? { call: o.call } : {}) });
+    // V9: each variable's type, beside its value (rich only; null = not known)
+    if (o.types !== undefined && (!rich || !Array.isArray(o.types) || o.types.length !== vars.length || !o.types.every(t => t === null || short(t)))) return null;
+    out.push({ name: o.name, vars, ...(isInt(o.call) ? { call: o.call } : {}), ...(Array.isArray(o.types) ? { types: o.types as (string | null)[] } : {}) });
   }
   return out;
 }
@@ -85,6 +91,7 @@ function readObjs(raw: unknown, rich: boolean): DsObj[] | null {
     else if (o.k === "obj" && short(o.type) && !refs && o.ref === undefined) { const fields = readPairs(o.fields); if (!fields) return null; out.push({ id: o.id, k: "obj", type: o.type, fields }); }
     else if (rich && (o.k === "array" || o.k === "set") && short(o.type) && cells(o.items)) out.push({ id: o.id, k: o.k, type: o.type, items: o.items, ...withRefs });
     else if (rich && o.k === "map" && short(o.type) && cells(o.keys) && cells(o.items) && o.keys.length === o.items.length) out.push({ id: o.id, k: "map", type: o.type, keys: o.keys, items: o.items, ...withRefs });
+    else if (rich && o.k === "grid" && short(o.type) && !refs && Array.isArray(o.rows) && o.rows.length <= 20 && o.rows.every(r => cells(r) && r.length <= 20)) out.push({ id: o.id, k: "grid", type: o.type, rows: o.rows as string[][] });
     else return null;
   }
   // every link points at an object of the right kind in this very state; a V5 reference at an object that is there
@@ -119,22 +126,29 @@ export function readDsTrace(config: unknown, limits: { steps: number; lines: num
     if (!isInt(s.l) || s.l < 0 || s.l > lines.length || !isStr(s.n) || s.n.length > 600 || !isInt(s.o) || s.o < printed || s.o > c.out.length) return null;
     if (s.f !== undefined) frames = readFrames(s.f, rich);
     if (s.r !== undefined && (!rich || !short(s.r))) return null;   // V8: the returned value, rich only
+    // V9: the expressions' values, rich only: at most 12 [expression, value] pairs
+    if (s.x !== undefined && (!rich || !Array.isArray(s.x) || s.x.length > 12 || !s.x.every(p => Array.isArray(p) && p.length === 2 && short(p[0]) && short(p[1])))) return null;
     if (s.h !== undefined) objs = readObjs(s.h, rich);
     if (!frames || !objs) return null;
     const ids = new Set(objs.map(o => o.id));
     const refs = [...frames.flatMap(f => f.vars), ...objs.flatMap(o => (o.k === "obj" ? o.fields : []))];
     if (refs.some(([, v]) => v.t === "ref" && !ids.has(v.id))) return null;
     printed = s.o;
-    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}), ...(isStr(s.r) ? { ret: s.r } : {}) });
+    steps.push({ line: s.l, note: s.n, frames, objs, out: c.out.slice(0, s.o), error: s.e === true, ...(s.p === true ? { pause: true } : {}), ...(isStr(s.r) ? { ret: s.r } : {}), ...(Array.isArray(s.x) && s.x.length ? { evals: s.x as [string, string][] } : {}) });
   }
-  let pointers: [string, string][] | undefined;
+  const ident = (v: unknown) => isStr(v) && /^[A-Za-z_][A-Za-z0-9_]{0,40}$/.test(v);
+  let pointers: string[][] | undefined;
   if (c.pointers !== undefined) {
-    const ident = (v: unknown) => isStr(v) && /^[A-Za-z_][A-Za-z0-9_]{0,40}$/.test(v);
-    if (!rich || !Array.isArray(c.pointers) || c.pointers.length > 20 || !c.pointers.every(p => Array.isArray(p) && p.length === 2 && ident(p[0]) && ident(p[1]))) return null;
-    pointers = c.pointers as [string, string][];
+    if (!rich || !Array.isArray(c.pointers) || c.pointers.length > 20 || !c.pointers.every(p => Array.isArray(p) && (p.length === 2 || p.length === 3) && p.every(ident))) return null;
+    pointers = c.pointers as string[][];
+  }
+  let digits: [string, number][] | undefined;   // V9
+  if (c.digits !== undefined) {
+    if (!rich || !Array.isArray(c.digits) || c.digits.length > 10 || !c.digits.every(p => Array.isArray(p) && p.length === 2 && ident(p[0]) && [2, 8, 10, 16].includes(p[1] as number))) return null;
+    digits = c.digits as [string, number][];
   }
   return { lines, ...(short(c.given) || (isStr(c.given) && c.given.length <= 300) ? { given: c.given as string } : {}), ...(isStr(c.stdin) ? { stdin: c.stdin } : {}), steps,
-    ...(pointers && pointers.length ? { pointers } : {}) };
+    ...(pointers && pointers.length ? { pointers } : {}), ...(digits && digits.length ? { digits } : {}) };
 }
 
 // ── what a state is drawn as ──────────────────────────────────────────────────────────────────────────────────────────
@@ -175,7 +189,7 @@ export function layoutTree(root: number, kids: (id: number) => { l: number | nul
 }
 
 /** The drawing of one program state: every structure with the names that point at it. `pointers` (V5): see DsTrace. */
-export function sceneOf(frames: DsFrame[], objs: DsObj[], pointers?: [string, string][]): DsScene {
+export function sceneOf(frames: DsFrame[], objs: DsObj[], pointers?: string[][]): DsScene {
   const labels = new Map<number, DsLabel[]>();
   frames.forEach((f, i) => {
     const top = i === frames.length - 1;
@@ -203,7 +217,7 @@ export function sceneOf(frames: DsFrame[], objs: DsObj[], pointers?: [string, st
   const marks = new Map<number, DsMark[]>();
   frames.forEach((f, fi) => {
     const vars = new Map(f.vars);
-    for (const [a, i] of pointers ?? []) {
+    for (const [a, i] of (pointers ?? []).filter(p => p.length === 2)) {
       const arr = vars.get(a), idx = vars.get(i);
       if (arr?.t !== "ref" || idx?.t !== "v" || !/^-?\d+$/.test(idx.s)) continue;
       const target = byId.get(arr.id);
@@ -257,6 +271,49 @@ export function sceneOf(frames: DsFrame[], objs: DsObj[], pointers?: [string, st
     scene.trees.push({ nodes: laid.map(n => { const b = byId.get(n.id) as Extract<DsObj, { k: "bin" }>; return { ...n, v: refText(b.v, b.ref), labels: lab(n.id) }; }) });
   }
   return scene;
+}
+
+// ── V9 «أسس علم الحاسوب»: a 2D array, a string being indexed, a number being taken apart (the teacher's visual run) ─────────────
+export type DsGrid = { id: number; type: string; rows: string[][]; labels: string[]; mark: { r: number; c: number; names: string } | null };
+export type DsText = { name: string; chars: string[]; marks: DsMark[] };
+export type DsPlaces = { name: string; base: number; value: string; digits: string[]; hot: boolean };
+const whole = (v: DsVal | undefined): number | null => (v?.t === "v" && /^-?\d{1,15}$/.test(v.s) ? Number(v.s) : null);
+/** The extra drawings of one step (pure): every grid with the a[i, j] cell its index variables point at; every string a[i] indexes,
+ *  as cells with the index arrow; every number the program takes apart (n % 10, n / 10 — or base 2, 8, 16) in place-value boxes,
+ *  «hot» when this step's own `n % base` was evaluated. Only the running method's variables (the top frame). */
+export function extrasOf(step: DsStep, pointers?: string[][], digits?: [string, number][]): { grids: DsGrid[]; texts: DsText[]; places: DsPlaces[] } {
+  const top = step.frames[step.frames.length - 1];
+  const vars = new Map(top?.vars ?? []);
+  const grids: DsGrid[] = step.objs.filter((o): o is Extract<DsObj, { k: "grid" }> => o.k === "grid").map(o => {
+    const labels = (top?.vars ?? []).filter(([, v]) => v.t === "ref" && v.id === o.id).map(([n]) => n);
+    let mark: DsGrid["mark"] = null;
+    for (const p of pointers ?? []) {
+      if (p.length !== 3 || !labels.includes(p[0])) continue;
+      const r = whole(vars.get(p[1])), c = whole(vars.get(p[2]));
+      if (r !== null && c !== null && r >= 0 && c >= 0 && r < o.rows.length && c < (o.rows[r]?.length ?? 0)) { mark = { r, c, names: p[1] + ", " + p[2] }; break; }
+    }
+    return { id: o.id, type: o.type, rows: o.rows, labels, mark };
+  });
+  const texts: DsText[] = [];
+  for (const p of pointers ?? []) {
+    if (p.length !== 2 || texts.some(t => t.name === p[0])) continue;
+    const v = vars.get(p[0]);
+    if (v?.t !== "v" || v.s.length < 2 || v.s[0] !== '"' || v.s[v.s.length - 1] !== '"') continue;
+    const chars = [...v.s.slice(1, -1)].slice(0, DS_LIMITS.items);
+    const marks = (pointers ?? []).filter(q => q.length === 2 && q[0] === p[0]).flatMap(q => {
+      const at = whole(vars.get(q[1]));
+      return at !== null && at >= 0 && at <= chars.length ? [{ name: q[1], at, top: true }] : [];
+    });
+    texts.push({ name: p[0], chars, marks });
+  }
+  const places: DsPlaces[] = [];
+  for (const [name, base] of digits ?? []) {
+    const n = whole(vars.get(name));
+    if (n === null || places.some(x => x.name === name && x.base === base)) continue;
+    const ds = Math.abs(n).toString(base).toUpperCase().split("").slice(-16);
+    places.push({ name, base, value: String(n), digits: ds, hot: (step.evals ?? []).some(([e]) => e.replace(/\s+/g, "") === name + "%" + base) });
+  }
+  return { grids, texts, places };
 }
 
 // ── the lab and the figure: a tree written as [value, left, right] ────────────────────────────────────────────────────

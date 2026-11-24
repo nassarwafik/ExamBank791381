@@ -18,6 +18,10 @@
 //     { k: "map", type, keys, items, refs? }; C#'s own Stack<T> / Queue<T> → the same "stack" / "queue" as the book's.
 // Visual lab V8 (plan §17) — also in RICH mode: every frame carries "call" (one number per call, for the whole run), and the step on
 //     which a method returns carries "ret" (the value, as a literal) — what the call tree is drawn from.
+// Visual lab V9 (plan §18) — also in RICH mode: a step carries "evals" ([[expression, value]], at most 12): the value of every `/`, `%`,
+//     comparison, `&&`, `||` and `!` the writer's code evaluated since the step before (Tracer.cs wraps them in E, which returns the
+//     value unchanged, short-circuit kept); a frame carries "types" beside "vars" (each variable's declared type, as C# writes it);
+//     a two-dimensional array is an object { k: "grid", type, rows: [[cells]] }.
 internal static class TraceRuntime
 {
     /// <summary>Visual lab V4 — the class a teacher's program may call IN THE VISUAL RUN ONLY (it is compiled into traced programs, never
@@ -57,6 +61,7 @@ internal static class __LabTrace
     static bool rich;              // V5: rich types (see the header)
     static int calls;              // V8: the calls so far (a frame's call number)
     static string? returning;      // V8: the value the method returns on the step being recorded
+    static readonly global::System.Collections.Generic.List<string> evals = new global::System.Collections.Generic.List<string>();   // V9
     static bool inside;            // «اكشف الداخل»: the book's Stack<T> / Queue<T> recorded as the objects they are (Head / First, Last → Node<T>)
     static string? markNote;       // Viz.Show(title) / Viz.Pause(reason): the next recorded step carries the title …
     static bool markPause;         // … and, for Pause, a stop for the player
@@ -104,6 +109,12 @@ internal static class __LabTrace
         finally { returning = null; }
         return value;
     }
+    /// <summary>V9: an expression's value, noted for the next step (rich mode); returns the value itself, so the program is unchanged.</summary>
+    public static T E<T>(T value, string text)
+    {
+        if (rich && muted == 0 && evals.Count < 12) evals.Add(""["" + Json(text) + "","" + Json(Lit(value)) + ""]"");
+        return value;
+    }
     public static void StepValue<T>(T value, int l, string[] names, global::System.Func<object?[]> values) => Record(l, names, values, """");
     public static void StepAfter(global::System.Action a, int l, string[] names, global::System.Func<object?[]> values) { a(); Record(l, names, values, """"); }
 
@@ -114,19 +125,20 @@ internal static class __LabTrace
         var top = frames[frames.Count - 1];
         top.Names = names; top.Values = values;
         foreach (var n in names) if (n.Length > 1 && n[0] == '+') top.Written.Add(n.Substring(1));   // «+a»: this step wrote a
-        if (muted > 0) return;
+        if (muted > 0) { evals.Clear(); return; }
         var (fr, ob) = Snapshot();
-        if (l > shown) { pendingFrames = fr; pendingObjs = ob; return; }
+        if (l > shown) { pendingFrames = fr; pendingObjs = ob; evals.Clear(); return; }
         pendingFrames = pendingObjs = null;
         if (count >= maxSteps) throw new __LabTraceLimit();
         bool pause = markPause;
         if (markNote != null) note = markNote;
         markNote = null; markPause = false;
-        Append(l, note, fr, ob, false, pause, returning);
+        Append(l, note, fr, ob, false, pause, returning, evals.Count > 0 ? ""["" + string.Join("","", evals) + ""]"" : null);
+        evals.Clear();
         lastFrames = fr; lastObjs = ob;
     }
 
-    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false, string? ret = null)
+    static void Append(int l, string note, string fr, string ob, bool error, bool pause = false, string? ret = null, string? evalsJson = null)
     {
         if (count > 0) steps.Append(',');
         steps.Append(""{\""line\"":"").Append(l).Append("",\""note\"":"").Append(Json(note)).Append("",\""frames\"":"").Append(fr)
@@ -134,6 +146,7 @@ internal static class __LabTrace
         if (error) steps.Append("",\""error\"":true"");
         if (pause) steps.Append("",\""pause\"":true"");
         if (ret != null) steps.Append("",\""ret\"":"").Append(Json(ret));
+        if (evalsJson != null) steps.Append("",\""evals\"":"").Append(evalsJson);
         steps.Append('}');
         count++;
     }
@@ -164,17 +177,24 @@ internal static class __LabTrace
                 if (rich) sb.Append("",\""call\"":"").Append(f.Call);
                 sb.Append("",\""vars\"":["");
                 bool firstVar = true;
+                var types = new global::System.Collections.Generic.List<string>();   // V9: «name|type» in rich mode
                 for (int j = 0; j < f.Names.Length && j < vals.Length; j++)
                 {
                     var name = f.Names[j];
+                    string? type = null;
+                    int bar = name.IndexOf('|');
+                    if (bar > 0) { type = name.Substring(bar + 1); name = name.Substring(0, bar); }
                     if (name.Length > 1 && name[0] == '?') { name = name.Substring(1); if (!f.Written.Contains(name)) continue; }   // not written yet
                     if (!firstVar) sb.Append(',');
                     firstVar = false;
+                    types.Add(type == null ? ""null"" : Json(type));
                     sb.Append('[').Append(Json(name)).Append(',').Append(Val(vals[j])).Append(']');
                     Visit(vals[j], objs);
                     if (vals[j] is global::System.Array arr && arr.Rank == 1) foreach (var x in arr) Visit(x, objs);
                 }
-                sb.Append(""]}"");
+                sb.Append(']');
+                if (rich && types.Exists(t => t != ""null"")) sb.Append("",\""types\"":["").Append(string.Join("","", types)).Append(']');
+                sb.Append('}');
             }
             sb.Append(']');
             return (sb.ToString(), ""["" + string.Join("","", objs.Values) + ""]"");
@@ -205,7 +225,7 @@ internal static class __LabTrace
     static string CollectionKind(object o, global::System.Type t)
     {
         if (o is string) return """";
-        if (t.IsArray) return t.GetArrayRank() == 1 ? ""array"" : """";
+        if (t.IsArray) return t.GetArrayRank() == 1 ? ""array"" : t.GetArrayRank() == 2 ? ""grid"" : """";
         if (!t.IsGenericType || t.Assembly == typeof(__LabTrace).Assembly) return """";
         var d = t.GetGenericTypeDefinition();
         if (d == typeof(global::System.Collections.Generic.List<>) || d == typeof(global::System.Collections.Generic.LinkedList<>)) return ""array"";
@@ -255,7 +275,7 @@ internal static class __LabTrace
     /// <summary>A type as C# writes it: int[] · List<string> · Dictionary<string, int>.</summary>
     static string TypeName(global::System.Type t)
     {
-        if (t.IsArray) return TypeName(t.GetElementType()!) + ""[]"";
+        if (t.IsArray) return TypeName(t.GetElementType()!) + ""["" + new string(',', t.GetArrayRank() - 1) + ""]"";
         if (t == typeof(int)) return ""int""; if (t == typeof(long)) return ""long""; if (t == typeof(double)) return ""double"";
         if (t == typeof(float)) return ""float""; if (t == typeof(decimal)) return ""decimal""; if (t == typeof(bool)) return ""bool"";
         if (t == typeof(char)) return ""char""; if (t == typeof(string)) return ""string""; if (t == typeof(byte)) return ""byte"";
@@ -308,6 +328,24 @@ internal static class __LabTrace
                 Refs(sb, vals, objs);
                 objs[id] = sb.Append('}').ToString();
                 VisitAll(vals, objs);
+                return;
+            }
+            case ""grid"":   // V9: a two-dimensional array, row by row (at most 20 × 20)
+            {
+                var g = (global::System.Array)v;
+                int rows = global::System.Math.Min(g.GetLength(0), 20), cols = global::System.Math.Min(g.GetLength(1), 20);
+                sb.Append("",\""type\"":"").Append(Json(TypeName(v.GetType()))).Append("",\""rows\"":["");
+                var inside = new global::System.Collections.Generic.List<object?>();
+                for (int r = 0; r < rows; r++)
+                {
+                    if (r > 0) sb.Append(',');
+                    var row = new global::System.Collections.Generic.List<object?>();
+                    for (int c = 0; c < cols; c++) row.Add(g.GetValue(g.GetLowerBound(0) + r, g.GetLowerBound(1) + c));
+                    sb.Append(Cells(row));
+                    inside.AddRange(row);
+                }
+                objs[id] = sb.Append(""]}"").ToString();
+                VisitAll(inside, objs);
                 return;
             }
             case ""map"":
