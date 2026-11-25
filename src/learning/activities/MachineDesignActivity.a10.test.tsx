@@ -86,6 +86,16 @@ describe("A10 — the server check", () => {
     fireEvent.click(screen.getAllByRole("checkbox", { name: "قبول" })[0]);    // an edit clears the verdict
     expect(screen.queryByTestId("machine-design-verdict")).toBeNull();
   });
+  it("a function (A10b): «computes what the reference computes on every input up to length N» — the words outside the domain are not checked", async () => {
+    const check = vi.fn<ActivityCheck>(async () => ({ correct: true, agreesUpTo: { length: 8, words: 36, skipped: 475 } }));
+    render(<MachineDesignActivity {...props(blockFor(TM_TASK), check)} />);
+    fireEvent.click(btn("تحقّق من الآلة"));
+    const v = await screen.findByTestId("machine-design-verdict");
+    expect(v.textContent).toContain("آلتك تحسب ما يحسبه النموذج على كل المدخلات حتى الطول 8 (36 مدخلًا)");
+    expect(v.textContent).toContain("الكلمات التي ليست مدخلًا للدالة لا تُفحص");
+    expect(v.textContent).toContain("وليس برهانًا");
+    expect(v.textContent).not.toContain("على كل الكلمات حتى الطول");
+  });
   it("wrong: the separating word; a function's expected and given answers; not halting; a broken rule", async () => {
     let reply: ActivityCheckResult = { correct: false, counterexample: { word: "aab", shouldAccept: false }, feedback: { hints: ["عدّ."] } };
     const check = vi.fn<ActivityCheck>(async () => reply);

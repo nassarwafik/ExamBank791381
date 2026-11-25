@@ -251,6 +251,33 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     check(/يُفحص تصميمك عند فتح المادة من المنصة/.test(await md.innerText()), name + ": without a check seam the exercise says the check happens on the platform");
     if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the push-down exercise (" + (await sideways()) + " px)");
   }
+  // AUTO-A10b — a Turing machine «صمّم الآلة» that computes: built with the lab's TM rows ($ typed as a tape symbol), run step by step:
+  // the tape is drawn and ends with the answer between two $
+  {
+    const md = page.getByTestId("machine-design-tm");
+    await md.scrollIntoViewIfNeeded();
+    check(/بين علامتي \$/.test(await md.innerText()) && /111 → \$11111\$/.test(await md.innerText()), name + ": the Turing machine task says the answer goes between two $, with its example");
+    await md.getByRole("button", { name: /إضافة حالة/ }).click();
+    await md.getByRole("button", { name: /إضافة حالة/ }).click();
+    await md.getByLabel("قبول").nth(2).check();
+    await md.getByRole("button", { name: "إضافة انتقال" }).click();      // q0 —1/$,R→ q1
+    await md.getByLabel("الانتقال 1: يكتب").fill("$");
+    await md.getByLabel("الانتقال 1: إلى").selectOption("q1");
+    await md.getByRole("button", { name: "إضافة انتقال" }).click();      // q1 —∆/$,S→ q2
+    await md.getByLabel("الانتقال 2: من").selectOption("q1");
+    await md.getByLabel("الانتقال 2: يقرأ").fill("∆");
+    await md.getByLabel("الانتقال 2: يكتب").fill("$");
+    await md.getByLabel("الانتقال 2: الحركة").selectOption("S");
+    await md.getByLabel("الانتقال 2: إلى").selectOption("q2");
+    check(await md.getByTestId("machine-design-issues").count() === 0, name + ": the two Turing-machine rows read (no issue listed)");
+    const run = md.locator("section").filter({ has: page.getByRole("heading", { name: /شغّل آلتك خطوة خطوة/ }) });
+    await run.getByLabel("الكلمة", { exact: true }).fill("1");
+    await run.getByRole("button", { name: "شغّل", exact: true }).click();
+    await run.getByRole("button", { name: "النهاية" }).click();
+    const tape = await run.locator(".learning-automaton-tape").getAttribute("aria-label");
+    check(await run.getByText(/الكلمة 1 مقبولة/).count() === 1 && /\$ \$/.test(tape || ""), name + ": «1» runs to the accepting state and the tape ends «$ $» (" + tape + ")");
+    if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the Turing machine exercise (" + (await sideways()) + " px)");
+  }
 
   // AUTO-A8 — the exam question «تصميم أوتومات»
   console.log(name + ": the exam question «تصميم أوتومات»");

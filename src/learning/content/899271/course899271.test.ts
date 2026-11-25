@@ -88,10 +88,16 @@ describe("899271 — the bodies", () => {
     const designs = sims.filter(b => b.type === "simulation" && b.simulationType === "automaton-design");
     expect(designs.map(b => b.id)).toEqual(["m02-l04-p02-b06", "m03-l05-p01-b04", "m03-l05-p01-b05", "m04-l04-p02-b06", "m05-l05-p02-b06", "m05-l05-p02-b07", "m06-l03-p02-b06", "m06-l03-p02-b07", "m07-l03-p02-b06", "m07-l03-p02-b07"]);
     expect(designs.every(b => b.origin === "teacher-enrichment")).toBe(true);
-    // AUTO-A10 — the four push-down «صمّم الآلة» exercises: units 8 (aⁿb²ⁿ, (ab)ⁿbⁿ) and 9 (wcwᴿ, a²ⁿbᵐcᵏ with k < n+m); enrichment, judged on the server
+    // AUTO-A10 — the push-down «صمّم الآلة» exercises: units 8 (aⁿb²ⁿ, (ab)ⁿbⁿ) and 9 (wcwᴿ, a²ⁿbᵐcᵏ with k < n+m); AUTO-A10b — the Turing
+    // machines of unit 10: four that recognise (awb, (ab)ⁿ, aⁿbⁿ, palindromes) and three that compute (x + 2, x + y, parity); enrichment, judged on the server
     const machines = sims.filter(b => b.type === "simulation" && b.simulationType === "machine-design");
-    expect(machines.map(b => b.id)).toEqual(["m08-l04-p02-b06", "m08-l04-p02-b07", "m09-l03-p02-b05", "m09-l03-p02-b06"]);
+    expect(machines.map(b => b.id)).toEqual(["m08-l04-p02-b06", "m08-l04-p02-b07", "m09-l03-p02-b05", "m09-l03-p02-b06",
+      "m10-l06-p03-b01", "m10-l06-p03-b02", "m10-l06-p03-b03", "m10-l06-p03-b04", "m10-l06-p04-b01", "m10-l06-p04-b02", "m10-l06-p04-b03"]);
     expect(machines.every(b => b.origin === "teacher-enrichment")).toBe(true);
+    // the unit-10 tasks: on the book's tape (├ before the input), and the unary x + 2 tried on longer words (one letter: few words)
+    const task = (id: string) => (machines.find(b => b.id === id) as unknown as { config: { task: { leftEnd?: boolean; maxLength?: number; mode?: string } } }).config.task;
+    for (const id of ["m10-l06-p03-b01", "m10-l06-p03-b02", "m10-l06-p03-b03", "m10-l06-p03-b04", "m10-l06-p04-b01", "m10-l06-p04-b02", "m10-l06-p04-b03"]) expect(task(id).leftEnd, id).toBe(true);
+    expect(task("m10-l06-p04-b01")).toMatchObject({ mode: "compute", maxLength: 10 });
     for (const b of blocks) if (b.type === "visual") expect(resolveVisual(b.visualId), b.visualId).not.toBeNull();
   }, 30000);
 });

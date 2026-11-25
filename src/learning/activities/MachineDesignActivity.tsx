@@ -144,10 +144,22 @@ function Verdict({ result, task }: { result: ActivityCheckResult; task: MachineT
     const a = result.agreesUpTo;
     return (
       <div className="learning-autodesign-verdict is-right" role="status" data-testid="machine-design-verdict">
-        <p className="learning-autodesign-verdicthead"><IconCheck size={16} aria-hidden="true" />
-          ✓ آلتك تتفق مع النموذج على كل الكلمات حتى الطول {a?.length ?? task.maxLength}{a ? " (" + a.words + " كلمة)" : ""}.
-        </p>
-        <p className="learning-autodesign-help">هذا فحص بكل الكلمات حتى هذا الطول، وليس برهانًا على كل الكلمات.</p>
+        {task.mode === "compute" ? (
+          // AUTO-A10b — a function is judged on the inputs the reference accepts (owner decision 2026-11-25): «every input», not «every word»
+          <>
+            <p className="learning-autodesign-verdicthead"><IconCheck size={16} aria-hidden="true" />
+              ✓ آلتك تحسب ما يحسبه النموذج على كل المدخلات حتى الطول {a?.length ?? task.maxLength}{a ? " (" + a.words + " مدخلًا)" : ""}.
+            </p>
+            <p className="learning-autodesign-help">الكلمات التي ليست مدخلًا للدالة لا تُفحص. وهذا فحص بكل المدخلات حتى هذا الطول، وليس برهانًا على كل المدخلات.</p>
+          </>
+        ) : (
+          <>
+            <p className="learning-autodesign-verdicthead"><IconCheck size={16} aria-hidden="true" />
+              ✓ آلتك تتفق مع النموذج على كل الكلمات حتى الطول {a?.length ?? task.maxLength}{a ? " (" + a.words + " كلمة)" : ""}.
+            </p>
+            <p className="learning-autodesign-help">هذا فحص بكل الكلمات حتى هذا الطول، وليس برهانًا على كل الكلمات.</p>
+          </>
+        )}
         {fb.message && <p>{fb.message}</p>}
         {fb.explanation && <p className="learning-autodesign-explain">{fb.explanation}</p>}
       </div>

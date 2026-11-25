@@ -14,6 +14,9 @@
 //   • Every word of length 0…N over the alphabet, in shortlex order (shorter first, then the alphabet's order), is run on both machines.
 //     N = the task's `maxLength` (default 8), lowered until at most WORD_BUDGET words are tried. The first word on which their verdicts
 //     (or, for a function, their answers) differ is the counterexample — certain, since both runs halted.
+//   • AUTO-A10b (owner decision 2026-11-25, «Only inputs the model accepts»): for a FUNCTION the reference also fixes its domain. A word
+//     on which the reference halts WITHOUT accepting (an input of the wrong form, e.g. «##» for x + y over {1, #}) is outside the
+//     function: skipped and counted like a word the reference does not halt on, never judged. Only answers on the domain are compared.
 //   • A Turing machine may run forever: a run is cut at the engine's step limit (LIMITS.tmSteps). A word on which the REFERENCE does not
 //     halt is skipped (counted, never judged); one on which the LEARNER's does not halt while the reference does is reported as
 //     `nohalt: { word }` — it does not certainly disagree, so it is not a counterexample, and the verdict is not «agrees».
@@ -136,6 +139,7 @@ function evaluateMachineDesign(key, response) {
     for (const w of shortlex(rules.alphabet, length)) {
       const r = outcome(ref.machine, rules, w);
       if (!r.halted) { skipped++; continue; }
+      if (rules.mode === "compute" && !r.accept) { skipped++; continue; }   // A10b — outside the function's domain: never judged
       words++;
       const l = outcome(mine.machine, rules, w);
       if (!l.halted) { if (!nohalt) nohalt = { word: w }; continue; }
