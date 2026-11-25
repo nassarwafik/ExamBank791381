@@ -2,7 +2,7 @@
 
 | Identity | Kind | Grading | Partial | Response | Compound part | Composite child | AI composer | Authoring version | Grader | 20G | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, 21C, 21DB3, 21DD3, A, B, C, E, S |
+| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, 21C, 21DB3, 21DD3, A, A8, B, C, E, S |
 | `trueFalse@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21DD3, A, B, E, S |
 | `multiTrueFalse@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | B, E, S |
 | `shortAnswer@1` | type | hybrid | — | text | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, S |
@@ -18,6 +18,7 @@
 | `functionGraphSelection@1` | type | auto | ✓ | functionGraphSelection | — | ✓ | — | ✓ | registered | A | 21A2 |
 | `scene3DSelection@1` | type | auto | ✓ | scene3DSelection | — | — | — | ✓ | registered | A | 21C |
 | `meshPartSelection@1` | type | auto | ✓ | meshPartSelection | — | — | — | ✓ | registered | A | 21DB3 |
+| `automatonDesign@1` | type | auto | — | automatonDesign | — | — | — | ✓ | registered | A | A8 |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | ✓ | ✓ | registered | A | A, B, E, S |
 | `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | ✓ | ✓ | registered | A | 21A1, 21DD3, A, B, D, E, S |
 | `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | registered | A | D, E, S |

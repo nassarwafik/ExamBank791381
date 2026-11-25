@@ -8,7 +8,10 @@
 //   • on the phone the page never scrolls sideways (the tables scroll inside their own frame); the desktop panel fills the screen;
 //   • AUTO-A7 — browser-harness/automata-design.html, a book «صمّم الآلة» exercise beside the book's tool bar: on the desktop the lab's
 //     drawing editor in the activity (real double-clicks and an arrow drag; the exercise's 3-state limit holds), «فحص سريع لآلتك», and
-//     «افتح في مختبر الآلات» opening the tool bar's lab with a copy; on the phone the table only, and the same hand-over.
+//     «افتح في مختبر الآلات» opening the tool bar's lab with a copy; on the phone the table only, and the same hand-over;
+//   • AUTO-A8 — browser-harness/automaton-question.html, the exam question «تصميم أوتومات»: the student's renderer (desktop: real
+//     double-clicks within the question's 3-state limit and an arrow drag; the saved answer is the machine only) and the teacher's editor
+//     (the reference built with the table is written to the private key); on the phone the table only and no sideways scroll.
 //   node scripts/check-automata-lab-browser.mjs     (env: PLAYWRIGHT_CORE_DIR, CHROMIUM_PATH, optional HARNESS_OUT)
 import fs from "node:fs";
 import os from "node:os";
@@ -22,7 +25,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(process.env.HARNESS_OUT || path.join(os.tmpdir(), "harness-automata-lab"));
 const { chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core");
 
-await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html") } } } });
+await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html"), question: path.join(root, "browser-harness/automaton-question.html") } } } });
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -209,6 +212,62 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
   await panel.getByLabel("من q0 بالرمز 1 إلى", { exact: true }).selectOption("q0");
   check(await cellOf("q0", "1").inputValue() === "q1", "an edit in the lab does not change the exercise");
   if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-design-lab-" + name + ".png"), fullPage: false });
+  check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
+  check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
+
+  // AUTO-A8 — the exam question «تصميم أوتومات»
+  console.log(name + ": the exam question «تصميم أوتومات»");
+  errors.length = 0;
+  await page.goto(origin + "/browser-harness/automaton-question.html");
+  const stu = page.getByTestId("automaton-design-response");
+  await stu.waitFor({ timeout: 20000 });
+  const savedAnswer = async () => JSON.parse((await page.getByTestId("saved-answer").textContent()) || "null");
+  const qcell = (scope, from, symbol) => scope.getByLabel("من " + from + " بالرمز " + symbol + " إلى", { exact: true });
+  check(!/تحقّق من الآلة|مختبر الآلات/.test(await stu.innerText()), "the exam's builder has no «تحقّق» and no lab hand-over");
+  if (name === "desktop") {
+    const canvas = stu.getByTestId("alab-canvas");
+    const centre = () => canvas.evaluate(el => el.scrollIntoView({ block: "center" }));
+    const center = async q => { const b = await canvas.locator("g.learning-automaton-state").filter({ hasText: new RegExp("^" + q + "$") }).locator("circle").first().boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+    await centre();
+    let b = await canvas.boundingBox();
+    await page.mouse.dblclick(b.x + b.width - 12, (await center("q0")).y);
+    await stu.getByText(/^أُضيفت الحالة q1\.$/).waitFor({ timeout: 5000 });
+    await centre(); b = await canvas.boundingBox();
+    await page.mouse.dblclick((await center("q0")).x, b.y + b.height - 12);
+    await stu.getByText(/^أُضيفت الحالة q2\.$/).waitFor({ timeout: 5000 });
+    await centre(); b = await canvas.boundingBox();
+    await page.mouse.dblclick(b.x + b.width - 12, b.y + b.height - 12);
+    await stu.getByText(/^بلغت الحد: 3 حالة\.$/).waitFor({ timeout: 5000 });
+    check(true, "student, desktop: the drawing adds q1, q2 and refuses a fourth state (the question's limit, 3)");
+    await stu.getByRole("radio", { name: "رسم الأسهم" }).check();
+    await centre();
+    const from = await center("q0"), to = await center("q1");
+    await page.mouse.move(from.x, from.y); await page.mouse.down();
+    for (let k = 1; k <= 8; k++) await page.mouse.move(from.x + (to.x - from.x) * k / 8, from.y + (to.y - from.y) * k / 8);
+    await page.mouse.up();
+    await stu.getByRole("group", { name: "رمز السهم من q0 إلى q1" }).getByRole("button", { name: "1", exact: true }).click();
+    const a = await savedAnswer();
+    check(a && a.kind === "automatonDesign" && JSON.stringify(Object.keys(a).sort()) === '["kind","machine"]' && JSON.stringify(a.machine) === JSON.stringify({ states: ["q0", "q1", "q2"], start: "q0", accept: [], transitions: [["q0", "1", "q1"]] }),
+      "student, desktop: the saved answer is the machine only (" + JSON.stringify(a) + ")");
+  } else {
+    check(await stu.getByTestId("alab-canvas").count() === 0, "student, phone: no drawing editor (the table)");
+    await stu.getByRole("button", { name: /إضافة حالة/ }).click();
+    await qcell(stu, "q0", "1").selectOption("q1");
+    const a = await savedAnswer();
+    check(a && JSON.stringify(a.machine.transitions) === '[["q0","1","q1"]]', "student, phone: the table's arrow is the saved answer");
+    check(await sideways() <= 1, "phone: no sideways scroll in the exam question (" + (await sideways()) + " px)");
+  }
+  const tea = page.getByTestId("qt-editor-automatonDesign");
+  check(/الآلة النموذجية \(مفتاح التصحيح\) مفقودة/.test(await tea.innerText()), "teacher: a new question blocks until the reference is built");
+  const ref = page.getByTestId("automaton-reference");
+  await ref.getByRole("button", { name: /إضافة حالة/ }).click();
+  await ref.getByLabel("قبول").nth(1).check();
+  for (const [f, s, t] of [["q0", "a", "q1"], ["q0", "b", "q0"], ["q1", "a", "q1"], ["q1", "b", "q0"]]) await qcell(ref, f, s).selectOption(t);
+  const saved = JSON.parse(await page.getByTestId("saved-question").textContent());
+  check(JSON.stringify(saved.answer.reference) === JSON.stringify({ states: ["q0", "q1"], start: "q0", accept: ["q1"], transitions: [["q0", "a", "q1"], ["q0", "b", "q0"], ["q1", "a", "q1"], ["q1", "b", "q0"]] })
+    && await page.getByTestId("automaton-question-issues").count() === 0, "teacher: the reference built with the table is the private key; the question is complete");
+  if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automaton-question-" + name + ".png"), fullPage: true });
+  if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the teacher's editor (" + (await sideways()) + " px)");
   check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
   check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
   await ctx.close();

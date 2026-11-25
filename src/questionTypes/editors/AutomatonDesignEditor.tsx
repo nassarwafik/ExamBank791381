@@ -32,7 +32,8 @@ export default function AutomatonDesignEditor({ node, onChange, disabled }: Auth
   const [alphabetText, setAlphabetText] = useState(() => alphabet.join(", "));
   const [acceptText, setAcceptText] = useState(() => shownWords(accept));
   const [rejectText, setRejectText] = useState(() => shownWords(reject));
-  const refRules = useMemo<FaRules>(() => ({ machine, alphabet, maxStates: AUTOMATON_DESIGN_LIMITS.states, complete: false }), [machine, alphabet.join(",")]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const alphabetKey = alphabet.join(",");
+  const refRules = useMemo<FaRules>(() => ({ machine, alphabet: alphabetKey ? alphabetKey.split(",") : [], maxStates: AUTOMATON_DESIGN_LIMITS.states, complete: false }), [machine, alphabetKey]);
   const [draft, setDraft] = useState<LabDraft>(() => draftOfMachine(refRules, key.reference) ?? initialFaDraft(refRules));
   const built = isObj(key.reference);
 

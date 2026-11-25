@@ -107,6 +107,7 @@ type KeyResult = { ok: true; key: AutomatonDesignAnswerKeyV1; issues: [] } | { o
 function checkKey(raw: unknown, config: AutomatonDesignConfigV1 | null): KeyResult {
   const bad = (code: string, message: string): KeyResult => ({ ok: false, issues: [err(code, message, "answer.reference")] });
   if (!isPlain(raw) || !onlyKeys(raw, ["reference"])) return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة أو غير صالحة.", "answer")] };
+  if (raw.reference === undefined) return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة: ابنِها في محرر السؤال.", "answer")] };
   const m = readMachineShape(raw.reference);
   if (!m) return bad("AUTOMATON_KEY_INVALID", "الآلة النموذجية غير صالحة.");
   if (m.states.length > AUTOMATON_DESIGN_LIMITS.states) return bad("AUTOMATON_KEY_TOO_BIG", "الآلة النموذجية حتى " + AUTOMATON_DESIGN_LIMITS.states + " حالة.");

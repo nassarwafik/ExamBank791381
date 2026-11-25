@@ -130,6 +130,8 @@ function checkKey(raw, config) {
     const bad = (code, message) => ({ ok: false, issues: [err(code, message, "answer.reference")] });
     if (!isPlain(raw) || !onlyKeys(raw, ["reference"]))
         return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة أو غير صالحة.", "answer")] };
+    if (raw.reference === undefined)
+        return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة: ابنِها في محرر السؤال.", "answer")] };
     const m = readMachineShape(raw.reference);
     if (!m)
         return bad("AUTOMATON_KEY_INVALID", "الآلة النموذجية غير صالحة.");
