@@ -13,6 +13,7 @@ import http from "node:http";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { setEditorCode } from "./monaco-set-code.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.resolve(process.env.DIST || path.join(root, "dist"));
@@ -48,11 +49,8 @@ const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", e => errors.push(String(e)));
 const program = "class Program\n{\n    static int Sq(int x)\n    {\n        return x * x;\n    }\n    static void Main()\n    {\n        int s = 0;\n        for (int i = 1; i <= 3; i++) s += Sq(i);\n        System.Console.WriteLine(\"sum \" + s);\n    }\n}";
-async function setCode(source) {
-  const monaco = page.locator(".monaco-editor .view-lines");
-  if (await monaco.count()) { await monaco.first().click(); await page.keyboard.press("Control+A"); await page.keyboard.press("Delete"); await page.keyboard.insertText(source); }
-  else await page.getByLabel("كود C#").fill(source);
-}
+// the race-free writer (focus awaited, the editor's content checked): scripts/monaco-set-code.mjs
+const setCode = source => setEditorCode(page, page, source);
 const status = () => page.locator(".stt-cs-status").innerText();
 
 console.log("1. online: /lab.html, «تنزيل للعمل بلا إنترنت»");

@@ -20,6 +20,7 @@ import http from "node:http";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { setEditorCode } from "./monaco-set-code.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dist = path.resolve(process.env.DIST || path.join(root, "dist"));
@@ -119,15 +120,7 @@ async function setCode(panel, page, source) {
   // V15: after a visual run the program is folded to one line; open it to write the next program
   const fold = panel.getByTestId("csharp-editor-fold");
   if (await fold.count() && await fold.getAttribute("aria-expanded") === "false") await fold.click();
-  const monaco = panel.locator(".monaco-editor .view-lines");
-  if (await monaco.count()) {
-    await monaco.first().click();
-    await page.keyboard.press("Control+A");
-    await page.keyboard.press("Delete");
-    await page.keyboard.insertText(source);
-  } else {
-    await panel.getByLabel("كود C#").fill(source);
-  }
+  await setEditorCode(page, panel, source);            // focus awaited, the content checked (scripts/monaco-set-code.mjs)
 }
 async function run(panel, page, source, timeout = 60000) {
   await setCode(panel, page, source);
