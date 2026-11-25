@@ -247,8 +247,10 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     await page.mouse.up();
     await stu.getByRole("group", { name: "رمز السهم من q0 إلى q1" }).getByRole("button", { name: "1", exact: true }).click();
     const a = await savedAnswer();
-    check(a && a.kind === "automatonDesign" && JSON.stringify(Object.keys(a).sort()) === '["kind","machine"]' && JSON.stringify(a.machine) === JSON.stringify({ states: ["q0", "q1", "q2"], start: "q0", accept: [], transitions: [["q0", "1", "q1"]] }),
-      "student, desktop: the saved answer is the machine only (" + JSON.stringify(a) + ")");
+    // AUTO-A9 — the answer is the machine and, beside it, where the double-clicked states were put (presentation only)
+    check(a && a.kind === "automatonDesign" && JSON.stringify(Object.keys(a).sort()) === '["kind","layout","machine"]' && JSON.stringify(a.machine) === JSON.stringify({ states: ["q0", "q1", "q2"], start: "q0", accept: [], transitions: [["q0", "1", "q1"]] })
+      && Array.isArray(a.layout.q1) && Array.isArray(a.layout.q2),
+      "student, desktop: the saved answer is the machine, with where q1 and q2 were put (" + JSON.stringify(a) + ")");
   } else {
     check(await stu.getByTestId("alab-canvas").count() === 0, "student, phone: no drawing editor (the table)");
     await stu.getByRole("button", { name: /إضافة حالة/ }).click();

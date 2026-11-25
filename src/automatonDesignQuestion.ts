@@ -12,6 +12,10 @@
 //   • the key (`node.answer`) is `{ reference }`, the teacher's machine — removed by the student sanitizer, never sent;
 //   • the answer is `{ kind: "automatonDesign", machine }`: the student's states, start, accepting states and arrows. A machine that breaks
 //     a public rule (too many states, a symbol outside the alphabet, …) is KEPT as answered and judged wrong by the grader — never dropped.
+// AUTO-A9 — where the states were put on the drawing (`layout`: state → grid cell [column, row]) may travel with the answer and with the
+// reference, so a saved drawing comes back as it was left. PRESENTATION ONLY: the grader reads the machine, never the layout (a machine
+// moved on the drawing is the same machine, the same mark). Bounded to the machine's own states and the drawing's grid; an answer whose
+// layout does not read keeps its machine and loses only the layout (an answer is never lost over a presentation field).
 import { effectiveQuestionTypeVersion } from "./questionTypeCatalog";
 
 export const AUTOMATON_DESIGN_TYPE_KEY = "automatonDesign";
@@ -19,8 +23,10 @@ export const AUTOMATON_DESIGN_LIMITS = Object.freeze({ states: 12, symbols: 6, t
 export type AutomatonDesignMachineType = "DFA" | "NFA";
 export type AutomatonDesignConfigV1 = { v: 1; machine: AutomatonDesignMachineType; alphabet: string[]; maxStates: number; complete?: true; examples?: { accept: string[]; reject: string[] } };
 export type AutomatonMachine = { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] };
-export type AutomatonDesignAnswerKeyV1 = { reference: AutomatonMachine };
-export type AutomatonDesignAnswer = { kind: "automatonDesign"; machine: AutomatonMachine };
+/** AUTO-A9 — the drawing's grid cells of a machine's states ([column, row], 0…GRID_MAX), presentation only. */
+export type AutomatonLayout = Record<string, [number, number]>;
+export type AutomatonDesignAnswerKeyV1 = { reference: AutomatonMachine; layout?: AutomatonLayout };
+export type AutomatonDesignAnswer = { kind: "automatonDesign"; machine: AutomatonMachine; layout?: AutomatonLayout };
 export type AutomatonDesignIssue = { code: string; message: string; severity: "error"; path?: string };
 
 const err = (code: string, message: string, path?: string): AutomatonDesignIssue => ({ code, message, severity: "error", ...(path ? { path } : {}) });
@@ -32,6 +38,23 @@ const own = (o: Record<string, unknown>, k: string) => Object.prototype.hasOwnPr
 const STATE_ID = /^[A-Za-z][A-Za-z0-9_]{0,7}$/;
 const SYMBOL = /^[A-Za-z0-9#$*+@]$/;
 const EPSILON = "ε";
+/** The drawing editor's grid bound (studentTools/automataLab.ts GRID_MAX — parity-tested). */
+export const AUTOMATON_LAYOUT_GRID_MAX = 20;
+
+/** AUTO-A9 — a layout for these states, or null when it does not read: a plain object, keys among the states, values two integers 0…20. */
+export function readAutomatonLayout(raw: unknown, states: readonly string[]): AutomatonLayout | null {
+  if (!isPlain(raw)) return null;
+  const keys = Object.keys(raw);
+  if (keys.length > states.length) return null;
+  const out: AutomatonLayout = {};
+  for (const q of keys) {
+    const c = raw[q];
+    if (FORBIDDEN.has(q) || !states.includes(q) || !Array.isArray(c) || c.length !== 2) return null;
+    if (!c.every(v => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= AUTOMATON_LAYOUT_GRID_MAX)) return null;
+    out[q] = [c[0] as number, c[1] as number];
+  }
+  return out;
+}
 
 export const automatonDesignQuestionVersion = (node: unknown): number | undefined => isPlain(node) ? effectiveQuestionTypeVersion(AUTOMATON_DESIGN_TYPE_KEY, node.questionTypeVersion) : undefined;
 export const defaultAutomatonDesignConfig = (): AutomatonDesignConfigV1 => ({ v: 1, machine: "DFA", alphabet: ["a", "b"], maxStates: 4 });
@@ -106,7 +129,7 @@ function runs(m: AutomatonMachine, word: string): boolean {
 type KeyResult = { ok: true; key: AutomatonDesignAnswerKeyV1; issues: [] } | { ok: false; issues: AutomatonDesignIssue[] };
 function checkKey(raw: unknown, config: AutomatonDesignConfigV1 | null): KeyResult {
   const bad = (code: string, message: string): KeyResult => ({ ok: false, issues: [err(code, message, "answer.reference")] });
-  if (!isPlain(raw) || !onlyKeys(raw, ["reference"])) return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة أو غير صالحة.", "answer")] };
+  if (!isPlain(raw) || !onlyKeys(raw, ["reference", "layout"])) return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة أو غير صالحة.", "answer")] };
   if (raw.reference === undefined) return { ok: false, issues: [err("AUTOMATON_KEY_INVALID", "الآلة النموذجية (مفتاح التصحيح) مفقودة: ابنِها في محرر السؤال.", "answer")] };
   const m = readMachineShape(raw.reference);
   if (!m) return bad("AUTOMATON_KEY_INVALID", "الآلة النموذجية غير صالحة.");
@@ -126,7 +149,13 @@ function checkKey(raw: unknown, config: AutomatonDesignConfigV1 | null): KeyResu
       if (r !== undefined) return bad("AUTOMATON_KEY_EXAMPLE", "الكلمة «" + (r || "ε") + "» في الأمثلة المرفوضة، لكن الآلة النموذجية تقبلها.");
     }
   }
-  return { ok: true, key: { reference: m }, issues: [] };
+  let layout: AutomatonLayout | undefined;
+  if (raw.layout !== undefined) {
+    const l = readAutomatonLayout(raw.layout, m.states);
+    if (!l) return { ok: false, issues: [err("AUTOMATON_KEY_LAYOUT", "أماكن حالات الآلة النموذجية في الرسم غير صالحة.", "answer.layout")] };
+    if (Object.keys(l).length) layout = l;
+  }
+  return { ok: true, key: { reference: m, ...(layout ? { layout } : {}) }, issues: [] };
 }
 export function validateAutomatonDesignAnswerKey(raw: unknown, rawConfig: unknown): KeyResult {
   const cfg = validateAutomatonDesignConfig(rawConfig);
@@ -156,9 +185,12 @@ export function automatonDesignAuthority(rawConfig: unknown, rawKey: unknown): {
 export type AutomatonDesignAnswerResult = { ok: true; answer: AutomatonDesignAnswer } | { ok: false; code: string };
 /** The answer's SHAPE only (bounded strings and arrays): a machine that breaks a rule of the question is kept, and judged wrong. */
 export function normalizeAutomatonDesignAnswer(a: unknown): AutomatonDesignAnswerResult {
-  if (!isPlain(a) || a.kind !== "automatonDesign" || !onlyKeys(a, ["kind", "machine"])) return { ok: false, code: "AUTOMATON_ANSWER_INVALID" };
+  if (!isPlain(a) || a.kind !== "automatonDesign" || !onlyKeys(a, ["kind", "machine", "layout"])) return { ok: false, code: "AUTOMATON_ANSWER_INVALID" };
   const m = readMachineShape(a.machine);
-  return m ? { ok: true, answer: { kind: "automatonDesign", machine: m } } : { ok: false, code: "AUTOMATON_ANSWER_INVALID" };
+  if (!m) return { ok: false, code: "AUTOMATON_ANSWER_INVALID" };
+  // AUTO-A9 — the layout is presentation only: one that does not read is dropped, the machine (the answer) is kept
+  const layout = a.layout === undefined ? null : readAutomatonLayout(a.layout, m.states);
+  return { ok: true, answer: { kind: "automatonDesign", machine: m, ...(layout && Object.keys(layout).length ? { layout } : {}) } };
 }
 /** Draft / submission binding: the shape (the question's rules are the grader's to judge, so an answer is never dropped for breaking one). */
 export function bindAutomatonDesignAnswerToQuestion(a: unknown, question: unknown): AutomatonDesignAnswerResult {

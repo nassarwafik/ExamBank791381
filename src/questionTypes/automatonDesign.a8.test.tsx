@@ -115,6 +115,29 @@ describe("A8 — the teacher's editor", () => {
   });
 });
 
+describe("AUTO-A9 — the teacher's reference keeps its layout", () => {
+  function Editor({ initial, spy }: { initial: BuilderQuestion; spy?: (n: Record<string, unknown>) => void }) {
+    const [node, setNode] = useState(initial);
+    return <AutomatonDesignEditor node={node as never} onChange={patch => setNode(n => { const next = { ...n, ...patch } as BuilderQuestion; spy?.(next as never); return next; })} />;
+  }
+  it("moving a reference state (desktop) writes where it was put beside the reference; reopening draws it there", () => {
+    vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === "(pointer: fine)", media: q, addEventListener() {}, removeEventListener() {} })));
+    const seen: Record<string, unknown>[] = [];
+    render(<Editor initial={question()} spy={n => seen.push(n)} />);
+    const ref = screen.getByTestId("automaton-reference");
+    fireEvent.change(within(ref).getByLabelText("الحالة"), { target: { value: "q1" } });
+    fireEvent.click(within(within(ref).getByRole("group", { name: "انقل q1 خانة" })).getByRole("button", { name: "أسفل" }));
+    const key = (seen.at(-1) as { answer: { reference: unknown; layout?: Record<string, [number, number]> } }).answer;
+    expect(key.reference).toEqual(REF);
+    expect(key.layout?.q1).toBeTruthy();
+    cleanup();
+    render(<Editor initial={question(CFG, key)} />);
+    const ys = [...screen.getByTestId("automaton-reference").querySelectorAll("g.learning-automaton-state")].map(g => [g.querySelector("text")?.textContent, Number(g.querySelector("circle")?.getAttribute("cy"))]);
+    const y = Object.fromEntries(ys);
+    expect(y.q1).toBeGreaterThan(y.q0 as number);                               // q1 one row below q0, as it was put
+  });
+});
+
 describe("A8 — the student's renderer", () => {
   const studentQ = (cfg: unknown = CFG) => sanitizeExamForStudent(baseExam([question(cfg)])).sections[0].questions[0];
   function Student({ q, initial, disabled, spy }: { q: Question; initial?: Answer; disabled?: boolean; spy?: (a: Answer) => void }) {
@@ -159,19 +182,33 @@ describe("A8 — the student's renderer", () => {
     fireEvent.click(screen.getByRole("button", { name: "شغّل" }));
     expect(screen.getByRole("status").textContent).toContain("آلتك تقبل الكلمة 0101");
   });
-  it("on a desktop, moving a state on the drawing saves nothing (the same machine); an arrow drawn in the table does", () => {
+  // AUTO-A9 (owner request «ابدأ بحفظ أماكن الحالات») — this test pinned the A8 behaviour «moving a state saves nothing»; it now pins the
+  // decided one: a move saves the SAME machine with where the state was put, and a saved answer comes back drawn as it was left.
+  it("AUTO-A9 — on a desktop, moving a state saves the same machine with its layout; the saved answer comes back where it was left", () => {
     vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === "(pointer: fine)", media: q, addEventListener() {}, removeEventListener() {} })));
     const sent: Answer[] = [];
     render(<Student q={studentQ()} spy={a => sent.push(a)} />);
     const r = screen.getByTestId("automaton-design-response");
     fireEvent.click(within(r).getByRole("button", { name: /إضافة حالة/ }));
     expect(sent).toHaveLength(1);
+    const before = sent[0] as Extract<Answer, { kind: "automatonDesign" }>;
     fireEvent.change(within(r).getByLabelText("الحالة"), { target: { value: "q1" } });
     fireEvent.click(within(within(r).getByRole("group", { name: "انقل q1 خانة" })).getByRole("button", { name: "أسفل" }));
     expect(within(r).getByText("نُقلت q1.")).toBeTruthy();
-    expect(sent).toHaveLength(1);
-    fireEvent.change(cell(r, "q0", "1"), { target: { value: "q1" } });
     expect(sent).toHaveLength(2);
+    const moved = sent[1] as Extract<Answer, { kind: "automatonDesign" }>;
+    expect(moved.machine).toEqual(before.machine);                              // the same machine: the same grade
+    expect(moved.layout?.q1).toBeTruthy();
+    const q1Cell = moved.layout!.q1;
+    fireEvent.click(within(within(r).getByRole("group", { name: "انقل q1 خانة" })).getByRole("button", { name: "أسفل" }));
+    fireEvent.click(within(within(r).getByRole("group", { name: "انقل q1 خانة" })).getByRole("button", { name: "أعلى" }));
+    expect((sent.at(-1) as typeof moved).layout!.q1).toEqual(q1Cell);
+    const circleY = () => Number([...screen.getByTestId("alab-canvas").querySelectorAll("g.learning-automaton-state")].find(g => g.querySelector("text")?.textContent === "q1")!.querySelector("circle")!.getAttribute("cy"));
+    const y = circleY();
+    cleanup();
+    render(<Student q={studentQ()} initial={sent.at(-1)} />);
+    expect(circleY()).toBe(y);                                                    // restored where it was left
+    fireEvent.change(cell(screen.getByTestId("automaton-design-response"), "q0", "1"), { target: { value: "q1" } });
   });
   it("a config that does not read shows a note (never a broken builder)", () => {
     render(<AutomatonDesignResponse q={{ text: "س", marks: 1, automatonDesign: { v: 1, machine: "TM" } } as never} id="a1" labelPrefix="" answer={undefined} onAnswer={() => {}} />);

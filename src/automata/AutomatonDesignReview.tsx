@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { gridLayout, readAutomatonConfig, type Machine } from "../learning/activities/automaton";
+import { readAutomatonConfig, type Machine } from "../learning/activities/automaton";
+import { labLayout } from "../studentTools/automataLab";
 import { Diagram } from "../learning/activities/automatonDiagram";
 import { buildScene } from "../learning/activities/automatonScene";
 import { issueText } from "../learning/activities/automatonDesign";
@@ -11,7 +12,8 @@ import "../learning/activities/automatonDesign.css";
  * AUTO-A8b — the teacher's review of an automatonDesign@1 answer (lazy, teacher only): the student's machine and the reference machine,
  * drawn as the book draws them, and the grader's stored verdict in words — the shortest word on which the two machines disagree («الكلمة
  * abb يجب أن تُقبل، لكن آلة الطالب ترفضها») or the public rule of the question the student's machine broke. The verdict is the one the
- * server stored with the grade (`autoGrade.automatonFeedback`); nothing is re-judged here.
+ * server stored with the grade (`autoGrade.automatonFeedback`); nothing is re-judged here. AUTO-A9 — each machine is drawn where its
+ * author put its states (the saved `layout`; the book's automatic layout for the rest).
  */
 type Feedback = { counterexample?: { word: string; shouldAccept: boolean }; issue?: { code: string; state?: string; symbol?: string; max?: number } };
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
@@ -24,8 +26,15 @@ function drawable(kind: "DFA" | "NFA", alphabet: string[], raw: unknown): Machin
   void kind;
   return read ? read.machine : null;
 }
-function Drawing({ title, machine, ids, testId }: { title: string; machine: Machine | null; ids: string; testId: string }) {
-  const scene = useMemo(() => (machine ? buildScene(machine, gridLayout(machine)) : null), [machine]);
+/** AUTO-A9 — a saved layout (cells of the machine's states) or none: the rest is the book's automatic layout (labLayout). */
+const layoutOf = (raw: unknown): Record<string, [number, number]> | undefined => {
+  if (!isObj(raw)) return undefined;
+  const out: Record<string, [number, number]> = {};
+  for (const [q, c] of Object.entries(raw)) if (Array.isArray(c) && c.length === 2 && c.every(v => Number.isInteger(v) && v >= 0 && v <= 20)) out[q] = [c[0], c[1]];
+  return out;
+};
+function Drawing({ title, machine, layout, ids, testId }: { title: string; machine: Machine | null; layout?: Record<string, [number, number]>; ids: string; testId: string }) {
+  const scene = useMemo(() => (machine ? buildScene(machine, labLayout(machine, layout)) : null), [machine, layout]);
   return (
     <figure className="ad-review-figure" data-testid={testId}>
       <figcaption>{title}</figcaption>
@@ -53,8 +62,8 @@ export default function AutomatonDesignReview({ answer, answerKey, config, feedb
       )}
       {issue && <p className="ad-review-verdict" data-testid="automaton-review-issue">آلة الطالب تخالف قاعدة في السؤال: {issueText(issue)}</p>}
       <div className="ad-review-pair">
-        {answer === undefined || answer === null ? <p className="learning-autodesign-help">لم يُسجّل الطالب آلة.</p> : <Drawing title="آلة الطالب" machine={mine} ids="adr-mine" testId="automaton-review-student" />}
-        <Drawing title="الآلة النموذجية" machine={ref} ids="adr-ref" testId="automaton-review-reference" />
+        {answer === undefined || answer === null ? <p className="learning-autodesign-help">لم يُسجّل الطالب آلة.</p> : <Drawing title="آلة الطالب" machine={mine} layout={isObj(answer) ? layoutOf(answer.layout) : undefined} ids="adr-mine" testId="automaton-review-student" />}
+        <Drawing title="الآلة النموذجية" machine={ref} layout={isObj(answerKey) ? layoutOf(answerKey.layout) : undefined} ids="adr-ref" testId="automaton-review-reference" />
       </div>
     </div>
   );
