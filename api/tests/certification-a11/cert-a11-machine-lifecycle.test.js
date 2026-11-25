@@ -185,6 +185,11 @@ describe("A11 the grade is the book exercises' judge", () => {
     expect(s("t1", NOHALT.t1)).toEqual({ score: 0, correct: false, manualReview: true, nohalt: { word: "b" } });
     expect(s("p1", ATTACKER.p1)).toEqual({ score: 0, correct: false, manualReview: false, issue: { code: "too-many-states", max: 6 } });
     expect(s("t1", undefined)).toEqual({ score: 0, correct: false, manualReview: false });
+    // the book's tape: a machine that first steps onto ├ and back is right on t1 (├ before the input), as on the student's own player
+    const detour = { ...R.awb, states: [...R.awb.states, "d1", "d2"], start: "d1", transitions: [tm("d1", "a", "a", "L", "d2"), tm("d1", "b", "b", "L", "d2"), tm("d2", "├", "├", "R", "q0"), ...R.awb.transitions] };
+    expect(s("t1", ans(detour))).toMatchObject({ score: 5, correct: true });
+    const noEnd = { ...q("t1").machineDesign }; delete noEnd.leftEnd;
+    expect(scoreMachineDesign({ config: noEnd, answerKey: q("t1").answer, response: ans(detour), maxMarks: 5 })).toMatchObject({ score: 0, counterexample: { word: "ab", shouldAccept: true } });
     expect(JSON.stringify(s("t2", PARTIAL.t2))).not.toMatch(/"reference"|"q5"/);
   });
 });

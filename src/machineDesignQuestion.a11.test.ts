@@ -48,6 +48,12 @@ describe("A11a — the public rules", () => {
   });
   it("the student projection is the canonical rules (no answer data), or nothing", () => {
     expect(projectMachineDesignConfigForStudent(TM_CFG)).toEqual(TM_CFG);
+    // a REBUILT copy, never the stored object: repeated example words once, empty example lists dropped
+    const raw = { ...PDA_CFG, examples: { accept: ["ab", "ab", ""], reject: [] } };
+    const p = projectMachineDesignConfigForStudent(raw);
+    expect(p).toEqual({ ...PDA_CFG, examples: { accept: ["ab", ""], reject: [] } });
+    expect(p).not.toBe(raw);
+    expect(projectMachineDesignConfigForStudent({ ...PDA_CFG, examples: { accept: [], reject: [] } })).toEqual({ v: 1, machine: "PDA", alphabet: ["a", "b"], maxStates: 6 });
     expect(projectMachineDesignConfigForStudent({ ...TM_CFG, reference: PLUS2 })).toBeNull();
   });
 });
