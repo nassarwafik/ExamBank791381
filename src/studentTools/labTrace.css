@@ -134,3 +134,7 @@
 .lab-tt-out{ text-align:start; }
 .lab-tt-go{ font:inherit; min-inline-size:2rem; padding:0 .3rem; background:none; border:1px solid transparent; border-radius:var(--eb-r-sm); cursor:pointer; color:inherit; }
 .lab-tt-go:focus-visible{ outline:2px solid var(--eb-primary); }
+
+/* V16 (§26) — «جدول التتبّع» of a called method: its call number and the value it returns */
+.lab-tt td.lab-tt-call{ color:var(--eb-text-secondary); }
+.lab-tt td.lab-tt-ret{ font-weight:700; color:var(--eb-primary-strong); }

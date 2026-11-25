@@ -8,6 +8,7 @@ import type { DsFrame, DsObj, DsStep, DsTrace, DsVal } from "../learning/activit
 //     cell of an array that is there, `a.Length` / `list.Count` only by the length of one;
 //   • runtimeErrorOf: the run's error (stderr) in one Arabic sentence; an index outside an array says which index and which range;
 //   • traceTable: «جدول التتبّع» — one row per step that changed a value of the running method (or printed), up to the step shown;
+//     V16: of any method the run calls (traceMethods), each call numbered, with its depth and the value it returns;
 //   • traceKey: the player's keyboard (the page is RTL: ← is forward, as «الخطوة التالية» is left of «الخطوة السابقة»).
 
 const plain = (v: DsVal | undefined): string | null => (v?.t === "v" ? v.s : v?.t === "null" ? "null" : null);
@@ -104,58 +105,86 @@ export function runtimeErrorOf(stderr: string, step: DsStep, lines: readonly str
   return base;
 }
 
-export type TraceTable = { columns: string[]; rows: { step: number; line: number; cells: (string | null)[]; changed: boolean[]; test: TraceCondition | null; printed: string }[]; clipped: boolean };
+export type TraceRow = {
+  step: number; line: number; cells: (string | null)[]; changed: boolean[]; test: TraceCondition | null; printed: string;
+  /** V16, a called method only: which call of it this is (1, 2, … in the order the calls began), how deep the call stack is
+   *  (0 = the method the run starts in), and the value it returns on the step it returns (null on any other step). */
+  call: number; depth: number; ret: string | null;
+};
+export type TraceTable = { method: string; called: boolean; columns: string[]; rows: TraceRow[]; clipped: boolean };
 export const TRACE_TABLE_MAX = 400;
 
+const topOf = (s: DsStep): DsFrame | undefined => s.frames.at(-1);
+
+/** V16: the methods that run in the trace (each the running method on some step), the one the run starts in first. */
+export function traceMethods(trace: DsTrace): string[] {
+  const out: string[] = [];
+  const entry = trace.steps[0]?.frames[0]?.name;
+  if (entry) out.push(entry);
+  for (const s of trace.steps) { const n = topOf(s)?.name; if (n && !out.includes(n)) out.push(n); }
+  return out;
+}
+
 /**
- * «جدول التتبّع»: the columns are the plain variables of the method the run starts in (in the order they appear) and, for each
- * `a[i]` of the program, that cell (`arr[i]`). A row for every step up to `upTo` where one of them changed, a condition was tested or
- * something was printed — while that method is the one running (a called method's steps are its own story).
+ * «جدول التتبّع» for one method (by default the one the run starts in): the columns are its plain variables (in the order they
+ * appear) and, for each `a[i]` of the program over one of its arrays, that cell (`arr[i]`). A row for every step up to `upTo` WHILE
+ * THAT METHOD IS THE ONE RUNNING where one of them changed, a condition was tested, something was printed or it returned a value.
+ * V16: a called method is a table of its own — every call of it (a recursion's too) numbered, with its depth and what it returned;
+ * a value is «changed» against the same call's previous row, never against another call's.
  */
-export function traceTable(trace: DsTrace, upTo: number): TraceTable {
+export function traceTable(trace: DsTrace, upTo: number, method?: string): TraceTable {
   const entry = trace.steps[0]?.frames[0]?.name ?? "";
+  const name = method ?? entry;
+  const called = name !== entry;
+  const runs = (s: DsStep) => topOf(s)?.name === name;
   const names: string[] = [], cells: string[] = [];   // the variables first, then the cells a[i] (each in the order it appears)
   const seen = new Set<string>();
   const add = (list: string[], c: string) => { if (!seen.has(c)) { seen.add(c); list.push(c); } };
   const ptrs = (trace.pointers ?? []).filter(p => p.length === 2);
   for (const s of trace.steps) {
-    const f = s.frames.length === 1 && s.frames[0].name === entry ? s.frames[0] : null;
-    if (!f) continue;
+    if (!runs(s)) continue;
+    const f = topOf(s)!;
     for (const [n, v] of f.vars) if (v.t === "v" || v.t === "null") add(names, n);
     for (const [a, i] of ptrs) if (arrayOf(new Map(f.vars).get(a), s.objs)) add(cells, a + "[" + i + "]");
   }
   const cols = [...names, ...cells];
   const cellOf = (c: string, s: DsStep): string | null => {
-    const f = s.frames[0], vars = new Map(f.vars);
+    const vars = new Map(topOf(s)!.vars);
     const m = /^(\w+)\[(\w+)\]$/.exec(c);
     if (!m) return plain(vars.get(c));
     const items = arrayOf(vars.get(m[1]), s.objs), i = plain(vars.get(m[2]));
     if (!items || i === null || !/^\d+$/.test(i)) return null;
     return items[Number(i)] ?? null;
   };
-  const rows: TraceTable["rows"] = [];
-  let last: (string | null)[] | null = null, clipped = false;
+  const ordinal = new Map<number, number>();   // a call's number for the whole run → 1, 2, … for this method
+  const lastOf = new Map<number, (string | null)[]>();   // each call's previous row
+  const rows: TraceRow[] = [];
+  let clipped = false;
   for (let k = 0; k <= Math.min(upTo, trace.steps.length - 1); k++) {
     const s = trace.steps[k];
-    if (!(s.frames.length === 1 && s.frames[0].name === entry)) { last = null; continue; }
+    if (!runs(s)) continue;
+    const id = topOf(s)!.call ?? -1;
+    if (!ordinal.has(id)) ordinal.set(id, ordinal.size + 1);
+    const last = lastOf.get(id) ?? null;
     const row = cols.map(c => cellOf(c, s));
     const printed = s.out.slice(k > 0 ? trace.steps[k - 1].out.length : 0);
     const test = conditionOf(s);
+    const ret = called && s.ret !== undefined ? s.ret : null;
     const changed = row.map((c, j) => !last || last[j] !== c);
     const nothing = last ? !changed.some(Boolean) : row.every(c => c === null);   // a first row with no value yet is no row
-    if (nothing && !test && !printed) continue;
+    if (nothing && !test && !printed && ret === null) continue;
     if (rows.length >= TRACE_TABLE_MAX) { clipped = true; break; }
-    rows.push({ step: k, line: s.line, cells: row, changed: last ? changed : row.map(c => c !== null), test, printed });
-    last = row;
+    rows.push({ step: k, line: s.line, cells: row, changed: last ? changed : row.map(c => c !== null), test, printed, call: ordinal.get(id)!, depth: s.frames.length - 1, ret });
+    lastOf.set(id, row);
   }
-  return { columns: cols, rows, clipped };
+  return { method: name, called, columns: cols, rows, clipped };
 }
 
 /** The table as text with tabs (pasted into a spreadsheet or a document, it keeps its columns). */
 export function traceTableText(t: TraceTable): string {
-  const head = ["الخطوة", "السطر", ...t.columns, "الشرط", "الناتج"].join("\t");
-  const body = t.rows.map(r => [String(r.step + 1), String(r.line), ...r.cells.map(c => c ?? ""),
-    r.test ? r.test.text + " → " + (r.test.value ? "true" : "false") : "", r.printed.replace(/\s+/g, " ").trim()].join("\t"));
+  const head = ["الخطوة", "السطر", ...(t.called ? ["الاستدعاء", "العمق"] : []), ...t.columns, "الشرط", ...(t.called ? ["تُعيد"] : []), "الناتج"].join("\t");
+  const body = t.rows.map(r => [String(r.step + 1), String(r.line), ...(t.called ? [String(r.call), String(r.depth)] : []), ...r.cells.map(c => c ?? ""),
+    r.test ? r.test.text + " → " + (r.test.value ? "true" : "false") : "", ...(t.called ? [r.ret ?? ""] : []), r.printed.replace(/\s+/g, " ").trim()].join("\t"));
   return [head, ...body].join("\n");
 }
 
