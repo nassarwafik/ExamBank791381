@@ -266,6 +266,14 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
   const saved = JSON.parse(await page.getByTestId("saved-question").textContent());
   check(JSON.stringify(saved.answer.reference) === JSON.stringify({ states: ["q0", "q1"], start: "q0", accept: ["q1"], transitions: [["q0", "a", "q1"], ["q0", "b", "q0"], ["q1", "a", "q1"], ["q1", "b", "q0"]] })
     && await page.getByTestId("automaton-question-issues").count() === 0, "teacher: the reference built with the table is the private key; the question is complete");
+  // AUTO-A8b — the teacher's review (both machines drawn, the stored word) and the student's released breakdown
+  const rv = page.getByTestId("automaton-design-review");
+  await rv.scrollIntoViewIfNeeded();
+  const drawnStates = async id => (await page.getByTestId(id).locator("g.learning-automaton-state text").allTextContents()).join(",");
+  check(await drawnStates("automaton-review-student") === "p0,p1" && await drawnStates("automaton-review-reference") === "q0,q1,q2"
+    && /الكلمة\s*b\s*يجب أن تُرفض، لكن آلة الطالب تقبلها/.test(await page.getByTestId("automaton-review-word").innerText()), "review: both machines drawn and the separating word in words");
+  await page.getByTestId("result-breakdown").locator("summary").click();
+  check(/الكلمة\s*b\s*كان يجب أن تُرفض، لكن آلتك تقبلها/.test(await page.getByTestId("breakdown-automaton").innerText()), "the student's released breakdown: one line with the word");
   if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automaton-question-" + name + ".png"), fullPage: true });
   if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the teacher's editor (" + (await sideways()) + " px)");
   check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");

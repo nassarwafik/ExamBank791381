@@ -48,7 +48,7 @@ const scene3DSelection = require("./shared-finalization/scene3DSelectionQuestion
 const meshPartSelection = require("./shared-finalization/meshPartSelectionQuestion");
 // AUTO-A8 — automatonDesign@1: the shared contract re-validates the public rules and the PRIVATE reference (unreadable ⇒ 0 + manual review),
 // then the book exercises' judge compares the two LANGUAGES exactly; full marks or zero (owner decision). automaton-design-grading.js.
-const { scoreAutomatonDesign } = require("./automaton-design-grading");
+const { scoreAutomatonDesign, automatonFeedbackOf } = require("./automaton-design-grading");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -189,7 +189,8 @@ registerBuiltIn("meshPartSelection", (question, response, max) => {
 });
 registerBuiltIn("automatonDesign", (question, response, max) => {
   const r = scoreAutomatonDesign({ config: question.automatonDesign, answerKey: question.answer, response, maxMarks: max });
-  return { score: r.score, correct: r.correct, manualReview: r.manualReview };
+  const feedback = automatonFeedbackOf(r);   // AUTO-A8b — the separating word / broken rule, kept with the grade
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, ...(feedback ? { automatonFeedback: feedback } : {}) };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {
   const r = inlineCloze.scoreInlineCloze({ config: question.inlineCloze, answerKey: question.answer, response, maxMarks: max });

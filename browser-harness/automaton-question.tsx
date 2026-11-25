@@ -2,6 +2,8 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import AutomatonDesignResponse from "../src/questionTypes/student/AutomatonDesignResponse";
 import AutomatonDesignEditor from "../src/questionTypes/editors/AutomatonDesignEditor";
+import AutomatonDesignReview from "../src/automata/AutomatonDesignReview";
+import ResultBreakdown from "../src/student/exam/ResultBreakdown";
 import type { Answer } from "../src/answerState";
 import "../src/design-tokens.css";
 import "../src/fonts.css";
@@ -32,6 +34,15 @@ createRoot(document.getElementById("root")!).render(
       <h1>سؤال امتحان: تصميم أوتومات</h1>
       <section data-testid="student"><h2>شاشة الطالب</h2><Student /></section>
       <section data-testid="teacher"><h2>محرّر المعلم</h2><Teacher /></section>
+      <section data-testid="review"><h2>مراجعة المعلم (AUTO-A8b)</h2>
+        <AutomatonDesignReview config={{ v: 1, machine: "NFA", alphabet: ["a", "b"], maxStates: 4 }}
+          answerKey={{ reference: { states: ["q0", "q1", "q2"], start: "q0", accept: ["q2"], transitions: [["q0", "a", "q0"], ["q0", "b", "q0"], ["q0", "a", "q1"], ["q1", "b", "q2"]] } }}
+          answer={{ kind: "automatonDesign", machine: { states: ["p0", "p1"], start: "p0", accept: ["p1"], transitions: [["p0", "a", "p0"], ["p0", "b", "p0"], ["p0", "b", "p1"]] } }}
+          feedback={{ counterexample: { word: "b", shouldAccept: false } }} />
+      </section>
+      <section data-testid="breakdown"><h2>نتيجة الطالب بعد النشر (AUTO-A8b)</h2>
+        <ResultBreakdown breakdown={{ sections: [{ id: "s1", title: "قسم", capped: false }], questions: [{ number: 1, sectionId: "s1", status: "zero", maxMarks: 6, score: 0, automaton: { word: "b", shouldAccept: false } }] }} />
+      </section>
     </article>
   </StrictMode>
 );

@@ -59,3 +59,10 @@
 .qt-automaton-design .ad-inline label, .qt-automaton-design .ad-fields > .ad-check{ font-size:var(--eb-fs-13);  display:flex; align-items:center; gap:var(--eb-space-1); }
 .qt-automaton-design .ad-note{ margin:0; font-size:var(--eb-fs-12); color:var(--eb-text-secondary); }
 .qt-automaton-design .ad-issues{ border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
+/* AUTO-A8b — the teacher's review of an automatonDesign@1 answer. */
+.ad-review{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-inline-size:0; }
+.ad-review-rules{ margin:0; font-size:var(--eb-fs-13); color:var(--eb-text-secondary); }
+.ad-review-verdict{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-surface-2, var(--eb-bg)); border:1px solid var(--eb-border); }
+.ad-review-pair{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:var(--eb-space-3); }
+.ad-review-figure{ margin:0; min-inline-size:0; overflow-x:auto; }
+.ad-review-figure > figcaption{ font-weight:600; font-size:var(--eb-fs-13); margin-block-end:var(--eb-space-1); }

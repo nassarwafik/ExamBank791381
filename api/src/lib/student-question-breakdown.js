@@ -6,6 +6,11 @@
 // expected output, a hidden-test detail or any part structure. The projection is an explicit ALLOWLIST built field by field from the
 // stored grade (nothing is spread), so a field added to the grade later can never leak through here.
 //
+// AUTO-A8b — owner decision (2026-11-25): an automatonDesign@1 question ALSO shows the student, after the results are released, the
+// shortest word on which their machine and the reference disagree («الكلمة abb كان يجب أن تُقبل») — or the public rule of the question
+// their machine broke. One word or one rule, rebuilt field by field from the stored grade (never the reference, never a model machine),
+// and never on a question that awaits the teacher or does not count.
+//
 // Gating (by the caller, student-submission pub()): only inside a RELEASED result (results release, Phase 21G.5 — before release the
 // whole result is withheld), and never while official coding grading can still change a mark (the score itself is withheld then).
 //
@@ -16,6 +21,19 @@
 const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
 const num = v => { const n = Number(v); return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; };
 const MAX_COMMENT = 1000;
+const AUTOMATON_ISSUES = new Set(["malformed", "no-states", "too-many-states", "no-start", "epsilon-in-dfa", "symbol-outside-alphabet", "two-arrows", "incomplete"]);
+const WORD = /^[A-Za-z0-9#$*+@]{0,40}$/;
+const SHORT = /^[A-Za-zε0-9#$*+@_]{1,8}$/;
+/** AUTO-A8b — the separating word or the broken rule of a stored automaton grade, rebuilt and bounded; null otherwise. */
+function automatonOf(g) {
+  const f = isObj(g.automatonFeedback) ? g.automatonFeedback : null;
+  if (!f) return null;
+  const ce = isObj(f.counterexample) ? f.counterexample : null;
+  if (ce && typeof ce.word === "string" && WORD.test(ce.word) && typeof ce.shouldAccept === "boolean") return { word: ce.word, shouldAccept: ce.shouldAccept };
+  const is = isObj(f.issue) ? f.issue : null;
+  if (is && AUTOMATON_ISSUES.has(is.code)) return { issue: { code: is.code, ...(typeof is.state === "string" && SHORT.test(is.state) ? { state: is.state } : {}), ...(typeof is.symbol === "string" && SHORT.test(is.symbol) ? { symbol: is.symbol } : {}), ...(Number.isInteger(is.max) && is.max > 0 && is.max <= 24 ? { max: is.max } : {}) } };
+  return null;
+}
 
 function statusOf(g) {
   if (g.ignored === true) return "notCounted";
@@ -36,6 +54,8 @@ function questionBreakdown(attempt) {
     if (status !== "pending") item.score = num(g.score);
     const comment = typeof g.teacherComment === "string" ? g.teacherComment.trim().slice(0, MAX_COMMENT) : "";
     if (comment) item.comment = comment;
+    const automaton = status === "pending" || status === "notCounted" ? null : automatonOf(g);
+    if (automaton) item.automaton = automaton;
     return item;
   });
   const sections = (attempt && Array.isArray(attempt.sections) ? attempt.sections.filter(isObj) : []).map(s => ({
@@ -48,4 +68,4 @@ function questionBreakdown(attempt) {
   return { sections, questions };
 }
 
-module.exports = { questionBreakdown, statusOf };
+module.exports = { questionBreakdown, statusOf, automatonOf };
