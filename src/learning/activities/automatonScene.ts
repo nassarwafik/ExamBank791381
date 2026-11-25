@@ -68,6 +68,8 @@ export type Scene = {
   stateLabels: Record<string, Placed>;
   start: { d: string };
   box: Box;
+  /** The size of one grid cell (a state's column / row): an editor snaps a dragged state to it (AUTO-A6b). */
+  cell: { w: number; h: number };
 };
 
 /** Lays the whole drawing out once per machine: arrows, loops on the freest side, labels clear of the arrows, the bounds. */
@@ -141,5 +143,5 @@ export function buildScene(machine: Machine, layout: Record<string, [number, num
   }
   for (const l of Object.values(stateLabels)) grow(textBox(l));
   for (const p of curvePeaks) grow({ x1: p.x - 4, y1: p.y - 4, x2: p.x + 4, y2: p.y + 4 });
-  return { r: R, font, pos, edges, stateLabels, start, box: { x1: box.x1 - 12, y1: box.y1 - 12, x2: box.x2 + 12, y2: box.y2 + 12 } };
+  return { r: R, font, pos, edges, stateLabels, start, box: { x1: box.x1 - 12, y1: box.y1 - 12, x2: box.x2 + 12, y2: box.y2 + 12 }, cell: { w: cw, h: ch } };
 }

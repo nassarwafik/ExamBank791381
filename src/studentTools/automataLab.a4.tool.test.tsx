@@ -115,7 +115,8 @@ describe("A4 — the tool", () => {
     render(<AutomataLabTool config={ALL} />);
     fireEvent.click(screen.getByRole("radio", { name: "أوتومات مكدّس" }));
     fireEvent.click(screen.getByRole("button", { name: /^افتح مثالًا: aⁿbⁿ/ }));
-    expect(within(section(/الانتقالات/)).getByText("ادفع a,⏊/S")).toBeTruthy();
+    // the list's own notation column (A6b: on a desktop the drawing above it carries the same labels on its arrows)
+    expect(within(screen.getByRole("region", { name: "انتقالات أوتومات المكدّس" })).getByText("ادفع a,⏊/S")).toBeTruthy();
     expect(runAll("ab aabb aab abb")).toEqual(["ab✓ تُقبل", "aabb✓ تُقبل", "aab✗ تُرفض", "abb✗ تُرفض"]);
     // the first row pops ⏊: refused, and the drawing waits
     fireEvent.change(screen.getByLabelText("الانتقال 1: العملية"), { target: { value: "pop" } });
@@ -127,7 +128,7 @@ describe("A4 — the tool", () => {
     render(<AutomataLabTool config={ALL} />);
     fireEvent.click(screen.getByRole("radio", { name: "آلة تورنغ" }));
     fireEvent.click(screen.getByRole("button", { name: /^افتح مثالًا: كلمات من a طولها زوجي/ }));
-    expect(within(section(/الانتقالات/)).getAllByText(/^(a\/a,R|∆\/∆,S)$/).map(e => e.textContent)).toEqual(["a/a,R", "a/a,R", "∆/∆,S"]);
+    expect(within(screen.getByRole("region", { name: "انتقالات آلة تورنغ" })).getAllByText(/^(a\/a,R|∆\/∆,S)$/).map(e => e.textContent)).toEqual(["a/a,R", "a/a,R", "∆/∆,S"]);
     // a Turing machine's rows add the tape at the halt (∆ for an empty tape); no $ on any tape → no answer column
     expect(runAll("ε a aa")).toEqual(["ε✓ تُقبل∆", "a✗ تُرفضa", "aa✓ تُقبلaa"]);
     expect(within(section(/كلمات كثيرة/)).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["الكلمة", "النتيجة", "الشريط عند التوقف"]);

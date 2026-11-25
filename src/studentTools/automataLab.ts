@@ -12,7 +12,7 @@
 // The machine is a table of data: nothing is evaluated. A Turing machine is stopped after the runners' own step limit.
 
 import {
-  AUTOMATON_KINDS, EPSILON_SYMBOLS, LIMITS, epsilonClosure, readAutomatonConfig, runAutomaton, splitWord,
+  AUTOMATON_KINDS, EPSILON_SYMBOLS, LIMITS, epsilonClosure, gridLayout, readAutomatonConfig, runAutomaton, splitWord,
   type AutomatonKind, type FaMachine, type Machine, type PdaOp, type TmMachine, type TmMove, type Verdict,
 } from "../learning/activities/automaton";
 
@@ -54,6 +54,8 @@ export type LabDraft = {
   tm: TmRow[];
   /** Turing machine: the course's left-end mark ├ before the input (the head starts on the input's first letter). */
   leftEnd: boolean;
+  /** AUTO-A6b — where the learner placed states by mouse: grid cells [column, row] (the others are placed automatically). */
+  layout?: Record<string, [number, number]>;
 };
 
 export const cellKey = (state: string, symbol: string): string => state + "|" + symbol;
@@ -88,8 +90,10 @@ export function removeState(d: LabDraft, q: string): LabDraft {
   for (const [k, v] of Object.entries(d.cells)) if (!k.startsWith(q + "|")) cells[k] = v.filter(t => t !== q);
   const labels = { ...d.labels };
   delete labels[q];
+  const layout = d.layout ? { ...d.layout } : undefined;
+  if (layout) delete layout[q];
   return {
-    ...d, states, start: d.start === q ? states[0] : d.start, accept: d.accept.filter(s => s !== q), labels, cells,
+    ...d, states, start: d.start === q ? states[0] : d.start, accept: d.accept.filter(s => s !== q), labels, cells, ...(layout ? { layout } : {}),
     pda: d.pda.filter(r => r.from !== q && r.to !== q), tm: d.tm.filter(r => r.from !== q && r.to !== q),
   };
 }
@@ -427,4 +431,80 @@ export function runWord(m: Machine, word: string): { ok: true; run: ReturnType<t
   const split = splitWord(m, word);
   if (!split.ok) return { ok: false, message: "الرمز " + split.bad + " ليس من الأبجدية {" + m.alphabet.join(", ") + "}." };
   return { ok: true, run: runAutomaton(m, split.symbols) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUTO-A6b — drawing with the mouse: the layout and the edits a drawing makes (pure)
+// ────────────────────────────────────────────────────────────────────────────
+
+export const GRID_MAX = 20;
+type Cell = [number, number];
+const sameCell = (a: Cell, b: Cell) => a[0] === b[0] && a[1] === b[1];
+
+/**
+ * Every state's grid cell: the course's automatic layout (columns by distance from the start), with the cells the learner chose by
+ * mouse taking precedence; a state placed automatically on a chosen cell moves to the first free cell of its column, then to the right.
+ * Two states never share a cell. Deterministic.
+ */
+export function labLayout(m: Machine, chosen?: Record<string, Cell>): Record<string, Cell> {
+  const auto = gridLayout(m);
+  const out: Record<string, Cell> = {};
+  const used: Cell[] = [];
+  for (const s of m.states) {
+    const c = chosen?.[s];
+    if (c && !used.some(u => sameCell(u, c))) { out[s] = [c[0], c[1]]; used.push(out[s]); }
+  }
+  for (const s of m.states) {
+    if (out[s]) continue;
+    let [col, row] = auto[s];
+    while (used.some(u => sameCell(u, [col, row]))) { row++; if (row > GRID_MAX) { row = 0; col++; } }
+    out[s] = [col, row];
+    used.push(out[s]);
+  }
+  return out;
+}
+
+/** The grid cell under a point of the drawing (snapped, kept inside the grid). */
+export function cellAt(point: { x: number; y: number }, cell: { w: number; h: number }): Cell {
+  const clamp = (v: number) => Math.max(0, Math.min(GRID_MAX, v));
+  return [clamp(Math.round(point.x / cell.w)), clamp(Math.round(point.y / cell.h))];
+}
+
+/** The state whose circle holds a point of the drawing, or null. */
+export function stateAt(point: { x: number; y: number }, pos: Record<string, { x: number; y: number }>, r: number): string | null {
+  for (const [s, p] of Object.entries(pos)) if (Math.hypot(point.x - p.x, point.y - p.y) <= r) return s;
+  return null;
+}
+
+/** Moves a state to a cell; a state already there takes the moved state's old cell (they swap). The layout keeps both choices. */
+export function moveStateTo(d: LabDraft, layoutNow: Record<string, Cell>, q: string, to: Cell): LabDraft {
+  const from = layoutNow[q];
+  if (!from || sameCell(from, to)) return d;
+  const other = Object.keys(layoutNow).find(s => s !== q && sameCell(layoutNow[s], to));
+  const layout: Record<string, Cell> = { ...layoutNow, [q]: [to[0], to[1]] };
+  if (other) layout[other] = [from[0], from[1]];
+  return { ...d, layout };
+}
+
+/** A new state at a free cell (double-click on the drawing); refused at the limit or on a taken cell. */
+export function addStateAt(d: LabDraft, layoutNow: Record<string, Cell>, at: Cell): LabDraft {
+  if (d.states.length >= MAX_STATES || Object.values(layoutNow).some(c => sameCell(c, at))) return d;
+  const q = nextStateName(d.states);
+  return { ...d, states: [...d.states, q], layout: { ...layoutNow, [q]: [at[0], at[1]] } };
+}
+
+/**
+ * An arrow drawn from one state to another (or to itself). A finite automaton takes its symbol: a deterministic one REPLACES the arrow
+ * of that state and symbol (one arrow each), a non-deterministic one adds a target (ε too). A push-down automaton or a Turing machine
+ * gets a new row from → to, to be completed in the list (its symbol, the stack or the tape).
+ */
+export function addArrow(d: LabDraft, from: string, to: string, symbol?: string): LabDraft {
+  if (!d.states.includes(from) || !d.states.includes(to)) return d;
+  if (d.kind === "DFA" || d.kind === "NFA") {
+    if (symbol === undefined || (symbol === EPS ? d.kind !== "NFA" : !d.alphabet.includes(symbol))) return d;
+    const k = cellKey(from, symbol), now = d.cells[k] ?? [];
+    return { ...d, cells: { ...d.cells, [k]: d.kind === "DFA" ? [to] : now.includes(to) ? now : [...now, to] } };
+  }
+  if (d.kind === "PDA") return { ...d, pda: [...d.pda, { from, read: d.alphabet[0] ?? "", top: BOTTOM, op: "none", write: "", to }] };
+  return { ...d, tm: [...d.tm, { from, read: d.alphabet[0] ?? BLANK, write: d.alphabet[0] ?? BLANK, move: "R", to }] };
 }
