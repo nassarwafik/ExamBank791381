@@ -8,10 +8,12 @@ configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
 
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
+const late = <T,>(p: Promise<T>) => new Promise<T>(resolve => setTimeout(() => resolve(p), 50));
 function installFetch() {
   globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.includes("/api/platform-login")) return res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" });
+    // the sign-in answers LATE, as on a loaded machine: the login page (which has its own h1) is still there meanwhile
+    if (url.includes("/api/platform-login")) return late(res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" }));
     if (url.includes("/api/teacher-analytics")) return res(500, { ok: false, error: "x" });
     return res(200, { ok: true, classes: [], students: [], assignments: [], exams: [], posts: [], projects: [], events: [] });
   }) as unknown as typeof fetch;
@@ -43,7 +45,8 @@ describe("L.2 — the teacher app opens a Learning Materials link", () => {
     installFetch();
     render(<App />);
     await login();
-    await screen.findByRole("heading", { level: 1 });
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
     expect(h1()).not.toBe("المواد التعليمية");
     expect(location.hash).toBe("");
   }, 30000);
