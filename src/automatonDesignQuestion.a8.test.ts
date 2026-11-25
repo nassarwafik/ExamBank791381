@@ -41,6 +41,9 @@ describe("A8 — the rules (public config)", () => {
   it("the student projection is the canonical rules — a smuggled field withholds the whole config", () => {
     expect(projectAutomatonDesignConfigForStudent(CFG)).toEqual(CFG);
     expect(projectAutomatonDesignConfigForStudent({ ...CFG, reference: REF })).toBeNull();
+    // the stored copy is not what is sent: duplicate example words are sent once, empty example lists not at all
+    expect(projectAutomatonDesignConfigForStudent({ ...CFG, examples: { accept: ["1", "1", "01"], reject: [] } })).toEqual({ ...CFG, examples: { accept: ["1", "01"], reject: [] } });
+    expect(projectAutomatonDesignConfigForStudent({ v: 1, machine: "NFA", alphabet: ["a"], maxStates: 2, examples: { accept: [], reject: [] } })).toEqual({ v: 1, machine: "NFA", alphabet: ["a"], maxStates: 2 });
     expect(projectAutomatonDesignConfigForStudent({ ...CFG, examples: { accept: ["1"], reject: [], correct: ["x"] } })).toBeNull();
   });
 });

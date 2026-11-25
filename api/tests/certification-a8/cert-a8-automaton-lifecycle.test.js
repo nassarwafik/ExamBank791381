@@ -108,6 +108,14 @@ describe("A8 authoring: the fixture is a real, finalizable exam", () => {
     const r = gradeExam(e, { d1: blank, d2: PERFECT.d2 });
     expect([r.score, r.totalMarks, r.questions.filter(q => q.countedMaxMarks > 0).map(q => q.questionId)]).toEqual([5, 5, ["d2"]]);
   });
+  it("the sanitizer REBUILDS the rules: a field smuggled into them withholds them whole (the student never sees it)", () => {
+    const e = load();
+    qs(e)[0].automatonDesign.hint = "الحل: حالتان";
+    const p = sanitizeExamForStudent(e);
+    expect(qs(p)[0].automatonDesign).toBeUndefined();
+    expect(JSON.stringify(p)).not.toContain("الحل: حالتان");
+    expect(configsOf(p).d2).toEqual(configsOf(load()).d2);
+  });
   it("the student projection keeps the rules exactly and never the reference", () => {
     const e = load(), p = sanitizeExamForStudent(e);
     expect(configsOf(p)).toEqual(configsOf(e));
@@ -160,6 +168,21 @@ describe("A8 the grade is the language, by the book exercises' judge", () => {
       pairs++;
     }
     expect(pairs).toBeGreaterThan(10);
+  });
+  it("a judge that cannot decide (its bounds reached) sends the answer to teacher review — never a silent zero", () => {
+    const judge = require_("../../src/lib/learning-automaton-design.js");
+    const gradingPath = require_.resolve("../../src/lib/automaton-design-grading.js");
+    const real = judge.evaluateAutomatonDesign;
+    try {
+      judge.evaluateAutomatonDesign = () => ({ status: "unavailable" });
+      delete require_.cache[gradingPath];
+      const { scoreAutomatonDesign: undecided } = require_(gradingPath);
+      const q = qs(load())[0];
+      expect(undecided({ config: q.automatonDesign, answerKey: q.answer, response: PERFECT.d1, maxMarks: 5 })).toEqual({ score: 0, correct: false, manualReview: true });
+    } finally {
+      judge.evaluateAutomatonDesign = real;
+      delete require_.cache[gradingPath];
+    }
   });
   it("the separating word and the broken rule are kept beside the score; the reference states are never in the result", () => {
     const e = load(), q = id => qs(e).find(x => x.examQuestionId === id);

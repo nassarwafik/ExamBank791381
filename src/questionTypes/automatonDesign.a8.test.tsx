@@ -159,6 +159,20 @@ describe("A8 — the student's renderer", () => {
     fireEvent.click(screen.getByRole("button", { name: "شغّل" }));
     expect(screen.getByRole("status").textContent).toContain("آلتك تقبل الكلمة 0101");
   });
+  it("on a desktop, moving a state on the drawing saves nothing (the same machine); an arrow drawn in the table does", () => {
+    vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === "(pointer: fine)", media: q, addEventListener() {}, removeEventListener() {} })));
+    const sent: Answer[] = [];
+    render(<Student q={studentQ()} spy={a => sent.push(a)} />);
+    const r = screen.getByTestId("automaton-design-response");
+    fireEvent.click(within(r).getByRole("button", { name: /إضافة حالة/ }));
+    expect(sent).toHaveLength(1);
+    fireEvent.change(within(r).getByLabelText("الحالة"), { target: { value: "q1" } });
+    fireEvent.click(within(within(r).getByRole("group", { name: "انقل q1 خانة" })).getByRole("button", { name: "أسفل" }));
+    expect(within(r).getByText("نُقلت q1.")).toBeTruthy();
+    expect(sent).toHaveLength(1);
+    fireEvent.change(cell(r, "q0", "1"), { target: { value: "q1" } });
+    expect(sent).toHaveLength(2);
+  });
   it("a config that does not read shows a note (never a broken builder)", () => {
     render(<AutomatonDesignResponse q={{ text: "س", marks: 1, automatonDesign: { v: 1, machine: "TM" } } as never} id="a1" labelPrefix="" answer={undefined} onAnswer={() => {}} />);
     expect(screen.getByTestId("automaton-design-unavailable")).toBeTruthy();
