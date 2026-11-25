@@ -98,6 +98,20 @@ describe("A11a — the teacher's editor", () => {
     expect(last(seen).answer.reference).toEqual({ states: ["q0"], start: "q0", accept: ["q0"], transitions: [tmMove("q0", "1", "$", "S", "q0")] });
     expect(screen.queryByTestId("machine-question-issues")).toBeNull();
   });
+  it("on a desktop (the drawing editor shown) the rules' radios and the drawing's are separate groups: choosing «تحسب دالة» keeps the drawing's mode", () => {
+    vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: /fine|hover/.test(q), media: q, addEventListener() {}, removeEventListener() {} })));
+    render(<Editor initial={question({ v: 1, machine: "TM", alphabet: ["1"], maxStates: 6, leftEnd: true }, {})} />);
+    const ref = screen.getByTestId("machine-reference");
+    const drawing = within(ref).getAllByRole("radio").filter(r => !(r as HTMLInputElement).name.endsWith("-start"));
+    expect(drawing.length).toBeGreaterThan(0);                                       // the drawing editor's mode radios
+    const before = drawing.map(r => (r as HTMLInputElement).checked);
+    fireEvent.click(screen.getByRole("radio", { name: /تحسب دالة/ }));
+    expect((screen.getByRole("radio", { name: /تحسب دالة/ }) as HTMLInputElement).checked).toBe(true);
+    expect(drawing.map(r => (r as HTMLInputElement).checked)).toEqual(before);
+    const names = (el: HTMLElement) => new Set(within(el).queryAllByRole("radio").map(r => (r as HTMLInputElement).name));
+    const rules = [...names(screen.getByRole("radiogroup", { name: "ما تفعله الآلة" })), ...names(screen.getByRole("radiogroup", { name: "نوع الآلة" }))];
+    for (const n of rules) expect(names(ref).has(n), n).toBe(false);
+  });
   it("a function's examples are word=output pairs (never a field named `answer`), checked against the reference", () => {
     const seen: Record<string, unknown>[] = [];
     render(<Editor initial={question({ ...TM_CFG, examples: undefined })} spy={n => seen.push(n)} />);

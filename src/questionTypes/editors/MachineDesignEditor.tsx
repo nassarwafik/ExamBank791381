@@ -12,7 +12,8 @@ import "../../learning/activities/activities.css";
 // optional examples (words that are accepted / rejected, or a function's word → answer) — and the PRIVATE reference machine, built with the
 // very builder the student uses. The reference is written to `answer` (removed by the student sanitizer) as soon as the teacher builds it;
 // until then finalization blocks («الآلة النموذجية مفقودة»). Every change is validated live by the same contract the server finalizes and
-// grades with: the reference is read by the book's engine, and the examples are run on it.
+// grades with: the reference is read by the book's engine, and the examples are run on it. It wears the automatonDesign@1 editor's styles
+// (`qt-automaton-design`: the fieldsets may shrink below their table, so a phone never scrolls sideways).
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const KIND_LABEL: Readonly<Record<MachineDesignKind, string>> = Object.freeze({ PDA: "أوتومات مكدّس (حتمي)", TM: "آلة تورنغ (حتمية)" });
 const words = (v: unknown) => (Array.isArray(v) ? v.filter((w): w is string => typeof w === "string") : []);
@@ -33,6 +34,8 @@ function parsePairs(text: string): Pair[] {
 }
 
 export default function MachineDesignEditor({ node, onChange, disabled }: AuthoringEditorProps) {
+  // the rules' own radio groups are named `<ids>-q-…`: the builder below (and, on a desktop, its drawing editor) owns `<ids>-start`,
+  // `<ids>-mode`, … — one shared name would make them ONE radio group
   const ids = "mde" + useId().replace(/:/g, "");
   const raw = isObj((node as { machineDesign?: unknown }).machineDesign) ? (node as { machineDesign: Record<string, unknown> }).machineDesign : {};
   const machine: MachineDesignKind = raw.machine === "TM" ? "TM" : "PDA";
@@ -78,16 +81,16 @@ export default function MachineDesignEditor({ node, onChange, disabled }: Author
   const applyAlphabet = (text: string) => { setAlphabetText(text); write({ alphabet: [...new Set(text.split(/[\s,،]+/).filter(Boolean))] }); };
 
   return (
-    <div className="qt-editor qt-machine-design" data-testid="qt-editor-machineDesign" dir="rtl">
+    <div className="qt-editor qt-automaton-design qt-machine-design" data-testid="qt-editor-machineDesign" dir="rtl">
       <fieldset className="ad-fields" disabled={disabled}>
         <legend>قواعد السؤال (يراها الطالب)</legend>
         <div className="ad-inline" role="radiogroup" aria-label="نوع الآلة">
-          {(["PDA", "TM"] as const).map(t => <label key={t}><input type="radio" name={ids + "-kind"} checked={machine === t} onChange={() => write({ machine: t })} />{KIND_LABEL[t]}</label>)}
+          {(["PDA", "TM"] as const).map(t => <label key={t}><input type="radio" name={ids + "-q-kind"} checked={machine === t} onChange={() => write({ machine: t })} />{KIND_LABEL[t]}</label>)}
         </div>
         {machine === "TM" && (
           <div className="ad-inline" role="radiogroup" aria-label="ما تفعله الآلة">
-            <label><input type="radio" name={ids + "-mode"} checked={!compute} onChange={() => write({ compute: false })} />تميّز لغة (تتوقف في حالة قبول)</label>
-            <label><input type="radio" name={ids + "-mode"} checked={compute} onChange={() => write({ compute: true })} />تحسب دالة (الجواب بين علامتي $)</label>
+            <label><input type="radio" name={ids + "-q-mode"} checked={!compute} onChange={() => write({ compute: false })} />تميّز لغة (تتوقف في حالة قبول)</label>
+            <label><input type="radio" name={ids + "-q-mode"} checked={compute} onChange={() => write({ compute: true })} />تحسب دالة (الجواب بين علامتي $)</label>
           </div>
         )}
         <label>الأبجدية (رموز مفصولة بفواصل؛ $ لعلامة الجواب)<input type="text" dir="ltr" value={alphabetText} maxLength={40} onChange={e => applyAlphabet(e.target.value)} /></label>

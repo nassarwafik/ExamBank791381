@@ -376,7 +376,7 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     const ed = page.getByTestId("qt-editor-machineDesign");
     await ed.getByRole("radio", { name: /آلة تورنغ/ }).check();
     await ed.getByRole("radio", { name: /تحسب دالة/ }).check();
-    await ed.getByLabel(/الأبجدية/).fill("1");
+    await ed.getByLabel(/^الأبجدية \(رموز/).fill("1");
     const ref = ed.getByTestId("machine-reference");
     await ref.getByRole("button", { name: "إضافة انتقال" }).click();
     await ref.getByLabel("الانتقال 1: يكتب").fill("$");
