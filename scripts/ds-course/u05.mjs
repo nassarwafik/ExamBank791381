@@ -58,47 +58,33 @@ public static void ReverseQueue(Queue<int> Q)
     while (!S.IsEmpty())
         Q.Insert(S.Pop());
 }`;
-/** The book's RemoveMin; `cmp` is the test that keeps a document, `note` the comment printed after it. */
-const REMOVE_MIN = (cmp, note = "") => `
-public static Document RemoveMin(Queue<Document> Q)
+/**
+ * The supermarket example (it replaces the book's printer example, ص 203–205): the express cashier serves the FIRST customer
+ * with the fewest items. `keep` is the test that returns a customer to the queue, `less` the comparison that picks the customer.
+ */
+const EXPRESS = (keep = "c != Min", less = "<") => `
+public static Customer ExpressCashier(Queue<Customer> Q)
 {
     if (Q.IsEmpty()) return null;
-    Queue<Document> QTemp = CopyQueue(Q);
-    // **** Find the first document with minimal number of pages ****
-    Document MinDoc = QTemp.Remove(), Doc;
-    while (!QTemp.IsEmpty())
-    {
-        Doc = QTemp.Remove();
-        if (MinDoc.GetNumPages() > Doc.GetNumPages())
-            MinDoc = Doc;
-    }
-    // **** Remove MinDoc from the queue ****
+    Queue<Customer> Temp = new Queue<Customer>();
+    Customer Min = Q.Head();
+    Customer c;
+    // (1) everyone moves to Temp; remember who has the fewest items
     while (!Q.IsEmpty())
     {
-        Doc = Q.Remove();
-        if (${cmp})${note}
-            QTemp.Insert(Doc);
+        c = Q.Remove();
+        if (c.GetItems() ${less} Min.GetItems())
+            Min = c;
+        Temp.Insert(c);
     }
-    // ****  copy QTemp documents back into the original Q ****
-    while (!QTemp.IsEmpty())
-        Q.Insert(QTemp.Remove());
-    // **** Return the found document with minimal number of pages ****
-    return MinDoc;
-}`;
-const BY_POINTER = " // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****";
-const COPY_QUEUE_DOC = `
-public static Queue<Document> CopyQueue(Queue<Document> Q1)
-{
-    Queue<Document> Q2 = new Queue<Document>();
-    while (!Q1.IsEmpty())
-        Q2.Insert(Q1.Remove());
-    Queue<Document> Q3 = new Queue<Document>();
-    while (!Q2.IsEmpty())
+    // (2) everyone returns to Q, except Min
+    while (!Temp.IsEmpty())
     {
-        Q1.Insert(Q2.Head());
-        Q3.Insert(Q2.Remove());
+        c = Temp.Remove();
+        if (${keep})
+            Q.Insert(c);
     }
-    return Q3;
+    return Min;
 }`;
 // تمارين الكتاب: سؤال 6 وسؤال 8
 const WHAT6 = `
@@ -233,44 +219,56 @@ public class MyQueue<T>
         return x;
     }
 }`;
-const DOCUMENT = `
-public class Document
+const CUSTOMER = `
+public class Customer
 {
-    private string FileName;
-    private int NumPages;
-    public Document(string FileName, int NumPages)
+    private string Name;
+    private int Items;
+    public Customer(string Name, int Items)
     {
-        this.FileName = FileName;
-        this.NumPages = NumPages;
+        this.Name = Name;
+        this.Items = Items;
     }
-    public string GetFileName() { return FileName; }
-    public int GetNumPages() { return NumPages; }
-    public override string ToString()
-    {
-        return "FileName = " + FileName + "\\nNumPages = " + NumPages;
-    }
+    public string GetName() { return Name; }
+    public int GetItems() { return Items; }
 }`;
-/** The same class without ToString, for the trace: a document is then drawn as (name, pages). */
-const DOCUMENT_PLAIN = DOCUMENT.replace(/\n {4}public override string ToString\(\)\n {4}\{\n.*\n {4}\}/, "");
+/** The customers' names from the head, as [Sami,Laila]; the queue is restored. */
 const NAMES = `
-public static string Names(Queue<Document> Q)
+public static string Names(Queue<Customer> Q)
 {
-    Queue<Document> T = CopyQueue(Q);
+    Queue<Customer> T = new Queue<Customer>();
     string s = "[";
-    while (!T.IsEmpty())
+    while (!Q.IsEmpty())
     {
-        s += T.Remove().GetFileName();
-        if (!T.IsEmpty()) s += ",";
+        Customer c = Q.Remove();
+        s += c.GetName();
+        if (!Q.IsEmpty()) s += ",";
+        T.Insert(c);
     }
+    while (!T.IsEmpty())
+        Q.Insert(T.Remove());
     return s + "]";
 }`;
-const DOCS_RUN = `
-Queue<Document> Q = new Queue<Document>();
-Q.Insert(new Document("A", 7));
-Q.Insert(new Document("B", 3));
-Q.Insert(new Document("C", 9));
-Q.Insert(new Document("D", 3));`;
-const DOC_LIB = [DOCUMENT_PLAIN, COPY_QUEUE_DOC, NAMES];
+/** The regular cashier: the customer at the head pays first. */
+const CASHIER = `
+public static void Main()
+{
+    Queue<Customer> Q = new Queue<Customer>();
+    Q.Insert(new Customer("Sami", 5));
+    Q.Insert(new Customer("Laila", 2));
+    Q.Insert(new Customer("Ahmad", 8));
+    Customer c = Q.Remove();
+    Console.WriteLine(c.GetName() + " pays for " + c.GetItems() + " items");
+    Console.WriteLine(Names(Q));
+}`;
+const SHOP_RUN = `
+Queue<Customer> Q = new Queue<Customer>();
+Q.Insert(new Customer("Sami", 5));
+Q.Insert(new Customer("Laila", 2));
+Q.Insert(new Customer("Ahmad", 8));
+Q.Insert(new Customer("Huda", 2));`;
+const SHOP_LIB = [CUSTOMER, NAMES];
+const SHOP = { lib: SHOP_LIB, quiet: ["Names"] };
 
 // ── ورقة أسئلة الدور (للمعلّم): الأسئلة المختارة ──────────────────────────────────────────────────────────────────────
 const Q1 = `
@@ -963,61 +961,63 @@ export default {
       title: "دور من الكائنات",
       pages: [
         {
-          title: "دور مستندات للطباعة: `RemoveMin`",
+          title: "دور في السوبرماركت: صندوق الدفع السريع",
           src: "203–205",
-          keywords: ["Document", "RemoveMin", "Queue<Document>", "CopyQueue", "مقارنة مؤشّرات"],
+          keywords: ["Customer", "ExpressCashier", "Queue<Customer>", "دور من الكائنات", "سوبرماركت", "مقارنة مؤشّرات"],
           objective: "أن تعمل مع دور قيمه كائنات، وأن تُخرج منه كائنًا من الوسط مع الحفاظ على ترتيب الباقي.",
           blocks: [
-            EX({ title: "مثال (6)", mode: "practice", prompt: "عندما نستعمل طابعة موجودة في شبكة حواسيب محلّية، فإنّ المستندات التي نُرسلها إلى هذه الطابعة تُحفظ في قائمة انتظار — أي دور — من نوع مستندات للطباعة، بحيث تتمّ طباعتها وفق بروتوكول `FIFO`. أحيانًا يكون من المُفضّل طباعة الملفات الصغيرة قبل الملفات الكبيرة، لأنّ طباعتها لا تستغرق وقتًا طويلًا. حجم المستندات يُقاس بعدد صفحاتها. أمامك وصف جزئي لواجهة الفئة `Document` التي تُمثّل النوع مستندات للطباعة. اكتب عملية خارجية تتلقّى دورًا من نمط `Document` ثم تقوم بإخراج الملف الأول صاحب أصغر عدد من الصفحات." }),
-            API("`Document`", [
-              ["private string FileName;", "اسم الملف"],
-              ["private int NumPages;", "عدد صفحات الملف"],
-              ["public Document(string FileName, int NumPages)", "عملية بنائية تُنشئ مستندًا جديدًا باسم `FileName` وعدد صفحاته `NumPages`."],
-              ["Get / Set", "—"],
-              ["public override string ToString()", "تعيد تفاصيل المستند بالنسق: `FileName = ...` ثم في سطر جديد `NumPages = ...`."],
+            CLAR("بدل مثال الكتاب", "في الكتاب (ص 203–205) مثال «دور مستندات للطباعة» والعملية `RemoveMin`. استبدلناه بمثال أقرب إلى حياتنا اليومية: **دور زبائن في السوبرماركت**. الفكرة نفسها تمامًا: دور قيمه كائنات، ونُخرج منه الكائن صاحب **أصغر** قيمة مع الحفاظ على ترتيب الباقي."),
+            XP("في السوبرماركت يقف الزبائن في **دور** أمام صندوق الدفع: من وصل أولًا يدفع أولًا (`FIFO`). كل زبون معه عربة فيها عدد من المشتريات. يفتح المحلّ **صندوقًا سريعًا** ويدعو إليه الزبون الذي معه **أقل** عدد من المشتريات، لأنّ خدمته تنتهي بسرعة. الزبون المدعوّ يخرج من الدور، وبقية الزبائن **يبقون في أماكنهم** بالترتيب نفسه."),
+            FIG("الدور أمام صندوق الدفع", [
+              { kind: "queue", items: ["سامي 🛒5", "ليلى 🛒2", "أحمد 🛒8", "هدى 🛒2"], label: "الرأس سامي (وصل أولًا) والنهاية هدى" },
+              { kind: "queue", items: ["سامي 🛒5", "أحمد 🛒8", "هدى 🛒2"], label: "بعد أن ذهبت ليلى إلى الصندوق السريع" },
+            ], { description: "الرقم بجانب الاسم هو عدد المشتريات في العربة. لليلى وهدى العدد نفسه (2)، لكن ليلى وصلت قبل هدى، فهي التي تذهب.", fallback: "رسم: دور من الرأس إلى النهاية: سامي (5 مشتريات)، ليلى (2)، أحمد (8)، هدى (2). وبعد ذهاب ليلى إلى الصندوق السريع: سامي، أحمد، هدى." }),
+            LAB("queue", { type: "string", values: ["سامي", "ليلى", "أحمد"], name: "Q", title: "محاكي: دور الزبائن", description: "أدخِل زبونًا جديدًا (اكتب اسمه) فيقف في **نهاية** الدور، واضغط «إخراج» ليدفع الزبون الذي في **الرأس**. هل يستطيع زبون أن يتجاوز من أمامه؟" }),
+            XH("الفئة `Customer`: زبون واحد", 3),
+            API("`Customer`", [
+              ["private string Name;", "اسم الزبون"],
+              ["private int Items;", "عدد المشتريات في عربته"],
+              ["public Customer(string Name, int Items)", "عملية بنائية تُنشئ زبونًا جديدًا اسمه `Name` ومعه `Items` مشتريات."],
+              ["public string GetName()", "تعيد اسم الزبون."],
+              ["public int GetItems()", "تعيد عدد المشتريات."],
             ]),
+            XCS(CUSTOMER),
+            XH("الخطوة الأولى: الصندوق العادي", 3),
+            XP("نبني دورًا من نمط `Queue<Customer>`: كل قيمة فيه **مؤشّر إلى كائن** زبون. الصندوق العادي يخدم الزبون الذي في الرأس بالأمر `Q.Remove()`، والعملية تعيد الكائن نفسه، فنسأله عن اسمه وعدد مشترياته. (العملية `Names` تطبع أسماء الزبائن من الرأس وتعيد الدور كما كان.)"),
+            XCS(CASHIER),
+            TRACE({ title: "تتبّع: الصندوق العادي", code: CASHIER, ...SHOP, description: "راقب: من يخرج من الدور؟ وهل يتغيّر ترتيب من بقي؟" }),
+            XH("الخطوة الثانية: الصندوق السريع", 3),
+            XEX({ title: "مثال: `ExpressCashier`", mode: "practice", prompt: "اكتب عملية خارجية تتلقّى دورًا من نمط `Customer`، تُخرج منه **أول** زبون معه أقل عدد من المشتريات وتعيده، وتُبقي بقية الزبائن في الدور بترتيبهم. إذا كان الدور فارغًا تعيد `null`." }),
             XOL([
-              "ننسخ الدور، ونبحث في **النسخة** عن أول مستند له أصغر عدد من الصفحات: `MinDoc`.",
-              "نُخرج كل المستندات من الدور الأصلي، ونُدخل إلى الدور المساعد كل مستند **ما عدا** `MinDoc`.",
-              "نعيد المستندات من الدور المساعد إلى الدور الأصلي: الدور يحافظ على الترتيب.",
-              "نعيد `MinDoc`.",
-            ], { title: "خطة الحل (تعليقات الكتاب داخل الكود بالإنجليزية)" }),
-            CS(REMOVE_MIN("MinDoc != Doc", BY_POINTER)),
-            P("لاحظ أنّنا أعدنا كتابة العملية `CopyQueue`:"),
-            CS(COPY_QUEUE_DOC),
-            P("**كود لفحص العملية**"),
-            CS(`
-              public static void TestRemoveMin()
-              {
-                  Random R = new Random();
-                  Queue<Document> Q = new Queue<Document>();
-                  Document Doc;
-                  for (int i = 1; i <= 5; i++)
-                  {
-                      Doc = new Document("File Nr" + i.ToString(), R.Next(1, 101));
-                      Q.Insert(Doc);
-                      System.Threading.Thread.Sleep(100);
-                  }
-                  Console.WriteLine(Q.ToString());
-                  Console.WriteLine("Remove File with Minimal number of pages");
-                  Doc = RemoveMin(Q);
-                  Console.WriteLine(Doc);
-                  Console.WriteLine(Q.ToString());
-              }`),
-            CLAR("للتتبّع", "كود الفحص في الكتاب يختار عدد الصفحات عشوائيًا (`Random`)، فلا يمكن تتبّعه مسبقًا. والكتاب يعطي واجهة الفئة `Document` فقط. لذلك كتبنا الفئة بأنفسنا، ونتتبّع `RemoveMin` على أربعة مستندات ثابتة."),
-            XCS(DOCUMENT),
+              "**المرور الأول:** نُخرج الزبائن من `Q` واحدًا واحدًا إلى دور مساعد `Temp`، ونتذكّر في `Min` من معه أقل عدد من المشتريات حتى الآن.",
+              "**المرور الثاني:** نعيد الزبائن من `Temp` إلى `Q`، **ما عدا** `Min`.",
+              "نعيد `Min`. ولأنّ الدور لا يقلب الترتيب، يعود الباقون بترتيبهم الأصلي.",
+            ], { title: "خطة الحل: مروران فقط" }),
+            XCS(EXPRESS()),
+            XNOTE("لاحظ شيئين صغيرين ومهمّين", "(1) الشرط `<` (أصغر تمامًا) يُبقي في `Min` **أول** زبون له أقل عدد، ولا يبدّله بمن بعده إذا تساويا. (2) الشرط `c != Min` يقارن **مؤشّرات**: هل هذا هو الكائن نفسه؟ لا يقارن عدد المشتريات."),
             TRACE({
-              title: "تتبّع `RemoveMin`", code: REMOVE_MIN("MinDoc != Doc", BY_POINTER), lib: DOC_LIB, quiet: ["CopyQueue", "Names"], max: 120,
-              run: DOCS_RUN + "\nDocument Doc = RemoveMin(Q);\nConsole.WriteLine(Doc.GetFileName());\nConsole.WriteLine(Names(Q));",
-              given: "دور المستندات `Q` من الرأس: `(A, 7)` ثم `(B, 3)` ثم `(C, 9)` ثم `(D, 3)` (الاسم، عدد الصفحات)، والاستدعاء `RemoveMin(Q)`.",
-              description: "للمستندين `B` و `D` العدد نفسه من الصفحات. أيهما يخرج؟ وهل يتغيّر ترتيب الباقي؟",
+              title: "تتبّع `ExpressCashier`", code: EXPRESS(), ...SHOP, max: 150,
+              run: SHOP_RUN + "\nCustomer Fast = ExpressCashier(Q);\nConsole.WriteLine(Fast.GetName());\nConsole.WriteLine(Names(Q));",
+              given: "الدور `Q` من الرأس: `(Sami, 5)` ثم `(Laila, 2)` ثم `(Ahmad, 8)` ثم `(Huda, 2)` (الاسم، عدد المشتريات)، والاستدعاء `ExpressCashier(Q)`.",
+              description: "لليلى وهدى العدد نفسه من المشتريات. من يذهب إلى الصندوق السريع؟ وهل يتغيّر ترتيب الباقين؟",
             }),
-            proved(MC("أي مستند تعيده `RemoveMin` للدور `(A, 7)` ثم `(B, 3)` ثم `(C, 9)` ثم `(D, 3)`؟", ["`A`", "*`B`", "`C`", "`D`"], "أصغر عدد صفحات هو 3. الشرط `MinDoc.GetNumPages() > Doc.GetNumPages()` يبدّل `MinDoc` فقط إذا وجد عددًا **أصغر** تمامًا، فيبقى أول مستند له 3 صفحات: `B`."),
-              { code: REMOVE_MIN("MinDoc != Doc"), lib: DOC_LIB, quiet: ["CopyQueue", "Names"], run: DOCS_RUN + "\nConsole.Write(RemoveMin(Q).GetFileName());", out: "B" }),
-            proved(MC("أي مستندات تبقى في الدور بعد الاستدعاء، من الرأس إلى النهاية؟", ["`[A,C]`", "*`[A,C,D]`", "`[D,C,A]`", "`[C,D,A]`"], "خرج `B` فقط. المستند `D` له العدد نفسه من الصفحات لكنه **كائن آخر**، والمقارنة `MinDoc != Doc` تقارن المؤشّرات لا عدد الصفحات. والباقي عاد بترتيبه لأنّ الدور المساعد يحافظ على الترتيب."),
-              { code: REMOVE_MIN("MinDoc != Doc"), lib: DOC_LIB, quiet: ["CopyQueue", "Names"], run: DOCS_RUN + "\nRemoveMin(Q);\nConsole.Write(Names(Q));", out: "[A,C,D]" }),
-            proved(MC("طالب كتب الشرط `if (MinDoc.GetNumPages() != Doc.GetNumPages())` بدل `if (MinDoc != Doc)`. أي مستندات تبقى في الدور نفسه بعد الاستدعاء؟", ["`[A,C,D]`: لا فرق", "*`[A,C]`: خرج `B` و `D` معًا", "`[A,B,C]`", "الدور فارغ: `[]`"], "بمقارنة عدد الصفحات يُعتبر كل مستند له 3 صفحات «هو» `MinDoc`، فلا يعود `B` ولا `D` إلى الدور، مع أنّ العملية تعيد مستندًا واحدًا فقط. لهذا يقارن الكتاب المؤشّرات."),
-              { code: REMOVE_MIN("MinDoc.GetNumPages() != Doc.GetNumPages()"), lib: DOC_LIB, quiet: ["CopyQueue", "Names"], run: DOCS_RUN + "\nRemoveMin(Q);\nConsole.Write(Names(Q));", out: "[A,C]" }),
+            XH("أسئلة على المثال", 3),
+            proved(MC("في الصندوق **العادي**: الدور `(Sami, 5)` ثم `(Laila, 2)` ثم `(Ahmad, 8)`. من يدفع أولًا؟", ["*`Sami`", "`Laila`", "`Ahmad`", "من معه أكثر مشتريات"], "الدور يعمل وفق `FIFO`: يخرج الزبون الذي في الرأس، أي من وصل أولًا، مهما كان عدد مشترياته."),
+              { code: CASHIER, ...SHOP, out: "Sami pays for 5 items\n[Laila,Ahmad]\n", loose: true }),
+            proved(MC("من يذهب إلى الصندوق **السريع** في الدور `(Sami, 5)` ثم `(Laila, 2)` ثم `(Ahmad, 8)` ثم `(Huda, 2)`؟", ["`Sami`", "*`Laila`", "`Ahmad`", "`Huda`"], "أقل عدد مشتريات هو 2. الشرط `<` يبدّل `Min` فقط إذا وجد عددًا **أصغر** تمامًا، فتبقى ليلى (أول من معها 2) ولا تحلّ مكانها هدى."),
+              { code: EXPRESS(), ...SHOP, run: SHOP_RUN + "\nConsole.Write(ExpressCashier(Q).GetName());", out: "Laila" }),
+            proved(MC("من يبقى في الدور بعد الاستدعاء، من الرأس إلى النهاية؟", ["`[Sami,Ahmad]`", "*`[Sami,Ahmad,Huda]`", "`[Huda,Ahmad,Sami]`", "`[Ahmad,Sami,Huda]`"], "خرجت ليلى فقط. هدى معها العدد نفسه لكنها **كائن آخر**، والشرط `c != Min` يقارن المؤشّرات. والباقون عادوا بترتيبهم لأنّ الدور المساعد يحافظ على الترتيب."),
+              { code: EXPRESS(), ...SHOP, run: SHOP_RUN + "\nExpressCashier(Q);\nConsole.Write(Names(Q));", out: "[Sami,Ahmad,Huda]" }),
+            proved(TF("بعد `ExpressCashier(Q)` يتغيّر ترتيب الزبائن الباقين في الدور.", false, "كل زبون خرج إلى `Temp` ثم عاد إلى `Q` بالترتيب نفسه، لأنّ الدور (بعكس الراصّة) لا يقلب الترتيب. الدور بعد الاستدعاء: `[Sami,Ahmad,Huda]`."),
+              { code: EXPRESS(), ...SHOP, run: SHOP_RUN + "\nExpressCashier(Q);\nConsole.Write(Names(Q));", out: "[Sami,Ahmad,Huda]" }),
+            proved(MC("طالبة كتبت `<=` بدل `<` في المرور الأول. من يذهب الآن إلى الصندوق السريع؟", ["`Laila`", "*`Huda`", "`Sami`", "يذهب الاثنان معًا"], "مع `<=` يتبدّل `Min` أيضًا عند **التساوي**، فيبقى فيه **آخر** زبون معه 2 مشتريات: هدى. هذا عكس المطلوب: ليلى وصلت قبلها."),
+              { code: EXPRESS("c != Min", "<="), ...SHOP, run: SHOP_RUN + "\nConsole.Write(ExpressCashier(Q).GetName());", out: "Huda" }),
+            proved(MC("طالب كتب الشرط `if (c.GetItems() != Min.GetItems())` بدل `if (c != Min)`. من يبقى في الدور بعد الاستدعاء؟", ["`[Sami,Ahmad,Huda]`: لا فرق", "*`[Sami,Ahmad]`: خرجت ليلى وهدى معًا", "`[Sami,Laila,Ahmad]`", "الدور فارغ: `[]`"], "بمقارنة عدد المشتريات تُعتبر هدى «هي» `Min` لأنّ معها 2 أيضًا، فلا تعود إلى الدور، مع أنّ العملية تعيد زبونًا واحدًا فقط: هدى «ضاعت». لهذا نقارن المؤشّرات."),
+              { code: EXPRESS("c.GetItems() != Min.GetItems()"), ...SHOP, run: SHOP_RUN + "\nExpressCashier(Q);\nConsole.Write(Names(Q));", out: "[Sami,Ahmad]" }),
+            proved(SHORT("استدعينا `ExpressCashier(Q)` **مرتين** متتاليتين على الدور `(Sami, 5)` ثم `(Laila, 2)` ثم `(Ahmad, 8)` ثم `(Huda, 2)`. اكتب الدور الذي يبقى كما يُطبع، مثل `[Sami,Ahmad]`.", "[Sami,Ahmad]", "في المرة الأولى تخرج ليلى. في المرة الثانية الدور `[Sami,Ahmad,Huda]` وأقل عدد فيه 2، فتخرج هدى. يبقى سامي ثم أحمد."),
+              { code: EXPRESS(), ...SHOP, run: SHOP_RUN + "\nExpressCashier(Q);\nExpressCashier(Q);\nConsole.Write(Names(Q));", out: "[Sami,Ahmad]" }),
+            ORDER("رتّب خطوات `ExpressCashier`:", ["نفحص: إذا كان الدور فارغًا نعيد `null`", "نضع في `Min` الزبون الذي في الرأس", "ننقل كل الزبائن من `Q` إلى `Temp` ونحدّث `Min` كلما وجدنا عددًا أصغر", "نعيد الزبائن من `Temp` إلى `Q` ما عدا `Min`", "نعيد `Min`"], "أولًا نعرف **من** يخرج (المرور الأول)، وبعدها فقط نُخرجه ونعيد الباقين (المرور الثاني)."),
+            MC("لماذا ننقل الزبائن إلى **دور** مساعد وليس إلى **راصّة** مساعدة؟", ["لأنّ الراصّة لا تحفظ كائنات", "*لأنّ الدور المساعد يُبقي الزبائن بترتيب وصولهم عند إعادتهم", "لأنّ الدور أسرع من الراصّة", "لا فرق بين الاثنين"], "الراصّة تقلب الترتيب: لو استعملناها لصار آخر الواصلين في الرأس، وهذا ظلم لمن وصل أولًا!"),
           ],
         },
       ],
@@ -1333,7 +1333,7 @@ export default {
             XCS(IS_SORTED_EARLY),
             proved(SHORT("العملية أعلاه كتبها طالب ليفحص إن كان الدور مرتّبًا تصاعديًا، والمطلوب أن تحافظ على الدور. ماذا يبقى في الدور `q = [2,5,3,8]` بعد استدعائها؟ اكتب الدور كما يُطبع.", "[8]", "تُخرج 2 ثم 5 وتُدخلان إلى `temp`، ثم تُخرج 3 وعند المقارنة `3 < 5` تنتهي العملية بالأمر `return false;`. القيمتان 2 و5 بقيتا في `temp` والقيمة 3 لم تُدخل أصلًا، فتبقى في `q` القيمة 8 فقط. لا يجوز `return` إلا بعد إعادة كل القيم."),
               { code: IS_SORTED_EARLY, run: queueOf("q", "int", [2, 5, 3, 8]) + "\nIsSorted(q);\nConsole.Write(q);", out: "[8]" }),
-            MC("في `RemoveMin`: لماذا نُدخل المستندات إلى **دور** مساعد وليس إلى راصّة مساعدة؟", ["لأنّ الراصّة لا تحفظ كائنات", "*لأنّ الدور المساعد يحافظ على ترتيب المستندات الباقية عند إعادتها", "لأنّ الدور أسرع من الراصّة", "لا فرق بين الاثنين"], "المطلوب إخراج مستند واحد وترك الباقي بترتيبه. النقل إلى دور مساعد ثم العودة يحفظ الترتيب بمرور واحد في كل اتجاه."),
+            MC("في `ExpressCashier` (الصندوق السريع): ماذا يحدث لو أعدنا الزبائن إلى `Q` **قبل** أن نعرف من معه أقل عدد من المشتريات؟", ["لا شيء: النتيجة نفسها", "*قد نُبقي في الدور زبونًا كان يجب أن يخرج، لأنّنا لم نكن نعرف بعد أنّه صاحب أقل عدد", "يصبح الدور فارغًا", "ينقلب ترتيب الدور"], "لا نعرف من صاحب أقل عدد إلا بعد أن نرى **كل** الزبائن. لذلك المرور الأول يجد `Min`، والمرور الثاني فقط يُخرجه ويعيد الباقين."),
           ],
         },
       ],

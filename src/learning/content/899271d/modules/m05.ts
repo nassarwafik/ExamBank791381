@@ -2906,7 +2906,7 @@ const m05: ContentModule = {
    "pages": [
     {
      "id": "899271d-m05-l05-p01",
-     "title": "دور مستندات للطباعة: \u2066RemoveMin\u2069",
+     "title": "دور في السوبرماركت: صندوق الدفع السريع",
      "order": 1,
      "source": {
       "kind": "book",
@@ -2917,50 +2917,192 @@ const m05: ContentModule = {
      },
      "learningObjective": "أن تعمل مع دور قيمه كائنات، وأن تُخرج منه كائنًا من الوسط مع الحفاظ على ترتيب الباقي.",
      "keywords": [
-      "Document",
-      "RemoveMin",
-      "Queue<Document>",
-      "CopyQueue",
+      "Customer",
+      "ExpressCashier",
+      "Queue<Customer>",
+      "دور من الكائنات",
+      "سوبرماركت",
       "مقارنة مؤشّرات"
      ],
      "blocks": [
       {
        "id": "m05-l05-p01-b01",
-       "type": "example",
-       "mode": "practice",
-       "title": "مثال (6)",
-       "prompt": "عندما نستعمل طابعة موجودة في شبكة حواسيب محلّية، فإنّ المستندات التي نُرسلها إلى هذه الطابعة تُحفظ في قائمة انتظار — أي دور — من نوع مستندات للطباعة، بحيث تتمّ طباعتها وفق بروتوكول \u2066FIFO\u2069. أحيانًا يكون من المُفضّل طباعة الملفات الصغيرة قبل الملفات الكبيرة، لأنّ طباعتها لا تستغرق وقتًا طويلًا. حجم المستندات يُقاس بعدد صفحاتها. أمامك وصف جزئي لواجهة الفئة \u2066Document\u2069 التي تُمثّل النوع مستندات للطباعة. اكتب عملية خارجية تتلقّى دورًا من نمط \u2066Document\u2069 ثم تقوم بإخراج الملف الأول صاحب أصغر عدد من الصفحات.",
-       "steps": [],
-       "origin": "book"
+       "type": "callout",
+       "kind": "clarification",
+       "title": "بدل مثال الكتاب",
+       "spans": [
+        {
+         "text": "في الكتاب (ص 203–205) مثال «دور مستندات للطباعة» والعملية "
+        },
+        {
+         "text": "RemoveMin",
+         "dir": "ltr"
+        },
+        {
+         "text": ". استبدلناه بمثال أقرب إلى حياتنا اليومية: "
+        },
+        {
+         "text": "دور زبائن في السوبرماركت",
+         "style": "strong"
+        },
+        {
+         "text": ". الفكرة نفسها تمامًا: دور قيمه كائنات، ونُخرج منه الكائن صاحب "
+        },
+        {
+         "text": "أصغر",
+         "style": "strong"
+        },
+        {
+         "text": " قيمة مع الحفاظ على ترتيب الباقي."
+        }
+       ],
+       "origin": "teacher-enrichment"
       },
       {
        "id": "m05-l05-p01-b02",
+       "type": "text",
+       "spans": [
+        {
+         "text": "في السوبرماركت يقف الزبائن في "
+        },
+        {
+         "text": "دور",
+         "style": "strong"
+        },
+        {
+         "text": " أمام صندوق الدفع: من وصل أولًا يدفع أولًا ("
+        },
+        {
+         "text": "FIFO",
+         "dir": "ltr"
+        },
+        {
+         "text": "). كل زبون معه عربة فيها عدد من المشتريات. يفتح المحلّ "
+        },
+        {
+         "text": "صندوقًا سريعًا",
+         "style": "strong"
+        },
+        {
+         "text": " ويدعو إليه الزبون الذي معه "
+        },
+        {
+         "text": "أقل",
+         "style": "strong"
+        },
+        {
+         "text": " عدد من المشتريات، لأنّ خدمته تنتهي بسرعة. الزبون المدعوّ يخرج من الدور، وبقية الزبائن "
+        },
+        {
+         "text": "يبقون في أماكنهم",
+         "style": "strong"
+        },
+        {
+         "text": " بالترتيب نفسه."
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b03",
+       "type": "interactive-diagram",
+       "interactionType": "ds-figure",
+       "version": 1,
+       "title": "الدور أمام صندوق الدفع",
+       "description": "الرقم بجانب الاسم هو عدد المشتريات في العربة. لليلى وهدى العدد نفسه (2)، لكن ليلى وصلت قبل هدى، فهي التي تذهب.",
+       "capabilities": {
+        "fullscreen": true
+       },
+       "config": {
+        "panels": [
+         {
+          "kind": "queue",
+          "items": [
+           "سامي 🛒5",
+           "ليلى 🛒2",
+           "أحمد 🛒8",
+           "هدى 🛒2"
+          ],
+          "label": "الرأس سامي (وصل أولًا) والنهاية هدى"
+         },
+         {
+          "kind": "queue",
+          "items": [
+           "سامي 🛒5",
+           "أحمد 🛒8",
+           "هدى 🛒2"
+          ],
+          "label": "بعد أن ذهبت ليلى إلى الصندوق السريع"
+         }
+        ]
+       },
+       "fallback": {
+        "text": "رسم: دور من الرأس إلى النهاية: سامي (5 مشتريات)، ليلى (2)، أحمد (8)، هدى (2). وبعد ذهاب ليلى إلى الصندوق السريع: سامي، أحمد، هدى."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b04",
+       "type": "simulation",
+       "simulationType": "ds-lab",
+       "version": 1,
+       "title": "محاكي: دور الزبائن",
+       "description": "أدخِل زبونًا جديدًا (اكتب اسمه) فيقف في **نهاية** الدور، واضغط «إخراج» ليدفع الزبون الذي في **الرأس**. هل يستطيع زبون أن يتجاوز من أمامه؟",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "structure": "queue",
+        "name": "Q",
+        "valueType": "string",
+        "values": [
+         "سامي",
+         "ليلى",
+         "أحمد"
+        ]
+       },
+       "fallback": {
+        "text": "مختبر الدور: نشاط تفاعلي تنفّذ فيه عمليات المبنى وترى الرسم يتغيّر."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b05",
+       "type": "heading",
+       "level": 3,
+       "text": "الفئة \u2066Customer\u2069: زبون واحد",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b06",
        "type": "table",
-       "caption": "واجهة الفئة \u2066Document\u2069",
+       "caption": "واجهة الفئة \u2066Customer\u2069",
        "headers": [
         "العملية",
         "الوصف"
        ],
        "rows": [
         [
-         "private string FileName;",
-         "اسم الملف"
+         "private string Name;",
+         "اسم الزبون"
         ],
         [
-         "private int NumPages;",
-         "عدد صفحات الملف"
+         "private int Items;",
+         "عدد المشتريات في عربته"
         ],
         [
-         "public Document(string FileName, int NumPages)",
-         "عملية بنائية تُنشئ مستندًا جديدًا باسم \u2066FileName\u2069 وعدد صفحاته \u2066NumPages\u2069."
+         "public Customer(string Name, int Items)",
+         "عملية بنائية تُنشئ زبونًا جديدًا اسمه \u2066Name\u2069 ومعه \u2066Items\u2069 مشتريات."
         ],
         [
-         "Get / Set",
-         "—"
+         "public string GetName()",
+         "تعيد اسم الزبون."
         ],
         [
-         "public override string ToString()",
-         "تعيد تفاصيل المستند بالنسق: \u2066FileName = ...\u2069 ثم في سطر جديد \u2066NumPages = ...\u2069."
+         "public int GetItems()",
+         "تعيد عدد المشتريات."
         ]
        ],
        "columnDirs": [
@@ -2970,30 +3112,150 @@ const m05: ContentModule = {
        "origin": "book"
       },
       {
-       "id": "m05-l05-p01-b03",
+       "id": "m05-l05-p01-b07",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public class Customer\n{\n    private string Name;\n    private int Items;\n    public Customer(string Name, int Items)\n    {\n        this.Name = Name;\n        this.Items = Items;\n    }\n    public string GetName() { return Name; }\n    public int GetItems() { return Items; }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b08",
+       "type": "heading",
+       "level": 3,
+       "text": "الخطوة الأولى: الصندوق العادي",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b09",
+       "type": "text",
+       "spans": [
+        {
+         "text": "نبني دورًا من نمط "
+        },
+        {
+         "text": "Queue<Customer>",
+         "dir": "ltr"
+        },
+        {
+         "text": ": كل قيمة فيه "
+        },
+        {
+         "text": "مؤشّر إلى كائن",
+         "style": "strong"
+        },
+        {
+         "text": " زبون. الصندوق العادي يخدم الزبون الذي في الرأس بالأمر "
+        },
+        {
+         "text": "Q.Remove()",
+         "dir": "ltr"
+        },
+        {
+         "text": "، والعملية تعيد الكائن نفسه، فنسأله عن اسمه وعدد مشترياته. (العملية "
+        },
+        {
+         "text": "Names",
+         "dir": "ltr"
+        },
+        {
+         "text": " تطبع أسماء الزبائن من الرأس وتعيد الدور كما كان.)"
+        }
+       ],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b10",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Main()\n{\n    Queue<Customer> Q = new Queue<Customer>();\n    Q.Insert(new Customer(\"Sami\", 5));\n    Q.Insert(new Customer(\"Laila\", 2));\n    Q.Insert(new Customer(\"Ahmad\", 8));\n    Customer c = Q.Remove();\n    Console.WriteLine(c.GetName() + \" pays for \" + c.GetItems() + \" items\");\n    Console.WriteLine(Names(Q));\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b11",
+       "type": "simulation",
+       "simulationType": "ds-trace",
+       "version": 1,
+       "title": "تتبّع: الصندوق العادي",
+       "description": "راقب: من يخرج من الدور؟ وهل يتغيّر ترتيب من بقي؟",
+       "capabilities": {
+        "fullscreen": true,
+        "reset": true,
+        "interactive": true
+       },
+       "config": {
+        "code": "public static void Main()\n{\n    Queue<Customer> Q = new Queue<Customer>();\n    Q.Insert(new Customer(\"Sami\", 5));\n    Q.Insert(new Customer(\"Laila\", 2));\n    Q.Insert(new Customer(\"Ahmad\", 8));\n    Customer c = Q.Remove();\n    Console.WriteLine(c.GetName() + \" pays for \" + c.GetItems() + \" items\");\n    Console.WriteLine(Names(Q));\n}",
+        "out": "Sami pays for 5 items\n[Laila,Ahmad]\n",
+        "steps": [
+{"l":1,"n":"يبدأ البرنامج من العملية `Main`.","o":0,"f":[{"name":"Main","vars":[]}],"h":[]},
+{"l":3,"n":"ننشئ دورًا فارغًا باسم `Q`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":[]}]},
+{"l":4,"n":"نُدخل `(Sami, 5)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(Sami, 5)"]}]},
+{"l":5,"n":"نُدخل `(Laila, 2)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Laila, 2)"]}]},
+{"l":6,"n":"نُدخل `(Ahmad, 8)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)"]}]},
+{"l":7,"n":"نُخرج `(Sami, 5)` من رأس الدور `Q`. `c` يشير الآن إلى `(Sami, 5)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}],["c",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["(Laila, 2)","(Ahmad, 8)"]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]}]},
+{"l":8,"n":"نطبع: `Sami pays for 5 items`.","o":22},
+{"l":9,"n":"نطبع: `[Laila,Ahmad]`.","o":36},
+{"l":10,"n":"ينتهي البرنامج.","o":36}
+]
+       },
+       "fallback": {
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (9 خطوة)؛ ناتج البرنامج: Sami pays for 5 items ↵ [Laila,Ahmad]."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b12",
+       "type": "heading",
+       "level": 3,
+       "text": "الخطوة الثانية: الصندوق السريع",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b13",
+       "type": "example",
+       "mode": "practice",
+       "title": "مثال: \u2066ExpressCashier\u2069",
+       "prompt": "اكتب عملية خارجية تتلقّى دورًا من نمط \u2066Customer\u2069، تُخرج منه أول زبون معه أقل عدد من المشتريات وتعيده، وتُبقي بقية الزبائن في الدور بترتيبهم. إذا كان الدور فارغًا تعيد \u2066null\u2069.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b14",
        "type": "list",
        "variant": "ordered",
-       "title": "خطة الحل (تعليقات الكتاب داخل الكود بالإنجليزية)",
+       "title": "خطة الحل: مروران فقط",
        "items": [
         {
          "id": "i1",
          "text": [
           {
-           "text": "ننسخ الدور، ونبحث في "
-          },
-          {
-           "text": "النسخة",
+           "text": "المرور الأول:",
            "style": "strong"
           },
           {
-           "text": " عن أول مستند له أصغر عدد من الصفحات: "
+           "text": " نُخرج الزبائن من "
           },
           {
-           "text": "MinDoc",
+           "text": "Q",
            "dir": "ltr"
           },
           {
-           "text": "."
+           "text": " واحدًا واحدًا إلى دور مساعد "
+          },
+          {
+           "text": "Temp",
+           "dir": "ltr"
+          },
+          {
+           "text": "، ونتذكّر في "
+          },
+          {
+           "text": "Min",
+           "dir": "ltr"
+          },
+          {
+           "text": " من معه أقل عدد من المشتريات حتى الآن."
           }
          ]
         },
@@ -3001,7 +3263,25 @@ const m05: ContentModule = {
          "id": "i2",
          "text": [
           {
-           "text": "نُخرج كل المستندات من الدور الأصلي، ونُدخل إلى الدور المساعد كل مستند "
+           "text": "المرور الثاني:",
+           "style": "strong"
+          },
+          {
+           "text": " نعيد الزبائن من "
+          },
+          {
+           "text": "Temp",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى "
+          },
+          {
+           "text": "Q",
+           "dir": "ltr"
+          },
+          {
+           "text": "، "
           },
           {
            "text": "ما عدا",
@@ -3011,7 +3291,7 @@ const m05: ContentModule = {
            "text": " "
           },
           {
-           "text": "MinDoc",
+           "text": "Min",
            "dir": "ltr"
           },
           {
@@ -3023,22 +3303,14 @@ const m05: ContentModule = {
          "id": "i3",
          "text": [
           {
-           "text": "نعيد المستندات من الدور المساعد إلى الدور الأصلي: الدور يحافظ على الترتيب."
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
            "text": "نعيد "
           },
           {
-           "text": "MinDoc",
+           "text": "Min",
            "dir": "ltr"
           },
           {
-           "text": "."
+           "text": ". ولأنّ الدور لا يقلب الترتيب، يعود الباقون بترتيبهم الأصلي."
           }
          ]
         }
@@ -3046,246 +3318,294 @@ const m05: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l05-p01-b04",
+       "id": "m05-l05-p01-b15",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static Document RemoveMin(Queue<Document> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Document> QTemp = CopyQueue(Q);\n    // **** Find the first document with minimal number of pages ****\n    Document MinDoc = QTemp.Remove(), Doc;\n    while (!QTemp.IsEmpty())\n    {\n        Doc = QTemp.Remove();\n        if (MinDoc.GetNumPages() > Doc.GetNumPages())\n            MinDoc = Doc;\n    }\n    // **** Remove MinDoc from the queue ****\n    while (!Q.IsEmpty())\n    {\n        Doc = Q.Remove();\n        if (MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****\n            QTemp.Insert(Doc);\n    }\n    // ****  copy QTemp documents back into the original Q ****\n    while (!QTemp.IsEmpty())\n        Q.Insert(QTemp.Remove());\n    // **** Return the found document with minimal number of pages ****\n    return MinDoc;\n}",
-       "origin": "book"
+       "code": "public static Customer ExpressCashier(Queue<Customer> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Customer> Temp = new Queue<Customer>();\n    Customer Min = Q.Head();\n    Customer c;\n    // (1) everyone moves to Temp; remember who has the fewest items\n    while (!Q.IsEmpty())\n    {\n        c = Q.Remove();\n        if (c.GetItems() < Min.GetItems())\n            Min = c;\n        Temp.Insert(c);\n    }\n    // (2) everyone returns to Q, except Min\n    while (!Temp.IsEmpty())\n    {\n        c = Temp.Remove();\n        if (c != Min)\n            Q.Insert(c);\n    }\n    return Min;\n}",
+       "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l05-p01-b05",
-       "type": "text",
-       "spans": [
-        {
-         "text": "لاحظ أنّنا أعدنا كتابة العملية "
-        },
-        {
-         "text": "CopyQueue",
-         "dir": "ltr"
-        },
-        {
-         "text": ":"
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m05-l05-p01-b06",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Queue<Document> CopyQueue(Queue<Document> Q1)\n{\n    Queue<Document> Q2 = new Queue<Document>();\n    while (!Q1.IsEmpty())\n        Q2.Insert(Q1.Remove());\n    Queue<Document> Q3 = new Queue<Document>();\n    while (!Q2.IsEmpty())\n    {\n        Q1.Insert(Q2.Head());\n        Q3.Insert(Q2.Remove());\n    }\n    return Q3;\n}",
-       "origin": "book"
-      },
-      {
-       "id": "m05-l05-p01-b07",
-       "type": "text",
-       "spans": [
-        {
-         "text": "كود لفحص العملية",
-         "style": "strong"
-        }
-       ],
-       "origin": "book"
-      },
-      {
-       "id": "m05-l05-p01-b08",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static void TestRemoveMin()\n{\n    Random R = new Random();\n    Queue<Document> Q = new Queue<Document>();\n    Document Doc;\n    for (int i = 1; i <= 5; i++)\n    {\n        Doc = new Document(\"File Nr\" + i.ToString(), R.Next(1, 101));\n        Q.Insert(Doc);\n        System.Threading.Thread.Sleep(100);\n    }\n    Console.WriteLine(Q.ToString());\n    Console.WriteLine(\"Remove File with Minimal number of pages\");\n    Doc = RemoveMin(Q);\n    Console.WriteLine(Doc);\n    Console.WriteLine(Q.ToString());\n}",
-       "origin": "book"
-      },
-      {
-       "id": "m05-l05-p01-b09",
+       "id": "m05-l05-p01-b16",
        "type": "callout",
-       "kind": "clarification",
-       "title": "للتتبّع",
+       "kind": "warning",
+       "title": "لاحظ شيئين صغيرين ومهمّين",
        "spans": [
         {
-         "text": "كود الفحص في الكتاب يختار عدد الصفحات عشوائيًا ("
+         "text": "(1) الشرط "
         },
         {
-         "text": "Random",
+         "text": "<",
          "dir": "ltr"
         },
         {
-         "text": ")، فلا يمكن تتبّعه مسبقًا. والكتاب يعطي واجهة الفئة "
+         "text": " (أصغر تمامًا) يُبقي في "
         },
         {
-         "text": "Document",
+         "text": "Min",
          "dir": "ltr"
         },
         {
-         "text": " فقط. لذلك كتبنا الفئة بأنفسنا، ونتتبّع "
+         "text": " "
         },
         {
-         "text": "RemoveMin",
+         "text": "أول",
+         "style": "strong"
+        },
+        {
+         "text": " زبون له أقل عدد، ولا يبدّله بمن بعده إذا تساويا. (2) الشرط "
+        },
+        {
+         "text": "c != Min",
          "dir": "ltr"
         },
         {
-         "text": " على أربعة مستندات ثابتة."
+         "text": " يقارن "
+        },
+        {
+         "text": "مؤشّرات",
+         "style": "strong"
+        },
+        {
+         "text": ": هل هذا هو الكائن نفسه؟ لا يقارن عدد المشتريات."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l05-p01-b10",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public class Document\n{\n    private string FileName;\n    private int NumPages;\n    public Document(string FileName, int NumPages)\n    {\n        this.FileName = FileName;\n        this.NumPages = NumPages;\n    }\n    public string GetFileName() { return FileName; }\n    public int GetNumPages() { return NumPages; }\n    public override string ToString()\n    {\n        return \"FileName = \" + FileName + \"\\nNumPages = \" + NumPages;\n    }\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m05-l05-p01-b11",
+       "id": "m05-l05-p01-b17",
        "type": "simulation",
        "simulationType": "ds-trace",
        "version": 1,
-       "title": "تتبّع \u2066RemoveMin\u2069",
-       "description": "للمستندين \u2066B\u2069 و \u2066D\u2069 العدد نفسه من الصفحات. أيهما يخرج؟ وهل يتغيّر ترتيب الباقي؟",
+       "title": "تتبّع \u2066ExpressCashier\u2069",
+       "description": "لليلى وهدى العدد نفسه من المشتريات. من يذهب إلى الصندوق السريع؟ وهل يتغيّر ترتيب الباقين؟",
        "capabilities": {
         "fullscreen": true,
         "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static Document RemoveMin(Queue<Document> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Document> QTemp = CopyQueue(Q);\n    // **** Find the first document with minimal number of pages ****\n    Document MinDoc = QTemp.Remove(), Doc;\n    while (!QTemp.IsEmpty())\n    {\n        Doc = QTemp.Remove();\n        if (MinDoc.GetNumPages() > Doc.GetNumPages())\n            MinDoc = Doc;\n    }\n    // **** Remove MinDoc from the queue ****\n    while (!Q.IsEmpty())\n    {\n        Doc = Q.Remove();\n        if (MinDoc != Doc) // **** لاحظ أنّنا هنا نُقارن مؤشّرات ****\n            QTemp.Insert(Doc);\n    }\n    // ****  copy QTemp documents back into the original Q ****\n    while (!QTemp.IsEmpty())\n        Q.Insert(QTemp.Remove());\n    // **** Return the found document with minimal number of pages ****\n    return MinDoc;\n}",
-        "given": "دور المستندات `Q` من الرأس: `(A, 7)` ثم `(B, 3)` ثم `(C, 9)` ثم `(D, 3)` (الاسم، عدد الصفحات)، والاستدعاء `RemoveMin(Q)`.",
-        "out": "B\n[A,C,D]\n",
+        "code": "public static Customer ExpressCashier(Queue<Customer> Q)\n{\n    if (Q.IsEmpty()) return null;\n    Queue<Customer> Temp = new Queue<Customer>();\n    Customer Min = Q.Head();\n    Customer c;\n    // (1) everyone moves to Temp; remember who has the fewest items\n    while (!Q.IsEmpty())\n    {\n        c = Q.Remove();\n        if (c.GetItems() < Min.GetItems())\n            Min = c;\n        Temp.Insert(c);\n    }\n    // (2) everyone returns to Q, except Min\n    while (!Temp.IsEmpty())\n    {\n        c = Temp.Remove();\n        if (c != Min)\n            Q.Insert(c);\n    }\n    return Min;\n}",
+        "given": "الدور `Q` من الرأس: `(Sami, 5)` ثم `(Laila, 2)` ثم `(Ahmad, 8)` ثم `(Huda, 2)` (الاسم، عدد المشتريات)، والاستدعاء `ExpressCashier(Q)`.",
+        "out": "Laila\n[Sami,Ahmad,Huda]\n",
         "steps": [
-{"l":1,"n":"تبدأ العملية `RemoveMin` مع `Q` = الدور `[Document,Document,Document,Document]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]}]},
+{"l":1,"n":"تبدأ العملية `ExpressCashier` مع `Q` = الدور `[Customer,Customer,Customer,Customer]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]}]},
 {"l":3,"n":"الشرط `Q.IsEmpty()` غير صحيح: نتخطّى ما بعد `if`.","o":0},
-{"l":4,"n":"`QTemp` يشير الآن إلى الدور `[Document,Document,Document,Document]`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]},{"id":7,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]}]},
-{"l":6,"n":"نُخرج `(A, 7)` من رأس الدور `QTemp`. `MinDoc` يشير الآن إلى `(A, 7)`. نعرّف المتغيّر `Doc`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]},{"id":2,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"A\""}],["NumPages",{"t":"v","s":"7"}]]},{"id":7,"k":"queue","items":["(B, 3)","(C, 9)","(D, 3)"]}]},
-{"l":7,"n":"الشرط `!QTemp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":9,"n":"نُخرج `(B, 3)` من رأس الدور `QTemp`. `Doc` يشير الآن إلى `(B, 3)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":2}],["Doc",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]},{"id":2,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"A\""}],["NumPages",{"t":"v","s":"7"}]]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(C, 9)","(D, 3)"]}]},
-{"l":10,"n":"الشرط `MinDoc.GetNumPages() > Doc.GetNumPages()` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":11,"n":"`MinDoc` يشير الآن إلى `(B, 3)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(C, 9)","(D, 3)"]}]},
-{"l":7,"n":"الشرط `!QTemp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":9,"n":"نُخرج `(C, 9)` من رأس الدور `QTemp`. `Doc` يشير الآن إلى `(C, 9)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":4,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"C\""}],["NumPages",{"t":"v","s":"9"}]]},{"id":7,"k":"queue","items":["(D, 3)"]}]},
-{"l":10,"n":"الشرط `MinDoc.GetNumPages() > Doc.GetNumPages()` غير صحيح: نتخطّى ما بعد `if`.","o":0},
-{"l":7,"n":"الشرط `!QTemp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":9,"n":"نُخرج `(D, 3)` من رأس الدور `QTemp`. `Doc` يشير الآن إلى `(D, 3)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(B, 3)","(C, 9)","(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":5,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"D\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":[]}]},
-{"l":10,"n":"الشرط `MinDoc.GetNumPages() > Doc.GetNumPages()` غير صحيح: نتخطّى ما بعد `if`.","o":0},
-{"l":7,"n":"الشرط `!QTemp.IsEmpty()` غير صحيح: نخرج من الحلقة.","o":0},
-{"l":14,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":16,"n":"نُخرج `(A, 7)` من رأس الدور `Q`. `Doc` يشير الآن إلى `(A, 7)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["(B, 3)","(C, 9)","(D, 3)"]},{"id":2,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"A\""}],["NumPages",{"t":"v","s":"7"}]]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":[]}]},
-{"l":17,"n":"الشرط `MinDoc != Doc` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":18,"n":"نُدخل `(A, 7)` إلى نهاية الدور `QTemp`.","o":0,"h":[{"id":1,"k":"queue","items":["(B, 3)","(C, 9)","(D, 3)"]},{"id":2,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"A\""}],["NumPages",{"t":"v","s":"7"}]]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(A, 7)"]}]},
-{"l":14,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":16,"n":"نُخرج `(B, 3)` من رأس الدور `Q`. `Doc` يشير الآن إلى `(B, 3)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(C, 9)","(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(A, 7)"]}]},
-{"l":17,"n":"الشرط `MinDoc != Doc` غير صحيح: نتخطّى ما بعد `if`.","o":0},
-{"l":14,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":16,"n":"نُخرج `(C, 9)` من رأس الدور `Q`. `Doc` يشير الآن إلى `(C, 9)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"queue","items":["(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":4,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"C\""}],["NumPages",{"t":"v","s":"9"}]]},{"id":7,"k":"queue","items":["(A, 7)"]}]},
-{"l":17,"n":"الشرط `MinDoc != Doc` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":18,"n":"نُدخل `(C, 9)` إلى نهاية الدور `QTemp`.","o":0,"h":[{"id":1,"k":"queue","items":["(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":4,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"C\""}],["NumPages",{"t":"v","s":"9"}]]},{"id":7,"k":"queue","items":["(A, 7)","(C, 9)"]}]},
-{"l":14,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":16,"n":"نُخرج `(D, 3)` من رأس الدور `Q`. `Doc` يشير الآن إلى `(D, 3)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"RemoveMin","vars":[["Q",{"t":"ref","id":1}],["QTemp",{"t":"ref","id":7}],["MinDoc",{"t":"ref","id":3}],["Doc",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":5,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"D\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(A, 7)","(C, 9)"]}]},
-{"l":17,"n":"الشرط `MinDoc != Doc` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":18,"n":"نُدخل `(D, 3)` إلى نهاية الدور `QTemp`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":5,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"D\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(A, 7)","(C, 9)","(D, 3)"]}]},
-{"l":14,"n":"الشرط `!Q.IsEmpty()` غير صحيح: نخرج من الحلقة.","o":0},
-{"l":21,"n":"الشرط `!QTemp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":22,"n":"نُخرج `(A, 7)` من رأس الدور `QTemp`. نُدخل `(A, 7)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(A, 7)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":5,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"D\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(C, 9)","(D, 3)"]}]},
-{"l":21,"n":"الشرط `!QTemp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":22,"n":"نُخرج `(C, 9)` من رأس الدور `QTemp`. نُدخل `(C, 9)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(A, 7)","(C, 9)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":5,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"D\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":["(D, 3)"]}]},
-{"l":21,"n":"الشرط `!QTemp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":22,"n":"نُخرج `(D, 3)` من رأس الدور `QTemp`. نُدخل `(D, 3)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(A, 7)","(C, 9)","(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":5,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"D\""}],["NumPages",{"t":"v","s":"3"}]]},{"id":7,"k":"queue","items":[]}]},
-{"l":21,"n":"الشرط `!QTemp.IsEmpty()` غير صحيح: نخرج من الحلقة.","o":0},
-{"l":24,"n":"العملية `RemoveMin` تُعيد `(B, 3)`.","o":0},
-{"l":0,"n":"نطبع: `B`. نطبع: `[A,C,D]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}],["Doc",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(A, 7)","(C, 9)","(D, 3)"]},{"id":3,"k":"obj","type":"Document","fields":[["FileName",{"t":"v","s":"\"B\""}],["NumPages",{"t":"v","s":"3"}]]}]}
+{"l":4,"n":"ننشئ دورًا فارغًا باسم `Temp`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]},{"id":6,"k":"queue","items":[]}]},
+{"l":5,"n":"رأس الدور `Q` هو `(Sami, 5)` (لا يخرج). `Min` يشير الآن إلى `(Sami, 5)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]},{"id":6,"k":"queue","items":[]}]},
+{"l":6,"n":"نعرّف المتغيّر `c`.","o":0},
+{"l":8,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نُخرج `(Sami, 5)` من رأس الدور `Q`. `c` يشير الآن إلى `(Sami, 5)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":2}],["c",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]},{"id":6,"k":"queue","items":[]}]},
+{"l":11,"n":"الشرط `c.GetItems() < Min.GetItems()` غير صحيح: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"نُدخل `(Sami, 5)` إلى نهاية الدور `Temp`.","o":0,"h":[{"id":1,"k":"queue","items":["(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]},{"id":6,"k":"queue","items":["(Sami, 5)"]}]},
+{"l":8,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نُخرج `(Laila, 2)` من رأس الدور `Q`. `c` يشير الآن إلى `(Laila, 2)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":2}],["c",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(Ahmad, 8)","(Huda, 2)"]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Sami, 5)"]}]},
+{"l":11,"n":"الشرط `c.GetItems() < Min.GetItems()` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":12,"n":"`Min` يشير الآن إلى `(Laila, 2)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(Ahmad, 8)","(Huda, 2)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Sami, 5)"]}]},
+{"l":13,"n":"نُدخل `(Laila, 2)` إلى نهاية الدور `Temp`.","o":0,"h":[{"id":1,"k":"queue","items":["(Ahmad, 8)","(Huda, 2)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Sami, 5)","(Laila, 2)"]}]},
+{"l":8,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نُخرج `(Ahmad, 8)` من رأس الدور `Q`. `c` يشير الآن إلى `(Ahmad, 8)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"queue","items":["(Huda, 2)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":4,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Ahmad\""}],["Items",{"t":"v","s":"8"}]]},{"id":6,"k":"queue","items":["(Sami, 5)","(Laila, 2)"]}]},
+{"l":11,"n":"الشرط `c.GetItems() < Min.GetItems()` غير صحيح: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"نُدخل `(Ahmad, 8)` إلى نهاية الدور `Temp`.","o":0,"h":[{"id":1,"k":"queue","items":["(Huda, 2)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":4,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Ahmad\""}],["Items",{"t":"v","s":"8"}]]},{"id":6,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)"]}]},
+{"l":8,"n":"الشرط `!Q.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":10,"n":"نُخرج `(Huda, 2)` من رأس الدور `Q`. `c` يشير الآن إلى `(Huda, 2)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":5,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Huda\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)"]}]},
+{"l":11,"n":"الشرط `c.GetItems() < Min.GetItems()` غير صحيح: نتخطّى ما بعد `if`.","o":0},
+{"l":13,"n":"نُدخل `(Huda, 2)` إلى نهاية الدور `Temp`.","o":0,"h":[{"id":1,"k":"queue","items":[]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":5,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Huda\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Sami, 5)","(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]}]},
+{"l":8,"n":"الشرط `!Q.IsEmpty()` غير صحيح: نخرج من الحلقة.","o":0},
+{"l":16,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":18,"n":"نُخرج `(Sami, 5)` من رأس الدور `Temp`. `c` يشير الآن إلى `(Sami, 5)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":[]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]}]},
+{"l":19,"n":"الشرط `c != Min` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":20,"n":"نُدخل `(Sami, 5)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(Sami, 5)"]},{"id":2,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Sami\""}],["Items",{"t":"v","s":"5"}]]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Laila, 2)","(Ahmad, 8)","(Huda, 2)"]}]},
+{"l":16,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":18,"n":"نُخرج `(Laila, 2)` من رأس الدور `Temp`. `c` يشير الآن إلى `(Laila, 2)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":["(Ahmad, 8)","(Huda, 2)"]}]},
+{"l":19,"n":"الشرط `c != Min` غير صحيح: نتخطّى ما بعد `if`.","o":0},
+{"l":16,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":18,"n":"نُخرج `(Ahmad, 8)` من رأس الدور `Temp`. `c` يشير الآن إلى `(Ahmad, 8)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":4,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Ahmad\""}],["Items",{"t":"v","s":"8"}]]},{"id":6,"k":"queue","items":["(Huda, 2)"]}]},
+{"l":19,"n":"الشرط `c != Min` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":20,"n":"نُدخل `(Ahmad, 8)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Ahmad, 8)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":4,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Ahmad\""}],["Items",{"t":"v","s":"8"}]]},{"id":6,"k":"queue","items":["(Huda, 2)"]}]},
+{"l":16,"n":"الشرط `!Temp.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":18,"n":"نُخرج `(Huda, 2)` من رأس الدور `Temp`. `c` يشير الآن إلى `(Huda, 2)`.","o":0,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}]]},{"name":"ExpressCashier","vars":[["Q",{"t":"ref","id":1}],["Temp",{"t":"ref","id":6}],["Min",{"t":"ref","id":3}],["c",{"t":"ref","id":5}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Ahmad, 8)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":5,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Huda\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":[]}]},
+{"l":19,"n":"الشرط `c != Min` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":20,"n":"نُدخل `(Huda, 2)` إلى نهاية الدور `Q`.","o":0,"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Ahmad, 8)","(Huda, 2)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]},{"id":5,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Huda\""}],["Items",{"t":"v","s":"2"}]]},{"id":6,"k":"queue","items":[]}]},
+{"l":16,"n":"الشرط `!Temp.IsEmpty()` غير صحيح: نخرج من الحلقة.","o":0},
+{"l":22,"n":"العملية `ExpressCashier` تُعيد `(Laila, 2)`.","o":0},
+{"l":0,"n":"نطبع: `Laila`. نطبع: `[Sami,Ahmad,Huda]`. انتهى التنفيذ.","o":24,"f":[{"name":"Main","vars":[["Q",{"t":"ref","id":1}],["Fast",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["(Sami, 5)","(Ahmad, 8)","(Huda, 2)"]},{"id":3,"k":"obj","type":"Customer","fields":[["Name",{"t":"v","s":"\"Laila\""}],["Items",{"t":"v","s":"2"}]]}]}
 ]
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (40 خطوة)؛ ناتج البرنامج: B ↵ [A,C,D]."
+        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (41 خطوة)؛ ناتج البرنامج: Laila ↵ [Sami,Ahmad,Huda]."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l05-p01-b12",
+       "id": "m05-l05-p01-b18",
+       "type": "heading",
+       "level": 3,
+       "text": "أسئلة على المثال",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b19",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "أي مستند تعيده \u2066RemoveMin\u2069 للدور \u2066(A, 7)\u2069 ثم \u2066(B, 3)\u2069 ثم \u2066(C, 9)\u2069 ثم \u2066(D, 3)\u2069؟",
+        "prompt": "في الصندوق العادي: الدور \u2066(Sami, 5)\u2069 ثم \u2066(Laila, 2)\u2069 ثم \u2066(Ahmad, 8)\u2069. من يدفع أولًا؟",
         "options": [
          {
           "id": "o1",
-          "text": "\u2066A\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u2066B\u2069",
+          "text": "\u2066Sami\u2069",
           "correct": true
          },
          {
+          "id": "o2",
+          "text": "\u2066Laila\u2069"
+         },
+         {
           "id": "o3",
-          "text": "\u2066C\u2069"
+          "text": "\u2066Ahmad\u2069"
          },
          {
           "id": "o4",
-          "text": "\u2066D\u2069"
+          "text": "من معه أكثر مشتريات"
          }
         ],
         "feedback": {
-         "explanation": "أصغر عدد صفحات هو 3. الشرط \u2066MinDoc.GetNumPages() > Doc.GetNumPages()\u2069 يبدّل \u2066MinDoc\u2069 فقط إذا وجد عددًا أصغر تمامًا، فيبقى أول مستند له 3 صفحات: \u2066B\u2069."
+         "explanation": "الدور يعمل وفق \u2066FIFO\u2069: يخرج الزبون الذي في الرأس، أي من وصل أولًا، مهما كان عدد مشترياته."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l05-p01-b13",
+       "id": "m05-l05-p01-b20",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "أي مستندات تبقى في الدور بعد الاستدعاء، من الرأس إلى النهاية؟",
+        "prompt": "من يذهب إلى الصندوق السريع في الدور \u2066(Sami, 5)\u2069 ثم \u2066(Laila, 2)\u2069 ثم \u2066(Ahmad, 8)\u2069 ثم \u2066(Huda, 2)\u2069؟",
         "options": [
          {
           "id": "o1",
-          "text": "\u2066[A,C]\u2069"
+          "text": "\u2066Sami\u2069"
          },
          {
           "id": "o2",
-          "text": "\u2066[A,C,D]\u2069",
+          "text": "\u2066Laila\u2069",
           "correct": true
          },
          {
           "id": "o3",
-          "text": "\u2066[D,C,A]\u2069"
+          "text": "\u2066Ahmad\u2069"
          },
          {
           "id": "o4",
-          "text": "\u2066[C,D,A]\u2069"
+          "text": "\u2066Huda\u2069"
          }
         ],
         "feedback": {
-         "explanation": "خرج \u2066B\u2069 فقط. المستند \u2066D\u2069 له العدد نفسه من الصفحات لكنه كائن آخر، والمقارنة \u2066MinDoc != Doc\u2069 تقارن المؤشّرات لا عدد الصفحات. والباقي عاد بترتيبه لأنّ الدور المساعد يحافظ على الترتيب."
+         "explanation": "أقل عدد مشتريات هو 2. الشرط \u2066<\u2069 يبدّل \u2066Min\u2069 فقط إذا وجد عددًا أصغر تمامًا، فتبقى ليلى (أول من معها 2) ولا تحلّ مكانها هدى."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m05-l05-p01-b14",
+       "id": "m05-l05-p01-b21",
        "type": "practice",
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "طالب كتب الشرط \u2066if (MinDoc.GetNumPages() != Doc.GetNumPages())\u2069 بدل \u2066if (MinDoc != Doc)\u2069. أي مستندات تبقى في الدور نفسه بعد الاستدعاء؟",
+        "prompt": "من يبقى في الدور بعد الاستدعاء، من الرأس إلى النهاية؟",
         "options": [
          {
           "id": "o1",
-          "text": "\u2066[A,C,D]\u2069: لا فرق"
+          "text": "\u2066[Sami,Ahmad]\u2069"
          },
          {
           "id": "o2",
-          "text": "\u2066[A,C]\u2069: خرج \u2066B\u2069 و \u2066D\u2069 معًا",
+          "text": "\u2066[Sami,Ahmad,Huda]\u2069",
           "correct": true
          },
          {
           "id": "o3",
-          "text": "\u2066[A,B,C]\u2069"
+          "text": "\u2066[Huda,Ahmad,Sami]\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "\u2066[Ahmad,Sami,Huda]\u2069"
+         }
+        ],
+        "feedback": {
+         "explanation": "خرجت ليلى فقط. هدى معها العدد نفسه لكنها كائن آخر، والشرط \u2066c != Min\u2069 يقارن المؤشّرات. والباقون عادوا بترتيبهم لأنّ الدور المساعد يحافظ على الترتيب."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b22",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "trueFalse",
+        "prompt": "بعد \u2066ExpressCashier(Q)\u2069 يتغيّر ترتيب الزبائن الباقين في الدور.",
+        "answer": false,
+        "feedback": {
+         "explanation": "كل زبون خرج إلى \u2066Temp\u2069 ثم عاد إلى \u2066Q\u2069 بالترتيب نفسه، لأنّ الدور (بعكس الراصّة) لا يقلب الترتيب. الدور بعد الاستدعاء: \u2066[Sami,Ahmad,Huda]\u2069."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b23",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "طالبة كتبت \u2066<=\u2069 بدل \u2066<\u2069 في المرور الأول. من يذهب الآن إلى الصندوق السريع؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066Laila\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066Huda\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066Sami\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "يذهب الاثنان معًا"
+         }
+        ],
+        "feedback": {
+         "explanation": "مع \u2066<=\u2069 يتبدّل \u2066Min\u2069 أيضًا عند التساوي، فيبقى فيه آخر زبون معه 2 مشتريات: هدى. هذا عكس المطلوب: ليلى وصلت قبلها."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b24",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "طالب كتب الشرط \u2066if (c.GetItems() != Min.GetItems())\u2069 بدل \u2066if (c != Min)\u2069. من يبقى في الدور بعد الاستدعاء؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u2066[Sami,Ahmad,Huda]\u2069: لا فرق"
+         },
+         {
+          "id": "o2",
+          "text": "\u2066[Sami,Ahmad]\u2069: خرجت ليلى وهدى معًا",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u2066[Sami,Laila,Ahmad]\u2069"
          },
          {
           "id": "o4",
@@ -3293,7 +3613,94 @@ const m05: ContentModule = {
          }
         ],
         "feedback": {
-         "explanation": "بمقارنة عدد الصفحات يُعتبر كل مستند له 3 صفحات «هو» \u2066MinDoc\u2069، فلا يعود \u2066B\u2069 ولا \u2066D\u2069 إلى الدور، مع أنّ العملية تعيد مستندًا واحدًا فقط. لهذا يقارن الكتاب المؤشّرات."
+         "explanation": "بمقارنة عدد المشتريات تُعتبر هدى «هي» \u2066Min\u2069 لأنّ معها 2 أيضًا، فلا تعود إلى الدور، مع أنّ العملية تعيد زبونًا واحدًا فقط: هدى «ضاعت». لهذا نقارن المؤشّرات."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b25",
+       "type": "practice",
+       "question": {
+        "kind": "shortInput",
+        "prompt": "استدعينا \u2066ExpressCashier(Q)\u2069 مرتين متتاليتين على الدور \u2066(Sami, 5)\u2069 ثم \u2066(Laila, 2)\u2069 ثم \u2066(Ahmad, 8)\u2069 ثم \u2066(Huda, 2)\u2069. اكتب الدور الذي يبقى كما يُطبع، مثل \u2066[Sami,Ahmad]\u2069.",
+        "answer": "[Sami,Ahmad]",
+        "feedback": {
+         "explanation": "في المرة الأولى تخرج ليلى. في المرة الثانية الدور \u2066[Sami,Ahmad,Huda]\u2069 وأقل عدد فيه 2، فتخرج هدى. يبقى سامي ثم أحمد."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b26",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "ordering",
+        "prompt": "رتّب خطوات \u2066ExpressCashier\u2069:",
+        "items": [
+         {
+          "id": "s5",
+          "text": "نعيد \u2066Min\u2069"
+         },
+         {
+          "id": "s4",
+          "text": "نعيد الزبائن من \u2066Temp\u2069 إلى \u2066Q\u2069 ما عدا \u2066Min\u2069"
+         },
+         {
+          "id": "s3",
+          "text": "ننقل كل الزبائن من \u2066Q\u2069 إلى \u2066Temp\u2069 ونحدّث \u2066Min\u2069 كلما وجدنا عددًا أصغر"
+         },
+         {
+          "id": "s2",
+          "text": "نضع في \u2066Min\u2069 الزبون الذي في الرأس"
+         },
+         {
+          "id": "s1",
+          "text": "نفحص: إذا كان الدور فارغًا نعيد \u2066null\u2069"
+         }
+        ],
+        "order": [
+         "s1",
+         "s2",
+         "s3",
+         "s4",
+         "s5"
+        ],
+        "feedback": {
+         "explanation": "أولًا نعرف من يخرج (المرور الأول)، وبعدها فقط نُخرجه ونعيد الباقين (المرور الثاني)."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m05-l05-p01-b27",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "لماذا ننقل الزبائن إلى دور مساعد وليس إلى راصّة مساعدة؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "لأنّ الراصّة لا تحفظ كائنات"
+         },
+         {
+          "id": "o2",
+          "text": "لأنّ الدور المساعد يُبقي الزبائن بترتيب وصولهم عند إعادتهم",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "لأنّ الدور أسرع من الراصّة"
+         },
+         {
+          "id": "o4",
+          "text": "لا فرق بين الاثنين"
+         }
+        ],
+        "feedback": {
+         "explanation": "الراصّة تقلب الترتيب: لو استعملناها لصار آخر الواصلين في الرأس، وهذا ظلم لمن وصل أولًا!"
         }
        },
        "origin": "teacher-enrichment"
@@ -8076,28 +8483,28 @@ const m05: ContentModule = {
        "reveal": true,
        "question": {
         "kind": "multipleChoice",
-        "prompt": "في \u2066RemoveMin\u2069: لماذا نُدخل المستندات إلى دور مساعد وليس إلى راصّة مساعدة؟",
+        "prompt": "في \u2066ExpressCashier\u2069 (الصندوق السريع): ماذا يحدث لو أعدنا الزبائن إلى \u2066Q\u2069 قبل أن نعرف من معه أقل عدد من المشتريات؟",
         "options": [
          {
           "id": "o1",
-          "text": "لأنّ الراصّة لا تحفظ كائنات"
+          "text": "لا شيء: النتيجة نفسها"
          },
          {
           "id": "o2",
-          "text": "لأنّ الدور المساعد يحافظ على ترتيب المستندات الباقية عند إعادتها",
+          "text": "قد نُبقي في الدور زبونًا كان يجب أن يخرج، لأنّنا لم نكن نعرف بعد أنّه صاحب أقل عدد",
           "correct": true
          },
          {
           "id": "o3",
-          "text": "لأنّ الدور أسرع من الراصّة"
+          "text": "يصبح الدور فارغًا"
          },
          {
           "id": "o4",
-          "text": "لا فرق بين الاثنين"
+          "text": "ينقلب ترتيب الدور"
          }
         ],
         "feedback": {
-         "explanation": "المطلوب إخراج مستند واحد وترك الباقي بترتيبه. النقل إلى دور مساعد ثم العودة يحفظ الترتيب بمرور واحد في كل اتجاه."
+         "explanation": "لا نعرف من صاحب أقل عدد إلا بعد أن نرى كل الزبائن. لذلك المرور الأول يجد \u2066Min\u2069، والمرور الثاني فقط يُخرجه ويعيد الباقين."
         }
        },
        "origin": "teacher-enrichment"

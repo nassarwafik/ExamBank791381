@@ -1605,7 +1605,7 @@ const manifest: LearningCourseManifest = {
           "pages": [
             {
               "id": "899271d-m05-l05-p01",
-              "title": "دور مستندات للطباعة: \u2066RemoveMin\u2069",
+              "title": "دور في السوبرماركت: صندوق الدفع السريع",
               "order": 1,
               "source": {
                 "kind": "book",
@@ -1615,10 +1615,11 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "الفصل الخامس «قائمة الانتظار – الدور» · ص 203–205"
               },
               "keywords": [
-                "Document",
-                "RemoveMin",
-                "Queue<Document>",
-                "CopyQueue",
+                "Customer",
+                "ExpressCashier",
+                "Queue<Customer>",
+                "دور من الكائنات",
+                "سوبرماركت",
                 "مقارنة مؤشّرات"
               ]
             }
