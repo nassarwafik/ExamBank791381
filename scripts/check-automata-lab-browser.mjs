@@ -36,9 +36,10 @@ let failures = 0;
 const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if (!ok) failures++; };
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ["--no-sandbox"] });
-for (const [name, viewport] of [["desktop", { width: 1280, height: 900 }], ["phone", { width: 390, height: 844 }]]) {
+// the phone is a real phone: a touch screen, a coarse pointer (so no drawing editor), not a narrow desktop window with a mouse
+for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 }, false], ["phone", { width: 390, height: 844 }, true]]) {
   console.log(name + " " + viewport.width + "×" + viewport.height);
-  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, ...(touch ? { isMobile: true, hasTouch: true } : {}) });
   const page = await ctx.newPage();
   const errors = [], foreign = [];
   page.on("pageerror", e => errors.push(String(e)));
@@ -65,6 +66,40 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 900 }], ["pho
   check(/تقبل الآلة 16 كلمات من 31 حتى الطول 4/.test(await section(/لغة آلتي/).innerText()), "«لغة آلتي»: 16 of the 31 words up to length 4");
   if (name === "phone") check(await sideways() <= 1, "phone: the page never scrolls sideways (" + (await sideways()) + " px)");
 
+  // A6b: «ارسم بالفأرة» on a desktop — real mouse drags on the drawing (a phone has the table only)
+  if (name === "desktop") {
+    const canvas = lab.getByTestId("alab-canvas");
+    const center = async q => { await canvas.scrollIntoViewIfNeeded(); const b = await canvas.locator("g.learning-automaton-state").filter({ hasText: new RegExp("^" + q + "$") }).locator("circle").first().boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, r: b.width / 2 }; };
+    const dragFrom = async (from, to, opts = {}) => {
+      await page.mouse.move(from.x, from.y); await page.mouse.down();
+      for (let k = 1; k <= 8; k++) await page.mouse.move(from.x + (to.x - from.x) * k / 8, from.y + (to.y - from.y) * k / 8);
+      await page.mouse.up(); if (opts.shift) await page.keyboard.up("Shift");
+    };
+    const q0 = await center("q0"), q1 = await center("q1");
+    const cellX = q1.x - q0.x;                                                        // one grid column, on screen
+    await dragFrom(q1, { x: q1.x, y: q1.y + cellX * 0.8 });                           // down about one row
+    const q1b = await center("q1");
+    check(q1b.y > q1.y + 20 && Math.abs(q1b.x - q1.x) < 3, "drag: q1 moved down a grid row (snapped), its arrows redrawn");
+    await page.mouse.dblclick(q1b.x + cellX, q0.y);                                  // an empty spot to the right
+    await lab.getByText(/^أُضيفت الحالة q2\.$/).waitFor({ timeout: 5000 });
+    check(true, "double-click on an empty spot: a new state q2 there");
+    await lab.getByRole("radio", { name: "رسم الأسهم" }).check();
+    await dragFrom(await center("q2"), await center("q0"));
+    await lab.getByRole("group", { name: "رمز السهم من q2 إلى q0" }).getByRole("button", { name: "a", exact: true }).click();
+    check(await lab.getByLabel("من q2 بالرمز a إلى").inputValue() === "q0", "«رسم الأسهم»: a drag from q2 to q0, symbol a, is the table's arrow (q2, a) → q0");
+    await lab.getByRole("radio", { name: "تحريك الحالات" }).check();
+    // positions relative to q1, which does not move: the drawing's edge follows the start arrow, so the whole picture can shift on screen
+    const before0 = await center("q0"), before2 = await center("q2"), before1 = await center("q1");
+    await dragFrom(before2, before0);                                               // q2 dropped onto q0: they swap
+    const after0 = await center("q0"), after2 = await center("q2"), after1 = await center("q1");
+    const rel = (p, o) => ({ x: Math.round(p.x - o.x), y: Math.round(p.y - o.y) });
+    const same = (a, b) => Math.abs(a.x - b.x) < 3 && Math.abs(a.y - b.y) < 3;
+    check(same(rel(after2, after1), rel(before0, before1)) && same(rel(after0, after1), rel(before2, before1)) && await lab.getByText("تبادلت q2 وq0 مكانيهما.").count() === 1,
+      "drop onto another state: the two swap places (" + JSON.stringify({ q2: rel(after2, after1), wasQ0: rel(before0, before1) }) + ")");
+    if (process.env.SHOT_DIR) await canvas.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-lab-canvas.png") });
+    check(sideways !== undefined && (await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)) <= 1, "no sideways page scroll with the drawing editor");
+  } else check(await lab.getByTestId("alab-canvas").count() === 0, "phone: no drawing editor (the table is the phone's way)");
+
   // A5: «حوّل إلى حتمي» step by step, then the result opened in the editor (the NFA kept as A)
   await lab.getByRole("radio", { name: "أوتومات منتهٍ غير حتمي" }).check();
   await lab.getByRole("button", { name: /^افتح مثالًا: تنتهي بـ ab/ }).click();
@@ -88,7 +123,7 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 900 }], ["pho
   // the push-down example, step by step
   await lab.getByRole("radio", { name: "أوتومات مكدّس" }).check();
   await lab.getByRole("button", { name: /^افتح مثالًا: aⁿbⁿ/ }).click();
-  check(await section(/الانتقالات/).getByText("ادفع a,⏊/S", { exact: true }).count() === 1, "the push-down rows in the course's notation («ادفع a,⏊/S»)");
+  check(await lab.getByRole("region", { name: "انتقالات أوتومات المكدّس" }).getByText("ادفع a,⏊/S", { exact: true }).count() === 1, "the push-down rows in the course's notation («ادفع a,⏊/S»)");
   const player = section(/الرسم والتشغيل/);
   await player.getByLabel("الكلمة", { exact: true }).fill("aabb");
   await player.getByRole("button", { name: "شغّل", exact: true }).click();

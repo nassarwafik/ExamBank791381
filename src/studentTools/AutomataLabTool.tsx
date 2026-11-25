@@ -1,10 +1,10 @@
 import { useId, useMemo, useState } from "react";
 import type { AutomataLabToolV1 } from "./studentToolsSpec";
-import { gridLayout, type PdaOp, type TmMove } from "../learning/activities/automaton";
+import type { PdaOp, TmMove } from "../learning/activities/automaton";
 import { buildScene } from "../learning/activities/automatonScene";
 import { AutomatonPlayer } from "../learning/activities/AutomatonPlayer";
 import {
-  BLANK, BOTTOM, EPS, KIND_LABEL, LEFT_END, MAX_STATES, addState, addTrapState, cellKey, checkDraft, initialDraft, languageMaxLength,
+  BLANK, BOTTOM, EPS, KIND_LABEL, LEFT_END, MAX_STATES, addState, addTrapState, cellKey, checkDraft, initialDraft, labLayout, languageMaxLength,
   languageUpTo, missingArrows, nondeterminism, parseAlphabet, parseWords, removeState, runBatch, setAlphabet, unreachableStates,
   type AutomatonKind, type BatchRow, type LabDraft, type LanguageListing, type PdaRow, type TmRow,
 } from "./automataLab";
@@ -12,6 +12,7 @@ import { LAB_EXAMPLES } from "./automataLabExamples";
 import AutomataLabAlgorithms, { type Shelf } from "./AutomataLabAlgorithms";
 import AutomataWordTools from "./AutomataWordTools";
 import SaveDrawing from "./SaveDrawing";
+import AutomataLabCanvas, { finePointer } from "./AutomataLabCanvas";
 import "../learning/activities/activities.css";
 import "../learning/activities/automatonDesign.css";
 import "./automataLab.css";
@@ -50,7 +51,10 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
   const checked = useMemo(() => checkDraft(draft), [draft]);
   const machine = checked.machine;
   const stamp = useMemo(() => (machine ? JSON.stringify(machine) : ""), [machine]);
-  const scene = useMemo(() => (machine ? buildScene(machine, gridLayout(machine)) : null), [machine]);
+  // AUTO-A6b — the layout: the course's automatic one, with the cells the learner chose by mouse; the editor and the player share it
+  const layout = useMemo(() => (machine ? labLayout(machine, draft.layout) : null), [machine, draft.layout]);
+  const scene = useMemo(() => (machine && layout ? buildScene(machine, layout) : null), [machine, layout]);
+  const fine = useMemo(finePointer, []);
   const batchNow = batch && batch.stamp === stamp ? batch.value : null;
   const listingNow = listing && listing.stamp === stamp ? listing.value : null;
   const isFa = draft.kind === "DFA" || draft.kind === "NFA";
@@ -158,6 +162,8 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-t"}>
         <h3 id={ids + "-t"} className="learning-autodesign-heading">{num("t")}الانتقالات</h3>
+        {fine && machine && scene && layout && <AutomataLabCanvas ids={ids} draft={draft} machine={machine} scene={scene} layout={layout} edit={edit} />}
+        {fine && !machine && <p className="stt-hint">الرسم بالفأرة يعود حين تصبح الآلة جاهزة (انظر «الفحوص»).</p>}
         {isFa ? <FaTable draft={draft} ids={ids} setCell={setCell} toggleCell={toggleCell} />
           : draft.kind === "PDA" ? <PdaRows draft={draft} ids={ids} symbols={symbolsFor("pda")} set={setPda} remove={i => edit({ ...draft, pda: draft.pda.filter((_, k) => k !== i) })} add={addPda} />
           : <TmRows draft={draft} ids={ids} symbols={symbolsFor("tm")} set={setTm} remove={i => edit({ ...draft, tm: draft.tm.filter((_, k) => k !== i) })} add={addTm} />}
