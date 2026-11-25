@@ -89,6 +89,9 @@ registerTypeDefaults("functionGraphSelection", 1, ensure => { ensure("functionGr
 registerTypeDefaults("scene3DSelection", 1, () => {});
 // Phase 21D-B.3 — identity only: the lazy editor creates the model + private key when the teacher picks an asset; finalization blocks until then.
 registerTypeDefaults("meshPartSelection", 1, () => {});
+// AUTO-A8 — automatonDesign@1: a DFA over {a, b} with up to 4 states, and NO reference machine yet — finalization blocks until the teacher
+// builds it in the lazy editor. Literal on purpose (initial graph); the model's defaultAutomatonDesignConfig is the same value.
+registerTypeDefaults("automatonDesign", 1, ensure => { ensure("automatonDesign", { v: 1, machine: "DFA", alphabet: ["a", "b"], maxStates: 4 }); ensure("answer", {}); });
 registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 // Phase 19E — openResponse@1: the general profile and an EMPTY rubric that blocks finalization until the teacher builds one (the lazy
 // editor offers the useful 10-point default rubric in one click). Literal on purpose (initial graph); parity-tested against the model.

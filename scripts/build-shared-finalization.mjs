@@ -99,6 +99,9 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   // Phase 21D-B.1 — the GLB 2.0 asset authority (the server validates every uploaded mesh with the SAME code the browser runs before
   // drawing) and the versioned MeshModelSpecV1 exam contract with its code-owned asset library.
   "src/meshModels/glbAsset.ts", "src/meshModels/meshModelSpec.ts", "src/meshPartSelectionQuestion.ts",
+  // AUTO-A8 — the automatonDesign@1 contract (config, reference, answer shape): the finalization gate, the student projection, the ingest
+  // binder and the grader (api/src/lib/automaton-design-grading.js, which calls the book exercises' judge) read the same rules.
+  "src/automatonDesignQuestion.ts",
   // Phase 21I — multi-subject exam request routing (subject detection, bank / composer route decision, composer pre-fill): the
   // interpret-exam-request endpoint and the Builder route with byte-identical rules.
   "src/examRequestRouting.ts",
