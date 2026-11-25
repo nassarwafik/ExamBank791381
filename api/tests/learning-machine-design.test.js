@@ -176,3 +176,18 @@ describe("POST /api/learning-study/899271/attempt — a push-down «صمّم ا�
     expect(written(ctx)).toEqual([]);
   });
 });
+
+describe("learning-check — a machine-design verdict reaches the route unchanged", () => {
+  it("a Turing machine that does not halt where the reference does: `nohalt` is passed through, never a counterexample", async () => {
+    const { checkResponse } = await import("../src/lib/learning-check.js");
+    const loops = { states: ["q0", "q1"], start: "q0", accept: ["q1"], transitions: [tmT("q0", "a", "a", "S", "q1"), tmT("q0", "b", "b", "S", "q0")] };
+    const out = checkResponse({ key: TM_KEY, feedback: { hints: ["h"] } }, { kind: "machine-design", machine: loops });
+    expect(out.correct).toBe(false);
+    expect(out.nohalt).toEqual({ word: "b" });
+    expect(out.counterexample).toBeUndefined();
+    expect(out.agreesUpTo).toBeUndefined();
+    const right = checkResponse({ key: TM_KEY, feedback: {} }, { kind: "machine-design", machine: STARTS_A });
+    expect(right).toMatchObject({ correct: true, agreesUpTo: { length: 8, words: 511 } });
+    expect(right.nohalt).toBeUndefined();
+  });
+});

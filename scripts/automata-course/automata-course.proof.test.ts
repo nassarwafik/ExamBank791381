@@ -14,6 +14,8 @@
 //     examples agree, the reference itself passes the REAL server judge (api/src/lib/learning-machine-design.js) — «agrees up to length
 //     N» — and a machine that accepts nothing is judged wrong with a word the language really contains.
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 // @ts-expect-error — plain ESM authoring tools, untyped on purpose.
 import { buildCourse } from "../build-automata-course.mjs";
 import { readAutomatonConfig, runAutomaton, splitWord, type Machine } from "../../src/learning/activities/automaton";
@@ -157,6 +159,24 @@ describe("every «صمّم الآلة» exercise is proven through the real serv
 // ── AUTO-A10 — «صمّم الآلة» for push-down automata and Turing machines ───────────────────────────────────────────────────────
 const machineDesigns = raw.filter(r => r.block.type === "simulation" && r.block.simulationType === "machine-design");
 type MachineCfg = { task: { machine: "PDA" | "TM"; alphabet: string[]; maxStates?: number; mode?: string; examples?: { accept?: string[]; reject?: string[]; compute?: { word: string; answer: string }[] } }; reference: Record<string, unknown> };
+describe("the machine-design study key carries every public rule of the task (the judge reads only the key)", () => {
+  it("machine, alphabet, maxStates, mode, leftEnd and maxLength — and nothing of the task's examples or intro", () => {
+    const block = { type: "simulation", id: "x", simulationType: "machine-design", version: 1, config: {
+      task: { intro: "i", machine: "TM", alphabet: ["a", "b"], maxStates: 5, mode: "compute", leftEnd: true, maxLength: 6, examples: { compute: [{ word: "a", answer: "a" }] } },
+      reference: { states: ["q0"], start: "q0", accept: [], transitions: [] } } } as unknown as SimulationBlock;
+    expect(machineDesignKey(block)).toEqual({ kind: "machine-design", rules: { machine: "TM", alphabet: ["a", "b"], maxStates: 5, mode: "compute", leftEnd: true, maxLength: 6 }, reference: { states: ["q0"], start: "q0", accept: [], transitions: [] } });
+    const bare = { ...block, config: { ...(block.config as object), task: { intro: "i", machine: "PDA", alphabet: ["a"], leftEnd: false } } } as unknown as SimulationBlock;
+    expect((machineDesignKey(bare) as { rules: unknown }).rules).toEqual({ machine: "PDA", alphabet: ["a"] });
+    expect(machineDesignKey({ ...block, version: 2 } as SimulationBlock)).toBeNull();
+    expect(machineDesignKey({ ...block, simulationType: "automaton-design" } as SimulationBlock)).toBeNull();
+  });
+  it("every book exercise: the key built from the block is the one in the generated check index (no drift)", () => {
+    const index = JSON.parse(fs.readFileSync(path.join(process.cwd(), "api/src/data/learning-check/899271.json"), "utf8")) as { pages: Record<string, { activities: Record<string, { key: unknown }> }> };
+    const generated = new Map<string, unknown>();
+    for (const page of Object.values(index.pages)) for (const [id, a] of Object.entries(page.activities)) generated.set(id, a.key);
+    for (const r of machineDesigns) expect(generated.get(r.block.id), r.block.id).toEqual(machineDesignKey(r.block as unknown as SimulationBlock));
+  });
+});
 describe("every push-down / Turing machine «صمّم الآلة» exercise is proven through the real server judge", () => {
   it("the course has machine-design exercises", () => { expect(machineDesigns.length).toBeGreaterThanOrEqual(4); });
   for (const r of machineDesigns) {
