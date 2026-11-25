@@ -33,7 +33,7 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const load = () => JSON.parse(fs.readFileSync(path.join(repo, AUTOMATON_DESIGN_ACCEPTANCE_PATH), "utf8"));
 const qs = e => e.sections.flatMap(s => s.questions);
 const configsOf = e => Object.fromEntries(qs(e).filter(q => q.automatonDesign).map(q => [q.examQuestionId, q.automatonDesign]));
-const STUDENTS = { "ad-perfect": "طالب مثالي", "ad-partial": "طالب جزئي", "ad-blank": "طالب لم يجب", "ad-attacker": "طالب مهاجم" };
+const STUDENTS = { "ad-perfect": "طالب مثالي", "ad-partial": "طالب جزئي", "ad-blank": "طالب لم يجب", "ad-attacker": "طالب مهاجم", "ad-layout": "طالب يرتّب رسمه" };
 
 const m = (states, start, accept, transitions) => ({ states, start, accept, transitions: transitions.map(t => t.split(" ")) });
 const ans = machine => ({ kind: "automatonDesign", machine });
@@ -261,6 +261,18 @@ describe("A8 full platform lifecycle", () => {
     expect(released.resultsVisible).toBe(true);
     expect(released.questionBreakdown.questions.map(q => q.automaton ?? null)).toEqual([{ issue: { code: "incomplete", state: "t", symbol: "0" } }, null, { word: "b", shouldAccept: false }, null, null]);
     expect(JSON.stringify(released)).not.toMatch(/"reference"/);
+  });
+  it("AUTO-A9 — a layout is presentation only: it is saved and restored exactly, and never changes a mark", async () => {
+    const withLayout = { ...PERFECT, d1: { ...PERFECT.d1, layout: { s: [0, 0], t: [2, 1] } }, n1: { ...PARTIAL.n1, layout: { q1: [1, 3] } } };
+    const r = await takeExam(p, aid, "ad-layout", withLayout);
+    for (const x of r.restores) expect(x.restored).toEqual(x.expected.answers);
+    expect(r.attempt.answers.d1.layout).toEqual({ s: [0, 0], t: [2, 1] });
+    const snapshot = p.assignmentOf(aid).examSnapshot;
+    const strip = a => Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v && v.layout ? { kind: v.kind, machine: v.machine } : v]));
+    expect(gradeExam(snapshot, r.attempt.answers)).toEqual(gradeExam(snapshot, strip(r.attempt.answers)));
+    expect(r.attempt.score).toBe(22 - 6);                                         // n1 wrong (ends with b), the rest right
+    const bad = normalizeDraftAnswers({ d1: { ...PERFECT.d1, layout: { s: [99, 0] } } }, snapshot);
+    expect([bad.rejected, bad.answers.d1]).toEqual([[], PERFECT.d1]);             // a bad layout is dropped, the machine kept
   });
   it("grading is decided by the server only and is repeatable", () => {
     const snapshot = p.assignmentOf(aid).examSnapshot;

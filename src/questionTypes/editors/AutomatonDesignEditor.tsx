@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import type { AuthoringEditorProps } from "../registryTypes";
 import { AUTOMATON_DESIGN_LIMITS, validateAutomatonDesignQuestion, type AutomatonDesignMachineType } from "../../automatonDesignQuestion";
 import AutomatonBuilder from "../../learning/activities/AutomatonBuilder";
-import { draftOfMachine, initialFaDraft, machineOfDraft, type FaRules } from "../../learning/activities/automatonDraft";
+import { draftOfMachine, initialFaDraft, layoutOfDraft, machineOfDraft, type FaRules } from "../../learning/activities/automatonDraft";
 import { parseWords, type LabDraft } from "../../studentTools/automataLab";
 import "../../learning/activities/activities.css";
 
@@ -34,7 +34,7 @@ export default function AutomatonDesignEditor({ node, onChange, disabled }: Auth
   const [rejectText, setRejectText] = useState(() => shownWords(reject));
   const alphabetKey = alphabet.join(",");
   const refRules = useMemo<FaRules>(() => ({ machine, alphabet: alphabetKey ? alphabetKey.split(",") : [], maxStates: AUTOMATON_DESIGN_LIMITS.states, complete: false }), [machine, alphabetKey]);
-  const [draft, setDraft] = useState<LabDraft>(() => draftOfMachine(refRules, key.reference) ?? initialFaDraft(refRules));
+  const [draft, setDraft] = useState<LabDraft>(() => draftOfMachine(refRules, key.reference, key.layout) ?? initialFaDraft(refRules));
   const built = isObj(key.reference);
 
   type Next = { machine?: AutomatonDesignMachineType; alphabet?: string[]; maxStates?: number; complete?: boolean; accept?: string[]; reject?: string[]; draft?: LabDraft };
@@ -50,7 +50,8 @@ export default function AutomatonDesignEditor({ node, onChange, disabled }: Auth
     const writesReference = built || next.draft !== undefined;
     onChange({
       automatonDesign: { v: 1, machine: m, alphabet: a, maxStates: Math.round(next.maxStates ?? maxStates), ...(c ? { complete: true } : {}), ...(acc.length || rej.length ? { examples: { accept: acc, reject: rej } } : {}) },
-      answer: writesReference ? { reference: machineOfDraft(d, rules) } : {},
+      // AUTO-A9 — where the teacher put the reference's states travels with it (presentation only; the review draws it there)
+      answer: writesReference ? (() => { const layout = layoutOfDraft(d); return { reference: machineOfDraft(d, rules), ...(layout ? { layout } : {}) }; })() : {},
     } as never);
   };
   const applyAlphabet = (text: string) => { setAlphabetText(text); write({ alphabet: [...new Set(text.split(/[\s,،]+/).filter(Boolean))] }); };

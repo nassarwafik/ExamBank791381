@@ -1,6 +1,7 @@
 // AUTO-A8 (docs/enterprise-automata-lab-a4.md §11) — the learner's finite-automaton draft and the machine it stands for: shared by the
 // book's «صمّم الآلة» activity, the exam's automatonDesign@1 question (the student's answer and the teacher's reference) and their
 // builder (AutomatonBuilder.tsx). The draft is the lab's own (automataLab.ts LabDraft), so the lab's pure edits apply to it. Pure.
+// AUTO-A9 — the draft's layout (where states were put by mouse) travels beside the machine: layoutOfDraft / draftOfMachine(…, layout).
 import type { LabDraft } from "../../studentTools/automataLab";
 
 export type FaRules = { machine: "DFA" | "NFA"; alphabet: string[]; maxStates: number; complete: boolean };
@@ -28,7 +29,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
  * states, a start among them (else the first), accepting states among them, and the arrows whose ends are states and whose symbol is a
  * column of the table (a deterministic automaton keeps the first arrow of a state and symbol). Anything else → null (start afresh).
  */
-export function draftOfMachine(rules: Pick<FaRules, "machine" | "alphabet">, raw: unknown): LabDraft | null {
+export function draftOfMachine(rules: Pick<FaRules, "machine" | "alphabet">, raw: unknown, layout?: unknown): LabDraft | null {
   if (!isObj(raw) || !Array.isArray(raw.states)) return null;
   const states = [...new Set(raw.states.filter((q): q is string => typeof q === "string" && q.length > 0 && q.length <= 8))];
   if (!states.length) return null;
@@ -42,5 +43,16 @@ export function draftOfMachine(rules: Pick<FaRules, "machine" | "alphabet">, raw
     const k = cellKey(from, sym), now = cells[k] ?? [];
     if (rules.machine === "DFA" ? now.length === 0 : !now.includes(to)) cells[k] = [...now, to];
   }
-  return { ...initialFaDraft(rules), states, start, accept, cells };
+  // AUTO-A9 — where the states were put on the drawing (cells of these states only; the rest is the book's automatic layout)
+  const cellsOf: Record<string, [number, number]> = {};
+  if (isObj(layout)) for (const q of states) { const c = layout[q]; if (Array.isArray(c) && c.length === 2 && c.every(v => Number.isInteger(v) && v >= 0 && v <= 20)) cellsOf[q] = [c[0], c[1]]; }
+  return { ...initialFaDraft(rules), states, start, accept, cells, ...(Object.keys(cellsOf).length ? { layout: cellsOf } : {}) };
+}
+
+/** AUTO-A9 — the draft's chosen cells for its own states (what is saved beside the machine), or undefined when none. */
+export function layoutOfDraft(d: LabDraft): Record<string, [number, number]> | undefined {
+  if (!d.layout) return undefined;
+  const out: Record<string, [number, number]> = {};
+  for (const q of d.states) { const c = d.layout[q]; if (c) out[q] = [c[0], c[1]]; }
+  return Object.keys(out).length ? out : undefined;
 }

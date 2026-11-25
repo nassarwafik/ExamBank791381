@@ -36,6 +36,18 @@ describe("A8b — the teacher's review", () => {
   });
 });
 
+describe("AUTO-A9 — the review draws each machine where its author put it", () => {
+  const cy = (id: string, q: string) => Number([...screen.getByTestId(id).querySelectorAll("g.learning-automaton-state")].find(g => g.querySelector("text")?.textContent === q)!.querySelector("circle")!.getAttribute("cy"));
+  it("a saved layout moves the drawn state; without one, the book's automatic layout", () => {
+    render(<AutomatonDesignReview answer={MINE} answerKey={{ reference: REF }} config={CFG} />);
+    const flat = [cy("automaton-review-student", "p1"), cy("automaton-review-reference", "q2")];
+    cleanup();
+    render(<AutomatonDesignReview answer={{ ...MINE, layout: { p1: [1, 2] } }} answerKey={{ reference: REF, layout: { q2: [2, 3] } }} config={CFG} />);
+    expect(cy("automaton-review-student", "p1")).toBeGreaterThan(flat[0]);
+    expect(cy("automaton-review-reference", "q2")).toBeGreaterThan(flat[1]);
+  });
+});
+
 describe("A8b — the student's released breakdown", () => {
   const breakdown: QuestionBreakdown = { sections: [{ id: "s1", title: "قسم", capped: false }], questions: [
     { number: 1, sectionId: "s1", status: "zero", maxMarks: 5, score: 0, automaton: { word: "abb", shouldAccept: true } },
