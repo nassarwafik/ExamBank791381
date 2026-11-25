@@ -30,7 +30,8 @@ const { canonicalizeExamContent } = require_("../../src/lib/exam-canonical.js");
 const { normalizeDraftAnswers } = require_("../../src/lib/draft-answers.js");
 const { scoreMachineDesign, rulesOf } = require_("../../src/lib/machine-design-grading.js");
 const { evaluateMachineDesign, MACHINE_DESIGN_LIMITS: JUDGE_LIMITS } = require_("../../src/lib/learning-machine-design.js");
-const { MACHINE_DESIGN_LIMITS } = require_("../../src/lib/shared-finalization/machineDesignQuestion.js");
+const { MACHINE_DESIGN_LIMITS, answerBetweenDollars } = require_("../../src/lib/shared-finalization/machineDesignQuestion.js");
+const { answerOnTape } = require_("../../src/lib/learning-machine-design.js");
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const load = () => JSON.parse(fs.readFileSync(path.join(repo, MACHINE_DESIGN_ACCEPTANCE_PATH), "utf8"));
 const qs = e => e.sections.flatMap(s => s.questions);
@@ -75,6 +76,9 @@ describe("A11 authoring: the fixture is a real, finalizable exam", () => {
     expect(qs(e).map(q => q.presentationType)).toEqual([...Array(3).fill("machineDesign"), "multipleChoice"]);
     for (const q of qs(e).filter(x => x.machineDesign)) expect(validateMachineDesignQuestion(q), q.examQuestionId).toEqual([]);
     expect(evaluateExamFinalization(e).blockers.map(b => b.message)).toEqual([]);
+  });
+  it("the contract's answer between the first two $ is the judge's (parity: the teacher's examples are checked as the student is graded)", () => {
+    for (const tape of ["$11$", "ab$1$", "$$", "$1", "", "1$11$1$", "├$1$∆"]) expect(answerBetweenDollars([...tape]), tape).toBe(answerOnTape(tape));
   });
   it("the contract's bounds are the judge's (parity)", () => {
     expect([MACHINE_DESIGN_LIMITS.states, MACHINE_DESIGN_LIMITS.symbols, MACHINE_DESIGN_LIMITS.transitions, MACHINE_DESIGN_LIMITS.maxLength])

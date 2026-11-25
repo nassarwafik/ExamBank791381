@@ -5,7 +5,6 @@ import {
   validateMachineDesignConfig, validateMachineDesignQuestion, validateMachineDesignAnswerKey, projectMachineDesignConfigForStudent, machineDesignAuthority,
   normalizeMachineDesignAnswer, bindMachineDesignAnswerToQuestion, isMachineDesignAnswerAnswered, answerBetweenDollars, defaultMachineDesignConfig, MACHINE_DESIGN_LIMITS,
 } from "./machineDesignQuestion";
-import { answerOnTape } from "../api/src/lib/learning-machine-design.js";
 
 const pdaMove = (from: string, read: string, top: string, op: string, write: string, to: string) => ({ from, read, top, op, write, to });
 const tmMove = (from: string, read: string, write: string, move: string, to: string) => ({ from, read, write, move, to });
@@ -100,7 +99,8 @@ describe("A11a — the answer", () => {
     expect(isMachineDesignAnswerAnswered({ kind: "machineDesign", machine: PLUS2 })).toBe(true);
     expect(isMachineDesignAnswerAnswered({ kind: "automatonDesign", machine: PLUS2 })).toBe(false);
   });
-  it("the answer between the first two $ is the judge's (parity)", () => {
-    for (const tape of ["$11$", "ab$1$", "$$", "$1", "", "1$11$1$"]) expect(answerBetweenDollars([...tape]), tape).toBe(answerOnTape(tape));
+  it("the answer is what stands between the FIRST two $ (null without two) — parity with the judge: api/tests/certification-a11", () => {
+    const cases: [string, string | null][] = [["$11$", "11"], ["ab$1$", "1"], ["$$", ""], ["$1", null], ["", null], ["1$11$1$", "11"]];
+    for (const [tape, expected] of cases) expect(answerBetweenDollars([...tape]), tape).toBe(expected);
   });
 });
