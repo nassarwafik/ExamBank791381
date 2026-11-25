@@ -7,13 +7,15 @@ import { render, cleanup, screen, fireEvent, within, act, waitFor } from "@testi
 import App from "./App";
 
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
+const late = <T,>(p: Promise<T>) => new Promise<T>(resolve => setTimeout(() => resolve(p), 50));
 let summaryCalls = 0;
 let summaryReplies: Array<[number, unknown]> = [];
 
 function installFetch() {
   globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.includes("/api/platform-login")) return res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" });
+    // the sign-in answers LATE, as on a loaded machine: the login page (which has its own h1) is still there meanwhile
+    if (url.includes("/api/platform-login")) return late(res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" }));
     if (url.includes("/api/messages?kind=unread-summary")) {
       summaryCalls++;
       const [status, body] = summaryReplies.length > 1 ? summaryReplies.shift()! : summaryReplies[0];
@@ -52,7 +54,8 @@ describe("Phase 5D — App teacher unread badge", () => {
     render(<App />);
     expect(summaryCalls).toBe(0);                                             // login screen: nothing teacher-only fires
     await login();
-    await screen.findByRole("heading", { level: 1 });
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
     await waitFor(() => expect(messagesNav().querySelector(".eb-nav-badge")?.textContent).toBe("3 رسائل جديدة"));
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
     await waitFor(() => expect(messagesNav().querySelector(".eb-nav-badge")?.textContent).toBe("5 رسائل جديدة"));

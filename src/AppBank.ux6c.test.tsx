@@ -10,6 +10,7 @@ import App from "./App";
 
 const PROJECTS = [{ projectCode: "899373", title: "مشروع 899373", tracks: [{ trackId: "book", title: "الكتاب", icon: "📘" }] }];
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
+const late = <T,>(p: Promise<T>) => new Promise<T>(resolve => setTimeout(() => resolve(p), 50));
 const q = (id: string, text: string) => ({ id, sourceId: "import-x", sourceKind: "import", official: false, questionNumber: "1", section: "BASIC", topic: "T", difficulty: 2, difficultyLabel: "", type: "shortAnswer", presentationType: "open", text, options: [], fields: [], answer: { mode: "manual", values: [] }, hasImage: false, reviewStatus: "classified", createdAt: "", updatedAt: "" });
 let bankQuestions = [q("import-x-1", "سؤال مستورد أول")];
 let calls: string[] = [];
@@ -17,7 +18,8 @@ let calls: string[] = [];
 function installFetch() {
   const fn = vi.fn((input: RequestInfo | URL) => {
     const url = String(input); calls.push(url.replace(/^https?:\/\/[^/]+/, ""));
-    if (url.includes("/api/platform-login")) return res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" });
+    // the sign-in answers LATE, as on a loaded machine: the login page (which has its own h1) is still there meanwhile
+    if (url.includes("/api/platform-login")) return late(res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" }));
     if (url.includes("/api/project-tracker")) {
       if (url.includes("resource=projects-summary")) return res(200, { ok: true, totalReadyForReview: 0, byProject: {} });
       if (url.includes("resource=projects")) return res(200, { ok: true, projects: PROJECTS });
@@ -54,7 +56,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("UX-6c — Exam Bank navigation", () => {
   it("بنك الامتحانات is a real sidebar destination inside its group: clicking it opens the management page with its own h1; Builder and Import links still work and remain the group's children", async () => {
     render(<App />); await login();
-    await screen.findByRole("heading", { level: 1 });
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
     const group = within(sidebar()).getByRole("group", { name: "بنك الامتحانات" });
     const links = within(group).getAllByRole("button").map(b => b.textContent?.trim());
     expect(links).toEqual(["بنك الامتحانات", "باني الامتحان", "استيراد من ملف", "مراجعات النشر"]);   // 14B — the Review Inbox is the group's third child
@@ -78,7 +81,8 @@ describe("UX-6c — Exam Bank navigation", () => {
   });
   it("the breadcrumb ancestor «بنك الامتحانات» on the builder and import pages leads to the management page", async () => {
     render(<App />); await login();
-    await screen.findByRole("heading", { level: 1 });
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
     fireEvent.click(nav("استيراد من ملف"));
     const crumbs = screen.getByRole("navigation", { name: "مسار الصفحة" });
     fireEvent.click(within(crumbs).getByRole("button", { name: "بنك الامتحانات" }));
@@ -87,7 +91,8 @@ describe("UX-6c — Exam Bank navigation", () => {
   });
   it("the page's actions route through App: «إنشاء امتحان جديد» opens the builder, «استيراد أسئلة» opens the import surface; returning to the bank reloads it so imported questions show up", async () => {
     render(<App />); await login();
-    await screen.findByRole("heading", { level: 1 });
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
     fireEvent.click(nav("بنك الامتحانات"));
     await screen.findByText("عدد الأسئلة");
     fireEvent.click(within(screen.getByRole("group", { name: "أقسام بنك الامتحانات" })).getByRole("button", { name: "بنك الأسئلة" }));
