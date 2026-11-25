@@ -65,7 +65,9 @@ const INT = /^-?\d{1,15}$/;
  *   • a variable → its value; `a[i]` / `a[2]` → the cell; `a.Length` / `a.Count` / `a.Count()` → its length;
  *   • V17 — fields: `p.Age`, a chain `p.Home.City`, a struct's field, a field of `this` written bare (`Age` in its class), a static
  *     field `Counter.Made` (or bare, when exactly one type has it); `s.Length` of a string;
- *   • V17 — calls: the writer's method → the value it returned (`calls`, below); `Math.Abs` / `Math.Max` / `Math.Min` of whole numbers.
+ *   • V17 — calls: the writer's method → the value it returned (`calls`, below); `Math.Abs` / `Math.Max` / `Math.Min` of whole numbers;
+ *   • V18 — a dictionary: `d[key]` → that key's value, `d.Count`, `d.ContainsKey(k)` / `d.ContainsValue(v)` (keys matched as Console
+ *     prints them; a key found more than once, or a dictionary clipped for space, stays as written).
  * Read in ONE pass: a value put in is never read again as a name. Strings and characters in the condition are left as written. A part
  * that cannot be read stays as written (its index and arguments still read); only a variable that holds no plain value, or an index
  * outside its array, makes the whole line unsure.
@@ -99,6 +101,39 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     if (o?.k !== "array") return null;
     return { items: o.items, quote: /^(List<)?string\b/.test(o.type) ? "\"" : /^(List<)?char\b/.test(o.type) ? "'" : "" };
   };
+  // V18: a Dictionary / SortedDictionary / SortedList — its keys and values as Console prints them, and its key and value types
+  const mapOf = (g: Got): { keys: string[]; items: string[]; key: string; value: string } | null => {
+    if (g?.t !== "val" || g.v.t !== "ref") return null;
+    const o = byId.get(g.v.id);
+    if (o?.k !== "map") return null;
+    const m = /<(.*)>$/.exec(o.type);
+    const types = m ? args(m[1]) : [];
+    return types.length === 2 ? { keys: o.keys, items: o.items, key: types[0], value: types[1] } : null;
+  };
+  /** A literal of the condition (`"Ali"`, `'c'`, `3`, `true`) as Console prints a value of type `type`; null when it cannot be told. */
+  const printed = (literal: string, type: string): string | null => {
+    if (type === "string") return /^"[^"\\]*"$/.test(literal) ? literal.slice(1, -1) : null;
+    if (type === "char") return /^'[^'\\]'$/.test(literal) ? literal.slice(1, -1) : null;
+    if (type === "bool") return literal === "true" ? "True" : literal === "false" ? "False" : null;
+    if (/^(int|long|short|byte)$/.test(type)) return INT.test(literal) ? literal : null;
+    return null;
+  };
+  /** A printed cell back as a literal of type `type`; null when it cannot be told (an object, a number of a type not read). */
+  const literalOf = (cell: string, type: string): string | null => {
+    if (cell === "…") return null;
+    if (type === "string") return /["\\]/.test(cell) ? null : "\"" + cell + "\"";
+    if (type === "char") return cell.length === 1 && cell !== "'" && cell !== "\\" ? "'" + cell + "'" : null;
+    if (type === "bool") return cell === "True" ? "true" : cell === "False" ? "false" : null;
+    if (/^(int|long|short|byte)$/.test(type)) return INT.test(cell) ? cell : null;
+    if (/^(double|float|decimal)$/.test(type)) return /^-?\d+(\.\d+)?$/.test(cell) ? cell : null;
+    return null;
+  };
+  /** Whether `list` holds `want` — false only when nothing was left out for space. */
+  const holds = (list: string[], want: string | null): Got => {
+    if (want === null) return null;
+    if (list.includes(want)) return { t: "lit", s: "true" };
+    return list.includes("…") ? null : { t: "lit", s: "false" };
+  };
   const member = (g: Got, name: string): Got => {
     if (g?.t === "type") return g.vars.has(name) ? { t: "val", v: g.vars.get(name)! } : null;
     if (g?.t !== "val") {
@@ -107,6 +142,7 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     }
     if (g.v.t === "rec") { const f = g.v.fields.find(x => x[0] === name); return f ? { t: "val", v: f[1] } : null; }
     if (g.v.t === "v" && name === "Length" && /^"[^"\\]*"$/.test(g.v.s)) return { t: "lit", s: String(g.v.s.length - 2) };
+    if (name === "Count" && mapOf(g)) { const mp = mapOf(g)!; return mp.keys.includes("…") ? null : { t: "lit", s: String(mp.keys.length) }; }
     if (name === "Length" || name === "Count") {
       const c = cells(g);
       return c && !c.items.includes("…") ? { t: "lit", s: String(c.items.length) } : null;
@@ -194,6 +230,12 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
               else if (/^(-?\d+(\.\d+)?|true|false|True|False)$/.test(cell)) got = { t: "lit", s: /^(true|false)$/i.test(cell) ? cell.toLowerCase() : cell };
               else { unsure = true; got = null; }
             } else got = null;
+          } else if (mapOf(got)) {
+            // V18: d[key] → the value of that key: the key read as Console prints it, found exactly once; else it stays as written
+            const mp = mapOf(got)!, want = printed(inner.trim(), mp.key);
+            const at = want === null ? [] : mp.keys.flatMap((k, x) => (k === want ? [x] : []));
+            const lit2 = at.length === 1 ? literalOf(mp.items[at[0]], mp.value) : null;
+            got = lit2 === null ? null : { t: "lit", s: lit2 };
           } else {
             if (got?.t === "val" && start.isVar && path.length === 1) unsure = true;   // a variable indexed that holds no array
             got = null;
@@ -207,7 +249,12 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
           const queue = queues.get(name);
           if (queue && queue.length) got = { t: "lit", s: queue.shift()! };
           else if (path.length === 2 && path[0] === "Math" && !start.isVar) got = math(name, args(inner));
-          else if (name === "Count" && inner.trim() === "" && path.length >= 2) {
+          else if ((name === "ContainsKey" || name === "ContainsValue") && path.length >= 2) {
+            // V18: d.ContainsKey(k) / d.ContainsValue(v), answered from the recorded keys / values
+            const owner = path.slice(0, -1).reduce<Got>((g, n, x) => (x === 0 ? root(n).got : member(g, n)), null);
+            const mp = mapOf(owner), xs = args(inner);
+            got = mp && xs.length === 1 ? (name === "ContainsKey" ? holds(mp.keys, printed(xs[0], mp.key)) : holds(mp.items, printed(xs[0], mp.value))) : null;
+          } else if (name === "Count" && inner.trim() === "" && path.length >= 2) {
             // list.Count(): the length of what the chain before it holds
             got = null;
             const owner = path.slice(0, -1).reduce<Got>((g, n, x) => (x === 0 ? root(n).got : member(g, n)), null);
