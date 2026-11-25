@@ -43,6 +43,10 @@ export const PLACE_VALUE_WIDTH_OPTIONS = [4, 8, 16] as const;
  *  a push-down automaton, a Turing machine). Kept here, not imported from the engine, so the contract stays a leaf module. */
 export const AUTOMATA_LAB_KINDS = ["DFA", "NFA", "PDA", "TM"] as const;
 export type AutomataLabKind = (typeof AUTOMATA_LAB_KINDS)[number];
+/** AUTO-A6 — how much of the lab an exam offers: absent = everything (the book's set); "noAlgorithms" = no algorithms, no «آلاتي», no
+ *  word tools; "runOnly" = build, draw and run only (no «لغة آلتي», no course checks either). */
+export const AUTOMATA_LAB_LEVELS = ["noAlgorithms", "runOnly"] as const;
+export type AutomataLabLevel = (typeof AUTOMATA_LAB_LEVELS)[number];
 export const MAX_SECTION_OVERRIDES = 100;
 export const MAX_SECTION_ID_LENGTH = 120;
 /** Phase T5 — formula sheet bounds: a short title and a light document (it travels inside every delivered exam). */
@@ -85,7 +89,8 @@ export type HexBinaryTableToolV1 = { id: "hexBinaryTable"; showDecimal: boolean 
 export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean; allowVisual?: true };
 /** AUTO-A4 — the automata lab: the learner builds a machine of one of `kinds` and runs it on words (step by step, many at once, «لغة آلتي»).
  *  The machine is data the learner builds: nothing is executed, nothing is stored or sent, nothing is graded. At least one kind. */
-export type AutomataLabToolV1 = { id: "automataLab"; kinds: AutomataLabKind[] };
+/** AUTO-A6 — `level`, additive within version 1: the canonical form carries it only when it restricts, so every earlier spec keeps its shape. */
+export type AutomataLabToolV1 = { id: "automataLab"; kinds: AutomataLabKind[]; level?: AutomataLabLevel };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
   | CSharpEditorToolV1 | AutomataLabToolV1;
@@ -149,7 +154,7 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   placeValueBoxes: ["id", "width"],
   hexBinaryTable: ["id", "showDecimal"],
   csharpEditor: ["id", "allowRun", "allowVisual"],
-  automataLab: ["id", "kinds"]
+  automataLab: ["id", "kinds", "level"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -317,7 +322,9 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
         if (kinds.includes(k as AutomataLabKind)) { add("STUDENT_TOOLS_DUPLICATE_VALUE", path + ".kinds", "نوع الآلة «" + String(k) + "» مكرر."); continue; }
         kinds.push(k as AutomataLabKind);
       }
-      value = { id, kinds: AUTOMATA_LAB_KINDS.filter(k => kinds.includes(k)) };   // canonical: the course's order
+      if ("level" in raw && !(AUTOMATA_LAB_LEVELS as readonly unknown[]).includes(raw.level)) add("STUDENT_TOOLS_INVALID_VALUE", path + ".level", "مستوى مختبر الآلات يجب أن يكون «بلا الخوارزميات» أو «البناء والتشغيل فقط» (أو يُترك للمختبر كاملًا).");
+      value = { id, kinds: AUTOMATA_LAB_KINDS.filter(k => kinds.includes(k)),   // canonical: the course's order
+        ...((AUTOMATA_LAB_LEVELS as readonly unknown[]).includes(raw.level) ? { level: raw.level as AutomataLabLevel } : {}) };
       break;
     }
   }

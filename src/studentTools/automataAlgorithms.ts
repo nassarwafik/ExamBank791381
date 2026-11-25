@@ -284,3 +284,84 @@ export function equivalence(a: Machine, b: Machine): Equivalence {
   }
   return { equal: true };
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUTO-A6 — the book's closure constructions (اللقاء 3، الشرائح 84–90؛ اللقاء 4، الشرائح 4–17): the result is non-deterministic
+// ────────────────────────────────────────────────────────────────────────────
+
+type Tri = [string, string, string];
+const tri = (m: FaMachine): Tri[] => m.transitions.map(t => [t.from, t.symbol, t.to]);
+/** Whether the automaton accepts the empty word (its start's ε-closure holds an accepting state; the start itself when there is no ε). */
+const acceptsEmpty = (m: FaMachine) => epsilonClosure(m, [m.start]).states.some(q => m.accept.includes(q));
+const alphabetOf = (a: FaMachine, b?: FaMachine) => [...a.alphabet, ...(b ? b.alphabet.filter(s => !a.alphabet.includes(s)) : [])];
+
+/**
+ * The second machine's states, renamed when a name is also the first machine's (the book names them apart: q… and p…): p0, p1, …
+ * in its own order (or r0, … when p… is taken too). → the renamed machine's arrows, states, start and accepting states.
+ */
+function apart(a: FaMachine, b: FaMachine): { b: FaMachine; renamed: boolean } {
+  if (!b.states.some(s => a.states.includes(s))) return { b, renamed: false };
+  const prefix = ["p", "r", "s", "u"].find(p => b.states.every((_, i) => !a.states.includes(p + i))) ?? "x";
+  const map = new Map(b.states.map((s, i) => [s, prefix + i]));
+  const r = (s: string) => map.get(s) as string;
+  return { renamed: true, b: { ...b, states: b.states.map(r), start: r(b.start), accept: b.accept.map(r),
+    stateLabels: Object.fromEntries(Object.entries(b.stateLabels).map(([k, v]) => [r(k), v])), transitions: b.transitions.map(t => ({ ...t, from: r(t.from), to: r(t.to) })) } };
+}
+
+/** The rows of a non-deterministic result: each state, where each symbol (and ε) leads, and a word for it. */
+function nfaRows(states: string[], accept: string[], transitions: Tri[], symbols: string[], notes: Record<string, string>): AlgoRow[] {
+  return states.map(s => ({
+    name: s, members: [s], accept: accept.includes(s),
+    moves: symbols.map(x => ({ symbol: x, to: transitions.filter(t => t[0] === s && t[1] === x).map(t => t[2]).join(", ") })),
+    ...(notes[s] ? { note: notes[s] } : {}),
+  }));
+}
+const newStartName = (taken: string[]) => (taken.includes("q0new") ? nextStateName(taken, "q0new") : "q0new");
+const RENAMED_NOTE = "سُمّيت حالات الآلة الثانية من جديد لأن أسماءها تتكرّر في الأولى. ";
+
+/** Union by a new start state (the book): q0new copies every arrow leaving the two starts; accepting when either accepts ε. */
+export function unionByNewStart(a: Machine, other: Machine): AlgoResult {
+  if (!isFa(a) || !isFa(other)) return fail("الاتحاد بحالة بداية جديدة لأوتومات منتهية.");
+  const { b, renamed } = apart(a, other);
+  const ta = tri(a), tb = tri(b);
+  const q = newStartName([...a.states, ...b.states]);
+  const extra: Tri[] = [...ta.filter(t => t[0] === a.start), ...tb.filter(t => t[0] === b.start)].map(t => [q, t[1], t[2]]);
+  const states = [q, ...a.states, ...b.states];
+  const accept = [...(acceptsEmpty(a) || acceptsEmpty(b) ? [q] : []), ...a.accept, ...b.accept];
+  const transitions = [...extra, ...ta, ...tb];
+  const symbols = [...alphabetOf(a, b), ...(transitions.some(t => t[1] === "ε") ? ["ε"] : [])];
+  const notes: Record<string, string> = { [q]: "بداية جديدة" };
+  return finish({ kind: "NFA", alphabet: alphabetOf(a, b), states, start: q, accept, transitions }, nfaRows(states, accept, transitions, symbols, notes),
+    (renamed ? RENAMED_NOTE : "") + "أوتومات غير حتمي: الحالة " + q + " تنسخ كل سهم يخرج من بدايتي الآلتين.");
+}
+
+/** Concatenation (the book): the first machine's start; from each of its accepting states, the arrows that leave the second's start;
+ *  accepting = the second's (and the first's too when the second accepts ε). */
+export function concatenation(a: Machine, other: Machine): AlgoResult {
+  if (!isFa(a) || !isFa(other)) return fail("التسلسل لأوتومات منتهية.");
+  const { b, renamed } = apart(a, other);
+  const ta = tri(a), tb = tri(b);
+  const extra: Tri[] = a.accept.flatMap(f => tb.filter(t => t[0] === b.start).map(t => [f, t[1], t[2]] as Tri));
+  const states = [...a.states, ...b.states];
+  const accept = acceptsEmpty(b) ? [...a.accept, ...b.accept] : [...b.accept];
+  const transitions = [...ta, ...tb, ...extra];
+  const symbols = [...alphabetOf(a, b), ...(transitions.some(t => t[1] === "ε") ? ["ε"] : [])];
+  const notes = Object.fromEntries(a.accept.map(f => [f, "تأخذ أسهم بداية الثانية"]));
+  return finish({ kind: "NFA", alphabet: alphabetOf(a, b), states, start: a.start, accept, transitions }, nfaRows(states, accept, transitions, symbols, notes),
+    (renamed ? RENAMED_NOTE : "") + "أوتومات غير حتمي للتسلسل: من كل حالة قبول في الأولى تخرج أسهم بداية الثانية.");
+}
+
+/** Reversal (the book): every arrow flipped; the original start becomes the one accepting state; a new start q0new (accepting when the
+ *  machine accepts ε) takes every arrow that now leaves an original accepting state. */
+export function reversal(a: Machine): AlgoResult {
+  if (!isFa(a)) return fail("العكس لأوتومات منتهٍ.");
+  const flipped: Tri[] = tri(a).map(([f, s, t]) => [t, s, f]);
+  const q = newStartName(a.states);
+  const extra: Tri[] = a.accept.flatMap(f => flipped.filter(t => t[0] === f).map(t => [q, t[1], t[2]] as Tri));
+  const states = [q, ...a.states];
+  const accept = [a.start, ...(acceptsEmpty(a) ? [q] : [])];
+  const transitions = [...extra, ...flipped];
+  const symbols = [...a.alphabet, ...(transitions.some(t => t[1] === "ε") ? ["ε"] : [])];
+  return finish({ kind: "NFA", alphabet: a.alphabet, states, start: q, accept, transitions }, nfaRows(states, accept, transitions, symbols, { [q]: "بداية جديدة", [a.start]: "كانت البداية" }),
+    "أوتومات غير حتمي للعكس: كل سهم مقلوب، والبداية القديمة هي حالة القبول.");
+}

@@ -78,6 +78,13 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 900 }], ["pho
   check(/الآلتان متكافئتان/.test(await algos.innerText()), "the DFA and the kept NFA are equivalent");
   if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the working table (" + (await sideways()) + " px)");
 
+  // A6: «أدوات الكلمات» (unit 1) and «حفظ صورة» above the drawing
+  const words = section(/أدوات الكلمات/);
+  await words.getByLabel(/^الكلمة w/).fill("01102");
+  await words.getByRole("button", { name: "حلّل الكلمة" }).click();
+  check(/البادئات \(6\)/.test(await words.innerText()) && /اللواحق \(6\)/.test(await words.innerText()), "«أدوات الكلمات»: w = 01102 has 6 prefixes and 6 suffixes (ε and w included, as the book)");
+  check(await section(/الرسم والتشغيل/).getByTestId("save-drawing").count() === 1, "«حفظ صورة» above the lab's drawing");
+
   // the push-down example, step by step
   await lab.getByRole("radio", { name: "أوتومات مكدّس" }).check();
   await lab.getByRole("button", { name: /^افتح مثالًا: aⁿbⁿ/ }).click();
