@@ -19,6 +19,7 @@ const { isCompositeQuestionNode, compositeQuestionMaxMarks, isCompositeAnswerAns
 // ingest apply); a kind it does not admit is never "answered" here, so it can never take a first-N slot.
 const { legacyResponseAdmitted } = require("./question-type-graders");
 const { isAutomatonDesignAnswerAnswered } = require("./shared-finalization/automatonDesignQuestion");
+const { isMachineDesignAnswerAnswered } = require("./shared-finalization/machineDesignQuestion");
 const { compositeStructure, compositeChildNode } = require("./shared-finalization/compositeQuestion");
 
 // Stable identity helpers. These MUST match src/StudentQuestionCard.tsx's qid() and the front-end
@@ -157,6 +158,9 @@ function isResponseAnswered(a) {
     // AUTO-A8 — an automaton design counts when the student did something beyond the empty start state (mirror of answerState.ts).
     case "automatonDesign":
       return isAutomatonDesignAnswerAnswered(a);
+    // AUTO-A11a — a push-down / Turing machine design counts the same way (mirror of answerState.ts).
+    case "machineDesign":
+      return isMachineDesignAnswerAnswered(a);
     // Phase 20A — a trusted SmartSim answer counts when it carries at least one action (mirror of answerState.ts).
     case "smartSim":
       return Array.isArray(a.actions) && a.actions.length > 0;
