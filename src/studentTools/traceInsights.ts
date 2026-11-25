@@ -66,6 +66,8 @@ const INT = /^-?\d{1,15}$/;
  *   • V17 — fields: `p.Age`, a chain `p.Home.City`, a struct's field, a field of `this` written bare (`Age` in its class), a static
  *     field `Counter.Made` (or bare, when exactly one type has it); `s.Length` of a string;
  *   • V17 — calls: the writer's method → the value it returned (`calls`, below); `Math.Abs` / `Math.Max` / `Math.Min` of whole numbers;
+ *   • V19 — `Math.Pow` of whole numbers when the result is a whole number exactly; `s.Contains("…")` / `s.Contains('c')` of a
+ *     string; a method call after an index is asked of what the index gave (never of the chain's first name);
  *   • V18 — a dictionary: `d[key]` → that key's value, `d.Count`, `d.ContainsKey(k)` / `d.ContainsValue(v)` (keys matched as Console
  *     prints them; a key found more than once, or a dictionary clipped for space, stays as written).
  * Read in ONE pass: a value put in is never read again as a name. Strings and characters in the condition are left as written. A part
@@ -107,7 +109,7 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     const o = byId.get(g.v.id);
     if (o?.k !== "map") return null;
     const m = /<(.*)>$/.exec(o.type);
-    const types = m ? args(m[1]) : [];
+    const types = m ? typeArgs(m[1]) : [];
     return types.length === 2 ? { keys: o.keys, items: o.items, key: types[0], value: types[1] } : null;
   };
   /** A literal of the condition (`"Ali"`, `'c'`, `3`, `true`) as Console prints a value of type `type`; null when it cannot be told. */
@@ -186,11 +188,29 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     out.push(inner.slice(last).trim());
     return out;
   };
+  const typeArgs = (inner: string): string[] => {   // a generic type's arguments: split at the commas outside < >
+    const out: string[] = [];
+    let depth = 0, last = 0;
+    for (let i = 0; i < inner.length; i++) {
+      const c = inner[i];
+      if (c === "<") depth++;
+      else if (c === ">") depth--;
+      else if (c === "," && depth === 0) { out.push(inner.slice(last, i).trim()); last = i + 1; }
+    }
+    out.push(inner.slice(last).trim());
+    return out;
+  };
   const math = (fn: string, xs: string[]): Got => {
     if (!xs.every(x => INT.test(x))) return null;
     const ns = xs.map(Number);
     if (fn === "Abs" && ns.length === 1) return { t: "lit", s: String(Math.abs(ns[0])) };
     if ((fn === "Max" || fn === "Min") && ns.length === 2) return { t: "lit", s: String(fn === "Max" ? Math.max(ns[0], ns[1]) : Math.min(ns[0], ns[1])) };
+    if (fn === "Pow" && ns.length === 2 && ns[1] >= 0 && ns[1] <= 1000) {
+      // V19: a whole number exactly (C#'s double holds it exactly up to 2^53); else it stays as written
+      const r = BigInt(ns[0]) ** BigInt(ns[1]);
+      const big = r < 0n ? -r : r;
+      return big <= 9007199254740992n ? { t: "lit", s: r.toString() } : null;
+    }
     return null;
   };
 
@@ -206,6 +226,9 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
       const first = src.slice(i, j);
       const start = root(first);
       let got = start.got, written = first, path = [first], plainName = true;
+      // V19: what the chain held right before its last `.name` — the owner a method call is asked of (an index or a call in
+      // between is part of it: `maps["x"].ContainsKey(…)` asks the inner dictionary, never `maps`); null when no `.name` came last
+      let owner: Got = null, ownerKnown = false;
       for (;;) {
         let k = j;
         while (k < src.length && src[k] === " ") k++;
@@ -213,6 +236,7 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
           let e = k + 1;
           while (e < src.length && /\w/.test(src[e])) e++;
           const name = src.slice(k + 1, e);
+          owner = got; ownerKnown = true;
           got = member(got, name);
           path.push(name); written += "." + name; plainName = false; j = e;
         } else if (src[k] === "[") {
@@ -240,7 +264,7 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
             if (got?.t === "val" && start.isVar && path.length === 1) unsure = true;   // a variable indexed that holds no array
             got = null;
           }
-          written += "[" + inner + "]"; plainName = false; j = e + 1;
+          written += "[" + inner + "]"; plainName = false; ownerKnown = false; j = e + 1;
         } else if (src[k] === "(") {
           const e = close(src, k);
           if (e < 0) break;
@@ -251,17 +275,22 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
           else if (path.length === 2 && path[0] === "Math" && !start.isVar) got = math(name, args(inner));
           else if ((name === "ContainsKey" || name === "ContainsValue") && path.length >= 2) {
             // V18: d.ContainsKey(k) / d.ContainsValue(v), answered from the recorded keys / values
-            const owner = path.slice(0, -1).reduce<Got>((g, n, x) => (x === 0 ? root(n).got : member(g, n)), null);
-            const mp = mapOf(owner), xs = args(inner);
+            const mp = ownerKnown ? mapOf(owner) : null, xs = args(inner);
             got = mp && xs.length === 1 ? (name === "ContainsKey" ? holds(mp.keys, printed(xs[0], mp.key)) : holds(mp.items, printed(xs[0], mp.value))) : null;
+          } else if (name === "Contains" && ownerKnown && path.length >= 2) {
+            // V19: s.Contains("ab") / s.Contains('a') — a string with no escapes, an argument written as a literal (ordinal, as C#)
+            const text = lit(owner), xs = args(inner);
+            const plainText = (x: string | null) => (x && /^"[^"\\]*"$/.test(x) ? x.slice(1, -1) : null);
+            const hay = plainText(text);
+            const needle = xs.length === 1 ? plainText(xs[0]) ?? (/^'[^'\\]'$/.test(xs[0]) ? xs[0].slice(1, -1) : null) : null;
+            got = hay !== null && needle !== null ? { t: "lit", s: String(hay.includes(needle)) } : null;
           } else if (name === "Count" && inner.trim() === "" && path.length >= 2) {
             // list.Count(): the length of what the chain before it holds
             got = null;
-            const owner = path.slice(0, -1).reduce<Got>((g, n, x) => (x === 0 ? root(n).got : member(g, n)), null);
-            const c3 = cells(owner);
+            const c3 = ownerKnown ? cells(owner) : null;
             if (c3 && !c3.items.includes("…")) got = { t: "lit", s: String(c3.items.length) };
           } else got = null;
-          written += "(" + inner + ")"; plainName = false; j = e + 1;
+          written += "(" + inner + ")"; plainName = false; ownerKnown = false; j = e + 1;
         } else break;
       }
       const value = lit(got);
