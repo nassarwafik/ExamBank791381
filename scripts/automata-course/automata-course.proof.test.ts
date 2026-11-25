@@ -195,6 +195,8 @@ describe("every push-down / Turing machine «صمّم الآلة» exercise is p
       expect(m.kind).toBe(cfg.task.machine);
       expect(cfg.reference.states as string[]).toEqual(m.states);
       expect((cfg.reference.states as string[]).length, "the reference fits the task's state limit").toBeLessThanOrEqual(cfg.task.maxStates ?? 12);
+      // AUTO-A10b — a Turing machine task keeps the book's tape: the left end ├ exactly when the reference has it (the learner may use it)
+      if (m.kind === "TM") expect((cfg.task as { leftEnd?: boolean }).leftEnd === true, "the task's left end ├").toBe(m.leftEnd !== undefined);
       const key = machineDesignKey(r.block as unknown as SimulationBlock);
       expect(key).not.toBeNull();
       // the reference, sent as the learner sends a machine (the automaton-trace format), agrees with itself up to the judged length

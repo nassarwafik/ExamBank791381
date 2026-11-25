@@ -110,6 +110,14 @@ describe("AUTO-A10 — Turing machines: recognise a language, compute a function
     // a RECOGNISE task still judges every halted word (a reject is a verdict there, not «outside»)
     expect(judge({ ...STARTS_A, accept: [] }, TM_KEY)).toMatchObject({ correct: false, counterexample: { word: "a", shouldAccept: true } });
   });
+  it("the book's left end ├: a learner machine that uses it is right when the task's tape has it, and wrong when it does not", () => {
+    // starts with a — but first a step left onto ├ and back (the detour the book's machines use to find the start of the tape)
+    const detour = { states: ["q0", "q1", "q2", "q3"], start: "q0", accept: ["q2"], transitions: [tmT("q0", "a", "a", "L", "q1"), tmT("q0", "b", "b", "L", "q1"),
+      tmT("q1", "├", "├", "R", "q3"), tmT("q3", "a", "a", "S", "q2")] };
+    expect(judge(detour, { ...TM_KEY, rules: { ...TM_RULES, leftEnd: true } })).toMatchObject({ correct: true, agreesUpTo: { length: 8, words: 511 } });
+    // on a tape without ├ the step left finds a blank and the machine stops: wrong on «a»
+    expect(judge(detour, TM_KEY)).toEqual({ status: "judged", correct: false, counterexample: { word: "a", shouldAccept: true } });
+  });
   it("the lean halt agrees with the book's engine on every word up to length 6", () => {
     for (const m of [STARTS_A, EMPTY_ANSWER, ONE_A_ANSWER]) {
       const tm = readAutomatonConfig({ automaton: { kind: "TM", alphabet: ["a", "b"], blank: "∆", ...m } }).machine;

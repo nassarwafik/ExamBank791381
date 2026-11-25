@@ -94,6 +94,10 @@ describe("899271 — the bodies", () => {
     expect(machines.map(b => b.id)).toEqual(["m08-l04-p02-b06", "m08-l04-p02-b07", "m09-l03-p02-b05", "m09-l03-p02-b06",
       "m10-l06-p03-b01", "m10-l06-p03-b02", "m10-l06-p03-b03", "m10-l06-p03-b04", "m10-l06-p04-b01", "m10-l06-p04-b02", "m10-l06-p04-b03"]);
     expect(machines.every(b => b.origin === "teacher-enrichment")).toBe(true);
+    // the unit-10 tasks: on the book's tape (├ before the input), and the unary x + 2 tried on longer words (one letter: few words)
+    const task = (id: string) => (machines.find(b => b.id === id) as unknown as { config: { task: { leftEnd?: boolean; maxLength?: number; mode?: string } } }).config.task;
+    for (const id of ["m10-l06-p03-b01", "m10-l06-p03-b02", "m10-l06-p03-b03", "m10-l06-p03-b04", "m10-l06-p04-b01", "m10-l06-p04-b02", "m10-l06-p04-b03"]) expect(task(id).leftEnd, id).toBe(true);
+    expect(task("m10-l06-p04-b01")).toMatchObject({ mode: "compute", maxLength: 10 });
     for (const b of blocks) if (b.type === "visual") expect(resolveVisual(b.visualId), b.visualId).not.toBeNull();
   }, 30000);
 });
