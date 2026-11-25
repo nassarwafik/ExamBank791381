@@ -5,7 +5,10 @@
 //   • the DFA example: «أضف حالة مصيدة» is not needed (complete), many words run, «لغة آلتي» lists the words;
 //   • the push-down example: its rows in the course's notation, the run of «aabb» step by step to «الكلمة مقبولة», the stack drawn;
 //   • the Turing machine example: its tape drawn;
-//   • on the phone the page never scrolls sideways (the tables scroll inside their own frame); the desktop panel fills the screen.
+//   • on the phone the page never scrolls sideways (the tables scroll inside their own frame); the desktop panel fills the screen;
+//   • AUTO-A7 — browser-harness/automata-design.html, a book «صمّم الآلة» exercise beside the book's tool bar: on the desktop the lab's
+//     drawing editor in the activity (real double-clicks and an arrow drag; the exercise's 3-state limit holds), «فحص سريع لآلتك», and
+//     «افتح في مختبر الآلات» opening the tool bar's lab with a copy; on the phone the table only, and the same hand-over.
 //   node scripts/check-automata-lab-browser.mjs     (env: PLAYWRIGHT_CORE_DIR, CHROMIUM_PATH, optional HARNESS_OUT)
 import fs from "node:fs";
 import os from "node:os";
@@ -19,7 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(process.env.HARNESS_OUT || path.join(os.tmpdir(), "harness-automata-lab"));
 const { chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core");
 
-await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: path.join(root, "browser-harness/automata-lab.html") } } });
+await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html") } } } });
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -149,6 +152,63 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     check(!!box && box.width >= 1270 && box.height >= 890, "«ملء الشاشة»: the lab fills the screen (" + (box ? Math.round(box.width) + "×" + Math.round(box.height) : "none") + ")");
     if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-lab-fullscreen.png"), fullPage: false });
   }
+  check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
+  check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
+
+  // AUTO-A7 — a book «صمّم الآلة» exercise with the lab
+  console.log(name + ": «صمّم الآلة» with the lab");
+  errors.length = 0;
+  await page.goto(origin + "/browser-harness/automata-design.html");
+  const act = page.locator(".learning-autodesign");
+  await act.waitFor({ timeout: 20000 });
+  const cellOf = (from, symbol) => act.getByLabel("من " + from + " بالرمز " + symbol + " إلى", { exact: true });
+  const quickText = () => act.getByTestId("autodesign-quick").innerText();
+  if (name === "desktop") {
+    const canvas = act.getByTestId("alab-canvas");
+    check(await canvas.count() === 1 && await act.getByRole("region", { name: "جدول الانتقالات" }).count() === 1, "desktop: the lab's drawing editor in the activity, the table kept");
+    const centre = () => canvas.evaluate(el => el.scrollIntoView({ block: "center" }));   // the whole drawing in the window: clicks land on it
+    await centre();
+    const center = async q => { const b = await canvas.locator("g.learning-automaton-state").filter({ hasText: new RegExp("^" + q + "$") }).locator("circle").first().boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, r: b.width / 2 }; };
+    const q0 = await center("q0");
+    const box = await canvas.boundingBox();
+    await page.mouse.dblclick(box.x + box.width - 12, q0.y);                         // the free cell to the right
+    await act.getByText(/^أُضيفت الحالة q1\.$/).waitFor({ timeout: 5000 });
+    check(true, "double-click on an empty spot: q1");
+    await centre();
+    const q0b = await center("q0"), b1 = await canvas.boundingBox();
+    await page.mouse.dblclick(q0b.x, b1.y + b1.height - 12);                          // below q0
+    await act.getByText(/^أُضيفت الحالة q2\.$/).waitFor({ timeout: 5000 });
+    await centre();
+    const b2 = await canvas.boundingBox();
+    await page.mouse.dblclick(b2.x + b2.width - 12, b2.y + b2.height - 12);
+    await act.getByText(/^بلغت الحد: 3 حالة\.$/).waitFor({ timeout: 5000 });
+    check(await act.locator(".learning-autodesign-staterow").count() === 3, "the exercise's limit holds in the drawing: a fourth state is refused («بلغت الحد: 3»)");
+    await act.getByRole("radio", { name: "رسم الأسهم" }).check();
+    await centre();
+    const from = await center("q0"), to = await center("q1");
+    await page.mouse.move(from.x, from.y); await page.mouse.down();
+    for (let k = 1; k <= 8; k++) await page.mouse.move(from.x + (to.x - from.x) * k / 8, from.y + (to.y - from.y) * k / 8);
+    await page.mouse.up();
+    await act.getByRole("group", { name: "رمز السهم من q0 إلى q1" }).getByRole("button", { name: "1", exact: true }).click();
+    check(await cellOf("q0", "1").inputValue() === "q1", "an arrow drawn from q0 to q1 with 1 is the table's (q0, 1) → q1");
+    const q = await quickText();
+    check(/لا يصل مسار من البداية إلى q2/.test(q) && /ينقص أسهم/.test(q) && /لا مكان لحالة أخرى: الحد 3/.test(q), "«فحص سريع لآلتك»: q2 unreachable, missing arrows, no room for a trap state");
+    if (process.env.SHOT_DIR) await act.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-design-desktop.png") });
+  } else {
+    check(await act.getByTestId("alab-canvas").count() === 0, "phone: no drawing editor in the activity (the table)");
+    await act.getByRole("button", { name: /إضافة حالة/ }).click();
+    await act.getByLabel("قبول").nth(1).check();
+    await cellOf("q0", "1").selectOption("q1");
+    check(/ينقص أسهم/.test(await quickText()), "«فحص سريع لآلتك» on the phone");
+    check(await sideways() <= 1, "phone: no sideways scroll in the exercise (" + (await sideways()) + " px)");
+  }
+  await act.getByRole("button", { name: "افتح في مختبر الآلات" }).click();
+  const panel = page.getByTestId("tool-panel-automataLab");
+  await panel.getByTestId("alab-from-activity").waitFor({ timeout: 20000 });
+  check(await panel.isVisible() && await panel.getByLabel("من q0 بالرمز 1 إلى", { exact: true }).inputValue() === "q1", "«افتح في مختبر الآلات»: the book's tool bar opens its lab with a copy of the machine, and says it is a copy");
+  await panel.getByLabel("من q0 بالرمز 1 إلى", { exact: true }).selectOption("q0");
+  check(await cellOf("q0", "1").inputValue() === "q1", "an edit in the lab does not change the exercise");
+  if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-design-lab-" + name + ".png"), fullPage: false });
   check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
   check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
   await ctx.close();

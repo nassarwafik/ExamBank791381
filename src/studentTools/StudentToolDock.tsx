@@ -1,5 +1,7 @@
 import { Component, Suspense, lazy, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { projectStudentToolsForStudent, enabledToolsForSection, csharpRunAllowedInBook, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
+import type { LabDraft } from "./automataLab";
+import { provideLabOpener } from "./automataLabHandoff";
 import type { CSharpToolRunner } from "./csharpToolRun";
 import { studentToolCatalogEntry, studentToolHasUi } from "./studentToolsCatalog";
 import CalculatorTool from "./CalculatorTool";
@@ -39,7 +41,10 @@ const AutomataLabTool = lazy(() => import("./AutomataLabTool"));
 /** `onToolOpen` (Phase T8) is told each time the student opens a tool, for the attempt's usage record; the book reader passes nothing. */
 /** `csharpRunner` (Phase T14): the BOOK reader's run transport for the C# editor. An exam page never passes one (owner decision: in an exam
  *  the editor is a writing aid only); absent → write only. */
-type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner };
+/** `labHandoff` (AUTO-A7): the BOOK reader's tool bar lets the book's «صمّم الآلة» activities open a copy of the learner's machine in its
+ *  automata lab (automataLabHandoff.ts). An exam page never passes it. */
+type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner; labHandoff?: boolean };
+type Incoming = { draft: LabDraft; seq: number };
 type CSharpRun = { runner?: CSharpToolRunner };
 const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab"]);
 /** Phase E1 (owner request) — the tools whose panel can fill the screen («ملء الشاشة»), as the course's «وضع العرض» does. */
@@ -55,7 +60,7 @@ class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 
-function ToolBody({ tool, csharp, full = false }: { tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean }) {
+function ToolBody({ tool, csharp, full = false, incoming }: { tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean; incoming?: Incoming | null }) {
   switch (tool.id) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
@@ -71,7 +76,7 @@ function ToolBody({ tool, csharp, full = false }: { tool: StudentToolConfigV1; c
     case "periodicTable": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل الجدول الدوري…</p>}><PeriodicTableTool config={tool} /></Suspense>;
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
     case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} full={full} /></Suspense>;
-    case "automataLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الآلات…</p>}><AutomataLabTool config={tool} /></Suspense>;
+    case "automataLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الآلات…</p>}><AutomataLabTool config={tool} incoming={incoming ?? undefined} /></Suspense>;
     default: return null;
   }
 }
@@ -79,7 +84,7 @@ function ToolBody({ tool, csharp, full = false }: { tool: StudentToolConfigV1; c
 const toolTitle = (t: StudentToolConfigV1): string =>
   t.id === "calculator" ? (t.variant === "basic" ? "آلة حاسبة" : "آلة حاسبة علمية") : t.id === "formulaSheet" ? t.title : studentToolCatalogEntry(t.id).label;
 
-export default function StudentToolDock({ studentTools, sectionId, onToolOpen, csharpRunner }: Props) {
+export default function StudentToolDock({ studentTools, sectionId, onToolOpen, csharpRunner, labHandoff = false }: Props) {
   const baseId = useId();
   const spec = useMemo(() => projectStudentToolsForStudent(studentTools), [studentTools]);
   // T14 — running from the C# editor: books only, by the same rule the server applies (it checks again on every run).
@@ -89,6 +94,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
   const [menuOpen, setMenuOpen] = useState(false);
   const [openTool, setOpenTool] = useState<StudentToolId | null>(null);
   const [mounted, setMounted] = useState<ReadonlySet<StudentToolId>>(() => new Set());
+  const [incoming, setIncoming] = useState<Incoming | null>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
   // Phase T3 — the open panel can be dragged by its header on wide screens (on a phone it is a bottom sheet). One offset for the dock:
   // only one panel is visible at a time. «إعادة الموضع» is the non-drag alternative (WCAG 2.5.7).
@@ -152,14 +158,26 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
   const fullTool = full.active && openTool && openAllowed && FULLSCREEN_TOOLS.has(openTool) ? openTool : null;
   useEffect(() => { if (full.active && !fullTool) full.exit(); }, [full, fullTool]);
 
-  if (!all.length) return null;
-
   const open = (id: StudentToolId) => {
     setMounted(prev => (prev.has(id) ? prev : new Set([...prev, id])));
     if (openTool !== id) onToolOpen?.(id);   // T8: re-selecting the tool already open is not a new opening
     setOpenTool(id);
     setMenuOpen(false);
   };
+  // AUTO-A7 — the book's «صمّم الآلة» activities may open a copy of their machine here, while this bar offers the automata lab
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; });
+  const lab = labHandoff ? enabled.find(t => t.id === "automataLab") : undefined;
+  const labKinds = lab && lab.id === "automataLab" ? (lab.kinds.length ? lab.kinds : ["DFA" as const]).join(",") : "";
+  useEffect(() => {
+    if (!labKinds) return;
+    return provideLabOpener({
+      kinds: labKinds.split(",") as LabDraft["kind"][],
+      open: draft => { setIncoming(prev => ({ draft, seq: (prev?.seq ?? 0) + 1 })); openRef.current("automataLab"); },
+    });
+  }, [labKinds]);
+
+  if (!all.length) return null;
   const close = () => { setOpenTool(null); fabRef.current?.focus(); };   // a full-screen panel that closes leaves full screen (the effect above)
   const toggleFull = (id: StudentToolId) => { fullRef.current = panelRefs.current[id] ?? null; full.toggle(); };
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -191,7 +209,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
                 <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
               </span>
             </header>
-            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} /></ToolBoundary></div>
+            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} incoming={t.id === "automataLab" ? incoming : null} /></ToolBoundary></div>
           </section>
         );
       })}

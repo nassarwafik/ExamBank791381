@@ -1,10 +1,13 @@
 import { useId, useMemo, useRef, useState, type FormEvent } from "react";
 import type { ActivityCheckResult, LearningActivityProps } from "./engine";
 import { IconCheck, IconClose } from "../../icons";
-import { gridLayout, readAutomatonConfig, runAutomaton, splitWord, type Machine } from "./automaton";
+import { readAutomatonConfig, runAutomaton, splitWord, type Machine } from "./automaton";
 import { Diagram } from "./automatonDiagram";
 import { buildScene } from "./automatonScene";
 import { readDesignTask, issueText, type DesignTask } from "./automatonDesign";
+import { addTrapState, labLayout, missingArrows, nextStateName, removeState, unreachableStates, type LabDraft } from "../../studentTools/automataLab";
+import AutomataLabCanvas, { finePointer } from "../../studentTools/AutomataLabCanvas";
+import { copyDraft, useLabOpener } from "../../studentTools/automataLabHandoff";
 import "./automatonDesign.css";
 
 /**
@@ -21,16 +24,24 @@ import "./automatonDesign.css";
  * A verdict belongs to the machine it judged: any edit clears it. A transport failure or a retryable server error says
  * «تعذّر التحقق» — never a wrong answer. Without a `check` seam the designer works and says the check happens on the platform.
  * The shell's «إعادة تعيين» returns to one empty start state. No timers, no persistence, no network of its own.
+ *
+ * AUTO-A7 (docs/enterprise-automata-lab-a4.md §10) — the automata lab inside the activity (the judge does not change):
+ *   • on a desktop (a fine pointer) «آلتك» is the lab's drawing editor: drag states, draw arrows, double-click for a state — within the
+ *     exercise's state limit; the table stays, and is the phone's way. Where a state was put is the drawing's only (never sent);
+ *   • «فحص سريع لآلتك»: what the lab sees in the learner's OWN machine — states no path reaches, the missing arrows of a complete
+ *     automaton (and «أضف حالة مصيدة», the book's step). It knows nothing of the answer and never says the machine is right;
+ *   • «افتح في مختبر الآلات»: a copy of the machine in the book's tool bar lab (automataLabHandoff.ts), where it can be run on many words,
+ *     listed, converted, compared… Offered only where the page's tool bar has the lab, for this kind. The activity's machine stays.
  */
 
-type Draft = { states: string[]; start: string; accept: string[]; cells: Record<string, string[]> };
+/** The learner's draft: the lab's own draft (automataLab.ts) of the exercise's kind and alphabet — so the lab's editor and checks apply. */
+type Draft = LabDraft;
 const cellKey = (state: string, symbol: string) => state + "|" + symbol;
 const EPS = "ε";
-const initialDraft = (): Draft => ({ states: ["q0"], start: "q0", accept: [], cells: {} });
-const nextName = (states: string[]) => { let i = 0; while (states.includes("q" + i)) i++; return "q" + i; };
+const initialDraft = (task: DesignTask): Draft => ({ kind: task.machine, alphabet: [...task.alphabet], states: ["q0"], start: "q0", accept: [], labels: {}, cells: {}, pda: [], tm: [], leftEnd: false });
 const shown = (w: string) => (w === "" ? "ε (الكلمة الفارغة)" : w);
 
-/** The learner's draft as the machine the server reads: transitions [from, symbol, to] in table order. */
+/** The learner's draft as the machine the server reads: transitions [from, symbol, to] in table order (never the drawing's layout). */
 function machineOf(d: Draft, symbols: string[]) {
   const transitions: [string, string, string][] = [];
   for (const q of d.states) for (const s of symbols) for (const t of d.cells[cellKey(q, s)] ?? []) if (d.states.includes(t)) transitions.push([q, s, t]);
@@ -51,7 +62,7 @@ export default function AutomatonDesignActivity({ block, commands, emit, check }
 
 function Designer({ task, blockId, emit, check }: { task: DesignTask; blockId: string; emit: LearningActivityProps["emit"]; check: LearningActivityProps["check"] }) {
   const ids = useId().replace(/:/g, "");
-  const [draft, setDraft] = useState<Draft>(initialDraft);
+  const [draft, setDraft] = useState<Draft>(() => initialDraft(task));
   const [state, setState] = useState<CheckState>({ kind: "idle" });
   const [word, setWord] = useState("");
   const [tried, setTried] = useState<{ word: string; stamp: string; accepted: boolean } | { word: string; stamp: string; bad: string } | null>(null);
@@ -67,20 +78,18 @@ function Designer({ task, blockId, emit, check }: { task: DesignTask; blockId: s
     const read = readAutomatonConfig({ automaton: { kind: task.machine, alphabet: task.alphabet, states: machine.states, start: machine.start, accept: machine.accept, transitions: machine.transitions } });
     return read ? read.machine : null;
   }, [stamp, task.machine]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const scene = useMemo(() => (drawn ? buildScene(drawn, gridLayout(drawn)) : null), [drawn]);
+  // AUTO-A7 — the book's automatic layout, with the cells the learner chose by mouse (the drawing and the editor share it)
+  const layout = useMemo(() => (drawn ? labLayout(drawn, draft.layout) : null), [drawn, draft.layout]);
+  const scene = useMemo(() => (drawn && layout ? buildScene(drawn, layout) : null), [drawn, layout]);
+  const fine = useMemo(() => finePointer(), []);
+  const openInLab = useLabOpener(task.machine);
 
   const edit = (next: Draft) => { setDraft(next); setTried(null); };
   const addState = () => {
     if (draft.states.length >= task.maxStates) return;
-    edit({ ...draft, states: [...draft.states, nextName(draft.states)] });
+    edit({ ...draft, states: [...draft.states, nextStateName(draft.states)] });
   };
-  const removeState = (q: string) => {
-    if (draft.states.length <= 1) return;
-    const states = draft.states.filter(s => s !== q);
-    const cells: Record<string, string[]> = {};
-    for (const [k, v] of Object.entries(draft.cells)) if (!k.startsWith(q + "|")) cells[k] = v.filter(t => t !== q);
-    edit({ states, start: draft.start === q ? states[0] : draft.start, accept: draft.accept.filter(s => s !== q), cells });
-  };
+  const dropState = (q: string) => edit(removeState(draft, q));
   const setStart = (q: string) => edit({ ...draft, start: q });
   const toggleAccept = (q: string) => edit({ ...draft, accept: draft.accept.includes(q) ? draft.accept.filter(s => s !== q) : [...draft.accept, q] });
   const setCell = (q: string, s: string, to: string) => edit({ ...draft, cells: { ...draft.cells, [cellKey(q, s)]: to ? [to] : [] } });
@@ -111,6 +120,16 @@ function Designer({ task, blockId, emit, check }: { task: DesignTask; blockId: s
   };
   const triedNow = tried && tried.stamp === stamp ? tried : null;
   const missing = task.complete ? draft.states.flatMap(q => task.alphabet.filter(s => !(draft.cells[cellKey(q, s)] ?? []).length).map(s => q + "," + s)) : [];
+  // AUTO-A7 — «فحص سريع لآلتك»: the learner's own machine only
+  const unreachable = drawn ? unreachableStates(drawn) : [];
+  const holes = task.complete ? missingArrows(draft) : [];
+  const trapRoom = draft.states.length < task.maxStates;
+  const addTrap = () => { if (trapRoom) edit(addTrapState(draft)); };
+  const toLab = () => {
+    if (!openInLab) return;
+    openInLab(copyDraft(draft));
+    emit({ type: "interaction", activityId: blockId, name: "open-lab" });
+  };
 
   return (
     <div className="learning-autodesign" dir="rtl">
@@ -144,7 +163,7 @@ function Designer({ task, blockId, emit, check }: { task: DesignTask; blockId: s
                 <input type="checkbox" checked={draft.accept.includes(q)} onChange={() => toggleAccept(q)} />
                 <span>قبول</span>
               </label>
-              <button type="button" className="learning-autodesign-btn is-quiet" onClick={() => removeState(q)} disabled={draft.states.length <= 1} aria-label={"احذف الحالة " + q}>حذف</button>
+              <button type="button" className="learning-autodesign-btn is-quiet" onClick={() => dropState(q)} disabled={draft.states.length <= 1} aria-label={"احذف الحالة " + q}>حذف</button>
             </li>
           ))}
         </ul>
@@ -200,7 +219,11 @@ function Designer({ task, blockId, emit, check }: { task: DesignTask; blockId: s
 
       <section className="learning-autodesign-section" aria-labelledby={ids + "-draw"}>
         <h4 id={ids + "-draw"} className="learning-autodesign-heading">٣. آلتك</h4>
-        {drawn && scene ? <Diagram machine={drawn} scene={scene} step={{ active: [], used: [] }} ids={ids} live={false} /> : <p className="learning-autodesign-help">أكمل الحالات لتظهر الآلة.</p>}
+        {drawn && scene && layout
+          ? fine
+            ? <AutomataLabCanvas ids={ids} draft={draft} machine={drawn} scene={scene} layout={layout} edit={edit} maxStates={task.maxStates} />
+            : <Diagram machine={drawn} scene={scene} step={{ active: [], used: [] }} ids={ids} live={false} />
+          : <p className="learning-autodesign-help">أكمل الحالات لتظهر الآلة.</p>}
         <form className="learning-autodesign-try" onSubmit={tryWord}>
           <label className="learning-autodesign-trylabel" htmlFor={ids + "-word"}>جرّب كلمة على آلتك</label>
           <input id={ids + "-word"} className="learning-autodesign-input" dir="ltr" value={word} maxLength={40} autoComplete="off" spellCheck={false}
@@ -216,10 +239,30 @@ function Designer({ task, blockId, emit, check }: { task: DesignTask; blockId: s
         )}
       </section>
 
+      <section className="learning-autodesign-section" aria-labelledby={ids + "-quick"} data-testid="autodesign-quick">
+        <h4 id={ids + "-quick"} className="learning-autodesign-heading">٤. فحص سريع لآلتك</h4>
+        <ul className="learning-autodesign-quick">
+          {unreachable.length > 0 && <li>لا يصل مسار من البداية إلى <span dir="ltr">{unreachable.join("، ")}</span>: {unreachable.length === 1 ? "هذه الحالة لا تؤثر" : "هذه الحالات لا تؤثر"} في الكلمات المقبولة.</li>}
+          {holes.length > 0 && (
+            <li>
+              ينقص {holes.length === 1 ? "سهم" : "أسهم"} ليكون الأوتومات كاملًا: <span dir="ltr">{holes.slice(0, 6).map(h => "(" + h.state + ", " + h.symbol + ")").join(" ")}{holes.length > 6 ? " …" : ""}</span>.{" "}
+              <button type="button" className="learning-autodesign-btn is-quiet" onClick={addTrap} disabled={!trapRoom}>أضف حالة مصيدة</button>
+              {!trapRoom && <> (لا مكان لحالة أخرى: الحد {task.maxStates})</>}
+            </li>
+          )}
+          {unreachable.length === 0 && holes.length === 0 && <li>لا ملاحظات على شكل الآلة. هل تقبل اللغة المطلوبة؟ هذا ما يقرّره «تحقّق من الآلة».</li>}
+        </ul>
+      </section>
+
       <div className="learning-autodesign-checkbar">
         {check
           ? <button type="button" className="learning-autodesign-btn is-primary" onClick={runCheck} disabled={current?.kind === "pending"}>{current?.kind === "pending" ? "جارٍ التحقق…" : "تحقّق من الآلة"}</button>
           : <p className="learning-autodesign-help" role="note">يُفحص تصميمك عند فتح المادة من المنصة.</p>}
+        {openInLab && (
+          <button type="button" className="learning-autodesign-btn" onClick={toLab} disabled={!drawn} title="نسخة من آلتك في مختبر الآلات: التمرين لا يتغيّر">
+            افتح في مختبر الآلات
+          </button>
+        )}
       </div>
       {current?.kind === "error" && <p className="learning-autodesign-verdict is-error" role="alert">تعذّر التحقق الآن. آلتك لم تُعتبر خطأ — حاول مرة أخرى بعد قليل.</p>}
       {result && <Verdict result={result} />}
