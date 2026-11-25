@@ -190,7 +190,10 @@ const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
 // readerFirstLoad 41 → 42 KB by the owner (DS-A4, 2026-11-14, «رفع الحد موافق عليه»): after the data-structures course (four activity
 // registry entries) and the result-line fix, main stood at 41,916 / 41,984 B — 68 bytes of room, so the next Reader change of any
 // phase would have failed for its size alone (docs/enterprise-data-structures-course.md §10).
-export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 42, manifest: 15, visualGroup: 9, visualsTotal: 75 });
+// readerFirstLoad 42 → 43 KB by the owner (AUTO-A10a, 2026-11-25, «Raise it to 43 KB»): the push-down «صمّم الآلة» exercise type
+// (one registry entry with its preload list, and its study key) put main + A10a at 43,093 / 43,008 B; a redundant CSS import was
+// removed first, and sharing the key code with the A3 key made the gzip larger, not smaller (docs/enterprise-automata-lab-a4.md §14).
+export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 43, manifest: 15, visualGroup: 9, visualsTotal: 75 });
 // 899371 enrichment P11 (docs/enterprise-899371-enrichment-plan.md §7.3) — the scene engine's own lazy chunk, gzip KB (measured 4.0).
 export const SCENE_ENGINE_GZIP_BUDGET_KB = 8;
 // The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`, and for the summary

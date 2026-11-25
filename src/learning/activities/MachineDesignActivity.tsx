@@ -8,7 +8,6 @@ import { counterexampleText, readMachineTask, type MachineTask } from "./machine
 import { BLANK, BOTTOM, checkDraft, initialDraft, labLayout, nextStateName, removeState, unreachableStates, type LabDraft, type PdaRow, type TmRow } from "../../studentTools/automataLab";
 import AutomataLabCanvas, { finePointer } from "../../studentTools/AutomataLabCanvas";
 import { PdaRows, TmRows, rowSymbols } from "../../studentTools/AutomataLabRows";
-import "./activities.css";
 import "./automatonDesign.css";
 
 /**
