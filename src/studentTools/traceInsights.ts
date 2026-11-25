@@ -59,6 +59,7 @@ type Fill = { statics?: DsStep["statics"]; rets?: Map<string, string[]> };
 type Got = { t: "val"; v: DsVal } | { t: "lit"; s: string } | { t: "type"; vars: Map<string, DsVal> } | null;
 const LITERAL = /^(-?\d+(\.\d+)?|true|false|null|"[^"\\]*"|'[^'\\]')$/;
 const INT = /^-?\d{1,15}$/;
+const NUM = /^-?\d{1,15}(\.\d{1,15})?$/;
 
 /**
  * `text` with the values of `frame` written in it; null when a name it should replace cannot be read with certainty.
@@ -66,6 +67,7 @@ const INT = /^-?\d{1,15}$/;
  *   • V17 — fields: `p.Age`, a chain `p.Home.City`, a struct's field, a field of `this` written bare (`Age` in its class), a static
  *     field `Counter.Made` (or bare, when exactly one type has it); `s.Length` of a string;
  *   • V17 — calls: the writer's method → the value it returned (`calls`, below); `Math.Abs` / `Math.Max` / `Math.Min` of whole numbers;
+ *   • V21 — `Math.Round` (banker's rounding, as C#; with digits only away from a midpoint) and `Math.Log` (written «≈», 10 digits);
  *   • V20 — `list.Contains(x)` of an array / List<T> / HashSet<T>; `Math.Sqrt` of a whole number ≥ 0;
  *   • V19 — `Math.Pow` of whole numbers when the result is a whole number exactly; `s.Contains("…")` / `s.Contains('c')` of a
  *     string; a method call after an index is asked of what the index gave (never of the chain's first name);
@@ -214,6 +216,13 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     return out;
   };
   const math = (fn: string, xs: string[]): Got => {
+    // V21: Round and Log also take a number with a fraction (as written in the condition, or a variable holding one)
+    if (fn === "Round" || fn === "Log") {
+      if (!xs.every(x => NUM.test(x))) return null;
+      const ds = xs.map(Number);
+      if (fn === "Round") return round(ds);
+      return log(ds);
+    }
     if (!xs.every(x => INT.test(x))) return null;
     const ns = xs.map(Number);
     if (fn === "Abs" && ns.length === 1) return { t: "lit", s: String(Math.abs(ns[0])) };
@@ -231,6 +240,43 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
       return big <= 9007199254740992n ? { t: "lit", s: r.toString() } : null;
     }
     return null;
+  };
+
+  /**
+   * V21: Math.Round(x) — C#'s default is the banker's rounding (MidpointRounding.ToEven): 2.5 → 2, 3.5 → 4, -2.5 → -2.
+   * Math.Round(x, d), 0 ≤ d ≤ 15: written only when x·10^d is clearly away from a midpoint (then every way of rounding agrees); near
+   * one, the binary value .NET holds decides and it is not read here — it stays as written.
+   */
+  const round = (ds: number[]): Got => {
+    if (ds.length === 1) {
+      const x = ds[0], f = Math.floor(x), diff = x - f;
+      const r = diff < 0.5 ? f : diff > 0.5 ? f + 1 : (f % 2 === 0 ? f : f + 1);
+      return numText(r);
+    }
+    if (ds.length === 2 && Number.isInteger(ds[1]) && ds[1] >= 0 && ds[1] <= 15) {
+      const p = 10 ** ds[1], scaled = ds[0] * p, frac = scaled - Math.floor(scaled);
+      if (Math.abs(frac - 0.5) < 1e-6) return null;
+      return numText(Math.round(scaled) / p);
+    }
+    return null;
+  };
+  /**
+   * V21: Math.Log(x) / Math.Log(x, b). IEEE does not require a logarithm to be correctly rounded, so its last digit may differ between
+   * this browser and .NET: it is written as an approximation, «≈» and 10 significant digits — never as digits that could be wrong.
+   * Math.Log(1) is exactly 0 everywhere. x ≤ 0, b ≤ 0 or b = 1 (NaN / ∞ in C#) stay as written.
+   */
+  const log = (ds: number[]): Got => {
+    if (!ds.every(d => d > 0) || (ds.length === 2 && ds[1] === 1) || ds.length > 2) return null;
+    if (ds[0] === 1) return { t: "lit", s: "0" };
+    const r = ds.length === 1 ? Math.log(ds[0]) : Math.log(ds[0]) / Math.log(ds[1]);
+    if (!Number.isFinite(r) || Math.abs(r) < 1e-6 || Math.abs(r) >= 1e10) return null;
+    const t = r.toPrecision(10).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+    return { t: "lit", s: "≈" + t };
+  };
+  /** A double as .NET prints it, when that is a plain decimal (no exponent); else null. */
+  const numText = (r: number): Got => {
+    const t = String(Object.is(r, -0) ? 0 : r);
+    return /e/i.test(t) ? null : { t: "lit", s: t };
   };
 
   const fill = (src: string): string => {

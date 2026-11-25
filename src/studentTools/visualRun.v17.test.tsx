@@ -59,7 +59,7 @@ describe("V17 — calls", () => {
     expect(fillValues("Math.Abs(x) < 5", f, PEOPLE)).toBe("3 < 5");
     expect(fillValues("Math.Max(a, b) == b && Math.Min(a, b + 1) > 0", f, PEOPLE)).toBe("9 == 9 && Math.Min(4, 9 + 1) > 0");   // b + 1 is no number yet
     expect(fillValues("list.Count() > 0 && list.Count == 3 && list[1] > 5", f, PEOPLE)).toBe("3 > 0 && 3 == 3 && 7 > 5");
-    expect(fillValues("Math.Log(a) > 0", f, PEOPLE)).toBe("Math.Log(4) > 0");   // not computed: stays, its arguments read (Math.Pow: V19, Math.Sqrt: V20)
+    expect(fillValues("Math.Exp(a) > 0", f, PEOPLE)).toBe("Math.Exp(4) > 0");   // not computed: stays, its arguments read (Math.Pow: V19, Math.Sqrt: V20, Math.Log: V21)
   });
 
   it("the writer's method → the value it returned; as many returns as calls, else the calls stay as written", () => {
