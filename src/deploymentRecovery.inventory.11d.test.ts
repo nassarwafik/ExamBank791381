@@ -48,6 +48,8 @@ const PROTECTED: [string, string, string, string][] = [
   // Phase 21D-B.3 — the realistic 3D model (mesh part selection) review loads on demand inside the assignment review, and the flat-exam
   // theme preview dialog left the initial graph (bundle relief) with the same stale-chunk recovery guarantee.
   ["./AssignmentReview.tsx", "MeshPartSelectionReview", "./meshModels/MeshPartSelectionReview", "teacher-mesh-review"],
+  // AUTO-A8b — the automatonDesign@1 review (both machines drawn, the stored separating word): teacher-only lazy chunk
+  ["./AssignmentReview.tsx", "AutomatonDesignReview", "./automata/AutomatonDesignReview", "teacher-automaton-review"],
   ["./App.tsx", "ExamPreview", "./ExamPreview", "teacher-theme-preview"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
