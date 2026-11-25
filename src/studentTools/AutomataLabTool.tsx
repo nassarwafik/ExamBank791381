@@ -13,6 +13,7 @@ import AutomataLabAlgorithms, { type Shelf } from "./AutomataLabAlgorithms";
 import AutomataWordTools from "./AutomataWordTools";
 import SaveDrawing from "./SaveDrawing";
 import AutomataLabCanvas, { finePointer } from "./AutomataLabCanvas";
+import { copyDraft } from "./automataLabHandoff";
 import "../learning/activities/activities.css";
 import "../learning/activities/automatonDesign.css";
 import "./automataLab.css";
@@ -29,17 +30,23 @@ import "./automataLab.css";
  *   ٥ the drawing and a word step by step — the book's own player (AutomatonPlayer), so a machine runs exactly as the book's do;
  *   ٦ many words at once; ٧ «لغة آلتي»: every word up to a length the machine accepts.
  * Everything stays in this panel: nothing is stored, sent or graded. A result belongs to the machine it ran on: any edit clears it.
+ * AUTO-A7 — `incoming`: a COPY of a book activity's machine («افتح في مختبر الآلات», automataLabHandoff.ts) replaces the lab's machine
+ * when it arrives (each new `seq` once), if the lab allows its kind; the activity's own machine never changes from here.
  */
 
 type Stamped<T> = { stamp: string; value: T };
 const MOVE_TEXT: Record<TmMove, string> = { R: "يمينًا R", L: "يسارًا L", S: "بلا حركة S" };
 const OP_TEXT: Record<PdaOp, string> = { push: "ادفع", pop: "اسحب", none: "بلا تغيير" };
 const shown = (w: string) => (w === "" ? "ε" : w);
+const FROM_ACTIVITY = "فُتحت هنا نسخة من آلتك في التمرين. ما تغيّره في المختبر لا يغيّر التمرين، والتحقق من الحل يبقى في التمرين.";
 
-export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 }) {
+export default function AutomataLabTool({ config, incoming }: { config: AutomataLabToolV1; incoming?: { draft: LabDraft; seq: number } }) {
   const ids = useId().replace(/:/g, "");
   const kinds = config.kinds.length ? config.kinds : (["DFA"] as AutomatonKind[]);
-  const [draft, setDraft] = useState<LabDraft>(() => initialDraft(kinds[0]));
+  const accepted = (i?: { draft: LabDraft }) => !!i && kinds.includes(i.draft.kind);
+  const [draft, setDraft] = useState<LabDraft>(() => (incoming && accepted(incoming) ? copyDraft(incoming.draft) : initialDraft(kinds[0])));
+  const [seenIncoming, setSeenIncoming] = useState(() => incoming?.seq ?? 0);
+  const [notice, setNotice] = useState(() => (incoming && accepted(incoming) ? FROM_ACTIVITY : ""));
   const [alphabetText, setAlphabetText] = useState(() => draft.alphabet.join(", "));
   const [alphabetError, setAlphabetError] = useState("");
   const [batchText, setBatchText] = useState("");
@@ -47,6 +54,17 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
   const [lengthWanted, setLengthWanted] = useState(4);
   const [listing, setListing] = useState<Stamped<LanguageListing> | null>(null);
   const [shelf, setShelf] = useState<Shelf>([]);
+  // AUTO-A7 — a new copy from a book activity (React's "adjusting state on a prop change" pattern: once per seq)
+  if (incoming && incoming.seq !== seenIncoming) {
+    setSeenIncoming(incoming.seq);
+    if (accepted(incoming)) {
+      const d = copyDraft(incoming.draft);
+      setDraft(d);
+      setAlphabetText(d.alphabet.join(", "));
+      setAlphabetError("");
+      setNotice(FROM_ACTIVITY);
+    }
+  }
 
   const checked = useMemo(() => checkDraft(draft), [draft]);
   const machine = checked.machine;
@@ -73,8 +91,9 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
     setDraft({ ...ex, cells: { ...ex.cells }, pda: ex.pda.map(r => ({ ...r })), tm: ex.tm.map(r => ({ ...r })) });
     setAlphabetText(ex.alphabet.join(", "));
     setAlphabetError("");
+    setNotice("");
   };
-  const clearAll = () => { const d = initialDraft(draft.kind); setDraft(d); setAlphabetText(d.alphabet.join(", ")); setAlphabetError(""); };
+  const clearAll = () => { const d = initialDraft(draft.kind); setDraft(d); setAlphabetText(d.alphabet.join(", ")); setAlphabetError(""); setNotice(""); };
 
   const setCell = (q: string, s: string, to: string) => edit({ ...draft, cells: { ...draft.cells, [cellKey(q, s)]: to ? [to] : [] } });
   const toggleCell = (q: string, s: string, to: string) => {
@@ -105,6 +124,7 @@ export default function AutomataLabTool({ config }: { config: AutomataLabToolV1 
     <div className="alab" data-testid="tool-automataLab" dir="rtl">
       <section className="learning-autodesign-section" aria-labelledby={ids + "-m"}>
         <h3 id={ids + "-m"} className="learning-autodesign-heading">{num("m")}الآلة</h3>
+        {notice && <p className="stt-hint alab-notice" role="status" data-testid="alab-from-activity">{notice}</p>}
         {kinds.length > 1 ? (
           <fieldset className="alab-kinds">
             <legend className="stt-label">نوع الآلة</legend>

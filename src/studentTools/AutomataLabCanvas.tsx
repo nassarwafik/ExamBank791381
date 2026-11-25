@@ -3,6 +3,7 @@ import type { Machine } from "../learning/activities/automaton";
 import { Diagram } from "../learning/activities/automatonDiagram";
 import type { Scene } from "../learning/activities/automatonScene";
 import { addArrow, addStateAt, cellAt, EPS, GRID_MAX, MAX_STATES, moveStateTo, removeState, stateAt, type LabDraft } from "./automataLab";
+import "./automataLabCanvas.css";
 
 /**
  * AUTO-A6b (docs/enterprise-automata-lab-a4.md §9) — «ارسم بالفأرة»: the machine drawn as the book draws it, and edited on the drawing,
@@ -15,6 +16,8 @@ import { addArrow, addStateAt, cellAt, EPS, GRID_MAX, MAX_STATES, moveStateTo, r
  *     non-dragging way to do everything a drag does (WCAG 2.5.7).
  * Every edit goes through the same pure functions as the table (automataLab.ts); the layout is kept in the draft, so the step-by-step
  * player below draws the machine where the learner put it.
+ * AUTO-A7 — the book's «صمّم الآلة» activity uses this editor too (with its exercise's state limit, `maxStates`); its styles are its own
+ * (automataLabCanvas.css), so it looks the same outside the tool bar.
  */
 
 type Cell = [number, number];
@@ -27,9 +30,10 @@ export function finePointer(): boolean {
   try { return typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(pointer: fine)").matches; } catch { return false; }
 }
 
-export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, edit }: {
-  ids: string; draft: LabDraft; machine: Machine; scene: Scene; layout: Record<string, Cell>; edit: (d: LabDraft) => void;
+export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, edit, maxStates = MAX_STATES }: {
+  ids: string; draft: LabDraft; machine: Machine; scene: Scene; layout: Record<string, Cell>; edit: (d: LabDraft) => void; maxStates?: number;
 }) {
+  const limit = Math.min(maxStates, MAX_STATES);
   const box = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<"move" | "arrow">("move");
   const [selected, setSelected] = useState<string>(draft.start);
@@ -110,7 +114,7 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const p = toDrawing(e.clientX, e.clientY);
     if (!p || stateAt(p, scene.pos, scene.r)) return;
-    if (draft.states.length >= MAX_STATES) { setSaid("بلغت الحد: " + MAX_STATES + " حالة."); return; }
+    if (draft.states.length >= limit) { setSaid("بلغت الحد: " + limit + " حالة."); return; }
     const c = cellAt(p, scene.cell);
     if (taken(c)) return;
     const next = addStateAt(draft, layout, c);

@@ -36,6 +36,8 @@
 .learning-autodesign-trylabel{ flex-basis:100%; font-weight:var(--eb-fw-semibold); }
 .learning-autodesign-input{ flex:1 1 8rem; min-width:0; min-height:44px; padding:0 var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:inherit; font:inherit; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 .learning-autodesign-tried{ margin:0; padding:var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
+/* AUTO-A7 — «فحص سريع لآلتك» */
+.learning-autodesign-quick{ margin:0; padding-inline-start:var(--eb-space-4); display:grid; gap:var(--eb-space-1); font-size:var(--eb-fs-13); color:var(--eb-text-secondary); }
 .learning-autodesign-checkbar{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); padding-top:var(--eb-space-2); border-top:1px solid var(--eb-border); }
 .learning-autodesign-verdict{ padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); }
 .learning-autodesign-verdict p{ margin:0 0 var(--eb-space-1); }

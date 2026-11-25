@@ -1,0 +1,14 @@
+/* AUTO-A6b / A7 — the drawing editor (AutomataLabCanvas): the tool bar's lab and the book's «صمّم الآلة» activity. Its hints and
+   labels are styled here too, so it looks the same outside the tool bar (where studentTools.css is not loaded). */
+.alab-canvas { display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.alab-canvas-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
+.alab-nudge { display: inline-flex; gap: var(--eb-space-1); }
+.alab-canvas-box { position: relative; cursor: grab; touch-action: none; user-select: none; border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r); }
+.alab-canvas-box.is-arrow { cursor: crosshair; }
+.alab-canvas-box.is-dragging { cursor: grabbing; }
+.alab-canvas-box:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
+.alab-canvas-line { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; overflow: visible; }
+.alab-canvas-line line { stroke: var(--eb-primary); stroke-width: 2; stroke-dasharray: 6 4; }
+.alab-pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
+.alab-canvas .stt-hint { margin: var(--eb-space-1) 0; font-size: var(--eb-fs-12); color: var(--eb-muted); }
+.alab-canvas .stt-label { font-size: var(--eb-fs-13); color: var(--eb-text-secondary); }

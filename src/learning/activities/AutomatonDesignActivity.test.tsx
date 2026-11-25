@@ -5,7 +5,7 @@
 // the machine (nothing else); the server's verdict in words (right, a broken public rule, the separating word); a new edit clears
 // the verdict; a failed check says «تعذّر التحقق» (never a wrong answer); no seam → no check button; the shell's reset; an
 // unreadable task; and through the real activity host and the page renderer's served-only seam.
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import AutomatonDesignActivity from "./AutomatonDesignActivity";
 import LearningActivityHost from "./LearningActivityHost";
@@ -14,7 +14,9 @@ import type { SimulationBlock } from "../content/types";
 import { servedBlock } from "../study/checkIndex";
 import { readDesignTask, issueText } from "./automatonDesign";
 
-afterEach(() => { cleanup(); });
+// AUTO-A7: these tests are the TABLE's — the phone's way (no fine pointer). The desktop's drawing editor is AutomatonDesignActivity.a7.test.tsx.
+beforeEach(() => { vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }))); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const DFA_TASK = { intro: "صمّم أوتومات حتميًا كاملًا للكلمات التي تنتهي بـ 1.", machine: "DFA", alphabet: ["0", "1"], maxStates: 3, complete: true, examples: { accept: ["1", "01"], reject: ["", "10"] } };
 const NFA_TASK = { intro: "صمّم أوتومات غير حتمي للكلمات التي تنتهي بـ ab.", machine: "NFA", alphabet: ["a", "b"], maxStates: 4 };

@@ -17,10 +17,11 @@ import { csharpVisualAllowedInBook, validateBookStudentTools } from "./studentTo
  *  by step and drawn as the course's trace activity draws it). Presentation: the lab runs only the reader's own program on this device. */
 /** Visual lab V7 (owner decision 2026-11-23) — a STUDENT gets «تشغيل مرئي» too when the class's teacher turned it on for this book
  *  (`allowVisual` of the book's C# editor, which needs running): on the student's own device, desktop only, never in an exam. */
+/** AUTO-A7 — `labHandoff`: the book's «صمّم الآلة» activities can open a copy of the learner's machine in this bar's automata lab. */
 export default function CourseToolDock({ courseId, bookTools, runHeaders, visualRun = false }: { courseId: string; bookTools?: unknown; runHeaders?: Record<string, string>; visualRun?: boolean }) {
   const chosen = bookTools === undefined ? undefined : validateBookStudentTools(bookTools);
   const tools = chosen === undefined ? courseStudentTools(courseId) : chosen.ok && chosen.value.tools.length ? chosen.value : undefined;
   const visual = visualRun || csharpVisualAllowedInBook(tools);
   const runner = useMemo(() => (runHeaders ? (isDesktopViewport() ? bookDeviceRunner(courseId, runHeaders, { visual }) : bookCSharpRunner(runHeaders, courseId)) : undefined), [runHeaders, courseId, visual]);
-  return tools ? <StudentToolDock studentTools={tools} csharpRunner={runner} /> : null;
+  return tools ? <StudentToolDock studentTools={tools} csharpRunner={runner} labHandoff /> : null;
 }

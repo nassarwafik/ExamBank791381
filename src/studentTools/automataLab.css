@@ -21,14 +21,6 @@
 .alab-facts dt { font-weight: 600; }
 .alab-facts dd { margin: 0; min-width: 0; }
 @media (max-width: 640px) { .alab-facts { grid-template-columns: 1fr; } }
-/* AUTO-A6b — «ارسم بالفأرة» (desktop). */
-.alab-canvas { display: flex; flex-direction: column; gap: var(--eb-space-2); }
-.alab-canvas-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
-.alab-nudge { display: inline-flex; gap: var(--eb-space-1); }
-.alab-canvas-box { position: relative; cursor: grab; touch-action: none; user-select: none; border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r); }
-.alab-canvas-box.is-arrow { cursor: crosshair; }
-.alab-canvas-box.is-dragging { cursor: grabbing; }
-.alab-canvas-box:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
-.alab-canvas-line { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; overflow: visible; }
-.alab-canvas-line line { stroke: var(--eb-primary); stroke-width: 2; stroke-dasharray: 6 4; }
-.alab-pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
+/* AUTO-A6b — «ارسم بالفأرة» (desktop): its own file, automataLabCanvas.css (the canvas imports it). */
+/* AUTO-A7 — a copy of a book activity's machine. */
+.alab-notice { color: var(--eb-text-secondary); }
