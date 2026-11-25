@@ -284,7 +284,9 @@ function gradeQuestion(question,response,context,placement){
     const r=handler(question,response,max,context)||{};
     const score=Math.min(Math.max(0,Number(r.score)||0),max);
     const manualReview=r.manualReview===true;
-    return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{})};
+    // AUTO-A8b — automatonDesign@1 keeps its separating word / broken rule (rebuilt and bounded by its grader) beside the score; no other
+    // handler returns the field, so every other grade is byte-for-byte unchanged
+    return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{}),...(r.automatonFeedback&&!manualReview?{automatonFeedback:r.automatonFeedback}:{})};
   }
   return gradeLegacyQuestion(question,response,max,placement);
 }
@@ -355,7 +357,7 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys,generation){
   const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
   // Phase 20D — an excess (first-N) or otherwise uncounted composite is ignored WHOLE: its parts carry no counted marks either.
   const parts=r.composite&&!counted&&Array.isArray(r.parts)?r.parts.map(p=>({...p,score:0,countedMaxMarks:0,manualReview:false,correct:false,counted:false,ignored:true})):(r.parts||null);
-  return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isAdmittedAnswered(q,resp),parts,...(r.composite?{composite:r.composite}:{})};
+  return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isAdmittedAnswered(q,resp),parts,...(r.composite?{composite:r.composite}:{}),...(r.automatonFeedback&&counted?{automatonFeedback:r.automatonFeedback}:{})};
 }
 
 // Section-aware, backward-compatible exam grader.
@@ -408,7 +410,8 @@ function gradeExam(exam,answers,context){
         manualReview:g.manualReview,
         ignored:!!g.ignored,
         parts:g.parts||null,
-        ...(g.composite?{composite:g.composite}:{})
+        ...(g.composite?{composite:g.composite}:{}),
+        ...(g.automatonFeedback?{automatonFeedback:g.automatonFeedback}:{})
       });
     });
     sections.push({

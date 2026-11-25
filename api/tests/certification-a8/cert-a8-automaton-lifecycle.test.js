@@ -253,6 +253,15 @@ describe("A8 full platform lifecycle", () => {
     expect(attemptInvariants(att, 22)).toEqual([]);
     expect(JSON.stringify(att)).not.toMatch(/"score":5,"correct":true|__proto__/);
   });
+  it("A8b — the stored grades keep the separating word / broken rule; the released result shows the student one line per wrong machine", () => {
+    const fb = r => Object.fromEntries(r.attempt.questionGrades.map(g => [g.questionId, g.automatonFeedback ?? null]));
+    expect(fb(runs.PARTIAL)).toEqual({ d1: { issue: { code: "incomplete", state: "t", symbol: "0" } }, d2: null, n1: { counterexample: { word: "b", shouldAccept: false } }, n2: null, c1: null });
+    expect(Object.values(fb(runs.PERFECT)).every(v => v === null)).toBe(true);
+    const released = runs.PARTIAL.submit.jsonBody.result;
+    expect(released.resultsVisible).toBe(true);
+    expect(released.questionBreakdown.questions.map(q => q.automaton ?? null)).toEqual([{ issue: { code: "incomplete", state: "t", symbol: "0" } }, null, { word: "b", shouldAccept: false }, null, null]);
+    expect(JSON.stringify(released)).not.toMatch(/"reference"/);
+  });
   it("grading is decided by the server only and is repeatable", () => {
     const snapshot = p.assignmentOf(aid).examSnapshot;
     for (const [name, r] of Object.entries(runs)) expect([gradeExam(snapshot, r.attempt.answers).score, gradeExam(snapshot, r.attempt.answers).score], name).toEqual([TOTAL[name], TOTAL[name]]);
@@ -274,6 +283,7 @@ describe("A8 full platform lifecycle", () => {
     const byId = Object.fromEntries(rv.jsonBody.questions.map(q => [q.questionId, q]));
     for (const [id, [auto]] of Object.entries(LEDGER.PARTIAL)) expect(byId[id].autoGrade.score, id).toBe(auto);
     expect([byId.n1.type, byId.n1.expectedAnswer, byId.n1.studentAnswer]).toEqual(["automatonDesign", { reference: REFERENCES_A8.endsWithAb }, PARTIAL.n1]);
+    expect([byId.n1.automatonDesign, byId.n1.autoGrade.automatonFeedback, byId.d1.autoGrade.automatonFeedback]).toEqual([configsOf(load()).n1, { counterexample: { word: "b", shouldAccept: false } }, { issue: { code: "incomplete", state: "t", symbol: "0" } }]);
     const saved = await p.teacher.saveReview(aid, "ad-partial", {}, 1, "مراجعة أسئلة تصميم الأوتومات");
     expect([saved.status, saved.jsonBody.result.score, saved.jsonBody.result.finalized]).toEqual([200, 9, true]);
   });

@@ -7,8 +7,11 @@
 //   • owner decision (2026-11-25): FULL MARKS OR ZERO — the reference's language → the question's marks; any other machine, or one that
 //     breaks a public rule of the question (too many states, a symbol outside the alphabet, an incomplete DFA where one is asked…) → 0;
 //   • no answer → 0 (not answered), as every auto-graded type.
-// The separating word (`counterexample`) and the broken rule (`issue`) are returned beside the score; AUTO-A8b carries them to the teacher's
-// review and, after the results are published, to the student. Pure; never throws.
+// The separating word (`counterexample`) and the broken rule (`issue`) are returned beside the score. AUTO-A8b: `automatonFeedbackOf`
+// turns them into the ONE stored shape — `automatonFeedback: { counterexample: { word, shouldAccept } } | { issue: { code, state?, symbol?,
+// max? } }`, rebuilt field by field and bounded — which the grade keeps (assignment-grading.js) for the teacher's review and, once the
+// results are released, the student's breakdown (student-question-breakdown.js). It names one word, or a public rule of the question —
+// never the reference. Pure; never throws.
 const { automatonDesignAuthority } = require("./shared-finalization/automatonDesignQuestion");
 const { evaluateAutomatonDesign } = require("./learning-automaton-design");
 
@@ -38,4 +41,19 @@ function scoreAutomatonDesign({ config, answerKey, response, maxMarks }) {
   }
 }
 
-module.exports = { scoreAutomatonDesign, AUTOMATON_DESIGN_FAIL_CLOSED };
+const ISSUE_CODES = new Set(["malformed", "no-states", "too-many-states", "no-start", "epsilon-in-dfa", "symbol-outside-alphabet", "two-arrows", "incomplete"]);
+const WORD = /^[A-Za-z0-9#$*+@]{0,40}$/;
+const SHORT = /^[A-Za-zε0-9#$*+@_]{1,8}$/;
+/** The stored feedback of one graded answer, or null: the separating word, else the broken public rule — nothing else, bounded. */
+function automatonFeedbackOf(r) {
+  if (!r || typeof r !== "object" || r.correct === true || r.manualReview === true) return null;
+  const ce = r.counterexample;
+  if (ce && typeof ce === "object" && typeof ce.word === "string" && WORD.test(ce.word) && typeof ce.shouldAccept === "boolean") return { counterexample: { word: ce.word, shouldAccept: ce.shouldAccept } };
+  const is = r.issue;
+  if (is && typeof is === "object" && ISSUE_CODES.has(is.code)) {
+    return { issue: { code: is.code, ...(typeof is.state === "string" && SHORT.test(is.state) ? { state: is.state } : {}), ...(typeof is.symbol === "string" && SHORT.test(is.symbol) ? { symbol: is.symbol } : {}), ...(Number.isInteger(is.max) && is.max > 0 && is.max <= 24 ? { max: is.max } : {}) } };
+  }
+  return null;
+}
+
+module.exports = { scoreAutomatonDesign, automatonFeedbackOf, AUTOMATON_DESIGN_FAIL_CLOSED };
