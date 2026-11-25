@@ -126,7 +126,7 @@ describe("A10 — the server check", () => {
     buildSmallPda();
     const run = screen.getByRole("heading", { name: /شغّل آلتك خطوة خطوة/ }).closest("section") as HTMLElement;
     fireEvent.change(within(run).getByLabelText("الكلمة", { exact: true }), { target: { value: "ab" } });
-    fireEvent.click(within(run).getByRole("button", { name: "شغّل", exact: true }));
+    fireEvent.click(within(run).getByRole("button", { name: "شغّل" }));
     fireEvent.click(within(run).getByRole("button", { name: "النهاية" }));
     expect(within(run).getByText(/الكلمة مقبولة/)).toBeTruthy();
   });
