@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-A8-AUTOMATON-DESIGN",
+  "title": "ExamBank A8 — اختبار القبول لأسئلة تصميم الأوتومات",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "الأوتومات المنتهي الحتمي وغير الحتمي",
+    "instructions": "ابنِ في كل سؤال أوتومات منتهيًا يقبل اللغة المطلوبة: الحالات، وحالة البداية، وحالات القبول، والأسهم — بالجدول أو بالرسم بالفأرة.",
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "العلامة كاملة إن قبلت آلتك اللغة المطلوبة بالضبط، وإلا صفر. «جرّب كلمة» يشغّل آلتك أنت فقط ولا يفحص الحل."
+            }
+          ]
+        }
+      ]
+    },
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-dfa",
+      "title": "أ — الأوتومات المنتهي الحتمي",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "automatonDesign",
+          "questionTypeVersion": 1,
+          "text": "صمّم أوتومات منتهيًا حتميًا كاملًا يقبل كل الكلمات فوق الأبجدية {0, 1} التي تنتهي بـ 1.",
+          "marks": 5,
+          "automatonDesign": {
+            "v": 1,
+            "machine": "DFA",
+            "alphabet": [
+              "0",
+              "1"
+            ],
+            "maxStates": 3,
+            "complete": true,
+            "examples": {
+              "accept": [
+                "1",
+                "01"
+              ],
+              "reject": [
+                "",
+                "10"
+              ]
+            }
+          },
+          "answer": {
+            "reference": {
+              "states": [
+                "q0",
+                "q1"
+              ],
+              "start": "q0",
+              "accept": [
+                "q1"
+              ],
+              "transitions": [
+                [
+                  "q0",
+                  "0",
+                  "q0"
+                ],
+                [
+                  "q0",
+                  "1",
+                  "q1"
+                ],
+                [
+                  "q1",
+                  "0",
+                  "q0"
+                ],
+                [
+                  "q1",
+                  "1",
+                  "q1"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "examQuestionId": "d2",
+          "presentationType": "automatonDesign",
+          "questionTypeVersion": 1,
+          "text": "صمّم أوتومات منتهيًا حتميًا يقبل الكلمات فوق {a, b} التي فيها عدد زوجي من الحرف a.",
+          "marks": 5,
+          "automatonDesign": {
+            "v": 1,
+            "machine": "DFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 3
+          },
+          "answer": {
+            "reference": {
+              "states": [
+                "q0",
+                "q1"
+              ],
+              "start": "q0",
+              "accept": [
+                "q0"
+              ],
+              "transitions": [
+                [
+                  "q0",
+                  "a",
+                  "q1"
+                ],
+                [
+                  "q0",
+                  "b",
+                  "q0"
+                ],
+                [
+                  "q1",
+                  "a",
+                  "q0"
+                ],
+                [
+                  "q1",
+                  "b",
+                  "q1"
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-nfa",
+      "title": "ب — الأوتومات المنتهي غير الحتمي",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "n1",
+          "presentationType": "automatonDesign",
+          "questionTypeVersion": 1,
+          "text": "صمّم أوتومات منتهيًا غير حتمي يقبل الكلمات فوق {a, b} التي تنتهي بـ ab.",
+          "marks": 6,
+          "automatonDesign": {
+            "v": 1,
+            "machine": "NFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 4,
+            "examples": {
+              "accept": [
+                "ab",
+                "bab"
+              ],
+              "reject": [
+                "",
+                "ba"
+              ]
+            }
+          },
+          "answer": {
+            "reference": {
+              "states": [
+                "q0",
+                "q1",
+                "q2"
+              ],
+              "start": "q0",
+              "accept": [
+                "q2"
+              ],
+              "transitions": [
+                [
+                  "q0",
+                  "a",
+                  "q0"
+                ],
+                [
+                  "q0",
+                  "b",
+                  "q0"
+                ],
+                [
+                  "q0",
+                  "a",
+                  "q1"
+                ],
+                [
+                  "q1",
+                  "b",
+                  "q2"
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "examQuestionId": "n2",
+          "presentationType": "automatonDesign",
+          "questionTypeVersion": 1,
+          "text": "صمّم أوتومات منتهيًا غير حتمي يقبل الكلمات فوق {a, b} التي فيها aa (حرفان a متتاليان).",
+          "marks": 4,
+          "automatonDesign": {
+            "v": 1,
+            "machine": "NFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 4
+          },
+          "answer": {
+            "reference": {
+              "states": [
+                "q0",
+                "q1",
+                "q2"
+              ],
+              "start": "q0",
+              "accept": [
+                "q2"
+              ],
+              "transitions": [
+                [
+                  "q0",
+                  "a",
+                  "q0"
+                ],
+                [
+                  "q0",
+                  "b",
+                  "q0"
+                ],
+                [
+                  "q0",
+                  "a",
+                  "q1"
+                ],
+                [
+                  "q1",
+                  "a",
+                  "q2"
+                ],
+                [
+                  "q2",
+                  "a",
+                  "q2"
+                ],
+                [
+                  "q2",
+                  "b",
+                  "q2"
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-mixed",
+      "title": "ج — سؤال تقليدي في الامتحان نفسه",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "multipleChoice",
+          "text": "كم سهمًا يخرج من كل حالة في أوتومات حتمي كامل أبجديته {a, b}؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "سهمان"
+            },
+            {
+              "text": "سهم واحد"
+            },
+            {
+              "text": "ثلاثة أسهم"
+            },
+            {
+              "text": "عدد غير محدد"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    }
+  ]
+}

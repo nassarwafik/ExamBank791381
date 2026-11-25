@@ -18,6 +18,7 @@ const { isCompositeQuestionNode, compositeQuestionMaxMarks, isCompositeAnswerAns
 // Phase 20G.2 (O1) — the question authority decides which answer kinds a legacy question admits (the SAME shared rule the grader and the
 // ingest apply); a kind it does not admit is never "answered" here, so it can never take a first-N slot.
 const { legacyResponseAdmitted } = require("./question-type-graders");
+const { isAutomatonDesignAnswerAnswered } = require("./shared-finalization/automatonDesignQuestion");
 const { compositeStructure, compositeChildNode } = require("./shared-finalization/compositeQuestion");
 
 // Stable identity helpers. These MUST match src/StudentQuestionCard.tsx's qid() and the front-end
@@ -153,6 +154,9 @@ function isResponseAnswered(a) {
     // Phase 21D-B.3 — a mesh part selection counts when at least one named part is selected (mirror of answerState.ts).
     case "meshPartSelection":
       return Array.isArray(a.parts) && a.parts.length > 0;
+    // AUTO-A8 — an automaton design counts when the student did something beyond the empty start state (mirror of answerState.ts).
+    case "automatonDesign":
+      return isAutomatonDesignAnswerAnswered(a);
     // Phase 20A — a trusted SmartSim answer counts when it carries at least one action (mirror of answerState.ts).
     case "smartSim":
       return Array.isArray(a.actions) && a.actions.length > 0;

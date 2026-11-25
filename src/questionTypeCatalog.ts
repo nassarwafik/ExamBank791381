@@ -75,6 +75,10 @@ const PRODUCTION_ROWS = [
   // Phase 21D-B.3 — meshPartSelection@1: the student selects NAMED PARTS of a realistic mesh model (reviewed library asset or validated
   // upload); auto-graded on part ids (never pixels), partial credit optional; not offline (the asset streams); not a compound part.
   ["meshPartSelection", "نموذج 3D واقعي", "interactive", "auto", 41, ["meshPartSelection"], false],
+  // AUTO-A8 — automatonDesign@1: the student BUILDS a finite automaton (DFA / NFA) for a language; the server compares its language with the
+  // teacher's reference exactly (full marks or zero, owner decision); interactive; offline; not a compound part. Inserted right after
+  // meshPartSelection (as 21D-B.3 after scene3DSelection) so the legacy order and every append position stay unchanged.
+  ["automatonDesign", "تصميم أوتومات", "interactive", "auto", 161, ["automatonDesign"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],

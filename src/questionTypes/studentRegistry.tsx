@@ -62,6 +62,7 @@ registerStudentRenderer("functionGraphSelection", 1, recoverableLazy("FunctionGr
 // Phase 21C — semantic interactive 3D model selection, fully lazy.
 registerStudentRenderer("scene3DSelection", 1, recoverableLazy("S3DResponse", () => import("./student/S3DResponse")));
 registerStudentRenderer("meshPartSelection", 1, recoverableLazy("MeshPartSelectionResponse", () => import("./student/MeshPartSelectionResponse")));
+registerStudentRenderer("automatonDesign", 1, recoverableLazy("AutomatonDesignResponse", () => import("./student/AutomatonDesignResponse")));
 registerStudentRenderer("openResponse", 1, recoverableLazy("OpenResponseResponse", () => import("./student/OpenResponseResponse")));
 // Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
 registerStudentRenderer("smartSim", 1, recoverableLazy("SmartSimResponse", () => import("./student/SmartSimResponse")));

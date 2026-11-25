@@ -19,7 +19,8 @@
 //     2¹² state sets; the pair bound (60 000) leaves room for a reference of up to 14 reachable sets beside the worst learner NFA.
 //     Reaching the bound anyway is treated as a judge that could not run (`unavailable`, retryable), never as a wrong answer.
 //
-// Practice only: nothing here grades an exam, writes storage or knows about Strength. Pure; never throws.
+// The book's practice judge; AUTO-A8 also calls it to grade an exam's automatonDesign@1 answer (automaton-design-grading.js, which owns
+// the exam's rules: the shared contract, fail-closed, full marks or zero). Nothing here writes storage or knows about Strength. Pure; never throws.
 
 const KIND = "automaton-design";
 const EPSILON = new Set(["ε", "λ"]);

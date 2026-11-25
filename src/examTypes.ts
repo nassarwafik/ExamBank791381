@@ -10,6 +10,7 @@ import type { ChartSelectionConfigV1 } from "./chartSelectionQuestion";
 import type { FunctionGraphSelectionConfigV1 } from "./functionGraphSelectionQuestion";
 import type { Scene3DSelectionConfigV1 } from "./scene3DSelectionQuestion";
 import type { MeshPartSelectionConfigV1 } from "./meshPartSelectionQuestion";
+import type { AutomatonDesignConfigV1 } from "./automatonDesignQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { RichContentV1 } from "./richContent/richContentModel";
@@ -170,6 +171,9 @@ export type BuilderQuestion = {
   // Phase 21C — PUBLIC interactive 3D scene-selection config; the correct semantic targets remain under answer.
   scene3DSelection?: Scene3DSelectionConfigV1;
   meshPartSelection?: MeshPartSelectionConfigV1;
+  // AUTO-A8 — PUBLIC automatonDesign@1 rules (machine type, alphabet, state limit, completeness, example words); the reference machine
+  // stays under answer.
+  automatonDesign?: AutomatonDesignConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
@@ -230,6 +234,9 @@ export type QuestionBody = {
   // Phase 21C — PUBLIC interactive 3D scene-selection config; the correct semantic targets remain under answer.
   scene3DSelection?: Scene3DSelectionConfigV1;
   meshPartSelection?: MeshPartSelectionConfigV1;
+  // AUTO-A8 — PUBLIC automatonDesign@1 rules (machine type, alphabet, state limit, completeness, example words); the reference machine
+  // stays under answer.
+  automatonDesign?: AutomatonDesignConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
