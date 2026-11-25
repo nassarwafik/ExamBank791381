@@ -22,51 +22,223 @@ const arrayOf = (v: DsVal | undefined, objs: readonly DsObj[]): string[] | null 
 export type TraceCondition = { text: string; value: boolean; withValues: string | null };
 const CONDITION = /^الشرط `(.+)` (صحيح|غير صحيح)\.$/s;
 
-/** The condition the step tested, its result, and the condition written with this step's values (null: nothing to replace, or unsure). */
-export function conditionOf(step: DsStep): TraceCondition | null {
+/**
+ * The condition the step tested, its result, and the condition written with this step's values (null: nothing to replace, or unsure).
+ * V17: with the trace and the step's place in it (`at`), a call of the writer's own method inside the condition is written as the
+ * value that call RETURNED — read from the return steps recorded just before the condition (see callReturns).
+ */
+export function conditionOf(step: DsStep, trace?: DsTrace, at?: number): TraceCondition | null {
   const m = CONDITION.exec(step.note);
   if (!m) return null;
   const text = m[1], value = m[2] === "صحيح";
   const frame = step.frames.at(-1);
-  const filled = frame ? fillValues(text, frame, step.objs) : null;
+  const rets = trace && at !== undefined ? callReturns(trace, at) : undefined;
+  const filled = frame ? fillValues(text, frame, step.objs, { statics: step.statics, rets }) : null;
   return { text, value, withValues: filled !== null && filled !== text ? filled : null };
 }
 
-/** `text` with the names of `frame` replaced by their values; null when a name it should replace cannot be read with certainty. */
-export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[]): string | null {
+/**
+ * V17: the values the writer's methods RETURNED to the running method since its previous step — the return steps (`ret`) of the
+ * calls it made directly (one frame deeper), in the order they returned, by method name. These steps come right before `at`: every
+ * step between the method's previous step and `at` is deeper than it.
+ */
+export function callReturns(trace: DsTrace, at: number): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  const d = trace.steps[at]?.frames.length ?? 0;
+  const found: [string, string][] = [];
+  for (let k = at - 1; k >= 0 && trace.steps[k].frames.length > d; k--) {
+    const s = trace.steps[k];
+    if (s.frames.length === d + 1 && s.ret !== undefined) found.unshift([s.frames[d].name, s.ret]);
+  }
+  for (const [n, r] of found) out.set(n, [...(out.get(n) ?? []), r]);
+  return out;
+}
+
+type Fill = { statics?: DsStep["statics"]; rets?: Map<string, string[]> };
+/** What a part of the condition is, while it is read: a value of the trace, a literal already written, or a type's statics. */
+type Got = { t: "val"; v: DsVal } | { t: "lit"; s: string } | { t: "type"; vars: Map<string, DsVal> } | null;
+const LITERAL = /^(-?\d+(\.\d+)?|true|false|null|"[^"\\]*"|'[^'\\]')$/;
+const INT = /^-?\d{1,15}$/;
+
+/**
+ * `text` with the values of `frame` written in it; null when a name it should replace cannot be read with certainty.
+ *   • a variable → its value; `a[i]` / `a[2]` → the cell; `a.Length` / `a.Count` / `a.Count()` → its length;
+ *   • V17 — fields: `p.Age`, a chain `p.Home.City`, a struct's field, a field of `this` written bare (`Age` in its class), a static
+ *     field `Counter.Made` (or bare, when exactly one type has it); `s.Length` of a string;
+ *   • V17 — calls: the writer's method → the value it returned (`calls`, below); `Math.Abs` / `Math.Max` / `Math.Min` of whole numbers.
+ * Read in ONE pass: a value put in is never read again as a name. Strings and characters in the condition are left as written. A part
+ * that cannot be read stays as written (its index and arguments still read); only a variable that holds no plain value, or an index
+ * outside its array, makes the whole line unsure.
+ */
+export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[], extra: Fill = {}): string | null {
   const vars = new Map(frame.vars);
+  const byId = new Map(objs.map(o => [o.id, o]));
+  const statics = new Map((extra.statics ?? []).map(t => [t.name, new Map(t.vars)]));
+  const thisObj = (() => { const t = vars.get("this"); const o = t?.t === "ref" ? byId.get(t.id) : undefined; return o?.k === "obj" ? new Map(o.fields) : null; })();
+  // a call of the writer's method is replaced only when the condition calls it exactly as many times as it returned (`&&` / `||` may
+  // have skipped one: then none of its calls is replaced)
+  const queues = new Map<string, string[]>();
+  for (const [n, rs] of extra.rets ?? []) {
+    const calls = (text.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, "").match(new RegExp("(?<![\\w])" + n + "\\s*\\(", "g")) ?? []).length;
+    if (calls === rs.length) queues.set(n, [...rs]);
+  }
   let unsure = false;
-  // ONE pass (a value put in is never read again as a name): a[i] / a[2] → the cell; a.Length / a.Count → its length; a plain
-  // variable → its value (never a method, a member or a type). Strings and characters in the condition are left as written.
-  const NAME = /(?<![\w.])([A-Za-z_]\w*)(?:\s*\[\s*([A-Za-z_]\w*|\d+)\s*\]|\s*\.\s*(Length|Count)\b(?!\s*\()|\b(?!\s*[(.[]))/g;
-  const parts = text.split(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/);
-  const out = parts.map((part, k) => (k % 2 === 1 ? part : part.replace(NAME, (whole, n: string, index?: string, size?: string) => {
-    if (!vars.has(n)) return whole;
-    if (index === undefined && size === undefined) {
-      const v = plain(vars.get(n));
-      if (v === null) unsure = true;
-      return v ?? whole;
+
+  const lit = (g: Got): string | null => {
+    if (!g) return null;
+    if (g.t === "lit") return g.s;
+    if (g.t !== "val") return null;
+    if (g.v.t === "v") return LITERAL.test(g.v.s) ? g.v.s : null;
+    return g.v.t === "null" ? "null" : null;
+  };
+  const cells = (g: Got): { items: string[]; quote: string } | null => {
+    if (g?.t !== "val") return null;
+    if (g.v.t === "arr") return { items: g.v.items, quote: "" };
+    if (g.v.t !== "ref") return null;
+    const o = byId.get(g.v.id);
+    if (o?.k !== "array") return null;
+    return { items: o.items, quote: /^(List<)?string\b/.test(o.type) ? "\"" : /^(List<)?char\b/.test(o.type) ? "'" : "" };
+  };
+  const member = (g: Got, name: string): Got => {
+    if (g?.t === "type") return g.vars.has(name) ? { t: "val", v: g.vars.get(name)! } : null;
+    if (g?.t !== "val") {
+      const s = lit(g);   // a string literal's Length
+      return name === "Length" && s && /^"[^"\\]*"$/.test(s) ? { t: "lit", s: String(s.length - 2) } : null;
     }
-    const cells = cellsOf(vars.get(n), objs);
-    if (!cells || cells.items.includes("…")) { unsure = true; return whole; }
-    if (size !== undefined) return String(cells.items.length);
-    const at = /^\d+$/.test(index!) ? Number(index) : Number(plain(vars.get(index!)) ?? NaN);
-    const cell = Number.isInteger(at) && at >= 0 && at < cells.items.length ? cells.items[at] : undefined;
-    if (cell === undefined) { unsure = true; return whole; }
-    // a cell is written as Console prints it: a string / a char gets its quotes back; any other cell must read as a literal
-    if (cells.quote) return cells.quote + cell + cells.quote;
-    if (!/^(-?\d+(\.\d+)?|true|false|True|False)$/.test(cell)) { unsure = true; return whole; }
-    return cell.toLowerCase() === "true" || cell.toLowerCase() === "false" ? cell.toLowerCase() : cell;
-  }))).join("");
+    if (g.v.t === "rec") { const f = g.v.fields.find(x => x[0] === name); return f ? { t: "val", v: f[1] } : null; }
+    if (g.v.t === "v" && name === "Length" && /^"[^"\\]*"$/.test(g.v.s)) return { t: "lit", s: String(g.v.s.length - 2) };
+    if (name === "Length" || name === "Count") {
+      const c = cells(g);
+      return c && !c.items.includes("…") ? { t: "lit", s: String(c.items.length) } : null;
+    }
+    if (g.v.t !== "ref") return null;
+    const o = byId.get(g.v.id);
+    if (o?.k !== "obj") return null;
+    const f = o.fields.find(x => x[0] === name);
+    return f ? { t: "val", v: f[1] } : null;
+  };
+  const root = (name: string): { got: Got; isVar: boolean } => {
+    if (vars.has(name)) return { got: { t: "val", v: vars.get(name)! }, isVar: true };
+    if (thisObj?.has(name)) return { got: { t: "val", v: thisObj.get(name)! }, isVar: true };
+    if (statics.has(name)) return { got: { t: "type", vars: statics.get(name)! }, isVar: false };
+    const owners = [...statics.values()].filter(m => m.has(name));
+    if (owners.length === 1) return { got: { t: "val", v: owners[0].get(name)! }, isVar: true };
+    return { got: null, isVar: false };
+  };
+  // the text between an opening bracket at `from` and its partner (strings skipped); -1 when it never closes
+  const close = (src: string, from: number): number => {
+    const open = src[from], shut = open === "(" ? ")" : "]";
+    let depth = 0;
+    for (let i = from; i < src.length; i++) {
+      const c = src[i];
+      if (c === "\"" || c === "'") { i = skipLiteral(src, i) - 1; continue; }
+      if (c === open) depth++;
+      else if (c === shut && --depth === 0) return i;
+    }
+    return -1;
+  };
+  const args = (inner: string): string[] => {   // split at the commas outside brackets and strings
+    const out: string[] = [];
+    let depth = 0, last = 0;
+    for (let i = 0; i < inner.length; i++) {
+      const c = inner[i];
+      if (c === "\"" || c === "'") { i = skipLiteral(inner, i) - 1; continue; }
+      if (c === "(" || c === "[") depth++;
+      else if (c === ")" || c === "]") depth--;
+      else if (c === "," && depth === 0) { out.push(inner.slice(last, i).trim()); last = i + 1; }
+    }
+    out.push(inner.slice(last).trim());
+    return out;
+  };
+  const math = (fn: string, xs: string[]): Got => {
+    if (!xs.every(x => INT.test(x))) return null;
+    const ns = xs.map(Number);
+    if (fn === "Abs" && ns.length === 1) return { t: "lit", s: String(Math.abs(ns[0])) };
+    if ((fn === "Max" || fn === "Min") && ns.length === 2) return { t: "lit", s: String(fn === "Max" ? Math.max(ns[0], ns[1]) : Math.min(ns[0], ns[1])) };
+    return null;
+  };
+
+  const fill = (src: string): string => {
+    let out = "";
+    for (let i = 0; i < src.length;) {
+      const c = src[i];
+      if (c === "\"" || c === "'") { const e = skipLiteral(src, i); out += src.slice(i, e); i = e; continue; }
+      if (!/[A-Za-z_]/.test(c) || (i > 0 && /[\w.]/.test(src[i - 1]))) { out += c; i++; continue; }
+      // a chain: name ( .name | [index] | (arguments) )*
+      let j = i;
+      while (j < src.length && /\w/.test(src[j])) j++;
+      const first = src.slice(i, j);
+      const start = root(first);
+      let got = start.got, written = first, path = [first], plainName = true;
+      for (;;) {
+        let k = j;
+        while (k < src.length && src[k] === " ") k++;
+        if (src[k] === "." && /[A-Za-z_]/.test(src[k + 1] ?? "")) {
+          let e = k + 1;
+          while (e < src.length && /\w/.test(src[e])) e++;
+          const name = src.slice(k + 1, e);
+          got = member(got, name);
+          path.push(name); written += "." + name; plainName = false; j = e;
+        } else if (src[k] === "[") {
+          const e = close(src, k);
+          if (e < 0) break;
+          const inner = fill(src.slice(k + 1, e));
+          const c2 = cells(got);
+          if (c2) {
+            const idx = inner.trim();
+            if (INT.test(idx)) {
+              const n = Number(idx), cell = n >= 0 && n < c2.items.length ? c2.items[n] : undefined;
+              if (cell === undefined || cell === "…") unsure = true;
+              // a cell is written as Console prints it: a string / a char gets its quotes back; any other cell must read as a literal
+              else if (c2.quote) got = { t: "lit", s: c2.quote + cell + c2.quote };
+              else if (/^(-?\d+(\.\d+)?|true|false|True|False)$/.test(cell)) got = { t: "lit", s: /^(true|false)$/i.test(cell) ? cell.toLowerCase() : cell };
+              else { unsure = true; got = null; }
+            } else got = null;
+          } else {
+            if (got?.t === "val" && start.isVar && path.length === 1) unsure = true;   // a variable indexed that holds no array
+            got = null;
+          }
+          written += "[" + inner + "]"; plainName = false; j = e + 1;
+        } else if (src[k] === "(") {
+          const e = close(src, k);
+          if (e < 0) break;
+          const inner = fill(src.slice(k + 1, e));
+          const name = path[path.length - 1];
+          const queue = queues.get(name);
+          if (queue && queue.length) got = { t: "lit", s: queue.shift()! };
+          else if (path.length === 2 && path[0] === "Math" && !start.isVar) got = math(name, args(inner));
+          else if (name === "Count" && inner.trim() === "" && path.length >= 2) {
+            // list.Count(): the length of what the chain before it holds
+            got = null;
+            const owner = path.slice(0, -1).reduce<Got>((g, n, x) => (x === 0 ? root(n).got : member(g, n)), null);
+            const c3 = cells(owner);
+            if (c3 && !c3.items.includes("…")) got = { t: "lit", s: String(c3.items.length) };
+          } else got = null;
+          written += "(" + inner + ")"; plainName = false; j = e + 1;
+        } else break;
+      }
+      const value = lit(got);
+      if (value !== null && got !== null && !(got.t === "type")) out += value;
+      else {
+        if (plainName && start.isVar) unsure = true;   // a variable (or a bare field) that holds no plain value
+        out += written;
+      }
+      i = j;
+    }
+    return out;
+  };
+  const out = fill(text);
   return unsure ? null : out;
 }
-const cellsOf = (v: DsVal | undefined, objs: readonly DsObj[]): { items: string[]; quote: string } | null => {
-  if (v?.t === "arr") return { items: v.items, quote: "" };
-  if (v?.t !== "ref") return null;
-  const o = objs.find(x => x.id === v.id);
-  if (o?.k !== "array") return null;
-  return { items: o.items, quote: /^string\b/.test(o.type) ? "\"" : /^char\b/.test(o.type) ? "'" : "" };
-};
+/** The end of the string / char literal that starts at `i` (after its closing quote). */
+function skipLiteral(src: string, i: number): number {
+  const q = src[i];
+  for (let k = i + 1; k < src.length; k++) {
+    if (src[k] === "\\") { k++; continue; }
+    if (src[k] === q) return k + 1;
+  }
+  return src.length;
+}
 
 const ERRORS: [RegExp, string][] = [
   [/IndexOutOfRangeException/, "الفهرس خارج حدود المصفوفة."],
@@ -168,7 +340,7 @@ export function traceTable(trace: DsTrace, upTo: number, method?: string): Trace
     const last = lastOf.get(id) ?? null;
     const row = cols.map(c => cellOf(c, s));
     const printed = s.out.slice(k > 0 ? trace.steps[k - 1].out.length : 0);
-    const test = conditionOf(s);
+    const test = conditionOf(s, trace, k);
     const ret = called && s.ret !== undefined ? s.ret : null;
     const changed = row.map((c, j) => !last || last[j] !== c);
     const nothing = last ? !changed.some(Boolean) : row.every(c => c === null);   // a first row with no value yet is no row
