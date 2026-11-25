@@ -1734,19 +1734,55 @@
     "899271d-m05-l05-p01": {
       "moduleId": "899271d-m05",
       "activities": {
-        "m05-l05-p01-b12": {
+        "m05-l05-p01-b19": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m05-l05-p01-b20": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m05-l05-p01-b13": {
+        "m05-l05-p01-b21": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m05-l05-p01-b14": {
+        "m05-l05-p01-b22": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m05-l05-p01-b23": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m05-l05-p01-b24": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m05-l05-p01-b25": {
+          "kind": "shortInput",
+          "answer": "[sami,ahmad]"
+        },
+        "m05-l05-p01-b26": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3",
+            "s4",
+            "s5"
+          ]
+        },
+        "m05-l05-p01-b27": {
           "kind": "multipleChoice",
           "correct": [
             "o2"

@@ -1,5 +1,5 @@
 {
- "compiler": "dotnet 8.0.134",
+ "compiler": "dotnet 8.0.428",
  "programs": {
   "0071f00402c24df3": {
    "out": "[9,12]\n"
@@ -10,8 +10,8 @@
   "0172c2b08695e30d": {
    "out": "80"
   },
-  "0199d7e53bddb6fd": {
-   "out": "B"
+  "01b6fe21bd15d0fc": {
+   "out": "[Sami,Ahmad]"
   },
   "0326be5348208c71": {
    "out": "2\n"
@@ -175,9 +175,6 @@
   "255a7465ffc8cb61": {
    "out": "False\n"
   },
-  "2560acdb89009b0b": {
-   "out": "[A,C,D]"
-  },
   "25d37f8d58c6ea01": {
    "out": "4 9 2 1 6 7 3 \n"
   },
@@ -223,6 +220,9 @@
   "2b324f91c5a77bed": {
    "out": "4 7"
   },
+  "2c3d6922695d33f4": {
+   "out": "Huda"
+  },
   "2d26183c82eed8f9": {
    "out": "3"
   },
@@ -243,9 +243,6 @@
   },
   "2fddd7eb5157fabc": {
    "out": "15\n"
-  },
-  "2fdf73efc9bc8450": {
-   "out": "[A,C]"
   },
   "304548f9d93db769": {
    "out": "21"
@@ -514,6 +511,9 @@
   "624935c03296616d": {
    "out": "self"
   },
+  "628ff5d1635634c2": {
+   "out": "Laila"
+  },
   "62ecd47ab16c9d83": {
    "out": "[e,a,d,b,c,c,b,d,a,e]"
   },
@@ -652,6 +652,9 @@
   "7c757fa34b0af210": {
    "out": "24\n"
   },
+  "7cffbe8a088e73e4": {
+   "out": "Sami pays for 5 items\n[Laila,Ahmad]\n"
+  },
   "7e0b6674f4a43e9b": {
    "out": "st2=[3,5,1,7,8,2]\n"
   },
@@ -745,6 +748,9 @@
   "981f6703b0004ea7": {
    "out": "30"
   },
+  "98d1a9cda1a9a9d2": {
+   "out": "[Sami,Ahmad]"
+  },
   "98e43e0110967f7a": {
    "out": "81"
   },
@@ -816,6 +822,9 @@
   },
   "a43981194ed81239": {
    "out": "14\n"
+  },
+  "a50c9ed0c6234ea6": {
+   "out": "[Sami,Ahmad,Huda]"
   },
   "a52b9ef98b6b0d75": {
    "out": "* \n* * \n* * * \n* * \n* \n"
@@ -969,6 +978,9 @@
   },
   "c9e6075322e843b0": {
    "out": "[70,50,30]\n"
+  },
+  "ca28ae07f536f78c": {
+   "out": "Laila\n[Sami,Ahmad,Huda]\n"
   },
   "cb16f587f817e172": {
    "out": "28\n[11,3,5,7,2]\n"
@@ -1218,9 +1230,6 @@
   },
   "faefa624ee41b4e9": {
    "out": "[1,2,5,9]\n"
-  },
-  "fb2c5419746b85eb": {
-   "out": "B\n[A,C,D]\n"
   },
   "fcd429042cf6150d": {
    "out": "[4,6,1]"
