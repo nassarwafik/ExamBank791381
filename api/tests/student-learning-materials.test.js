@@ -230,6 +230,9 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
     ] }, { courseId: "899271d", title: "مبنى المعطيات", subject: "علم الحاسوب", modules: [
       // DS-A2: «الوحدة الرابعة: مبنى المعطيات», generated with its content (its exact list is pinned by course899271d.test.ts)
       ...listLearningModules("899271d"),
+    ] }, { courseId: "791283", title: "أنظمة محوسبة", subject: "أنظمة محوسبة", modules: [
+      // HW-A2: «أنظمة محوسبة», generated with its content (its exact list is pinned by course791283.test.ts)
+      ...listLearningModules("791283"),
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m29|pages|lessons|blocks|answer|pdf/i);
   });

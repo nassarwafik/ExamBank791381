@@ -1930,6 +1930,16 @@
       "page": "ed-coding",
       "viewport": "tablet",
       "reason": "Python phase 2 (owner decision 2026-11-23, docs/enterprise-python-lab-spike.md) — on a DESKTOP-sized screen (the tablet capture is 1024 px with a fine pointer) a Python coding question in an exam now runs ON THE STUDENT'S DEVICE: the notice «تشغيل الكود غير متاح حاليًا…» is replaced by the practice area «مدخلات التشغيل» and «تشغيل» (the same area a C# question shows); the phone capture is unchanged (no lab on a phone)."
+    },
+    {
+      "page": "learning",
+      "viewport": "all",
+      "reason": "HW-A2 — the library lists a sixth available course, «أنظمة محوسبة» (791283 — computer components, lab safety and the operating system, with 3D models of the parts), as its own card after «مبنى المعطيات» (the owner's request: a new learning material); the page is one card taller, nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "HW-A2 — the same sixth course card «أنظمة محوسبة» (791283) in the library under the search panel; the page is one card taller, nothing else moves."
     }
   ]
 }

@@ -433,4 +433,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./DsSolutionActivity"),
     capabilities: { interactive: true },
   },
+  {
+    // HW-A1 (docs/enterprise-791283-course.md) — a computer PART as a 3D model (the platform's own Interactive3DSceneSpecV1 and SVG
+    // renderer): the learner turns and zooms it and chooses a piece to read its name and job. Data only; the choice is never an
+    // answer, never stored or sent. Its own lazy chunk; no timers, no network.
+    kind: "interactive-diagram",
+    key: "hw-part-3d",
+    versions: [1],
+    load: () => import("./HwPart3DActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
 ]);
