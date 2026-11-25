@@ -7,6 +7,8 @@ import {
   projectAutomatonDesignConfigForStudent, validateAutomatonDesignAnswerKey, validateAutomatonDesignConfig, validateAutomatonDesignQuestion,
 } from "./automatonDesignQuestion";
 import { newQuestion } from "./examBuilderState";
+import { AUTOMATON_LAYOUT_GRID_MAX, readAutomatonLayout } from "./automatonDesignQuestion";
+import { GRID_MAX } from "./studentTools/automataLab";
 
 const CFG = { v: 1, machine: "DFA", alphabet: ["0", "1"], maxStates: 3, complete: true, examples: { accept: ["1", "01"], reject: ["", "10"] } };
 const REF = { states: ["q0", "q1"], start: "q0", accept: ["q1"], transitions: [["q0", "0", "q0"], ["q0", "1", "q1"], ["q1", "0", "q0"], ["q1", "1", "q1"]] };
@@ -80,6 +82,29 @@ describe("A8 — the reference (private key)", () => {
     expect(automatonDesignAuthority(CFG, { reference: REF })).toEqual({ config: CFG, key: { reference: REF } });
     expect(automatonDesignAuthority({ ...CFG, machine: "TM" }, { reference: REF })).toBeNull();
     expect(automatonDesignAuthority(CFG, { reference: { ...REF, start: "x" } })).toBeNull();
+  });
+});
+
+describe("AUTO-A9 — the drawing's layout (presentation only)", () => {
+  const A = (machine: unknown, layout?: unknown) => ({ kind: "automatonDesign", machine, ...(layout !== undefined ? { layout } : {}) });
+  it("a layout of the machine's own states, in the grid, travels with the answer", () => {
+    expect(normalizeAutomatonDesignAnswer(A(REF, { q0: [0, 0], q1: [3, 2] }))).toEqual({ ok: true, answer: A(REF, { q0: [0, 0], q1: [3, 2] }) });
+    expect(readAutomatonLayout({ q0: [20, 20] }, ["q0"])).toEqual({ q0: [20, 20] });
+    expect(AUTOMATON_LAYOUT_GRID_MAX).toBe(GRID_MAX);                              // parity with the drawing editor's grid
+  });
+  it("a layout that does not read is dropped — the machine (the answer) is kept", () => {
+    for (const bad of [{ q9: [0, 0] }, { q0: [21, 0] }, { q0: [-1, 0] }, { q0: [1.5, 0] }, { q0: [0] }, { q0: "0,0" }, [[0, 0]], { q0: [0, 0], q1: [1, 1], q2: [2, 2] }, { __proto__: [0, 0] }])
+      expect(normalizeAutomatonDesignAnswer(A(REF, bad)), JSON.stringify(bad)).toEqual({ ok: true, answer: A(REF) });
+    expect(normalizeAutomatonDesignAnswer(A(REF, {}))).toEqual({ ok: true, answer: A(REF) });
+    expect(normalizeAutomatonDesignAnswer({ ...A(REF, { q0: [0, 0] }), score: 5 })).toEqual({ ok: false, code: "AUTOMATON_ANSWER_INVALID" });   // other fields still refused
+  });
+  it("the reference's layout is part of the key: one that does not read is an issue; the grading authority keeps it as given", () => {
+    expect(codes(node(CFG, { reference: REF, layout: { q0: [0, 0], q1: [2, 0] } }))).toEqual([]);
+    expect(codes(node(CFG, { reference: REF, layout: { q7: [0, 0] } }))).toEqual(["AUTOMATON_KEY_LAYOUT"]);
+    expect(automatonDesignAuthority(CFG, { reference: REF, layout: { q1: [2, 0] } })).toEqual({ config: CFG, key: { reference: REF, layout: { q1: [2, 0] } } });
+  });
+  it("answered: a layout alone is not an answer", () => {
+    expect(isAutomatonDesignAnswerAnswered(A({ states: ["q0"], start: "q0", accept: [], transitions: [] }, { q0: [3, 3] }))).toBe(false);
   });
 });
 
