@@ -9,6 +9,7 @@ import App from "./App";
 import TEMPLATE from "../public/templates/structured-exam-template.json";
 
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
+const late = <T,>(p: Promise<T>) => new Promise<T>(resolve => setTimeout(() => resolve(p), 50));
 const IMPORTED = { libraryItemId: "IMP-001", title: "امتحان مستورد", category: "final", description: "", tags: [], questionCount: 5, totalMarks: 100, conversionStatus: "ready", publishable: true };
 
 beforeEach(() => {
@@ -17,7 +18,8 @@ beforeEach(() => {
   (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
   globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
-    if (url.includes("/api/platform-login")) return res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" });
+    // the sign-in answers LATE, as on a loaded machine: the login page (which has its own h1) is still there meanwhile
+    if (url.includes("/api/platform-login")) return late(res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" }));
     if (url.includes("/api/exam-library/IMP-001")) return res(200, { ok: true, item: { ...IMPORTED, examSnapshot: { ...TEMPLATE, examId: "LIB-IMP-001", title: "امتحان مستورد", status: "final" } } });
     if (url.includes("/api/exam-library")) return res(200, { ok: true, catalog: [IMPORTED] });
     if (url.includes("/api/bank-questions")) return res(200, { ok: true, questions: [] });
@@ -35,8 +37,9 @@ describe("P6-E — a teacher copies an imported (structured) library exam into t
     fireEvent.change(document.querySelector('input[autocomplete="username"]') as HTMLInputElement, { target: { value: "T" } });
     fireEvent.change(document.querySelector('input[type="password"]') as HTMLInputElement, { target: { value: "pw" } });
     fireEvent.submit(document.querySelector("form.auth-form") as HTMLFormElement);
-    await screen.findByRole("heading", { level: 1 });
-    fireEvent.click(within(screen.getByRole("complementary", { name: "التنقل الرئيسي" })).getByRole("button", { name: "بنك الامتحانات" }));
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    const nav = await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
+    fireEvent.click(within(nav).getByRole("button", { name: "بنك الامتحانات" }));
     fireEvent.click(await screen.findByRole("button", { name: "المكتبة الرسمية" }));
     fireEvent.click(await screen.findByRole("button", { name: "فتح نسخة في الباني" }));
     const builder = await screen.findByRole("dialog", {}, { timeout: 8000 });
