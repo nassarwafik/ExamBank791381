@@ -62,7 +62,8 @@ describe("V15 — read from the steps, never guessed", () => {
     const f = (vs: [string, unknown][]) => ({ name: "Main", vars: vs as DsTrace["steps"][0]["frames"][0]["vars"] });
     expect(fillValues("k > 0 && p != null", f([["k", v("3")], ["p", { t: "ref", id: 9 }]]), [])).toBeNull();          // a reference
     expect(fillValues("a[i] > 0", f([["a", { t: "ref", id: 1 }], ["i", v("9")]]), [ARR as never])).toBeNull();          // outside the array
-    expect(fillValues("s == \"k\" && Math.Abs(k) > x.k", f([["k", v("3")], ["s", v("\"k\"")]]), [])).toBe("\"k\" == \"k\" && Math.Abs(3) > x.k");
+    // a method the trace knows nothing about stays as written, its arguments read (V17 computes Math.Abs / Max / Min: visualRun.v17)
+    expect(fillValues("s == \"k\" && Check(k) > x.k", f([["k", v("3")], ["s", v("\"k\"")]]), [])).toBe("\"k\" == \"k\" && Check(3) > x.k");
     // a value put in is never read again as a name (a cell «x» while a variable x exists)
     const names = { id: 2, k: "array", type: "string[]", items: ["x", "y"] };
     expect(fillValues("n[j] == x", f([["n", { t: "ref", id: 2 }], ["j", v("0")], ["x", v("\"y\"")]]), [names as never])).toBe("\"x\" == \"y\"");

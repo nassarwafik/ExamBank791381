@@ -48,7 +48,7 @@ export default function DsTraceView({ cfg, epoch, onStep, at: atProp, controls =
 
   const step = cfg.steps[Math.min(at, total - 1)];
   const prev = at > 0 ? cfg.steps[at - 1] : undefined;
-  const test = explain && !hidden ? conditionOf(step) : null;
+  const test = explain && !hidden ? conditionOf(step, cfg, at) : null;
   const printed = explain && prev && step.out.length > prev.out.length ? step.out.slice(prev.out.length) : "";
   // V15: the line that ran stays in sight inside the program (the player's bar is sticky: each line keeps a margin under it)
   const codeRef = useRef<HTMLOListElement>(null);
