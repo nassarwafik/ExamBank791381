@@ -153,10 +153,15 @@ describe("A7 — «افتح في مختبر الآلات»", () => {
     expect(d.accept).toEqual(["q1"]);
     expect(d.cells["q0|1"]).toEqual(["q1"]);
     expect(d.layout?.q1).toBeTruthy();
-    d.cells["q0|1"] = ["q0"];                                                        // the lab's copy is its own
+    d.cells["q0|1"].splice(0, 1, "q0");                                              // the lab's copy is its own: its arrays too
+    d.cells["q1|0"].push("q1");
     d.states.push("qX");
+    d.accept.push("q0");
+    fireEvent.change(screen.getByLabelText("جرّب كلمة على آلتك"), { target: { value: "01" } });   // the activity renders again
     expect(cell("q0", "1").value).toBe("q1");
+    expect(cell("q1", "0").value).toBe("q0");
     expect(screen.queryByRole("combobox", { name: "من qX بالرمز 0 إلى" })).toBeNull();
+    expect((screen.getAllByRole("checkbox", { name: "قبول" })[0] as HTMLInputElement).checked).toBe(false);
   });
 
   it("a lab that does not allow the kind, or an opener withdrawn: no button", () => {
@@ -188,6 +193,23 @@ describe("A7 — «افتح في مختبر الآلات»", () => {
     cleanup();
     render(<><AutomatonDesignActivity {...props(blockFor(DFA_TASK))} /><StudentToolDock studentTools={tools} /></>);
     expect(screen.queryByRole("button", { name: OPEN_LAB })).toBeNull();
+  });
+
+  it("a second hand-over while the lab is open replaces the lab's machine, and says again that it is a copy", async () => {
+    render(<><AutomatonDesignActivity {...props(blockFor(DFA_TASK))} /><StudentToolDock studentTools={courseStudentTools("899271")} labHandoff /></>);
+    buildEndsWith1();
+    fireEvent.click(btn(OPEN_LAB));
+    const panel = screen.getByTestId("tool-panel-automataLab");
+    await within(panel).findByTestId("alab-from-activity");
+    fireEvent.click(within(panel).getByRole("button", { name: "آلة جديدة" }));          // the lab moves on: a new machine, no note
+    expect(within(panel).queryByTestId("alab-from-activity")).toBeNull();
+    expect(within(panel).queryByRole("combobox", { name: "من q1 بالرمز a إلى" })).toBeNull();
+    const activity = document.querySelector(".learning-autodesign") as HTMLElement;
+    fireEvent.change(within(activity).getByRole("combobox", { name: "من q1 بالرمز 0 إلى" }), { target: { value: "q1" } });
+    fireEvent.click(within(activity).getByRole("button", { name: OPEN_LAB }));
+    expect(within(panel).getByTestId("alab-from-activity").textContent).toContain("نسخة من آلتك في التمرين");
+    expect((within(panel).getByRole("combobox", { name: "من q1 بالرمز 0 إلى" }) as HTMLSelectElement).value).toBe("q1");
+    expect((within(panel).getByLabelText("الأبجدية Σ") as HTMLInputElement).value).toBe("0, 1");
   });
 
   it("the lab takes a copy only of a kind it allows", () => {
