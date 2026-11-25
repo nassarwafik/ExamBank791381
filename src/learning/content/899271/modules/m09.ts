@@ -1672,6 +1672,397 @@ const m09: ContentModule = {
             },
             {
               "id": "m09-l03-p02-b05",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: المرآة المعلّمة wcR(w)",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {wcR(w) | w فوق {a, b}}: كلمة، ثم c، ثم الكلمة معكوسة.",
+                  "machine": "PDA",
+                  "alphabet": [
+                    "a",
+                    "b",
+                    "c"
+                  ],
+                  "maxStates": 5,
+                  "examples": {
+                    "accept": [
+                      "c",
+                      "aca",
+                      "abcba"
+                    ],
+                    "reject": [
+                      "",
+                      "abcab",
+                      "cc"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q2"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "c",
+                      "top": "⏊",
+                      "op": "none",
+                      "write": "",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "⏊",
+                      "op": "push",
+                      "write": "S",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "top": "⏊",
+                      "op": "push",
+                      "write": "T",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "S",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "T",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "A",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "B",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "top": "S",
+                      "op": "push",
+                      "write": "B",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "top": "T",
+                      "op": "push",
+                      "write": "B",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "top": "A",
+                      "op": "push",
+                      "write": "B",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "top": "B",
+                      "op": "push",
+                      "write": "B",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "c",
+                      "top": "S",
+                      "op": "none",
+                      "write": "",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "c",
+                      "top": "T",
+                      "op": "none",
+                      "write": "",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "c",
+                      "top": "A",
+                      "op": "none",
+                      "write": "",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "c",
+                      "top": "B",
+                      "op": "none",
+                      "write": "",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "top": "B",
+                      "op": "pop",
+                      "write": "B",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "top": "S",
+                      "op": "pop",
+                      "write": "S",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "top": "T",
+                      "op": "pop",
+                      "write": "T",
+                      "to": "q2"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "c يحدّد المنتصف، والرمز الخاص لأول حرف (S أو T) يحدّد النهاية — حيلة S نفسها في aⁿbⁿ.",
+                  "hints": [
+                    "قبل c ادفع كل رمز تقرؤه، وبعدها اسحب ما يطابقه.",
+                    "كيف تعرف أنك سحبت آخر رمز؟ علّم أول رمز يُدفع بحرف مختلف."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات مكدّس: صمّم أوتومات مكدّس حتميًا يقبل اللغة {wcR(w) | w فوق {a, b}}: كلمة، ثم c، ثم الكلمة معكوسة."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m09-l03-p02-b06",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: a²ⁿbᵐcᵏ، k < n + m",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {a²ⁿbᵐcᵏ | n, m ≥ 0، k < n + m}.",
+                  "machine": "PDA",
+                  "alphabet": [
+                    "a",
+                    "b",
+                    "c"
+                  ],
+                  "maxStates": 8,
+                  "examples": {
+                    "accept": [
+                      "aa",
+                      "b",
+                      "aabc",
+                      "bbc"
+                    ],
+                    "reject": [
+                      "a",
+                      "c",
+                      "aabcc",
+                      "bcc"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3",
+                    "q4",
+                    "q5"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q2",
+                    "q4",
+                    "q5"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "⏊",
+                      "op": "none",
+                      "write": "",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "top": "⏊",
+                      "op": "push",
+                      "write": "S",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "a",
+                      "top": "S",
+                      "op": "none",
+                      "write": "",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "a",
+                      "top": "A",
+                      "op": "none",
+                      "write": "",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q3",
+                      "read": "a",
+                      "top": "S",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q3",
+                      "read": "a",
+                      "top": "A",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "top": "⏊",
+                      "op": "push",
+                      "write": "S",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "top": "S",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "top": "A",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "b",
+                      "top": "S",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "b",
+                      "top": "A",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "c",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q5"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "c",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q5"
+                    },
+                    {
+                      "from": "q5",
+                      "read": "c",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q5"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "رمز لكل زوج a ولكل b، والأول S علامة لا يسحبها c: فيبقى عدد c أقل من n + m.",
+                  "hints": [
+                    "لكل زوج aa ادفع رمزًا واحدًا، ولكل b رمزًا.",
+                    "k أصغر تمامًا: الرمز الأول (S) لا يُسحب بـ c."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات مكدّس: صمّم أوتومات مكدّس حتميًا يقبل اللغة {a²ⁿbᵐcᵏ | n, m ≥ 0، k < n + m}."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m09-l03-p02-b07",
               "type": "practice",
               "reveal": true,
               "question": {

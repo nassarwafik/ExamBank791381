@@ -129,7 +129,7 @@ async function handler(request, deps = {}, obs = null) {
       // enforced again by the simulator's replay).
       if (check.key.kind === "network-lab" && responseBytes(body.response) > SMART_SIM_LIMITS.answerBytes) return TOO_LARGE;
       // AUTO-A3 — a «صمّم الآلة» answer is one small machine (≤ 12 states, ≤ 200 arrows): 16 KB is far above any real one.
-      if (check.key.kind === "automaton-design" && responseBytes(body.response) > AUTOMATON_DESIGN_ANSWER_BYTES) return TOO_LARGE;
+      if ((check.key.kind === "automaton-design" || check.key.kind === "machine-design") && responseBytes(body.response) > AUTOMATON_DESIGN_ANSWER_BYTES) return TOO_LARGE;
       // The gate: the page's OWN module must be published to the student's class (the same authority as the Reader
       // and Learning Practice). Teachers preview freely.
       if (actor.kind === "student" && !classCanSeeLearningModule(classroom, courseId, check.moduleId)) return UNAVAILABLE;
@@ -137,14 +137,14 @@ async function handler(request, deps = {}, obs = null) {
       const verdict = checkResponse(check, body.response);
       // The judge could not run (a broken lab topology / key — never the learner's fault): a retryable error, NOTHING recorded,
       // never a "wrong" (AGENTS.md §10 grading safety).
-      if (verdict.unavailable) return check.key.kind === "automaton-design" ? DESIGN_UNAVAILABLE : LAB_UNAVAILABLE;
+      if (verdict.unavailable) return check.key.kind === "automaton-design" || check.key.kind === "machine-design" ? DESIGN_UNAVAILABLE : LAB_UNAVAILABLE;
       const correct = verdict.correct;
       // Points come from the STUDY index alone (the check index only says what to answer): a block it does not list is judged and
       // answered, never recorded.
       const found = findStudyActivity(index, pageId, activityId);
       // `parts`: the per-part verdict of a structured answer / the per-check verdict of a network lab (booleans only) — the
       // Reader's per-part marks and «الصحيح: …» on a served page come from it.
-      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.parts ? { parts: verdict.parts } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}), ...(verdict.issue ? { issue: verdict.issue } : {}), ...(verdict.counterexample ? { counterexample: verdict.counterexample } : {}) };
+      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.parts ? { parts: verdict.parts } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}), ...(verdict.issue ? { issue: verdict.issue } : {}), ...(verdict.counterexample ? { counterexample: verdict.counterexample } : {}), ...(verdict.nohalt ? { nohalt: verdict.nohalt } : {}), ...(verdict.agreesUpTo ? { agreesUpTo: verdict.agreesUpTo } : {}) };
       const page = { pageId, moduleId: check.moduleId };
       // REVEAL + student + study activity: a wrong answer gave the right answer away → record it once (CAS; never over a
       // completion); a right answer after such a reveal is answered but never completed.

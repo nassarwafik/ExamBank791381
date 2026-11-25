@@ -1,5 +1,5 @@
 // Unit 9 — اللغات الخالية من السياق: أسئلة متقدمة وخصائص الانغلاق (اللقاء 5، الشرائح 16–46).
-import { P, H, DEF, NOTE, SUM, OL, TABLE, EX, CLAR, SIM, MC, TF, CLASSIFY, ORDER, GUIDED, ADDED, pda } from "./dsl.mjs";
+import { P, H, DEF, NOTE, SUM, OL, TABLE, EX, CLAR, SIM, MC, TF, CLASSIFY, ORDER, GUIDED, ADDED, DESIGN_MACHINE, pda } from "./dsl.mjs";
 
 // L = { a^{2n} b^m c^k | n, m ≥ 0, k < n + m } — the slides' construction idea (S5 22), as a deterministic PDA proven on every word
 export const A2N_BM_CK = pda({ states: ["q0", "q1", "q2", "q3", "q4", "q5"], alphabet: ["a", "b", "c"], accept: ["q2", "q4", "q5"], stack: ["S", "A"], t: [
@@ -10,6 +10,15 @@ const inL = w => { const m = /^(a*)(b*)(c*)$/.exec(w); if (!m) return false; con
 export const ANBN = pda({ states: ["q0", "q1", "q2", "q3"], alphabet: ["a", "b"], accept: ["q0", "q2"], stack: ["S", "A"], t: [
   "q0 → q1 : ادفع a,⏊/S", "q1 → q1 : ادفع a,S/A", "q1 → q1 : ادفع a,A/A", "q1 → q2 : اسحب b,S/S", "q1 → q3 : اسحب b,A/A", "q3 → q3 : اسحب b,A/A", "q3 → q2 : اسحب b,S/S"] });
 const anbn = w => { const m = /^(a*)(b*)$/.exec(w); return !!m && m[1].length === m[2].length; };
+// AUTO-A10 — the marked mirror wcR(w): the machine of «نحلّ معًا» (a special first symbol S / T marks the bottom of w)
+const WCRW = pda({ states: ["q0", "q1", "q2"], alphabet: ["a", "b", "c"], accept: ["q2"], stack: ["S", "T", "A", "B"], t: [
+  "q0 → q2 : بلا تغيير c,⏊/",
+  "q0 → q0 : ادفع a,⏊/S", "q0 → q0 : ادفع b,⏊/T",
+  "q0 → q0 : ادفع a,S/A", "q0 → q0 : ادفع a,T/A", "q0 → q0 : ادفع a,A/A", "q0 → q0 : ادفع a,B/A",
+  "q0 → q0 : ادفع b,S/B", "q0 → q0 : ادفع b,T/B", "q0 → q0 : ادفع b,A/B", "q0 → q0 : ادفع b,B/B",
+  "q0 → q1 : بلا تغيير c,S/", "q0 → q1 : بلا تغيير c,T/", "q0 → q1 : بلا تغيير c,A/", "q0 → q1 : بلا تغيير c,B/",
+  "q1 → q1 : اسحب a,A/A", "q1 → q1 : اسحب b,B/B", "q1 → q2 : اسحب a,S/S", "q1 → q2 : اسحب b,T/T"] });
+const wcrw = w => { const i = w.indexOf("c"); return i >= 0 && w.indexOf("c", i + 1) < 0 && [...w.slice(0, i)].reverse().join("") === w.slice(i + 1); };
 const CFL_ROWS = [["مجموعة جزئية", "✗"], ["اتحاد اللغات", "✓"], ["تقاطع اللغات", "✗"], ["تسلسل اللغات", "✓"], ["عكس اللغة", "✓"], ["اللغة المتمّمة", "✗"]];
 
 export default {
@@ -136,6 +145,23 @@ export default {
             TF("الأوتومات أعلاه يقبل الكلمة aabcc.", false, "n = 1، m = 1، k = 2: يجب k < 2. في المكدّس S ثم A: c الأول يسحب A، و c الثاني يجد S في القمة فيعلق الأوتومات.", { prove: { type: "accepts", word: "aabcc", expect: false } }),
             MC("في أي حالة يكون الأوتومات أعلاه بعد قراءة aaa؟", ["*q3", "q2", "q1", "q4"], "aa تقود إلى q2 (دفع S)، و a الثالث إلى q3: عدد a فردي.", { prove: { type: "finalState", word: "aaa", expect: "q3" } }),
             MC("ما محتوى المكدّس (من القاع إلى القمة) بعد قراءة aabb؟", ["*⏊SAA", "⏊SA", "⏊SS", "⏊AA"], "aa تدفع S، وكل b يدفع A: ⏊SAA.", { prove: { type: "stackAfter", word: "aabb", expect: "⏊SAA" } }),
+            // AUTO-A10 — «صمّم الآلة» for push-down automata (judged on every word up to length 6 over {a, b, c})
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: المرآة المعلّمة wcR(w)",
+              intro: "صمّم أوتومات مكدّس حتميًا يقبل اللغة `{wcR(w) | w فوق {a, b}}`: كلمة، ثم c، ثم الكلمة معكوسة.",
+              reference: WCRW, maxStates: 5, lang: wcrw, langMax: 7,
+              accept: ["c", "aca", "abcba"], reject: ["", "abcab", "cc"],
+              hints: ["قبل `c` ادفع كل رمز تقرؤه، وبعدها اسحب ما يطابقه.", "كيف تعرف أنك سحبت آخر رمز؟ علّم أول رمز يُدفع بحرف مختلف."],
+              explanation: "c يحدّد المنتصف، والرمز الخاص لأول حرف (S أو T) يحدّد النهاية — حيلة S نفسها في aⁿbⁿ.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: a²ⁿbᵐcᵏ، k < n + m",
+              intro: "صمّم أوتومات مكدّس حتميًا يقبل اللغة `{a²ⁿbᵐcᵏ | n, m ≥ 0، k < n + m}`.",
+              reference: A2N_BM_CK, maxStates: 8, lang: inL, langMax: 7,
+              accept: ["aa", "b", "aabc", "bbc"], reject: ["a", "c", "aabcc", "bcc"],
+              hints: ["لكل زوج `aa` ادفع رمزًا واحدًا، ولكل `b` رمزًا.", "k أصغر تمامًا: الرمز الأول (S) لا يُسحب بـ c."],
+              explanation: "رمز لكل زوج a ولكل b، والأول S علامة لا يسحبها c: فيبقى عدد c أقل من n + m.",
+            }),
             TF("الكلمة الفارغة ε في اللغة {a²ⁿbᵐcᵏ | k < n + m}.", false, "n = m = k = 0 يعطي 0 < 0، وهذا غير صحيح: ε ليست في اللغة، و q0 ليست حالة قبول."),
           ],
         },

@@ -10,6 +10,8 @@
 //       reveal? } } } } }                              // true: REVEAL mode (791381s Phase 2) — see checkResponse
 // A network lab's key is { kind: "network-lab", topology, checks } (791381s Phase 8B): judged by learning-lab.js.
 // A «صمّم الآلة» key is { kind: "automaton-design", rules, reference } (AUTO-A3): judged by learning-automaton-design.js.
+// AUTO-A10 — a push-down / Turing machine «صمّم الآلة» key is { kind: "machine-design", rules, reference }: judged on every word up to a
+// length by learning-machine-design.js (agreement up to that length, or the shortest word on which the machines certainly disagree).
 //
 // The API judges every answer here and returns the verdict with ONLY the feedback that answer earns: a right answer gets the right
 // message and the explanation, a wrong one gets the wrong message and the hint ladder. Study points stay with the study index.
@@ -19,6 +21,7 @@
 const { evaluateStudyResponse, structuredKeyMap } = require("./learning-study");
 const { evaluateNetworkLab } = require("./learning-lab");
 const { evaluateAutomatonDesign } = require("./learning-automaton-design");
+const { evaluateMachineDesign } = require("./learning-machine-design");
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const cleanId = v => (typeof v === "string" ? v.trim() : "");
@@ -69,6 +72,10 @@ function checkResponse(activity, response) {
     design = evaluateAutomatonDesign(activity.key, response);
     if (design.status !== "judged") return { unavailable: true };
   }
+  if (activity.key && activity.key.kind === "machine-design") {
+    design = evaluateMachineDesign(activity.key, response);
+    if (design.status !== "judged") return { unavailable: true };
+  }
   const correct = lab ? lab.correct === true : design ? design.correct === true : evaluateStudyResponse(activity.key, response);
   const fb = activity.feedback || {};
   const feedback = {};
@@ -93,7 +100,9 @@ function checkResponse(activity, response) {
   if (design && !correct) {
     if (design.issue) out.issue = design.issue;
     if (design.counterexample) out.counterexample = design.counterexample;
+    if (design.nohalt) out.nohalt = design.nohalt;   // AUTO-A10 — a Turing machine that did not halt where the reference did
   }
+  if (design && correct && design.agreesUpTo) out.agreesUpTo = design.agreesUpTo;   // AUTO-A10 — «agrees up to length N», never «proved»
   return out;
 }
 

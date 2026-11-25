@@ -66,3 +66,10 @@
 .ad-review-pair{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:var(--eb-space-3); }
 .ad-review-figure{ margin:0; min-inline-size:0; overflow-x:auto; }
 .ad-review-figure > figcaption{ font-weight:600; font-size:var(--eb-fs-13); margin-block-end:var(--eb-space-1); }
+/* AUTO-A10 — the push-down / Turing machine «صمّم الآلة»: the lab's row editors outside the tool bar (studentTools.css is not loaded). */
+.learning-machine-design .stt-hint{ margin:var(--eb-space-1) 0; font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.learning-machine-design .stt-btn{ min-block-size:44px; padding:0 var(--eb-space-3); border-radius:var(--eb-r); border:1px solid var(--eb-border); background:var(--eb-surface); color:var(--eb-text); font:inherit; cursor:pointer; align-self:flex-start; }
+.learning-machine-design .stt-input{ min-block-size:44px; border-radius:var(--eb-r); border:1px solid var(--eb-border); background:var(--eb-surface); color:var(--eb-text); font:inherit; }
+/* The lab's screen-reader labels (.alab-sr, position:absolute) inside the transition rows must be clipped by the row table's own scroll
+   box: without a positioned ancestor they escaped it and widened the page on a phone (the browser then zoomed the whole page out). */
+.learning-machine-design .learning-autodesign-tablewrap{ position:relative; }

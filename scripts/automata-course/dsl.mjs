@@ -94,6 +94,29 @@ export const DESIGN = ({ intro, machine, alphabet, maxStates, complete, accept =
   _lang: lang, _langMax: langMax,
 });
 
+/**
+ * AUTO-A10 — «صمّم الآلة» for a PUSH-DOWN automaton or a TURING machine (`simulation` / `machine-design` v1): the learner builds the
+ * machine; the SERVER runs it and `reference` (a pda()/tm() of this file, never served) on every word up to a length. `lang` (authoring
+ * only) is the declared language — or, with mode "compute", `fn` the declared function (word → answer): the proof test checks the
+ * reference against it, the example words / answers against it, and that the reference itself passes the real judge.
+ */
+export const DESIGN_MACHINE = ({ intro, reference, maxStates, mode, maxLength, accept = [], reject = [], compute = [], lang, fn, langMax = 7, explanation, hints, title }) => {
+  const { kind, alphabet, leftEnd } = reference;
+  const ref = { states: reference.states, start: reference.start, accept: reference.accept, transitions: reference.transitions };
+  return enr({
+    type: "simulation", simulationType: "machine-design", version: 1, title: title ?? "صمّم الآلة",
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+    config: {
+      task: { intro: plain(intro), machine: kind, alphabet, ...(maxStates ? { maxStates } : {}), ...(mode ? { mode } : {}), ...(kind === "TM" && leftEnd ? { leftEnd: true } : {}), ...(maxLength ? { maxLength } : {}),
+        ...(accept.length || reject.length || compute.length ? { examples: { ...(accept.length ? { accept } : {}), ...(reject.length ? { reject } : {}), ...(compute.length ? { compute } : {}) } } : {}) },
+      reference: ref,
+      feedback: { ...(explanation ? { explanation: plain(explanation) } : {}), ...(hints?.length ? { hints: hints.map(plain) } : {}) },
+    },
+    fallback: { text: "تمرين تفاعلي: صمّم " + (kind === "PDA" ? "أوتومات مكدّس" : "آلة تورنغ") + ": " + plain(intro) },
+    _lang: lang, _fn: fn, _langMax: langMax, _machine: reference,
+  });
+};
+
 /** «حل مع المعلم»: prompt → think first → steps revealed one by one → result. */
 export const GUIDED = ({ title, prompt, steps, result, explanation }) => enr({
   type: "guided", guidedType: "reveal", version: 1, title,

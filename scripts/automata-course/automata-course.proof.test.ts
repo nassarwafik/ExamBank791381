@@ -9,7 +9,13 @@
 //     declared language, its example words agree with that language, and the reference itself passes the REAL server judge
 //     (api/src/lib/learning-automaton-design.js) under the task's own rules (the task can be met within its limits), while a
 //     machine for another language is judged wrong with a separating word that the language really separates.
+//   • AUTO-A10 — each push-down / Turing machine «صمّم الآلة» exercise: its served task reads in the designer, its reference machine (in
+//     the book's engine) accepts EXACTLY its declared language (or computes its declared function) on every word up to a length, its
+//     examples agree, the reference itself passes the REAL server judge (api/src/lib/learning-machine-design.js) — «agrees up to length
+//     N» — and a machine that accepts nothing is judged wrong with a word the language really contains.
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 // @ts-expect-error — plain ESM authoring tools, untyped on purpose.
 import { buildCourse } from "../build-automata-course.mjs";
 import { readAutomatonConfig, runAutomaton, splitWord, type Machine } from "../../src/learning/activities/automaton";
@@ -18,6 +24,9 @@ import { automatonDesignKey } from "../../src/learning/study/eligibility";
 import { servedBlock } from "../../src/learning/study/checkIndex";
 import type { ContentBlock, SimulationBlock } from "../../src/learning/content/types";
 import { evaluateAutomatonDesign } from "../../api/src/lib/learning-automaton-design.js";
+import { evaluateMachineDesign } from "../../api/src/lib/learning-machine-design.js";
+import { readMachineTask } from "../../src/learning/activities/machineDesign";
+import { machineDesignKey } from "../../src/learning/study/eligibility";
 
 type Raw = { unit: number; pageId: string; block: Record<string, unknown> & { id: string; type: string } };
 const { raw } = buildCourse() as { raw: Raw[] };
@@ -143,6 +152,63 @@ describe("every «صمّم الآلة» exercise is proven through the real serv
       expect(v.correct).toBe(false);
       expect(v.counterexample!.shouldAccept).toBe(false);
       expect(lang(v.counterexample!.word)).toBe(false);
+    });
+  }
+});
+
+// ── AUTO-A10 — «صمّم الآلة» for push-down automata and Turing machines ───────────────────────────────────────────────────────
+const machineDesigns = raw.filter(r => r.block.type === "simulation" && r.block.simulationType === "machine-design");
+type MachineCfg = { task: { machine: "PDA" | "TM"; alphabet: string[]; maxStates?: number; mode?: string; examples?: { accept?: string[]; reject?: string[]; compute?: { word: string; answer: string }[] } }; reference: Record<string, unknown> };
+describe("the machine-design study key carries every public rule of the task (the judge reads only the key)", () => {
+  it("machine, alphabet, maxStates, mode, leftEnd and maxLength — and nothing of the task's examples or intro", () => {
+    const block = { type: "simulation", id: "x", simulationType: "machine-design", version: 1, config: {
+      task: { intro: "i", machine: "TM", alphabet: ["a", "b"], maxStates: 5, mode: "compute", leftEnd: true, maxLength: 6, examples: { compute: [{ word: "a", answer: "a" }] } },
+      reference: { states: ["q0"], start: "q0", accept: [], transitions: [] } } } as unknown as SimulationBlock;
+    expect(machineDesignKey(block)).toEqual({ kind: "machine-design", rules: { machine: "TM", alphabet: ["a", "b"], maxStates: 5, mode: "compute", leftEnd: true, maxLength: 6 }, reference: { states: ["q0"], start: "q0", accept: [], transitions: [] } });
+    const bare = { ...block, config: { ...(block.config as object), task: { intro: "i", machine: "PDA", alphabet: ["a"], leftEnd: false } } } as unknown as SimulationBlock;
+    expect((machineDesignKey(bare) as { rules: unknown }).rules).toEqual({ machine: "PDA", alphabet: ["a"] });
+    expect(machineDesignKey({ ...block, version: 2 } as SimulationBlock)).toBeNull();
+    expect(machineDesignKey({ ...block, simulationType: "automaton-design" } as SimulationBlock)).toBeNull();
+  });
+  it("every book exercise: the key built from the block is the one in the generated check index (no drift)", () => {
+    const index = JSON.parse(fs.readFileSync(path.join(process.cwd(), "api/src/data/learning-check/899271.json"), "utf8")) as { pages: Record<string, { activities: Record<string, { key: unknown }> }> };
+    const generated = new Map<string, unknown>();
+    for (const page of Object.values(index.pages)) for (const [id, a] of Object.entries(page.activities)) generated.set(id, a.key);
+    for (const r of machineDesigns) expect(generated.get(r.block.id), r.block.id).toEqual(machineDesignKey(r.block as unknown as SimulationBlock));
+  });
+});
+describe("every push-down / Turing machine «صمّم الآلة» exercise is proven through the real server judge", () => {
+  it("the course has machine-design exercises", () => { expect(machineDesigns.length).toBeGreaterThanOrEqual(4); });
+  for (const r of machineDesigns) {
+    it(r.block.id + " — reads, reference = its language, examples agree, the reference passes the judge, a machine that accepts nothing does not", () => {
+      const cfg = r.block.config as unknown as MachineCfg;
+      const served = servedBlock(r.block as unknown as ContentBlock) as unknown as { config: Record<string, unknown>; serverCheck?: boolean };
+      expect(Object.keys(served.config)).toEqual(["task"]);
+      expect(served.serverCheck).toBe(true);
+      expect(readMachineTask(served.config), "the designer reads the served task").not.toBeNull();
+      const m = readAutomatonConfig({ automaton: r.block._machine })!.machine;
+      expect(m.kind).toBe(cfg.task.machine);
+      expect(cfg.reference.states as string[]).toEqual(m.states);
+      expect((cfg.reference.states as string[]).length, "the reference fits the task's state limit").toBeLessThanOrEqual(cfg.task.maxStates ?? 12);
+      const lang = r.block._lang as (w: string) => boolean;
+      expect(typeof lang).toBe("function");
+      const all = words(cfg.task.alphabet, (r.block._langMax as number) ?? 7);
+      expect(all.filter(w => accepted(m, w) !== lang(w)).slice(0, 5), "words the reference judges differently from its language").toEqual([]);
+      for (const w of cfg.task.examples?.accept ?? []) expect(lang(w), "example «" + w + "» is accepted").toBe(true);
+      for (const w of cfg.task.examples?.reject ?? []) expect(lang(w), "example «" + w + "» is rejected").toBe(false);
+      const key = machineDesignKey(r.block as unknown as SimulationBlock);
+      expect(key).not.toBeNull();
+      // the reference, sent as the learner sends a machine (the automaton-trace format), agrees with itself up to the judged length
+      const v = evaluateMachineDesign(key, { kind: "machine-design", machine: r.block._machine }) as { status: string; correct: boolean; agreesUpTo?: { length: number; words: number } };
+      expect([v.status, v.correct]).toEqual(["judged", true]);
+      expect(v.agreesUpTo!.length).toBeGreaterThanOrEqual(cfg.task.alphabet.length > 2 ? 6 : 8);
+      // a machine that accepts nothing is wrong, on the shortest word the language contains
+      const nothing = { states: ["q0"], start: "q0", accept: [], transitions: [] };
+      const w = evaluateMachineDesign(key, { kind: "machine-design", machine: nothing }) as { correct: boolean; counterexample?: { word: string; shouldAccept: boolean } };
+      expect(w.correct).toBe(false);
+      expect(w.counterexample!.shouldAccept).toBe(true);
+      expect(lang(w.counterexample!.word)).toBe(true);
+      expect(all.filter(x => lang(x))[0]).toBe(w.counterexample!.word);   // the shortest (shortlex) word of the language
     });
   }
 });

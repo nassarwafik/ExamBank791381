@@ -83,13 +83,19 @@ export type ActivityCheckResult = {
   alreadyCompleted?: boolean;
   /** AUTO-A3 — «صمّم الآلة»: the public rule a wrong machine broke. */
   issue?: { code: string; state?: string; symbol?: string; max?: number };
-  /** AUTO-A3 — «صمّم الآلة»: the shortest word on which a wrong machine and the reference disagree. */
-  counterexample?: { word: string; shouldAccept: boolean };
+  /** AUTO-A3 — «صمّم الآلة»: the shortest word on which a wrong machine and the reference disagree. AUTO-A10 — for a Turing machine
+   *  that computes a function, the word with the expected answer and the machine's (null: no answer between two $). */
+  counterexample?: { word: string; shouldAccept?: boolean; expected?: string | null; got?: string | null };
+  /** AUTO-A10 — a Turing machine that did not halt (within the step limit) on a word where the reference did. */
+  nohalt?: { word: string };
+  /** AUTO-A10 — a push-down / Turing machine that agreed with the reference on every word up to `length` (`words` tried). Not a proof. */
+  agreesUpTo?: { length: number; words: number; skipped?: number };
 };
 /** What a server-judged simulation sends: a network lab's action list, or a «صمّم الآلة» machine (AUTO-A3). */
 export type ActivityCheckResponse =
   | { kind: "network-lab"; actions: unknown[] }
-  | { kind: "automaton-design"; machine: { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] } };
+  | { kind: "automaton-design"; machine: { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] } }
+  | { kind: "machine-design"; machine: Record<string, unknown> };
 /** Rejects on a transport failure or a retryable server error (a judge that could not run): never a "wrong". */
 export type ActivityCheck = (response: ActivityCheckResponse) => Promise<ActivityCheckResult>;
 
@@ -378,6 +384,15 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "automaton-design",
     versions: [1],
     load: () => import("./AutomatonDesignActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // AUTO-A10 — «صمّم الآلة» for a push-down automaton or a Turing machine: the learner builds it with the lab's own editors; the SERVER
+    // runs it and the reference on every word up to a length (agreement up to that length, or the shortest word that tells them apart).
+    kind: "simulation",
+    key: "machine-design",
+    versions: [1],
+    load: () => import("./MachineDesignActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
   {

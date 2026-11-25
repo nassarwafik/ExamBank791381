@@ -23,7 +23,7 @@
 //
 // IDENTITY: the activity id is the block's own id, which the content validator guarantees unique per course and
 // which the authoring contract treats as stable (renaming a block id is a content change, never a cosmetic one).
-import { isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, isServerJudgedSimulation, AUTOMATON_DESIGN_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
+import { isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, isMachineDesignBlock, MACHINE_DESIGN_VERSION, isServerJudgedSimulation, AUTOMATON_DESIGN_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
 
 /** Decision Q10 (899371 plan §18): Arabic-Indic «٠–٩» and Persian «۰–۹» digits and the Arabic decimal separator «٫» read as «0–9» / «.». */
 export const foldArabicDigits = (s: string): string =>
@@ -42,6 +42,7 @@ export type StudyActivityKey =
   | { kind: "classify"; assign: Record<string, string> }
   | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] }
   | { kind: "automaton-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; complete?: boolean }; reference: Record<string, unknown> }
+  | { kind: "machine-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; mode?: string; leftEnd?: boolean; maxLength?: number }; reference: Record<string, unknown> }
   | { kind: "exam-item"; itemId: string };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
@@ -106,9 +107,23 @@ export function automatonDesignKey(block: SimulationBlock): StudyActivityKey | n
   return { kind: "automaton-design", rules, reference };
 }
 
+/** AUTO-A10 — the key of a push-down / Turing machine «صمّم الآلة» exercise (v1, a task and a reference machine), or null. Structural
+ *  only: the server judge reads the rules and the reference (fail closed). */
+export function machineDesignKey(block: SimulationBlock): StudyActivityKey | null {
+  if (!isMachineDesignBlock(block) || block.version !== MACHINE_DESIGN_VERSION || !isPlainObject(block.config)) return null;
+  const { task, reference } = block.config as { task?: unknown; reference?: unknown };
+  if (!isPlainObject(task) || !isPlainObject(reference) || typeof task.machine !== "string" || !Array.isArray(task.alphabet)) return null;
+  const rules: { machine: string; alphabet: string[]; maxStates?: number; mode?: string; leftEnd?: boolean; maxLength?: number } = { machine: task.machine, alphabet: (task.alphabet as unknown[]).map(String) };
+  if (typeof task.maxStates === "number") rules.maxStates = task.maxStates;
+  if (typeof task.mode === "string") rules.mode = task.mode;
+  if (task.leftEnd === true) rules.leftEnd = true;
+  if (typeof task.maxLength === "number") rules.maxLength = task.maxLength;
+  return { kind: "machine-design", rules, reference };
+}
+
 /** The key of a server-judged simulation (a network lab or a «صمّم الآلة» exercise), or null. Pure. */
 export function serverSimulationKey(block: SimulationBlock): StudyActivityKey | null {
-  return isNetworkLabBlock(block) ? networkLabKey(block) : isAutomatonDesignBlock(block) ? automatonDesignKey(block) : null;
+  return isNetworkLabBlock(block) ? networkLabKey(block) : isAutomatonDesignBlock(block) ? automatonDesignKey(block) : isMachineDesignBlock(block) ? machineDesignKey(block) : null;
 }
 
 /** The eligible activity of one block, or null. Pure.

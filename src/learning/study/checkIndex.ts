@@ -15,9 +15,9 @@
 //
 // Which blocks are checkable is the eligibility rule's key (practiceQuestionKey / practiceTableKey); `study` is the study rule
 // itself (studyActivityOf), so the check index's study activities are exactly the study index's.
-import { hintLadder, isNetworkLabBlock, isAutomatonDesignBlock, type AutomatonDesignConfig, type SimulationBlock, type ContentBlock, type ContentModule, type LearningCourseManifest, type NetworkLabConfig, type PracticeQuestion } from "../content/types";
+import { hintLadder, isNetworkLabBlock, isAutomatonDesignBlock, isMachineDesignBlock, type MachineDesignConfig, type AutomatonDesignConfig, type SimulationBlock, type ContentBlock, type ContentModule, type LearningCourseManifest, type NetworkLabConfig, type PracticeQuestion } from "../content/types";
 import { orderedModules } from "../content/navigation";
-import { automatonDesignKey, networkLabKey, practiceQuestionKey, practiceTableKey, studyActivityOf, type StudyActivityKey } from "./eligibility";
+import { automatonDesignKey, machineDesignKey, networkLabKey, practiceQuestionKey, practiceTableKey, studyActivityOf, type StudyActivityKey } from "./eligibility";
 
 /** What the server says after an answer: the right / wrong message, the hint ladder (after a wrong answer), the explanation (after a right one). */
 export interface CheckFeedback { correct?: string; incorrect?: string; hints?: string[]; explanation?: string }
@@ -41,7 +41,7 @@ function feedbackOf(question: PracticeQuestion): CheckFeedback {
   return out;
 }
 
-function labFeedbackOf(config: NetworkLabConfig["feedback"] | AutomatonDesignConfig["feedback"] | undefined): CheckFeedback {
+function labFeedbackOf(config: NetworkLabConfig["feedback"] | AutomatonDesignConfig["feedback"] | MachineDesignConfig["feedback"] | undefined): CheckFeedback {
   const out: CheckFeedback = {};
   if (typeof config?.correctFeedback === "string" && config.correctFeedback) out.correct = config.correctFeedback;
   if (typeof config?.incorrectFeedback === "string" && config.incorrectFeedback) out.incorrect = config.incorrectFeedback;
@@ -53,6 +53,11 @@ function labFeedbackOf(config: NetworkLabConfig["feedback"] | AutomatonDesignCon
 
 /** The check entry of one block, or null when the block cannot be checked automatically. Pure. */
 export function checkActivityOf(block: ContentBlock): CheckActivity | null {
+  if (isMachineDesignBlock(block)) {
+    const sim = block as SimulationBlock;
+    const key = machineDesignKey(sim);
+    return key ? { key, study: studyActivityOf(sim) !== null, feedback: labFeedbackOf((sim.config as Partial<MachineDesignConfig> | undefined)?.feedback) } : null;
+  }
   if (isAutomatonDesignBlock(block)) {
     const sim = block as SimulationBlock;
     const key = automatonDesignKey(sim);
@@ -89,8 +94,8 @@ function servedQuestion(q: PracticeQuestion): PracticeQuestion {
 
 /** One block as the browser receives it. Pure; blocks other than `practice` / `practice-table` / a network lab are returned unchanged. */
 export function servedBlock(block: ContentBlock): ContentBlock {
-  if (isAutomatonDesignBlock(block)) {
-    // The PUBLIC task only (an allowlist): the reference machine and the feedback never leave the server.
+  if (isAutomatonDesignBlock(block) || isMachineDesignBlock(block)) {
+    // AUTO-A3 / A10 — the PUBLIC task only (an allowlist): the reference machine and the feedback never leave the server.
     const { serverCheck: _authored, config, ...rest } = block as SimulationBlock;
     const c = (config ?? {}) as Partial<AutomatonDesignConfig>;
     const served: Record<string, unknown> = {};
