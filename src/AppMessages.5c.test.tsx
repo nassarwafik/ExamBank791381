@@ -8,12 +8,14 @@ import { render, cleanup, screen, fireEvent, within } from "@testing-library/rea
 import App from "./App";
 
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
+const late = <T,>(p: Promise<T>) => new Promise<T>(resolve => setTimeout(() => resolve(p), 50));
 let calls: string[] = [];
 
 function installFetch() {
   globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = String(input); calls.push(url.replace(/^https?:\/\/[^/]+/, ""));
-    if (url.includes("/api/platform-login")) return res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" });
+    // the sign-in answers LATE, as on a loaded machine: the login page (which has its own h1) is still there meanwhile
+    if (url.includes("/api/platform-login")) return late(res(200, { ok: true, role: "teacher", token: "teacher-token", displayName: "المعلم" }));
     if (url.includes("/api/project-tracker")) {
       if (url.includes("resource=projects-summary")) return res(200, { ok: true, totalReadyForReview: 0, byProject: {} });
       if (url.includes("resource=projects")) return res(200, { ok: true, projects: [] });
@@ -45,7 +47,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("Phase 5C — teacher «الرسائل» destination", () => {
   it("appears in the sidebar and opens TeacherMessagesPage using the existing roster APIs", async () => {
     render(<App />); await login();
-    await screen.findByRole("heading", { level: 1 });
+    // wait for what only the signed-in app has: the login page has an h1 of its own, so «any h1» could be met before sign-in ends
+    await screen.findByRole("complementary", { name: "التنقل الرئيسي" });
     const entry = within(sidebar()).getByRole("button", { name: "الرسائل" });
     fireEvent.click(entry);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("الرسائل");
