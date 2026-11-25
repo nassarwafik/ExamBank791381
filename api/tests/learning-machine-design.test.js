@@ -92,6 +92,24 @@ describe("AUTO-A10 — Turing machines: recognise a language, compute a function
     expect(judge(ONE_A_ANSWER, COMPUTE_KEY)).toEqual({ status: "judged", correct: false, counterexample: { word: "", expected: "", got: "a" } });
     expect(judge(ONE_DOLLAR, COMPUTE_KEY)).toEqual({ status: "judged", correct: false, counterexample: { word: "", expected: "", got: null } });
   });
+  it("compute (A10b, owner decision): a word the reference halts on WITHOUT accepting is outside the function — skipped, never judged", () => {
+    // x + y over {1, #}: the book's machine, defined on 1…1#1…1 only; on «1», «##», «1#1#»… it halts in a state that does not accept
+    const XPLUSY = { states: ["q0", "q1", "q2", "q3"], start: "q0", accept: ["q3"], transitions: [tmT("q0", "1", "$", "R", "q1"), tmT("q1", "1", "1", "R", "q1"),
+      tmT("q1", "#", "1", "R", "q2"), tmT("q0", "#", "$", "R", "q2"), tmT("q2", "1", "1", "R", "q2"), tmT("q2", "∆", "$", "R", "q3")] };
+    const key = { kind: "machine-design", rules: { machine: "TM", alphabet: ["1", "#"], mode: "compute", maxStates: 6 }, reference: XPLUSY };
+    const domain = n => { let c = 0; for (let len = 1; len <= n; len++) c += len; return c; };   // 1ᵃ#1ᵇ with a + b + 1 = len: len words
+    expect(judge(XPLUSY, key)).toEqual({ status: "judged", correct: true, agreesUpTo: { length: 8, words: domain(8), skipped: 511 - domain(8) } });
+    // another machine for x + y that writes garbage (or never stops) outside the domain still agrees
+    const garbage = { ...XPLUSY, states: [...XPLUSY.states, "g"], transitions: [...XPLUSY.transitions, tmT("q2", "#", "#", "S", "g"), tmT("g", "#", "$", "R", "g")] };
+    expect(judge(garbage, key)).toMatchObject({ correct: true });
+    const loopsOutside = { ...XPLUSY, transitions: [...XPLUSY.transitions, tmT("q1", "∆", "∆", "S", "q1")] };   // «1», «11»…: runs forever
+    expect(judge(loopsOutside, key)).toMatchObject({ correct: true });
+    // on the domain the answers are compared: x + y + 1 is wrong on «#» (0 + 0), the shortest word of the domain
+    const plusOne = { ...XPLUSY, states: [...XPLUSY.states, "q4"], transitions: XPLUSY.transitions.map(t => (t.from === "q2" && t.read === "∆" ? tmT("q2", "∆", "1", "R", "q4") : t)).concat([tmT("q4", "∆", "$", "R", "q3")]) };
+    expect(judge(plusOne, key)).toEqual({ status: "judged", correct: false, counterexample: { word: "#", expected: "", got: "1" } });
+    // a RECOGNISE task still judges every halted word (a reject is a verdict there, not «outside»)
+    expect(judge({ ...STARTS_A, accept: [] }, TM_KEY)).toMatchObject({ correct: false, counterexample: { word: "a", shouldAccept: true } });
+  });
   it("the lean halt agrees with the book's engine on every word up to length 6", () => {
     for (const m of [STARTS_A, EMPTY_ANSWER, ONE_A_ANSWER]) {
       const tm = readAutomatonConfig({ automaton: { kind: "TM", alphabet: ["a", "b"], blank: "∆", ...m } }).machine;

@@ -2072,6 +2072,937 @@ const m10: ContentModule = {
               "origin": "teacher-enrichment"
             }
           ]
+        },
+        {
+          "id": "899271-m10-l06-p03",
+          "title": "تدريبات الوحدة (3): صمّم آلة تورنغ تميّز لغة",
+          "order": 3,
+          "source": {
+            "kind": "book",
+            "sourceId": "899271",
+            "pdfPageStart": 47,
+            "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+          },
+          "layout": "practice",
+          "blocks": [
+            {
+              "id": "m10-l06-p03-b01",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: awb",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ تقبل اللغة {awb | w ∈ {a,b}*}: الكلمات التي تبدأ بـ a وتنتهي بـ b. الكلمة مكتوبة بعد ├، والرأس على أول رموزها.",
+                  "machine": "TM",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 6,
+                  "leftEnd": true,
+                  "examples": {
+                    "accept": [
+                      "ab",
+                      "abb",
+                      "aab"
+                    ],
+                    "reject": [
+                      "",
+                      "a",
+                      "ba",
+                      "aba"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q3"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "q3"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "q0 تقرأ a، و q1 تتجاوز الكلمة حتى ∆ ثم تعود خطوة يسارًا إلى q2، و q2 تقبل إن كان آخر رمز b.",
+                  "hints": [
+                    "تحقّق من الرمز الأول، ثم تجاوز الكلمة يمينًا حتى أول خانة فارغة ∆.",
+                    "من ∆ خطوة واحدة يسارًا: هنا آخر رمز، ويجب أن يكون b."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ تقبل اللغة {awb | w ∈ {a,b}*}: الكلمات التي تبدأ بـ a وتنتهي بـ b. الكلمة مكتوبة بعد ├، والرأس على أول رموزها."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p03-b02",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: (ab)ⁿ",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ تقبل اللغة {(ab)ⁿ | n > 0}.",
+                  "machine": "TM",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 6,
+                  "leftEnd": true,
+                  "examples": {
+                    "accept": [
+                      "ab",
+                      "abab"
+                    ],
+                    "reject": [
+                      "",
+                      "a",
+                      "aba",
+                      "ba"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q3"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "q3"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "q1 تنتظر b بعد كل a، و q2 تنتظر a أو ∆: الوصول إلى ∆ من q2 يعني أن الكلمة أزواج ab كاملة.",
+                  "hints": [
+                    "حالتان تتناوبان: واحدة تنتظر a وأخرى تنتظر b.",
+                    "متى تقبل؟ حين تصل إلى ∆ بعد b."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ تقبل اللغة {(ab)ⁿ | n > 0}."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p03-b03",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: aⁿbⁿ",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ تقبل اللغة {aⁿbⁿ | n ≥ 0} دون مكدّس: علّم على الشريط ما عالجته.",
+                  "machine": "TM",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 7,
+                  "leftEnd": true,
+                  "examples": {
+                    "accept": [
+                      "",
+                      "ab",
+                      "aabb"
+                    ],
+                    "reject": [
+                      "a",
+                      "ba",
+                      "aab",
+                      "abb"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3",
+                    "q4"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q3"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "write": "A",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "B",
+                      "write": "B",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "write": "B",
+                      "move": "L",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "a",
+                      "write": "a",
+                      "move": "L",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "B",
+                      "write": "B",
+                      "move": "L",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "A",
+                      "write": "A",
+                      "move": "R",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "B",
+                      "write": "B",
+                      "move": "R",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "B",
+                      "write": "B",
+                      "move": "R",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "q3"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "كل دورة تعلّم a واحدًا (A) و b واحدًا (B). حين لا يبقى a، تتأكد q4 أن ما بعده B فقط حتى ∆، فتقبل.",
+                  "hints": [
+                    "استبدل أول a بـ A، ثم اذهب يمينًا إلى أول b واستبدله بـ B، ثم عد يسارًا إلى A.",
+                    "حين تجد في البداية B بدل a: تأكد أنه لم يبقَ إلا B حتى ∆."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ تقبل اللغة {aⁿbⁿ | n ≥ 0} دون مكدّس: علّم على الشريط ما عالجته."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p03-b04",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: المتناظرات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ تقبل اللغة {w | w ∈ {a,b}*، w = R(w)} (السؤال 6).",
+                  "machine": "TM",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 9,
+                  "leftEnd": true,
+                  "examples": {
+                    "accept": [
+                      "",
+                      "a",
+                      "aba",
+                      "abba"
+                    ],
+                    "reject": [
+                      "ab",
+                      "abb",
+                      "aab"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "qa",
+                    "qb",
+                    "qa2",
+                    "qb2",
+                    "back",
+                    "acc"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "acc"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "write": "X",
+                      "move": "R",
+                      "to": "qa"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "write": "X",
+                      "move": "R",
+                      "to": "qb"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "acc"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "X",
+                      "write": "X",
+                      "move": "L",
+                      "to": "acc"
+                    },
+                    {
+                      "from": "qa",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "qa"
+                    },
+                    {
+                      "from": "qa",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "qa"
+                    },
+                    {
+                      "from": "qa",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "qa2"
+                    },
+                    {
+                      "from": "qa",
+                      "read": "X",
+                      "write": "X",
+                      "move": "L",
+                      "to": "qa2"
+                    },
+                    {
+                      "from": "qb",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "qb"
+                    },
+                    {
+                      "from": "qb",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "qb"
+                    },
+                    {
+                      "from": "qb",
+                      "read": "∆",
+                      "write": "∆",
+                      "move": "L",
+                      "to": "qb2"
+                    },
+                    {
+                      "from": "qb",
+                      "read": "X",
+                      "write": "X",
+                      "move": "L",
+                      "to": "qb2"
+                    },
+                    {
+                      "from": "qa2",
+                      "read": "a",
+                      "write": "X",
+                      "move": "L",
+                      "to": "back"
+                    },
+                    {
+                      "from": "qa2",
+                      "read": "X",
+                      "write": "X",
+                      "move": "L",
+                      "to": "acc"
+                    },
+                    {
+                      "from": "qb2",
+                      "read": "b",
+                      "write": "X",
+                      "move": "L",
+                      "to": "back"
+                    },
+                    {
+                      "from": "qb2",
+                      "read": "X",
+                      "write": "X",
+                      "move": "L",
+                      "to": "acc"
+                    },
+                    {
+                      "from": "back",
+                      "read": "a",
+                      "write": "a",
+                      "move": "L",
+                      "to": "back"
+                    },
+                    {
+                      "from": "back",
+                      "read": "b",
+                      "write": "b",
+                      "move": "L",
+                      "to": "back"
+                    },
+                    {
+                      "from": "back",
+                      "read": "X",
+                      "write": "X",
+                      "move": "R",
+                      "to": "q0"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "q0 تعلّم الرمز الأول بـ X وتتذكره بالحالة (qa أو qb)، تذهب إلى آخر رمز غير معلَّم وتتحقق أنه نفسه، ثم تعود. لا شيء يبقى → قبول.",
+                  "hints": [
+                    "الحالة نفسها تتذكّر الرمز الأول: حالة لـ a وأخرى لـ b.",
+                    "علّم الرمز الأول والأخير بـ X، وعد إلى أول رمز غير معلَّم."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ تقبل اللغة {w | w ∈ {a,b}*، w = R(w)} (السؤال 6)."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p03-b05",
+              "type": "practice",
+              "reveal": true,
+              "question": {
+                "kind": "trueFalse",
+                "prompt": "الفحص «تتفق آلتك مع النموذج على كل الكلمات حتى الطول 8» برهانٌ على أن آلتك تقبل اللغة نفسها.",
+                "answer": false,
+                "feedback": {
+                  "explanation": "ليس برهانًا: الفحص يجرّب كل الكلمات حتى طول معيّن فقط، وقد تختلف الآلتان على كلمة أطول."
+                }
+              },
+              "origin": "teacher-enrichment"
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l06-p04",
+          "title": "تدريبات الوحدة (4): صمّم آلة تورنغ تحسب دالة",
+          "order": 4,
+          "source": {
+            "kind": "book",
+            "sourceId": "899271",
+            "pdfPageStart": 47,
+            "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+          },
+          "layout": "practice",
+          "blocks": [
+            {
+              "id": "m10-l06-p04-b01",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: f(x) = x + 2",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ تحسب f(x) = x + 2: المدخل x بالتمثيل الأحادي (مثلًا 111 تعني 3)، والناتج يُكتب على الشريط كقيمة أحادية بين علامتي $.",
+                  "machine": "TM",
+                  "alphabet": [
+                    "1"
+                  ],
+                  "maxStates": 8,
+                  "mode": "compute",
+                  "leftEnd": true,
+                  "maxLength": 10,
+                  "examples": {
+                    "compute": [
+                      {
+                        "word": "111",
+                        "answer": "11111"
+                      },
+                      {
+                        "word": "",
+                        "answer": "11"
+                      }
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3",
+                    "q4",
+                    "q5"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q5"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "1",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "1",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "∆",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "∆",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q3",
+                      "read": "∆",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "∆",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q5"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "∆",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q2"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "$ مكان أول 1، ثم في آخر الشريط 1 بدله و 11 للزيادة، ثم $: بين العلامتين x + 2 من الآحاد.",
+                  "hints": [
+                    "اكتب $ مكان أول 1، فهو يُحسب من x، ثم تجاوز بقية الآحاد.",
+                    "عند ∆ اكتب ثلاثة آحاد (الواحد الذي صار $ واثنين)، ثم $."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ تحسب f(x) = x + 2: المدخل x بالتمثيل الأحادي (مثلًا 111 تعني 3)، والناتج يُكتب على الشريط كقيمة أحادية بين علامتي $."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p04-b02",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: X + Y",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ تحسب X + Y: المدخل 1ˣ#1ʸ (مثلًا 11#1 تعني 2 + 1)، والناتج بين علامتي $. المدخلات التي ليست من هذا الشكل لا تُفحص.",
+                  "machine": "TM",
+                  "alphabet": [
+                    "1",
+                    "#"
+                  ],
+                  "maxStates": 6,
+                  "mode": "compute",
+                  "leftEnd": true,
+                  "examples": {
+                    "compute": [
+                      {
+                        "word": "11#1",
+                        "answer": "111"
+                      },
+                      {
+                        "word": "#11",
+                        "answer": "11"
+                      },
+                      {
+                        "word": "#",
+                        "answer": ""
+                      }
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q3"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "1",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "1",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "#",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "#",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "1",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "∆",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q3"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "$ مكان أول 1 (أو مكان # إن كان x = 0)، و # يصير 1، و $ في أول خانة فارغة: بين العلامتين x + y من الآحاد.",
+                  "hints": [
+                    "لا حاجة إلى نقل الآحاد: اكتب $ في أول الشريط، واجعل # واحدًا.",
+                    "انتبه: إن بدأ المدخل بـ # فـ x = 0، وهذا الـ # هو $ نفسه."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ تحسب X + Y: المدخل 1ˣ#1ʸ (مثلًا 11#1 تعني 2 + 1)، والناتج بين علامتي $. المدخلات التي ليست من هذا الشكل لا تُفحص."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p04-b03",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: زوجية الطول",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم آلة تورنغ لكلمة w فوق {a,b} تكتب بعدها $1$ إن كان طولها زوجيًا و $0$ إن كان فرديًا.",
+                  "machine": "TM",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 8,
+                  "mode": "compute",
+                  "leftEnd": true,
+                  "examples": {
+                    "compute": [
+                      {
+                        "word": "ab",
+                        "answer": "1"
+                      },
+                      {
+                        "word": "aba",
+                        "answer": "0"
+                      },
+                      {
+                        "word": "",
+                        "answer": "1"
+                      }
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3",
+                    "q4",
+                    "q5"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q5"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "write": "a",
+                      "move": "R",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "write": "b",
+                      "move": "R",
+                      "to": "q0"
+                    },
+                    {
+                      "from": "q0",
+                      "read": "∆",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "∆",
+                      "write": "1",
+                      "move": "R",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "∆",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q3",
+                      "read": "∆",
+                      "write": "0",
+                      "move": "R",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q4",
+                      "read": "∆",
+                      "write": "$",
+                      "move": "R",
+                      "to": "q5"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "q0 (زوجي) و q1 (فردي) تتبادلان مع كل رمز. عند ∆ تكتب الآلة $، ثم الرقم حسب الحالة، ثم $.",
+                  "hints": [
+                    "حالتان تتناوبان أثناء المرور على الكلمة: «زوجي» و «فردي».",
+                    "عند ∆ اكتب $، ثم 1 أو 0 حسب الحالة، ثم $."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم آلة تورنغ: صمّم آلة تورنغ لكلمة w فوق {a,b} تكتب بعدها $1$ إن كان طولها زوجيًا و $0$ إن كان فرديًا."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m10-l06-p04-b04",
+              "type": "practice",
+              "question": {
+                "kind": "shortInput",
+                "prompt": "ما الجواب بين علامتي $ الذي تكتبه آلة زوجية الطول بعد الكلمة abab؟",
+                "answer": "1",
+                "feedback": {
+                  "explanation": "طول abab أربعة، زوجي: تكتب الآلة بعدها $1$، والجواب بين العلامتين 1."
+                }
+              },
+              "origin": "teacher-enrichment"
+            }
+          ]
         }
       ]
     },

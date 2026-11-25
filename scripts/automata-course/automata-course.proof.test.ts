@@ -24,7 +24,7 @@ import { automatonDesignKey } from "../../src/learning/study/eligibility";
 import { servedBlock } from "../../src/learning/study/checkIndex";
 import type { ContentBlock, SimulationBlock } from "../../src/learning/content/types";
 import { evaluateAutomatonDesign } from "../../api/src/lib/learning-automaton-design.js";
-import { evaluateMachineDesign } from "../../api/src/lib/learning-machine-design.js";
+import { evaluateMachineDesign, tmHalt, answerOnTape } from "../../api/src/lib/learning-machine-design.js";
 import { readMachineTask } from "../../src/learning/activities/machineDesign";
 import { machineDesignKey } from "../../src/learning/study/eligibility";
 
@@ -178,9 +178,14 @@ describe("the machine-design study key carries every public rule of the task (th
   });
 });
 describe("every push-down / Turing machine «صمّم الآلة» exercise is proven through the real server judge", () => {
-  it("the course has machine-design exercises", () => { expect(machineDesigns.length).toBeGreaterThanOrEqual(4); });
+  it("the course has machine-design exercises: four push-down (units 8, 9), four Turing machines that recognise and three that compute (unit 10)", () => {
+    const kinds = machineDesigns.map(r => { const t = (r.block.config as unknown as MachineCfg).task; return t.machine + (t.mode === "compute" ? ":compute" : ""); });
+    expect(kinds.filter(k => k === "PDA").length).toBe(4);
+    expect(kinds.filter(k => k === "TM").length).toBe(4);
+    expect(kinds.filter(k => k === "TM:compute").length).toBe(3);
+  });
   for (const r of machineDesigns) {
-    it(r.block.id + " — reads, reference = its language, examples agree, the reference passes the judge, a machine that accepts nothing does not", () => {
+    it(r.block.id + " — reads, reference = its language (or its function), examples agree, the reference passes the judge, a machine that does nothing does not", () => {
       const cfg = r.block.config as unknown as MachineCfg;
       const served = servedBlock(r.block as unknown as ContentBlock) as unknown as { config: Record<string, unknown>; serverCheck?: boolean };
       expect(Object.keys(served.config)).toEqual(["task"]);
@@ -190,22 +195,37 @@ describe("every push-down / Turing machine «صمّم الآلة» exercise is p
       expect(m.kind).toBe(cfg.task.machine);
       expect(cfg.reference.states as string[]).toEqual(m.states);
       expect((cfg.reference.states as string[]).length, "the reference fits the task's state limit").toBeLessThanOrEqual(cfg.task.maxStates ?? 12);
-      const lang = r.block._lang as (w: string) => boolean;
-      expect(typeof lang).toBe("function");
-      const all = words(cfg.task.alphabet, (r.block._langMax as number) ?? 7);
-      expect(all.filter(w => accepted(m, w) !== lang(w)).slice(0, 5), "words the reference judges differently from its language").toEqual([]);
-      for (const w of cfg.task.examples?.accept ?? []) expect(lang(w), "example «" + w + "» is accepted").toBe(true);
-      for (const w of cfg.task.examples?.reject ?? []) expect(lang(w), "example «" + w + "» is rejected").toBe(false);
       const key = machineDesignKey(r.block as unknown as SimulationBlock);
       expect(key).not.toBeNull();
       // the reference, sent as the learner sends a machine (the automaton-trace format), agrees with itself up to the judged length
       const v = evaluateMachineDesign(key, { kind: "machine-design", machine: r.block._machine }) as { status: string; correct: boolean; agreesUpTo?: { length: number; words: number } };
       expect([v.status, v.correct]).toEqual(["judged", true]);
       expect(v.agreesUpTo!.length).toBeGreaterThanOrEqual(cfg.task.alphabet.length > 2 ? 6 : 8);
-      // a machine that accepts nothing is wrong, on the shortest word the language contains
+      const all = words(cfg.task.alphabet, (r.block._langMax as number) ?? 7);
       const nothing = { states: ["q0"], start: "q0", accept: [], transitions: [] };
-      const w = evaluateMachineDesign(key, { kind: "machine-design", machine: nothing }) as { correct: boolean; counterexample?: { word: string; shouldAccept: boolean } };
+      const w = evaluateMachineDesign(key, { kind: "machine-design", machine: nothing }) as { correct: boolean; counterexample?: { word: string; shouldAccept?: boolean; expected?: string | null; got?: string | null } };
       expect(w.correct).toBe(false);
+      if (cfg.task.mode === "compute") {
+        // AUTO-A10b — a function: on its domain the reference ACCEPTS and leaves exactly fn(w) between the first two $; outside it (fn
+        // gives null) the reference halts without accepting — the judge then skips the word (owner decision 2026-11-25)
+        const fn = r.block._fn as (w: string) => string | null;
+        expect(typeof fn).toBe("function");
+        expect(m.kind).toBe("TM");
+        const wrong = all.filter(x => { const h = tmHalt(m, [...x]); const f = fn(x); return f === null ? h.verdict === "accept" : h.verdict !== "accept" || answerOnTape(h.tape) !== f; });
+        expect(wrong.slice(0, 5), "words on which the reference computes something else than its function").toEqual([]);
+        expect(all.some(x => fn(x) !== null), "the function's domain is not empty").toBe(true);
+        for (const ex of cfg.task.examples?.compute ?? []) expect(fn(ex.word), "example «" + ex.word + "»").toBe(ex.answer);
+        // a machine that writes nothing is wrong on the shortest word of the domain: no answer between two $
+        const first = all.find(x => fn(x) !== null)!;
+        expect(w.counterexample).toEqual({ word: first, expected: fn(first), got: null });
+        return;
+      }
+      const lang = r.block._lang as (w: string) => boolean;
+      expect(typeof lang).toBe("function");
+      expect(all.filter(x => accepted(m, x) !== lang(x)).slice(0, 5), "words the reference judges differently from its language").toEqual([]);
+      for (const x of cfg.task.examples?.accept ?? []) expect(lang(x), "example «" + x + "» is accepted").toBe(true);
+      for (const x of cfg.task.examples?.reject ?? []) expect(lang(x), "example «" + x + "» is rejected").toBe(false);
+      // a machine that accepts nothing is wrong, on the shortest word the language contains
       expect(w.counterexample!.shouldAccept).toBe(true);
       expect(lang(w.counterexample!.word)).toBe(true);
       expect(all.filter(x => lang(x))[0]).toBe(w.counterexample!.word);   // the shortest (shortlex) word of the language

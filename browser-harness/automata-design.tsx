@@ -23,6 +23,12 @@ const pdaBlock: SimulationBlock = {
   capabilities: { fullscreen: true, reset: true, interactive: true },
   config: { task: { intro: "صمّم أوتومات مكدّس حتميًا يقبل اللغة {aⁿb²ⁿ | 0 ≤ n}.", machine: "PDA", alphabet: ["a", "b"], maxStates: 6, examples: { accept: ["", "abb"], reject: ["ab"] } } },
 };
+// AUTO-A10b — a Turing machine «صمّم الآلة» that COMPUTES (the answer between two $), served: the task only, no check seam
+const tmBlock: SimulationBlock = {
+  id: "machine-2", type: "simulation", origin: "teacher-enrichment", simulationType: "machine-design", version: 1, title: "صمّم الآلة: f(x) = x + 2",
+  capabilities: { fullscreen: true, reset: true, interactive: true },
+  config: { task: { intro: "صمّم آلة تورنغ تحسب f(x) = x + 2.", machine: "TM", alphabet: ["1"], maxStates: 8, mode: "compute", leftEnd: true, maxLength: 10, examples: { compute: [{ word: "111", answer: "11111" }] } } },
+};
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <article style={{ maxWidth: 760, margin: "0 auto", padding: 16, lineHeight: 1.8 }}>
@@ -30,6 +36,8 @@ createRoot(document.getElementById("root")!).render(
       <AutomatonDesignActivity block={block} courseId="899271" reducedMotion fullscreen={false} commands={{ reset: 0, replay: 0 }} emit={() => {}} />
       <h2>تمرين: صمّم أوتومات مكدّس</h2>
       <section data-testid="machine-design"><MachineDesignActivity block={pdaBlock} courseId="899271" reducedMotion fullscreen={false} commands={{ reset: 0, replay: 0 }} emit={() => {}} /></section>
+      <h2>تمرين: صمّم آلة تورنغ تحسب دالة</h2>
+      <section data-testid="machine-design-tm"><MachineDesignActivity block={tmBlock} courseId="899271" reducedMotion fullscreen={false} commands={{ reset: 0, replay: 0 }} emit={() => {}} /></section>
     </article>
     <CourseToolDock courseId="899271" />
   </StrictMode>
