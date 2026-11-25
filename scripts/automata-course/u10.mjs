@@ -1,5 +1,5 @@
 // Unit 10 — آلة تورنغ (اللقاء 5، الشرائح 47–93؛ وظائف آلة تورنغ، الفصل 16).
-import { VIS, P, H, DEF, NOTE, TIP, SUM, OL, LIST, TABLE, EX, CLAR, SIM, MC, TF, SHORT, CLASSIFY, MATCH, ORDER, GUIDED, ADDED, tm } from "./dsl.mjs";
+import { VIS, P, H, DEF, NOTE, TIP, SUM, OL, LIST, TABLE, EX, CLAR, SIM, MC, TF, SHORT, CLASSIFY, MATCH, ORDER, GUIDED, ADDED, DESIGN_MACHINE, tm } from "./dsl.mjs";
 
 const len = w => [...w].length;
 export const AWB = tm({ states: ["q0", "q1", "q2", "q3"], alphabet: ["a", "b"], accept: ["q3"], t: [
@@ -27,6 +27,11 @@ export const PALINDROME = tm({ states: ["q0", "qa", "qb", "qa2", "qb2", "back", 
   "qa2 → back : a/X,L", "qa2 → acc : X/X,L", "qb2 → back : b/X,L", "qb2 → acc : X/X,L",
   "back → back : a/a,L", "back → back : b/b,L", "back → q0 : X/X,R"] });
 const counts = re => w => { const m = re.exec(w); return !!m && m.slice(2).every(g => g.length === m[1].length); };
+// AUTO-A10b — the functions the book's machines compute (authoring only): the answer between the two $, or null outside the domain
+const ones = n => "1".repeat(n);
+const plus2 = w => ones(len(w) + 2);
+const xPlusY = w => { const m = /^(1*)#(1*)$/.exec(w); return m ? ones(m[1].length + m[2].length) : null; };
+const parity = w => (len(w) % 2 === 0 ? "1" : "0");
 
 export default {
   n: 10,
@@ -229,6 +234,79 @@ export default {
             SHORT("كم رمز 1 تكتب آلة f(x) = x + 2 بين علامتي $ للمدخل 111؟", "5", "x = 3، والناتج x + 2 = 5: $11111$."),
             ORDER("رتّب ما تفعله آلة X + Y على المدخل 11#1:", ["تكتب $ مكان أول 1", "تتجاوز بقية آحاد x يمينًا", "تكتب 1 مكان #", "تتجاوز آحاد y يمينًا", "تكتب $ في أول خانة فارغة"], "الناتج $111$: ثلاثة آحاد = 2 + 1."),
             TF("أطروحة تشرتش وتورنغ مبرهنة رياضية مبرهنة.", false, "ليست مبرهنة: لا برهان لها، لأنه لا تعريف دقيقًا لما هو «قابل للحل خوارزميًا»."),
+          ],
+        },
+        // AUTO-A10b — «صمّم آلة تورنغ»: the learner builds it with the lab's rows; the server runs it and the book's own machine on every
+        // word up to a length (agreement up to that length, or the shortest word that tells them apart). Functions: the answer between
+        // the two $, judged on the inputs the book's machine accepts (owner decision 2026-11-25).
+        {
+          title: "تدريبات الوحدة (3): صمّم آلة تورنغ تميّز لغة",
+          layout: "practice",
+          blocks: [
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: awb",
+              intro: "صمّم آلة تورنغ تقبل اللغة `{awb | w ∈ {a,b}*}`: الكلمات التي تبدأ بـ a وتنتهي بـ b. الكلمة مكتوبة بعد ├، والرأس على أول رموزها.",
+              reference: AWB, maxStates: 6, lang: w => len(w) >= 2 && w.startsWith("a") && w.endsWith("b"), langMax: 8,
+              accept: ["ab", "abb", "aab"], reject: ["", "a", "ba", "aba"],
+              hints: ["تحقّق من الرمز الأول، ثم تجاوز الكلمة يمينًا حتى أول خانة فارغة ∆.", "من ∆ خطوة واحدة يسارًا: هنا آخر رمز، ويجب أن يكون b."],
+              explanation: "q0 تقرأ a، و q1 تتجاوز الكلمة حتى ∆ ثم تعود خطوة يسارًا إلى q2، و q2 تقبل إن كان آخر رمز b.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: (ab)ⁿ",
+              intro: "صمّم آلة تورنغ تقبل اللغة `{(ab)ⁿ | n > 0}`.",
+              reference: ABN, maxStates: 6, lang: w => /^(ab)+$/.test(w), langMax: 8,
+              accept: ["ab", "abab"], reject: ["", "a", "aba", "ba"],
+              hints: ["حالتان تتناوبان: واحدة تنتظر a وأخرى تنتظر b.", "متى تقبل؟ حين تصل إلى ∆ بعد b."],
+              explanation: "q1 تنتظر b بعد كل a، و q2 تنتظر a أو ∆: الوصول إلى ∆ من q2 يعني أن الكلمة أزواج ab كاملة.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: aⁿbⁿ",
+              intro: "صمّم آلة تورنغ تقبل اللغة `{aⁿbⁿ | n ≥ 0}` دون مكدّس: علّم على الشريط ما عالجته.",
+              reference: ANBN, maxStates: 7, lang: counts(/^(a*)(b*)$/), langMax: 8,
+              accept: ["", "ab", "aabb"], reject: ["a", "ba", "aab", "abb"],
+              hints: ["استبدل أول a بـ A، ثم اذهب يمينًا إلى أول b واستبدله بـ B، ثم عد يسارًا إلى A.", "حين تجد في البداية B بدل a: تأكد أنه لم يبقَ إلا B حتى ∆."],
+              explanation: "كل دورة تعلّم a واحدًا (A) و b واحدًا (B). حين لا يبقى a، تتأكد q4 أن ما بعده B فقط حتى ∆، فتقبل.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: المتناظرات",
+              intro: "صمّم آلة تورنغ تقبل اللغة `{w | w ∈ {a,b}*، w = R(w)}` (السؤال 6).",
+              reference: PALINDROME, maxStates: 9, lang: w => w === [...w].reverse().join(""), langMax: 8,
+              accept: ["", "a", "aba", "abba"], reject: ["ab", "abb", "aab"],
+              hints: ["الحالة نفسها تتذكّر الرمز الأول: حالة لـ a وأخرى لـ b.", "علّم الرمز الأول والأخير بـ X، وعد إلى أول رمز غير معلَّم."],
+              explanation: "q0 تعلّم الرمز الأول بـ X وتتذكره بالحالة (qa أو qb)، تذهب إلى آخر رمز غير معلَّم وتتحقق أنه نفسه، ثم تعود. لا شيء يبقى → قبول.",
+            }),
+            TF("الفحص «تتفق آلتك مع النموذج على كل الكلمات حتى الطول 8» برهانٌ على أن آلتك تقبل اللغة نفسها.", false, "ليس برهانًا: الفحص يجرّب كل الكلمات حتى طول معيّن فقط، وقد تختلف الآلتان على كلمة أطول."),
+          ],
+        },
+        {
+          title: "تدريبات الوحدة (4): صمّم آلة تورنغ تحسب دالة",
+          layout: "practice",
+          blocks: [
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: f(x) = x + 2",
+              intro: "صمّم آلة تورنغ تحسب `f(x) = x + 2`: المدخل x بالتمثيل الأحادي (مثلًا 111 تعني 3)، والناتج يُكتب على الشريط كقيمة أحادية بين علامتي $.",
+              reference: PLUS2, maxStates: 8, mode: "compute", fn: plus2, langMax: 10, maxLength: 10,
+              compute: [{ word: "111", answer: "11111" }, { word: "", answer: "11" }],
+              hints: ["اكتب $ مكان أول 1، فهو يُحسب من x، ثم تجاوز بقية الآحاد.", "عند ∆ اكتب ثلاثة آحاد (الواحد الذي صار $ واثنين)، ثم $."],
+              explanation: "$ مكان أول 1، ثم في آخر الشريط 1 بدله و 11 للزيادة، ثم $: بين العلامتين x + 2 من الآحاد.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: X + Y",
+              intro: "صمّم آلة تورنغ تحسب `X + Y`: المدخل `1ˣ#1ʸ` (مثلًا 11#1 تعني 2 + 1)، والناتج بين علامتي $. المدخلات التي ليست من هذا الشكل لا تُفحص.",
+              reference: XPLUSY, maxStates: 6, mode: "compute", fn: xPlusY, langMax: 8,
+              compute: [{ word: "11#1", answer: "111" }, { word: "#11", answer: "11" }, { word: "#", answer: "" }],
+              hints: ["لا حاجة إلى نقل الآحاد: اكتب $ في أول الشريط، واجعل # واحدًا.", "انتبه: إن بدأ المدخل بـ # فـ x = 0، وهذا الـ # هو $ نفسه."],
+              explanation: "$ مكان أول 1 (أو مكان # إن كان x = 0)، و # يصير 1، و $ في أول خانة فارغة: بين العلامتين x + y من الآحاد.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: زوجية الطول",
+              intro: "صمّم آلة تورنغ لكلمة w فوق `{a,b}` تكتب بعدها `$1$` إن كان طولها زوجيًا و `$0$` إن كان فرديًا.",
+              reference: PARITY, maxStates: 8, mode: "compute", fn: parity, langMax: 8,
+              compute: [{ word: "ab", answer: "1" }, { word: "aba", answer: "0" }, { word: "", answer: "1" }],
+              hints: ["حالتان تتناوبان أثناء المرور على الكلمة: «زوجي» و «فردي».", "عند ∆ اكتب $، ثم 1 أو 0 حسب الحالة، ثم $."],
+              explanation: "q0 (زوجي) و q1 (فردي) تتبادلان مع كل رمز. عند ∆ تكتب الآلة $، ثم الرقم حسب الحالة، ثم $.",
+            }),
+            SHORT("ما الجواب بين علامتي $ الذي تكتبه آلة زوجية الطول بعد الكلمة abab؟", "1", "طول abab أربعة، زوجي: تكتب الآلة بعدها $1$، والجواب بين العلامتين 1."),
           ],
         },
       ],

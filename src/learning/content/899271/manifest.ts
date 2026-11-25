@@ -1970,6 +1970,28 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 47,
                 "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
               }
+            },
+            {
+              "id": "899271-m10-l06-p03",
+              "title": "تدريبات الوحدة (3): صمّم آلة تورنغ تميّز لغة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+              }
+            },
+            {
+              "id": "899271-m10-l06-p04",
+              "title": "تدريبات الوحدة (4): صمّم آلة تورنغ تحسب دالة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+              }
             }
           ]
         },
