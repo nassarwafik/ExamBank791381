@@ -162,7 +162,7 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
   console.log(name + ": «صمّم الآلة» with the lab");
   errors.length = 0;
   await page.goto(origin + "/browser-harness/automata-design.html");
-  const act = page.locator(".learning-autodesign");
+  const act = page.locator(".learning-autodesign").first();   // the A7 exercise (the page also holds the A10 one)
   await act.waitFor({ timeout: 20000 });
   const cellOf = (from, symbol) => act.getByLabel("من " + from + " بالرمز " + symbol + " إلى", { exact: true });
   const quickText = () => act.getByTestId("autodesign-quick").innerText();
@@ -214,6 +214,43 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
   if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-design-lab-" + name + ".png"), fullPage: false });
   check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
   check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
+
+  // AUTO-A10 — a push-down «صمّم الآلة» exercise on the same page: built with the lab's row editor, run step by step
+  {
+    await page.goto(origin + "/browser-harness/automata-design.html");          // afresh: no tool panel open over the page
+    const md = page.getByTestId("machine-design");
+    await md.scrollIntoViewIfNeeded();
+    await md.getByRole("button", { name: /إضافة حالة/ }).click();
+    await md.getByRole("button", { name: /إضافة حالة/ }).click();
+    await md.getByLabel("قبول").first().check();
+    await md.getByLabel("قبول").nth(2).check();
+    await md.getByRole("button", { name: "إضافة انتقال" }).click();
+    await md.getByLabel("الانتقال 1: يُكتب").fill("SA");
+    await md.getByLabel("الانتقال 1: إلى").selectOption("q1");
+    await md.getByRole("button", { name: "إضافة انتقال" }).click();
+    await md.getByLabel("الانتقال 2: من").selectOption("q1");
+    await md.getByLabel("الانتقال 2: يقرأ").selectOption("b");
+    await md.getByLabel("الانتقال 2: القمة").fill("A");
+    await md.getByLabel("الانتقال 2: العملية").selectOption("pop");
+    await md.getByLabel("الانتقال 2: يُكتب").fill("A");
+    await md.getByLabel("الانتقال 2: إلى").selectOption("q2");
+    await md.getByRole("button", { name: "إضافة انتقال" }).click();
+    await md.getByLabel("الانتقال 3: من").selectOption("q2");
+    await md.getByLabel("الانتقال 3: يقرأ").selectOption("b");
+    await md.getByLabel("الانتقال 3: القمة").fill("S");
+    await md.getByLabel("الانتقال 3: العملية").selectOption("pop");
+    await md.getByLabel("الانتقال 3: يُكتب").fill("S");
+    await md.getByLabel("الانتقال 3: إلى").selectOption("q2");
+    const run = md.locator("section").filter({ has: page.getByRole("heading", { name: /شغّل آلتك خطوة خطوة/ }) });
+    await run.getByLabel("الكلمة", { exact: true }).fill("abb");
+    await run.getByRole("button", { name: "شغّل", exact: true }).click();
+    await run.getByRole("button", { name: "النهاية" }).click();
+    check(await run.getByText(/الكلمة مقبولة/).count() === 1 && await run.locator(".learning-automaton-stack").count() + await run.getByRole("region", { name: /^المكدّس/ }).count() > 0,
+      name + ": a push-down «صمّم الآلة» — built with the lab's rows, «abb» runs step by step to «الكلمة مقبولة», the stack drawn");
+    check((await md.getByTestId("alab-canvas").count()) === (name === "desktop" ? 1 : 0), name + ": the drawing editor " + (name === "desktop" ? "on the desktop" : "not on the phone"));
+    check(/يُفحص تصميمك عند فتح المادة من المنصة/.test(await md.innerText()), name + ": without a check seam the exercise says the check happens on the platform");
+    if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the push-down exercise (" + (await sideways()) + " px)");
+  }
 
   // AUTO-A8 — the exam question «تصميم أوتومات»
   console.log(name + ": the exam question «تصميم أوتومات»");

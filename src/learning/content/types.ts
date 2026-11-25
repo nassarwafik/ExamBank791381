@@ -372,9 +372,40 @@ export interface AutomatonDesignConfig {
  *  type guard: a network lab is a SimulationBlock too, so a guard's false branch would rule every simulation out. */
 export const isAutomatonDesignBlock = (block: { type: string; simulationType?: unknown }): boolean =>
   block.type === "simulation" && block.simulationType === AUTOMATON_DESIGN_KEY;
+/**
+ * AUTO-A10 (docs/enterprise-automata-lab-a4.md §14) — «صمّم الآلة» for a PUSH-DOWN automaton or a TURING machine: `simulation` /
+ * `machine-design` v1. Their languages cannot be compared exactly, so the SERVER runs both machines on every word up to a length
+ * (api/src/lib/learning-machine-design.js): agreement up to that length, or the shortest word on which they certainly disagree. A new
+ * family, not a new version of automaton-design (whose verdict is a proof). Authored config:
+ *   • task      — PUBLIC: the statement, the machine (PDA / TM), the input alphabet, the state limit, for a TM the mode («recognize» a
+ *                 language / «compute» a function, the answer between two $) and the left-end mark, the longest word tried, examples;
+ *   • reference — the PRIVATE reference machine (the automaton-trace format of its kind): never served, judged on the server only;
+ *   • feedback  — right / wrong messages, hints and the explanation: never served.
+ * The served body keeps `task` only and carries `serverCheck: true` (checkIndex.ts servedBlock).
+ */
+export const MACHINE_DESIGN_KEY = "machine-design";
+export const MACHINE_DESIGN_VERSION = 1;
+export interface MachineDesignTask {
+  intro: string;
+  machine: "PDA" | "TM";
+  alphabet: string[];
+  maxStates?: number;
+  mode?: "recognize" | "compute";
+  leftEnd?: boolean;
+  maxLength?: number;
+  examples?: { accept?: string[]; reject?: string[]; compute?: { word: string; answer: string }[] };
+}
+export interface MachineDesignConfig {
+  task: MachineDesignTask;
+  reference?: Record<string, unknown>;
+  feedback?: { correctFeedback?: string; incorrectFeedback?: string; hints?: string[]; explanation?: string };
+}
+/** A machine-design block (any version). A plain boolean, as isAutomatonDesignBlock. */
+export const isMachineDesignBlock = (block: { type: string; simulationType?: unknown }): boolean =>
+  block.type === "simulation" && block.simulationType === MACHINE_DESIGN_KEY;
 /** A simulation whose answer the SERVER judges (its key never reaches the browser): a network lab or a «صمّم الآلة» exercise. */
 export const isServerJudgedSimulation = (block: { type: string; simulationType?: unknown }): block is SimulationBlock =>
-  isNetworkLabBlock(block) || isAutomatonDesignBlock(block);
+  isNetworkLabBlock(block) || isAutomatonDesignBlock(block) || isMachineDesignBlock(block);
 /** A guided, stepped animation of a concept (e.g. a packet traversing a path). Registry key = `animationType`. */
 export interface AnimationBlock extends ActivityBlockBase {
   type: "animation";

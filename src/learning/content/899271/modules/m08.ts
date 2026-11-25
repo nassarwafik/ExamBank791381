@@ -1684,6 +1684,241 @@ const m08: ContentModule = {
                 }
               },
               "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m08-l04-p02-b06",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: aⁿb²ⁿ",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {aⁿb²ⁿ | 0 ≤ n}: لكل a اثنان من b.",
+                  "machine": "PDA",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 6,
+                  "examples": {
+                    "accept": [
+                      "",
+                      "abb",
+                      "aabbbb"
+                    ],
+                    "reject": [
+                      "ab",
+                      "abbb",
+                      "ba"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q0",
+                    "q3"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "⏊",
+                      "op": "push",
+                      "write": "SA",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "a",
+                      "top": "A",
+                      "op": "push",
+                      "write": "AA",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "top": "S",
+                      "op": "pop",
+                      "write": "S",
+                      "to": "q3"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "ندفع رمزين لكل a (أولهما S للعلامة)، ونسحب واحدًا لكل b؛ حين يُسحب S نكون في حالة القبول.",
+                  "hints": [
+                    "كم رمزًا ندفع لكل a كي نسحب واحدًا لكل b؟",
+                    "علّم أول ما يُدفع برمز خاص (S) لتعرف متى عدت إلى البداية."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات مكدّس: صمّم أوتومات مكدّس حتميًا يقبل اللغة {aⁿb²ⁿ | 0 ≤ n}: لكل a اثنان من b."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m08-l04-p02-b07",
+              "type": "simulation",
+              "simulationType": "machine-design",
+              "version": 1,
+              "title": "صمّم الآلة: (ab)ⁿbⁿ",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {(ab)ⁿbⁿ | 0 ≤ n} (تمرين ج من الشرائح).",
+                  "machine": "PDA",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 7,
+                  "examples": {
+                    "accept": [
+                      "",
+                      "abb",
+                      "ababbb"
+                    ],
+                    "reject": [
+                      "ab",
+                      "abbb",
+                      "aabb"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3",
+                    "q4"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q0",
+                    "q4"
+                  ],
+                  "transitions": [
+                    {
+                      "from": "q0",
+                      "read": "a",
+                      "top": "⏊",
+                      "op": "push",
+                      "write": "S",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "top": "S",
+                      "op": "none",
+                      "write": "",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q1",
+                      "read": "b",
+                      "top": "A",
+                      "op": "none",
+                      "write": "",
+                      "to": "q2"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "a",
+                      "top": "S",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "a",
+                      "top": "A",
+                      "op": "push",
+                      "write": "A",
+                      "to": "q1"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "top": "S",
+                      "op": "pop",
+                      "write": "S",
+                      "to": "q4"
+                    },
+                    {
+                      "from": "q2",
+                      "read": "b",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q3",
+                      "read": "b",
+                      "top": "A",
+                      "op": "pop",
+                      "write": "A",
+                      "to": "q3"
+                    },
+                    {
+                      "from": "q3",
+                      "read": "b",
+                      "top": "S",
+                      "op": "pop",
+                      "write": "S",
+                      "to": "q4"
+                    }
+                  ]
+                },
+                "feedback": {
+                  "explanation": "ندفع عند a كل زوج (S للأول)، و b الزوج «بلا تغيير»؛ في الجزء الأخير كل b يسحب، وسحب S يعني القبول.",
+                  "hints": [
+                    "كل زوج ab يدفع رمزًا واحدًا، ثم كل b في الجزء الثاني يسحب رمزًا.",
+                    "بين a وb داخل الزوج لا نغيّر المكدّس: «بلا تغيير»."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات مكدّس: صمّم أوتومات مكدّس حتميًا يقبل اللغة {(ab)ⁿbⁿ | 0 ≤ n} (تمرين ج من الشرائح)."
+              },
+              "origin": "teacher-enrichment"
             }
           ]
         }

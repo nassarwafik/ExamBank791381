@@ -1,5 +1,5 @@
 // Unit 8 — أوتومات المكدّس (اللقاء 4، الشرائح 35–78؛ محاكاة أوتومات المكدّس).
-import { P, H, DEF, NOTE, OL, LIST, EX, CLAR, VIS, SIM, MC, TF, SHORT, CLASSIFY, ORDER, MATCH, GUIDED, pda } from "./dsl.mjs";
+import { P, H, DEF, NOTE, OL, LIST, EX, CLAR, VIS, SIM, MC, TF, SHORT, CLASSIFY, ORDER, MATCH, GUIDED, DESIGN_MACHINE, pda } from "./dsl.mjs";
 
 const anbn = w => { const m = /^(a*)(b*)$/.exec(w); return !!m && m[1].length === m[2].length; };
 const abnbn = w => { const m = /^((?:ab)*)(b*)$/.exec(w); return !!m && m[1].length / 2 === m[2].length; };
@@ -162,6 +162,24 @@ export default {
             SHORT("كم رمزًا في المكدّس (دون القاع) بعد قراءة aaaa في أوتومات aⁿbⁿ؟", "4", "S ثم A ثلاث مرات: أربعة رموز."),
             ORDER("رتّب أفكار بناء أوتومات aⁿbⁿ:", ["q0 حالة قبول لأن ε في اللغة", "لـ a الأول ندفع S", "لكل a إضافي ندفع A", "لكل b نسحب A ونبقى في حالة المقارنة", "حين يكون S في القمة نسحبه وننتقل إلى حالة القبول"], "الترتيب كما في الشرائح."),
             MC("لماذا ندفع S لـ a الأول وليس A؟", ["*كي نعرف متى نصل إلى b الأخير المطابق، فنسحب S وننتقل إلى حالة القبول", "لأن A ممنوع في البداية", "لأن S أصغر", "لا فرق بينهما"], "S علامة لأول a: حين يظهر في القمة نعرف أن عدد b ساوى عدد a."),
+            // AUTO-A10 — «صمّم الآلة» for a push-down automaton: the learner builds it; the server runs it and the book's own machine
+            // on every word up to length 8 (agreement up to that length, or the shortest word that tells them apart)
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: aⁿb²ⁿ",
+              intro: "صمّم أوتومات مكدّس حتميًا يقبل اللغة `{aⁿb²ⁿ | 0 ≤ n}`: لكل a اثنان من b.",
+              reference: ANB2N, maxStates: 6, lang: anb2n, langMax: 9,
+              accept: ["", "abb", "aabbbb"], reject: ["ab", "abbb", "ba"],
+              hints: ["كم رمزًا ندفع لكل `a` كي نسحب واحدًا لكل `b`؟", "علّم أول ما يُدفع برمز خاص (`S`) لتعرف متى عدت إلى البداية."],
+              explanation: "ندفع رمزين لكل a (أولهما S للعلامة)، ونسحب واحدًا لكل b؛ حين يُسحب S نكون في حالة القبول.",
+            }),
+            DESIGN_MACHINE({
+              title: "صمّم الآلة: (ab)ⁿbⁿ",
+              intro: "صمّم أوتومات مكدّس حتميًا يقبل اللغة `{(ab)ⁿbⁿ | 0 ≤ n}` (تمرين ج من الشرائح).",
+              reference: ABN_BN, maxStates: 7, lang: abnbn, langMax: 9,
+              accept: ["", "abb", "ababbb"], reject: ["ab", "abbb", "aabb"],
+              hints: ["كل زوج `ab` يدفع رمزًا واحدًا، ثم كل `b` في الجزء الثاني يسحب رمزًا.", "بين `a` و`b` داخل الزوج لا نغيّر المكدّس: «بلا تغيير»."],
+              explanation: "ندفع عند a كل زوج (S للأول)، و b الزوج «بلا تغيير»؛ في الجزء الأخير كل b يسحب، وسحب S يعني القبول.",
+            }),
           ],
         },
       ],

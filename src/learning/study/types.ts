@@ -14,7 +14,8 @@ export type StudyResponse =
   /** 791381s Phase 8B — a network lab: the learner's action list (the server replays and judges it). */
   | { kind: "network-lab"; actions: unknown[] }
   /** AUTO-A3 — «صمّم الآلة»: the learner's machine (the server compares its language with the reference). */
-  | { kind: "automaton-design"; machine: AutomatonDesignMachine };
+  | { kind: "automaton-design"; machine: AutomatonDesignMachine }
+  | { kind: "machine-design"; machine: Record<string, unknown> };
 
 /** The server's study policy: each module is worth up to `modulePointsMax` (20) = round(completed / eligible × 20). */
 export type StudyPolicy = { modulePointsMax: number; moduleCount: number };
@@ -52,7 +53,11 @@ export type StudyAttemptResponse = {
   /** AUTO-A3 — «صمّم الآلة», a wrong machine that breaks a PUBLIC rule of the task: which rule (and where). */
   issue?: AutomatonDesignIssue;
   /** AUTO-A3 — «صمّم الآلة», a wrong machine within the rules: the SHORTEST word on which it and the reference disagree. */
-  counterexample?: { word: string; shouldAccept: boolean };
+  counterexample?: { word: string; shouldAccept?: boolean; expected?: string | null; got?: string | null };
+  /** AUTO-A10 — a Turing machine that did not halt where the reference did. */
+  nohalt?: { word: string };
+  /** AUTO-A10 — a push-down / Turing machine that agreed with the reference on every word up to a length (not a proof). */
+  agreesUpTo?: { length: number; words: number; skipped?: number };
 };
 /** The public rule a «صمّم الآلة» machine broke (api/src/lib/learning-automaton-design.js readMachine). */
 export type AutomatonDesignIssue = { code: string; state?: string; symbol?: string; max?: number };

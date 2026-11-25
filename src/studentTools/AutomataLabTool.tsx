@@ -1,6 +1,5 @@
 import { useId, useMemo, useState } from "react";
 import type { AutomataLabToolV1 } from "./studentToolsSpec";
-import type { PdaOp, TmMove } from "../learning/activities/automaton";
 import { buildScene } from "../learning/activities/automatonScene";
 import { AutomatonPlayer } from "../learning/activities/AutomatonPlayer";
 import {
@@ -13,6 +12,7 @@ import AutomataLabAlgorithms, { type Shelf } from "./AutomataLabAlgorithms";
 import AutomataWordTools from "./AutomataWordTools";
 import SaveDrawing from "./SaveDrawing";
 import AutomataLabCanvas, { finePointer } from "./AutomataLabCanvas";
+import { PdaRows, TmRows } from "./AutomataLabRows";
 import { copyDraft } from "./automataLabHandoff";
 import "../learning/activities/activities.css";
 import "../learning/activities/automatonDesign.css";
@@ -35,8 +35,6 @@ import "./automataLab.css";
  */
 
 type Stamped<T> = { stamp: string; value: T };
-const MOVE_TEXT: Record<TmMove, string> = { R: "يمينًا R", L: "يسارًا L", S: "بلا حركة S" };
-const OP_TEXT: Record<PdaOp, string> = { push: "ادفع", pop: "اسحب", none: "بلا تغيير" };
 const shown = (w: string) => (w === "" ? "ε" : w);
 const FROM_ACTIVITY = "فُتحت هنا نسخة من آلتك في التمرين. ما تغيّره في المختبر لا يغيّر التمرين، والتحقق من الحل يبقى في التمرين.";
 
@@ -337,99 +335,4 @@ function FaTable({ draft, ids, setCell, toggleCell }: { draft: LabDraft; ids: st
   );
 }
 
-function StateSelect({ value, states, onChange, label }: { value: string; states: string[]; onChange: (v: string) => void; label: string }) {
-  return (
-    <select className="learning-autodesign-select" dir="ltr" value={states.includes(value) ? value : ""} onChange={e => onChange(e.target.value)} aria-label={label}>
-      {!states.includes(value) && <option value="">—</option>}
-      {states.map(s => <option key={s} value={s}>{s}</option>)}
-    </select>
-  );
-}
-
-function SymbolInput({ value, onChange, label, list, allowEmpty }: { value: string; onChange: (v: string) => void; label: string; list: string; allowEmpty?: boolean }) {
-  return (
-    <input className="stt-input alab-sym" dir="ltr" value={value} maxLength={allowEmpty ? 8 : 2} list={list} autoComplete="off" spellCheck={false}
-      aria-label={label} onChange={e => onChange(allowEmpty ? e.target.value.replace(/\s/g, "") : [...e.target.value.replace(/\s/g, "")].slice(-1).join(""))} />
-  );
-}
-
-function PdaRows({ draft, ids, symbols, set, remove, add }: { draft: LabDraft; ids: string; symbols: string[]; set: (i: number, p: Partial<PdaRow>) => void; remove: (i: number) => void; add: () => void }) {
-  const list = ids + "-pda-syms";
-  return (
-    <>
-      <p className="stt-hint">كل انتقال بترميز المادة: «ادفع a,{BOTTOM}/S» = نقرأ a وفي القمة {BOTTOM} فندفع S. «اسحب b,A/A» يسحب القمة A. «بلا تغيير» لا يمسّ المكدّس. القاع {BOTTOM}.</p>
-      <datalist id={list}>{symbols.map(s => <option key={s} value={s} />)}</datalist>
-      <div className="learning-autodesign-tablewrap" tabIndex={0} role="region" aria-label="انتقالات أوتومات المكدّس">
-        <table className="learning-autodesign-table alab-rows">
-          <thead><tr><th scope="col">#</th><th scope="col">من</th><th scope="col">يقرأ</th><th scope="col">القمة</th><th scope="col">العملية</th><th scope="col">يُكتب</th><th scope="col">إلى</th><th scope="col">بالترميز</th><th scope="col"><span className="alab-sr">حذف</span></th></tr></thead>
-          <tbody>
-            {draft.pda.map((r, i) => {
-              const n = "الانتقال " + (i + 1) + ": ";
-              return (
-                <tr key={i}>
-                  <th scope="row">{i + 1}</th>
-                  <td><StateSelect value={r.from} states={draft.states} onChange={v => set(i, { from: v })} label={n + "من"} /></td>
-                  <td>
-                    <select className="learning-autodesign-select" dir="ltr" value={draft.alphabet.includes(r.read) ? r.read : ""} onChange={e => set(i, { read: e.target.value })} aria-label={n + "يقرأ"}>
-                      {!draft.alphabet.includes(r.read) && <option value="">—</option>}
-                      {draft.alphabet.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td><SymbolInput value={r.top} onChange={v => set(i, { top: v })} label={n + "القمة"} list={list} /></td>
-                  <td>
-                    <select className="learning-autodesign-select" value={r.op} onChange={e => set(i, { op: e.target.value as PdaOp })} aria-label={n + "العملية"}>
-                      {(["push", "pop", "none"] as PdaOp[]).map(o => <option key={o} value={o}>{OP_TEXT[o]}</option>)}
-                    </select>
-                  </td>
-                  <td><SymbolInput value={r.write} onChange={v => set(i, { write: v })} label={n + "يُكتب"} list={list} allowEmpty /></td>
-                  <td><StateSelect value={r.to} states={draft.states} onChange={v => set(i, { to: v })} label={n + "إلى"} /></td>
-                  <td dir="rtl" className="alab-notation">{OP_TEXT[r.op] + " " + (r.read || "?") + "," + (r.top || "?") + "/" + r.write}</td>
-                  <td><button type="button" className="learning-autodesign-btn is-quiet" onClick={() => remove(i)} aria-label={"احذف " + n.slice(0, -2)}>حذف</button></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <button type="button" className="stt-btn" onClick={add}>إضافة انتقال</button>
-    </>
-  );
-}
-
-function TmRows({ draft, ids, symbols, set, remove, add }: { draft: LabDraft; ids: string; symbols: string[]; set: (i: number, p: Partial<TmRow>) => void; remove: (i: number) => void; add: () => void }) {
-  const list = ids + "-tm-syms";
-  return (
-    <>
-      <p className="stt-hint">كل انتقال بترميز المادة: «a/A,R» = نقرأ a فنكتب A ونتحرك يمينًا. الفراغ {BLANK}{draft.leftEnd ? "، وبداية الشريط " + LEFT_END : ""}. تتوقف الآلة حين لا انتقال، وتقبل إن توقفت في حالة قبول.</p>
-      <datalist id={list}>{symbols.map(s => <option key={s} value={s} />)}</datalist>
-      <div className="learning-autodesign-tablewrap" tabIndex={0} role="region" aria-label="انتقالات آلة تورنغ">
-        <table className="learning-autodesign-table alab-rows">
-          <thead><tr><th scope="col">#</th><th scope="col">من</th><th scope="col">يقرأ</th><th scope="col">يكتب</th><th scope="col">الحركة</th><th scope="col">إلى</th><th scope="col">بالترميز</th><th scope="col"><span className="alab-sr">حذف</span></th></tr></thead>
-          <tbody>
-            {draft.tm.map((r, i) => {
-              const n = "الانتقال " + (i + 1) + ": ";
-              return (
-                <tr key={i}>
-                  <th scope="row">{i + 1}</th>
-                  <td><StateSelect value={r.from} states={draft.states} onChange={v => set(i, { from: v })} label={n + "من"} /></td>
-                  <td><SymbolInput value={r.read} onChange={v => set(i, { read: v })} label={n + "يقرأ"} list={list} /></td>
-                  <td><SymbolInput value={r.write} onChange={v => set(i, { write: v })} label={n + "يكتب"} list={list} /></td>
-                  <td>
-                    <select className="learning-autodesign-select" value={r.move} onChange={e => set(i, { move: e.target.value as TmMove })} aria-label={n + "الحركة"}>
-                      {(["R", "L", "S"] as TmMove[]).map(m => <option key={m} value={m}>{MOVE_TEXT[m]}</option>)}
-                    </select>
-                  </td>
-                  <td><StateSelect value={r.to} states={draft.states} onChange={v => set(i, { to: v })} label={n + "إلى"} /></td>
-                  <td dir="ltr" className="alab-notation">{(r.read || "?") + "/" + (r.write || "?") + "," + r.move}</td>
-                  <td><button type="button" className="learning-autodesign-btn is-quiet" onClick={() => remove(i)} aria-label={"احذف " + n.slice(0, -2)}>حذف</button></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <button type="button" className="stt-btn" onClick={add}>إضافة انتقال</button>
-    </>
-  );
-}
 

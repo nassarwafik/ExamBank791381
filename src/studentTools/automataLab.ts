@@ -128,7 +128,9 @@ export function parseAlphabet(text: string): { ok: true; alphabet: string[] } | 
 // ────────────────────────────────────────────────────────────────────────────
 
 export type LabIssue = { code: string; text: string };
-export type LabCheck = { machine: Machine | null; issues: LabIssue[] };
+/** `raw` (AUTO-A10): the machine in the automaton-trace format the course's reader read it from — what a «صمّم الآلة» exercise for a
+ *  push-down automaton / Turing machine sends to the server judge. */
+export type LabCheck = { machine: Machine | null; issues: LabIssue[]; raw?: Record<string, unknown> };
 
 const OP_WORD: Record<PdaOp, string> = { push: "ادفع", pop: "اسحب", none: "بلا تغيير" };
 
@@ -210,7 +212,7 @@ export function checkDraft(d: LabDraft): LabCheck {
   };
   const read = readAutomatonConfig({ automaton });
   if (!read) return { machine: null, issues: [{ code: "unreadable", text: "تعذّر قراءة الآلة. راجع الحالات والانتقالات." }] };
-  return { machine: read.machine, issues: [] };
+  return { machine: read.machine, issues: [], raw: automaton };
 }
 
 /** A machine as a draft (to open a machine in the lab): the exact inverse of `checkDraft` for every machine the course's reader reads. */

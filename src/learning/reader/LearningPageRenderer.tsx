@@ -484,7 +484,7 @@ function labCheckOf(block: ContentBlock, ctx: ActivityRenderContext): ActivityCh
   const { study, pageId } = ctx;
   return async response => {
     const r = await study.report(pageId, block.id, response);
-    return { correct: r.correct, parts: r.parts, feedback: r.feedback, study: r.study, persisted: r.persisted, alreadyCompleted: r.alreadyCompleted, issue: r.issue, counterexample: r.counterexample };
+    return { correct: r.correct, parts: r.parts, feedback: r.feedback, study: r.study, persisted: r.persisted, alreadyCompleted: r.alreadyCompleted, issue: r.issue, counterexample: r.counterexample, nohalt: r.nohalt, agreesUpTo: r.agreesUpTo };
   };
 }
 
