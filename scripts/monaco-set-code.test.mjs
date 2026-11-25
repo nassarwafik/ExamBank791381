@@ -24,6 +24,7 @@ describe("showsProgram", () => {
   });
   it("refuses lines out of order, and a changed line", () => {
     expect(showsProgram([shown[1], shown[0], ...shown.slice(2)], program)).toBe(false);
+    expect(showsProgram([shown[4], shown[2], shown[3]], program)).toBe(false);   // a partial view out of order
     expect(showsProgram(shown.map(l => l.replace("WriteLine(1)", "WriteLine(2)")), program)).toBe(false);
   });
 });
