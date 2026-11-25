@@ -66,6 +66,7 @@ const INT = /^-?\d{1,15}$/;
  *   • V17 — fields: `p.Age`, a chain `p.Home.City`, a struct's field, a field of `this` written bare (`Age` in its class), a static
  *     field `Counter.Made` (or bare, when exactly one type has it); `s.Length` of a string;
  *   • V17 — calls: the writer's method → the value it returned (`calls`, below); `Math.Abs` / `Math.Max` / `Math.Min` of whole numbers;
+ *   • V20 — `list.Contains(x)` of an array / List<T> / HashSet<T>; `Math.Sqrt` of a whole number ≥ 0;
  *   • V19 — `Math.Pow` of whole numbers when the result is a whole number exactly; `s.Contains("…")` / `s.Contains('c')` of a
  *     string; a method call after an index is asked of what the index gave (never of the chain's first name);
  *   • V18 — a dictionary: `d[key]` → that key's value, `d.Count`, `d.ContainsKey(k)` / `d.ContainsValue(v)` (keys matched as Console
@@ -129,6 +130,18 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     if (/^(int|long|short|byte)$/.test(type)) return INT.test(cell) ? cell : null;
     if (/^(double|float|decimal)$/.test(type)) return /^-?\d+(\.\d+)?$/.test(cell) ? cell : null;
     return null;
+  };
+  /** V20: an array / List<T> / LinkedList<T> / HashSet<T> / SortedSet<T> — its cells and its element type (null for a 2-D array, a
+   *  jagged one, or a type not read). */
+  const elementsOf = (g: Got): { items: string[]; type: string } | null => {
+    if (g?.t !== "val" || g.v.t !== "ref") return null;
+    const o = byId.get(g.v.id);
+    if (o?.k !== "array" && o?.k !== "set") return null;
+    const arr = /^([A-Za-z_][\w.]*)\[\]$/.exec(o.type);
+    if (arr) return { items: o.items, type: arr[1] };
+    const gen = /^\w+<(.+)>$/.exec(o.type);
+    const ts = gen ? typeArgs(gen[1]) : [];
+    return ts.length === 1 ? { items: o.items, type: ts[0] } : null;
   };
   /** Whether `list` holds `want` — false only when nothing was left out for space. */
   const holds = (list: string[], want: string | null): Got => {
@@ -205,6 +218,12 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
     const ns = xs.map(Number);
     if (fn === "Abs" && ns.length === 1) return { t: "lit", s: String(Math.abs(ns[0])) };
     if ((fn === "Max" || fn === "Min") && ns.length === 2) return { t: "lit", s: String(fn === "Max" ? Math.max(ns[0], ns[1]) : Math.min(ns[0], ns[1])) };
+    if (fn === "Sqrt" && ns.length === 1 && ns[0] >= 0) {
+      // V20: IEEE's correctly rounded square root (as C#'s Math.Sqrt), written in its shortest form (as .NET prints a double); a
+      // result written with an exponent stays as written
+      const r = String(Math.sqrt(ns[0]));
+      return /e/i.test(r) ? null : { t: "lit", s: r };
+    }
     if (fn === "Pow" && ns.length === 2 && ns[1] >= 0 && ns[1] <= 1000) {
       // V19: a whole number exactly (C#'s double holds it exactly up to 2^53); else it stays as written
       const r = BigInt(ns[0]) ** BigInt(ns[1]);
@@ -278,12 +297,18 @@ export function fillValues(text: string, frame: DsFrame, objs: readonly DsObj[],
             const mp = ownerKnown ? mapOf(owner) : null, xs = args(inner);
             got = mp && xs.length === 1 ? (name === "ContainsKey" ? holds(mp.keys, printed(xs[0], mp.key)) : holds(mp.items, printed(xs[0], mp.value))) : null;
           } else if (name === "Contains" && ownerKnown && path.length >= 2) {
-            // V19: s.Contains("ab") / s.Contains('a') — a string with no escapes, an argument written as a literal (ordinal, as C#)
-            const text = lit(owner), xs = args(inner);
-            const plainText = (x: string | null) => (x && /^"[^"\\]*"$/.test(x) ? x.slice(1, -1) : null);
-            const hay = plainText(text);
-            const needle = xs.length === 1 ? plainText(xs[0]) ?? (/^'[^'\\]'$/.test(xs[0]) ? xs[0].slice(1, -1) : null) : null;
-            got = hay !== null && needle !== null ? { t: "lit", s: String(hay.includes(needle)) } : null;
+            const text = lit(owner), xs = args(inner), els = elementsOf(owner);
+            if (els) {
+              // V20: list.Contains(x) of an array / List<T> / HashSet<T> — x written as Console prints the element type; false only
+              // when nothing was clipped for space
+              got = xs.length === 1 ? holds(els.items, printed(xs[0], els.type)) : null;
+            } else {
+              // V19: s.Contains("ab") / s.Contains('a') — a string with no escapes, an argument written as a literal (ordinal, as C#)
+              const plainText = (x: string | null) => (x && /^"[^"\\]*"$/.test(x) ? x.slice(1, -1) : null);
+              const hay = plainText(text);
+              const needle = xs.length === 1 ? plainText(xs[0]) ?? (/^'[^'\\]'$/.test(xs[0]) ? xs[0].slice(1, -1) : null) : null;
+              got = hay !== null && needle !== null ? { t: "lit", s: String(hay.includes(needle)) } : null;
+            }
           } else if (name === "Count" && inner.trim() === "" && path.length >= 2) {
             // list.Count(): the length of what the chain before it holds
             got = null;
