@@ -159,6 +159,13 @@ describe("AUTO-A14 — the shipped theory exams are exactly the build of the cou
     expect([...kinds].sort()).toEqual(["آلة تورنغ", "أوتومات منتهٍ حتمي", "أوتومات منتهٍ غير حتمي", "أوتومات مكدّس"].sort());
   });
 
+  it("«the machine above» is the NEAREST simulator above the exercise on ITS page — never an earlier one, never another page's", () => {
+    const sim = (pageId, kind) => ({ unit: 1, pageId, block: { type: "simulation", simulationType: "automaton-trace", config: { automaton: { kind } } } });
+    const ex = (pageId, id) => ({ unit: 1, pageId, block: { type: "practice", id, question: { kind: "trueFalse", prompt: "الأوتومات أعلاه يقبل a.", answer: true } } });
+    const got = B.readExercises([sim("p1", "DFA"), ex("p1", "e1"), sim("p1", "NFA"), ex("p1", "e2"), ex("p2", "e3"), sim("p2", "PDA"), ex("p2", "e4")]);
+    expect(got.map(e => [e.id, e.machine?.kind ?? null])).toEqual([["e1", "DFA"], ["e2", "NFA"], ["e3", null], ["e4", "PDA"]]);
+  });
+
   it("every answer the book proves is proven AGAIN on the machine the question carries (accepts / final state / state set / stack / classify / shortest)", () => {
     let proven = 0;
     exercises.forEach((e, i) => {
