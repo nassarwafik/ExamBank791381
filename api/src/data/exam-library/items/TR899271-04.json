@@ -1,0 +1,1208 @@
+{
+  "libraryItemId": "TR899271-04",
+  "title": "تتبّع الآلات — آلة تورنغ (الوحدة 10)",
+  "category": "trace-899271",
+  "description": "تتبّع تشغيل آلات الوحدة 10 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+  "tags": [
+    "الأتمتة",
+    "تتبّع",
+    "تصحيح آلي"
+  ],
+  "questionCount": 10,
+  "totalMarks": 40,
+  "pageRange": "",
+  "parserFamily": "automata-trace-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "af4b4d49ab13e704f77c56fed6060d616456602b28a4be4f7a3d3d7abefda21b",
+  "contentHash": "c8c471118a786aea7ee88e3541903b89d90cf429ff002d3692f528a21f470c18",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271-trace",
+    "sourceFile": "scripts/automata-course/u10.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-TR899271-04",
+    "title": "تتبّع الآلات — آلة تورنغ (الوحدة 10)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "تتبّع تشغيل الآلات — من كتاب «الأتمتة»",
+      "instructions": "في كل سؤال آلة معطاة بجدول انتقالاتها («→» حالة البداية، «*» حالة قبول) وكلمة: اكتب سطر البداية ثم سطرًا لكل خطوة، ثم النتيجة. كل سطر صحيح يأخذ جزءًا من العلامة، والخطأ لا يُحسب مرتين.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u10",
+        "title": "الوحدة 10 — آلة تورنغ",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "TR899271-04-Q01",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l02-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة awb — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة abb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q3"
+                  }
+                ],
+                "blank": "∆",
+                "leftEnd": "├"
+              },
+              "word": "abb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q02",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l02-p01-b04",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة (ab)ⁿ، n > 0 — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة abab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q3"
+                  }
+                ],
+                "blank": "∆",
+                "leftEnd": "├"
+              },
+              "word": "abab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q03",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l02-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة aⁿbⁿ — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة aabb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "B",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "write": "a",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "B",
+                    "write": "B",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "A",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q3"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "A",
+                  "B"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "aabb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q04",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l02-p03-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة aⁿbⁿcⁿ — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة aabbcc: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q4"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "C",
+                    "write": "C",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "c",
+                    "write": "C",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "write": "a",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "write": "b",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "B",
+                    "write": "B",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "C",
+                    "write": "C",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "A",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "C",
+                    "write": "C",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q4"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "A",
+                  "B",
+                  "C"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "aabbcc"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q05",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l03-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة f(x) = x + 2 — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة 111: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "1"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q5"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "1",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "1",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "∆",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "∆",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "∆",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "∆",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q2"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "$"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "111"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q06",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l03-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة X + Y — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة 11#1111: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "1",
+                  "#"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "1",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "1",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "#",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "#",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "1",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "∆",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q3"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "$"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "11#1111"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q07",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l03-p03-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة زوجية الطول — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة aba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q5"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "∆",
+                    "write": "1",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "∆",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "∆",
+                    "write": "0",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "∆",
+                    "write": "$",
+                    "move": "R",
+                    "to": "q5"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "$",
+                  "0",
+                  "1"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "aba"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q08",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l06-p01-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "آلة التمارين 1–3 (aⁿbⁿ) — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة ab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "B",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "write": "a",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "B",
+                    "write": "B",
+                    "move": "L",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "A",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q3"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "A",
+                  "B"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "ab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q09",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l07-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: المتناظرات — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة abba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "qa",
+                  "qb",
+                  "qa2",
+                  "qb2",
+                  "back",
+                  "acc"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "acc"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "X",
+                    "move": "R",
+                    "to": "qa"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "write": "X",
+                    "move": "R",
+                    "to": "qb"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "acc"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "X",
+                    "write": "X",
+                    "move": "L",
+                    "to": "acc"
+                  },
+                  {
+                    "from": "qa",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "qa"
+                  },
+                  {
+                    "from": "qa",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "qa"
+                  },
+                  {
+                    "from": "qa",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "qa2"
+                  },
+                  {
+                    "from": "qa",
+                    "read": "X",
+                    "write": "X",
+                    "move": "L",
+                    "to": "qa2"
+                  },
+                  {
+                    "from": "qb",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "qb"
+                  },
+                  {
+                    "from": "qb",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "qb"
+                  },
+                  {
+                    "from": "qb",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "qb2"
+                  },
+                  {
+                    "from": "qb",
+                    "read": "X",
+                    "write": "X",
+                    "move": "L",
+                    "to": "qb2"
+                  },
+                  {
+                    "from": "qa2",
+                    "read": "a",
+                    "write": "X",
+                    "move": "L",
+                    "to": "back"
+                  },
+                  {
+                    "from": "qa2",
+                    "read": "X",
+                    "write": "X",
+                    "move": "L",
+                    "to": "acc"
+                  },
+                  {
+                    "from": "qb2",
+                    "read": "b",
+                    "write": "X",
+                    "move": "L",
+                    "to": "back"
+                  },
+                  {
+                    "from": "qb2",
+                    "read": "X",
+                    "write": "X",
+                    "move": "L",
+                    "to": "acc"
+                  },
+                  {
+                    "from": "back",
+                    "read": "a",
+                    "write": "a",
+                    "move": "L",
+                    "to": "back"
+                  },
+                  {
+                    "from": "back",
+                    "read": "b",
+                    "write": "b",
+                    "move": "L",
+                    "to": "back"
+                  },
+                  {
+                    "from": "back",
+                    "read": "X",
+                    "write": "X",
+                    "move": "R",
+                    "to": "q0"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "X"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "abba"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-04-Q10",
+            "origin": "imported",
+            "sourceId": "TR899271-04",
+            "sourceQuestionId": "m10-l07-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: abc — تتبّع تشغيل آلة تورنغ المعطاة على الكلمة abc: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة والشريط وموضع الرأس بعد كل خطوة)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "TM",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q4"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "write": "a",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "write": "b",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "C",
+                    "write": "C",
+                    "move": "R",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "c",
+                    "write": "C",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "write": "a",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "write": "b",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "B",
+                    "write": "B",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "C",
+                    "write": "C",
+                    "move": "L",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "A",
+                    "write": "A",
+                    "move": "R",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "B",
+                    "write": "B",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "C",
+                    "write": "C",
+                    "move": "R",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "∆",
+                    "write": "∆",
+                    "move": "L",
+                    "to": "q4"
+                  }
+                ],
+                "blank": "∆",
+                "tapeAlphabet": [
+                  "A",
+                  "B",
+                  "C"
+                ],
+                "leftEnd": "├"
+              },
+              "word": "abc"
+            },
+            "answer": {}
+          }
+        ]
+      }
+    ]
+  }
+}

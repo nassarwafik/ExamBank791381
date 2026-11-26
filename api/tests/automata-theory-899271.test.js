@@ -78,7 +78,8 @@ describe("AUTO-A14 — the shipped theory exams are exactly the build of the cou
     expect(fs.readdirSync(path.join(LIB, "items")).filter(f => f.startsWith("AT899271-")).sort()).toEqual(IDS.map(id => id + ".json"));
     const ours = catalogFile().filter(e => e.source?.repository === B.REPOSITORY);
     expect(ours.map(e => e.libraryItemId)).toEqual(IDS);
-    expect(catalogFile().slice(-6)).toEqual(ours);
+    const at = catalogFile().findIndex(e => e.libraryItemId === IDS[0]);
+    expect(catalogFile().slice(at, at + 6)).toEqual(ours);   // together, after the sources before them (AUTO-A15b's trace exams follow)
     const counts = [];
     for (const entry of ours) {
       const item = readItem(entry.libraryItemId);

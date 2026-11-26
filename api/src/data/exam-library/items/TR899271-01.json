@@ -1,0 +1,2862 @@
+{
+  "libraryItemId": "TR899271-01",
+  "title": "تتبّع الآلات — الأوتومات المنتهي الحتمي (الوحدات 2–4)",
+  "category": "trace-899271",
+  "description": "تتبّع تشغيل آلات الوحدات 2–4 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+  "tags": [
+    "الأتمتة",
+    "تتبّع",
+    "تصحيح آلي"
+  ],
+  "questionCount": 33,
+  "totalMarks": 132,
+  "pageRange": "",
+  "parserFamily": "automata-trace-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 33,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "96410adea15ed4d8fc10e2d1a0216339ed72b115f823f0c32c4e855d40c83477",
+  "contentHash": "44572068050105395e8838fe64e64d623199e906d5e2bdf0502ad41062315b55",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271-trace",
+    "sourceFile": "scripts/automata-course/u02.mjs scripts/automata-course/u03.mjs scripts/automata-course/u04.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-TR899271-01",
+    "title": "تتبّع الآلات — الأوتومات المنتهي الحتمي (الوحدات 2–4)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "تتبّع تشغيل الآلات — من كتاب «الأتمتة»",
+      "instructions": "في كل سؤال آلة معطاة بجدول انتقالاتها («→» حالة البداية، «*» حالة قبول) وكلمة: اكتب سطر البداية ثم سطرًا لكل خطوة، ثم النتيجة. كل سطر صحيح يأخذ جزءًا من العلامة، والخطأ لا يُحسب مرتين.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u02",
+        "title": "الوحدة 2 — الأوتومات المنتهي الحتمي",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "TR899271-01-Q01",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l02-p02-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ]
+                ]
+              },
+              "word": "abb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q02",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l03-p02-b04",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "الأوتومات: الكلمات ذات الطول الزوجي — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة 011: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1"
+                ],
+                "alphabet": [
+                  "0",
+                  "1"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "0",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "1",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "0",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "1",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "011"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q03",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l03-p03-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "الأوتومات المعطى في المهمة — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "ab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q04",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l04-p01-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "الأوتومات للتمارين 1–3 — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ]
+                ]
+              },
+              "word": "ab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q05",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l04-p02-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "الأوتومات للتمارين 6–8 (الطول الزوجي) — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة 0101: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1"
+                ],
+                "alphabet": [
+                  "0",
+                  "1"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "0",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "1",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "0",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "1",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "0101"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q06",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l05-p01-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: الأوتومات من الجدول — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة bab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ]
+                ]
+              },
+              "word": "bab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q07",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m02-l05-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: الكلمة الفارغة — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ε (الكلمة الفارغة): اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1"
+                ],
+                "alphabet": [
+                  "0",
+                  "1"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "0",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "1",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "0",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "1",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": ""
+            },
+            "answer": {}
+          }
+        ]
+      },
+      {
+        "id": "sec-u03",
+        "title": "الوحدة 3 — بناء أوتومات منتهٍ حتمي كامل",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "TR899271-01-Q08",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l02-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 1: الكلمات التي تحوي aa — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة baab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ]
+                ]
+              },
+              "word": "baab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q09",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l02-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 2: تحوي aa وتنتهي بـ a — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة aaba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "aaba"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q10",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l02-p02-b04",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 3: تحوي aa ولا تنتهي بـ a — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة aab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "aab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q11",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l03-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 4: على الأقل a مرتين — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة bacab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ]
+                ]
+              },
+              "word": "bacab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q12",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l03-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 5: بالضبط a مرتين — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abca: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "abca"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q13",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l04-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 6: تبدأ وتنتهي بـ a — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abca: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "abca"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q14",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l04-p02-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 7: لا تبدأ بـ a — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ε (الكلمة الفارغة): اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ]
+                ]
+              },
+              "word": ""
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q15",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l05-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 8: تبدأ بـ ab وتنتهي بـ a — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة aba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q4"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q4"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q4"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q4",
+                    "a",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "c",
+                    "q4"
+                  ]
+                ]
+              },
+              "word": "aba"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q16",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l05-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 9: cc مرتين على الأقل — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ccc: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q4"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q4",
+                    "a",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "ccc"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q17",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l05-p03-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 10: تبدأ بـ a وطولها زوجي — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "ab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q18",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l05-p04-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات يقبل اللغة الخالية — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ε (الكلمة الفارغة): اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": ""
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q19",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l05-p04-b05",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "المهمة 11: تبدأ بـ aa وطولها يقسم على 3 — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة aab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q4"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q4"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q5"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q5"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q5"
+                  ],
+                  [
+                    "q5",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q5",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q5",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q4",
+                    "a",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "c",
+                    "q4"
+                  ]
+                ]
+              },
+              "word": "aab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q20",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l06-p01-b04",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "بجروت 2010: الحل — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة 000$$: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5",
+                  "q6",
+                  "q7",
+                  "q8"
+                ],
+                "alphabet": [
+                  "0",
+                  "$"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q5"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "0",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "0",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "0",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "$",
+                    "q4"
+                  ],
+                  [
+                    "q0",
+                    "$",
+                    "q8"
+                  ],
+                  [
+                    "q1",
+                    "$",
+                    "q8"
+                  ],
+                  [
+                    "q2",
+                    "$",
+                    "q8"
+                  ],
+                  [
+                    "q3",
+                    "0",
+                    "q8"
+                  ],
+                  [
+                    "q4",
+                    "$",
+                    "q5"
+                  ],
+                  [
+                    "q4",
+                    "0",
+                    "q6"
+                  ],
+                  [
+                    "q6",
+                    "0",
+                    "q7"
+                  ],
+                  [
+                    "q7",
+                    "0",
+                    "q4"
+                  ],
+                  [
+                    "q6",
+                    "$",
+                    "q8"
+                  ],
+                  [
+                    "q7",
+                    "$",
+                    "q8"
+                  ],
+                  [
+                    "q5",
+                    "$",
+                    "q5"
+                  ],
+                  [
+                    "q5",
+                    "0",
+                    "q6"
+                  ],
+                  [
+                    "q8",
+                    "0",
+                    "q8"
+                  ],
+                  [
+                    "q8",
+                    "$",
+                    "q8"
+                  ]
+                ]
+              },
+              "word": "000$$"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q21",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l06-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "الحل: تبدأ بـ ab، فردية، بلا aa — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5",
+                  "q6"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3",
+                  "q4"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q6"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q6"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q6"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q4",
+                    "a",
+                    "q5"
+                  ],
+                  [
+                    "q4",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q5",
+                    "a",
+                    "q6"
+                  ],
+                  [
+                    "q5",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q6",
+                    "a",
+                    "q6"
+                  ],
+                  [
+                    "q6",
+                    "b",
+                    "q6"
+                  ]
+                ]
+              },
+              "word": "abb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q22",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l06-p03-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "بجروت 2018: الحل — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة acbcd: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c",
+                  "d"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q4"
+                  ],
+                  [
+                    "q1",
+                    "d",
+                    "q0"
+                  ],
+                  [
+                    "q2",
+                    "d",
+                    "q1"
+                  ],
+                  [
+                    "q3",
+                    "d",
+                    "q2"
+                  ],
+                  [
+                    "q0",
+                    "d",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "a",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "c",
+                    "q4"
+                  ],
+                  [
+                    "q4",
+                    "d",
+                    "q4"
+                  ]
+                ]
+              },
+              "word": "acbcd"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q23",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l07-p01-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات التمارين 1–3 (بالضبط a مرتين) — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة aba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "c",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "c",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "c",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "c",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "aba"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q24",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l08-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب الحل — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة aab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "aab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q25",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m03-l08-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب الحل — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة bab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "bab"
+            },
+            "answer": {}
+          }
+        ]
+      },
+      {
+        "id": "sec-u04",
+        "title": "الوحدة 4 — اتحاد اللغات المنتظمة وتقاطعها",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "TR899271-01-Q26",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l02-p03-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "A1: الأوتومات للغة L1 = {abw} — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q3"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q3"
+                  ]
+                ]
+              },
+              "word": "abba"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q27",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l02-p03-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "A2: الأوتومات للغة L2 (طول زوجي) — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "p0",
+                  "p1"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "p0",
+                "accept": [
+                  "p0"
+                ],
+                "transitions": [
+                  [
+                    "p0",
+                    "a",
+                    "p1"
+                  ],
+                  [
+                    "p0",
+                    "b",
+                    "p1"
+                  ],
+                  [
+                    "p1",
+                    "a",
+                    "p0"
+                  ],
+                  [
+                    "p1",
+                    "b",
+                    "p0"
+                  ]
+                ]
+              },
+              "word": "ab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q28",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l02-p03-b04",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "A3: الأوتومات للغة L3 (تحوي aa) — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة baab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "t0",
+                  "t1",
+                  "t2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "t0",
+                "accept": [
+                  "t2"
+                ],
+                "transitions": [
+                  [
+                    "t0",
+                    "b",
+                    "t0"
+                  ],
+                  [
+                    "t0",
+                    "a",
+                    "t1"
+                  ],
+                  [
+                    "t1",
+                    "a",
+                    "t2"
+                  ],
+                  [
+                    "t1",
+                    "b",
+                    "t0"
+                  ],
+                  [
+                    "t2",
+                    "a",
+                    "t2"
+                  ],
+                  [
+                    "t2",
+                    "b",
+                    "t2"
+                  ]
+                ]
+              },
+              "word": "baab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q29",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l02-p04-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات التقاطع (14 حالة يمكن الوصول إليها) — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abaa: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0p0t0",
+                  "q1p1t1",
+                  "q3p1t0",
+                  "q3p0t2",
+                  "q2p0t0",
+                  "q3p0t1",
+                  "q3p0t0",
+                  "q3p1t2",
+                  "q2p1t1",
+                  "q2p1t0",
+                  "q3p1t1",
+                  "q2p0t2",
+                  "q2p0t1",
+                  "q2p1t2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0p0t0",
+                "accept": [
+                  "q2p0t2"
+                ],
+                "transitions": [
+                  [
+                    "q0p0t0",
+                    "a",
+                    "q1p1t1"
+                  ],
+                  [
+                    "q0p0t0",
+                    "b",
+                    "q3p1t0"
+                  ],
+                  [
+                    "q1p1t1",
+                    "a",
+                    "q3p0t2"
+                  ],
+                  [
+                    "q1p1t1",
+                    "b",
+                    "q2p0t0"
+                  ],
+                  [
+                    "q3p1t0",
+                    "a",
+                    "q3p0t1"
+                  ],
+                  [
+                    "q3p1t0",
+                    "b",
+                    "q3p0t0"
+                  ],
+                  [
+                    "q3p0t2",
+                    "a",
+                    "q3p1t2"
+                  ],
+                  [
+                    "q3p0t2",
+                    "b",
+                    "q3p1t2"
+                  ],
+                  [
+                    "q2p0t0",
+                    "a",
+                    "q2p1t1"
+                  ],
+                  [
+                    "q2p0t0",
+                    "b",
+                    "q2p1t0"
+                  ],
+                  [
+                    "q3p0t1",
+                    "a",
+                    "q3p1t2"
+                  ],
+                  [
+                    "q3p0t1",
+                    "b",
+                    "q3p1t0"
+                  ],
+                  [
+                    "q3p0t0",
+                    "a",
+                    "q3p1t1"
+                  ],
+                  [
+                    "q3p0t0",
+                    "b",
+                    "q3p1t0"
+                  ],
+                  [
+                    "q3p1t2",
+                    "a",
+                    "q3p0t2"
+                  ],
+                  [
+                    "q3p1t2",
+                    "b",
+                    "q3p0t2"
+                  ],
+                  [
+                    "q2p1t1",
+                    "a",
+                    "q2p0t2"
+                  ],
+                  [
+                    "q2p1t1",
+                    "b",
+                    "q2p0t0"
+                  ],
+                  [
+                    "q2p1t0",
+                    "a",
+                    "q2p0t1"
+                  ],
+                  [
+                    "q2p1t0",
+                    "b",
+                    "q2p0t0"
+                  ],
+                  [
+                    "q3p1t1",
+                    "a",
+                    "q3p0t2"
+                  ],
+                  [
+                    "q3p1t1",
+                    "b",
+                    "q3p0t0"
+                  ],
+                  [
+                    "q2p0t2",
+                    "a",
+                    "q2p1t2"
+                  ],
+                  [
+                    "q2p0t2",
+                    "b",
+                    "q2p1t2"
+                  ],
+                  [
+                    "q2p0t1",
+                    "a",
+                    "q2p1t2"
+                  ],
+                  [
+                    "q2p0t1",
+                    "b",
+                    "q2p1t0"
+                  ],
+                  [
+                    "q2p1t2",
+                    "a",
+                    "q2p0t2"
+                  ],
+                  [
+                    "q2p1t2",
+                    "b",
+                    "q2p0t2"
+                  ]
+                ]
+              },
+              "word": "abaa"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q30",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l02-p04-b06",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات التقاطع بعد التسمية وجمع المصيدة — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abaa: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5",
+                  "q6",
+                  "q7",
+                  "q8"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q5"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q8"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q8"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q8",
+                    "a",
+                    "q8"
+                  ],
+                  [
+                    "q8",
+                    "b",
+                    "q8"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q3",
+                    "a",
+                    "q5"
+                  ],
+                  [
+                    "q3",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q4",
+                    "a",
+                    "q6"
+                  ],
+                  [
+                    "q4",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q5",
+                    "a",
+                    "q7"
+                  ],
+                  [
+                    "q5",
+                    "b",
+                    "q7"
+                  ],
+                  [
+                    "q6",
+                    "a",
+                    "q7"
+                  ],
+                  [
+                    "q6",
+                    "b",
+                    "q4"
+                  ],
+                  [
+                    "q7",
+                    "a",
+                    "q5"
+                  ],
+                  [
+                    "q7",
+                    "b",
+                    "q5"
+                  ]
+                ]
+              },
+              "word": "abaa"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q31",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l03-p01-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: الأوتومات «يعلق» على baaabb — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة baaabb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "baaabb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q32",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l04-p02-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات التمارين 6–8 (غير كامل: لا aa) — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة abab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0",
+                  "q1"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q0"
+                  ]
+                ]
+              },
+              "word": "abab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-01-Q33",
+            "origin": "imported",
+            "sourceId": "TR899271-01",
+            "sourceQuestionId": "m04-l05-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: أوتومات الاتحاد — تتبّع تشغيل الأوتومات المنتهي الحتمي المعطى على الكلمة ba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة بعد قراءة كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "DFA",
+                "states": [
+                  "q0p0",
+                  "q1p1",
+                  "q2p1",
+                  "q1p0",
+                  "q2p0"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0p0",
+                "accept": [
+                  "q0p0",
+                  "q1p1",
+                  "q1p0",
+                  "q2p0"
+                ],
+                "transitions": [
+                  [
+                    "q0p0",
+                    "a",
+                    "q1p1"
+                  ],
+                  [
+                    "q0p0",
+                    "b",
+                    "q2p1"
+                  ],
+                  [
+                    "q1p1",
+                    "a",
+                    "q1p0"
+                  ],
+                  [
+                    "q1p1",
+                    "b",
+                    "q1p0"
+                  ],
+                  [
+                    "q2p1",
+                    "a",
+                    "q2p0"
+                  ],
+                  [
+                    "q2p1",
+                    "b",
+                    "q2p0"
+                  ],
+                  [
+                    "q1p0",
+                    "a",
+                    "q1p1"
+                  ],
+                  [
+                    "q1p0",
+                    "b",
+                    "q1p1"
+                  ],
+                  [
+                    "q2p0",
+                    "a",
+                    "q2p1"
+                  ],
+                  [
+                    "q2p0",
+                    "b",
+                    "q2p1"
+                  ]
+                ]
+              },
+              "word": "ba"
+            },
+            "answer": {}
+          }
+        ]
+      }
+    ]
+  }
+}
