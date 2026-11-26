@@ -35,6 +35,32 @@ function automatonOf(g) {
   return null;
 }
 
+// AUTO-A11b — a machineDesign@1 question (a push-down automaton / Turing machine) shows the student, after the results are released, the
+// same kinds of line, rebuilt field by field from the stored grade: «agrees with the model on every word up to length N» (full marks —
+// honestly not a proof), the separating word (or, for a function, the expected answer and the machine's), a broken public rule, or the
+// word on which the Turing machine did not halt. Never the reference; never on a question that awaits the teacher or does not count.
+const MACHINE_WORD = /^[A-Za-z0-9#*+@]{0,10}$/;
+const MACHINE_ISSUES = new Set(["malformed", "too-many-states"]);
+const between = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+const answerOk = v => v === null || (typeof v === "string" && v.length <= 40 && !/[\u0000-\u001f$]/.test(v));
+/** AUTO-A11b — the one line of a stored machine grade, rebuilt and bounded; null otherwise. */
+function machineOf(g) {
+  const f = isObj(g.machineFeedback) ? g.machineFeedback : null;
+  if (!f) return null;
+  const a = isObj(f.agreesUpTo) ? f.agreesUpTo : null;
+  if (a && between(a.length, 1, 10) && between(a.words, 1, 2000) && (a.skipped === undefined || between(a.skipped, 1, 2000))) return { agreesUpTo: { length: a.length, words: a.words, ...(a.skipped !== undefined ? { skipped: a.skipped } : {}) } };
+  const ce = isObj(f.counterexample) ? f.counterexample : null;
+  if (ce && typeof ce.word === "string" && MACHINE_WORD.test(ce.word)) {
+    if (typeof ce.shouldAccept === "boolean") return { word: ce.word, shouldAccept: ce.shouldAccept };
+    if (typeof ce.expected === "string" && answerOk(ce.expected) && answerOk(ce.got)) return { word: ce.word, expected: ce.expected, got: ce.got };
+  }
+  const nh = isObj(f.nohalt) ? f.nohalt : null;
+  if (nh && typeof nh.word === "string" && MACHINE_WORD.test(nh.word)) return { nohalt: { word: nh.word } };
+  const is = isObj(f.issue) ? f.issue : null;
+  if (is && MACHINE_ISSUES.has(is.code)) return { issue: { code: is.code, ...(between(is.max, 1, 24) ? { max: is.max } : {}) } };
+  return null;
+}
+
 function statusOf(g) {
   if (g.ignored === true) return "notCounted";
   if (g.manualReview === true || isObj(g.technicalFailure) && g.reviewed !== true) return "pending";
@@ -56,6 +82,8 @@ function questionBreakdown(attempt) {
     if (comment) item.comment = comment;
     const automaton = status === "pending" || status === "notCounted" ? null : automatonOf(g);
     if (automaton) item.automaton = automaton;
+    const machine = status === "pending" || status === "notCounted" ? null : machineOf(g);
+    if (machine) item.machine = machine;
     return item;
   });
   const sections = (attempt && Array.isArray(attempt.sections) ? attempt.sections.filter(isObj) : []).map(s => ({
@@ -68,4 +96,4 @@ function questionBreakdown(attempt) {
   return { sections, questions };
 }
 
-module.exports = { questionBreakdown, statusOf, automatonOf };
+module.exports = { questionBreakdown, statusOf, automatonOf, machineOf };

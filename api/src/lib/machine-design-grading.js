@@ -12,6 +12,17 @@
 //       – a Turing machine that does not halt (within the engine's step limit) on a word where the reference does (`nohalt`) is NOT a
 //         certain wrong → teacher review (manualReview), never an automatic zero;
 //   • no answer → 0 (not answered), as every auto-graded type.
+// AUTO-A11b: `machineFeedbackOf` turns the grader's result into the ONE stored shape — `machineFeedback` — rebuilt field by field and
+// bounded, which the grade keeps (assignment-grading.js) for the teacher's review and, once the results are released, the student's
+// breakdown (student-question-breakdown.js):
+//   { agreesUpTo: { length, words, skipped? } }                       full marks — the length the check went to (not a proof)
+//   { counterexample: { word, shouldAccept } }                        a language: the shortest word on which the machines disagree
+//   { counterexample: { word, expected, got } }                       a function: the expected answer and the machine's (null: none)
+//   { issue: { code, max? } }                                         a public rule of the question the machine broke
+//   { nohalt: { word } }                                              a Turing machine that did not halt — kept although the grade awaits
+//                                                                     the teacher: it is exactly what the teacher needs to decide
+// It names one word and at most two short answers, or a public rule — never the reference, never a model machine. A fail-closed grade
+// (unreadable rules / reference, an undecided judge) has none.
 // Pure; never throws.
 const { machineDesignAuthority } = require("./shared-finalization/machineDesignQuestion");
 const { evaluateMachineDesign } = require("./learning-machine-design");
@@ -54,4 +65,30 @@ function scoreMachineDesign({ config, answerKey, response, maxMarks }) {
   }
 }
 
-module.exports = { scoreMachineDesign, rulesOf, MACHINE_DESIGN_FAIL_CLOSED };
+const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
+const WORD = /^[A-Za-z0-9#*+@]{0,10}$/;                                  // a word over the question's alphabet, up to the judge's longest
+const ISSUES = new Set(["malformed", "too-many-states"]);                // the judge's public-rule issues
+const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+/** A function's answer as stored: a short string without control characters, or null (no answer between two $). */
+const answerOk = v => v === null || (typeof v === "string" && v.length <= 40 && !/[\u0000-\u001f$]/.test(v));
+/** The stored feedback of one graded answer, or null — rebuilt field by field and bounded. */
+function machineFeedbackOf(r) {
+  if (!isObj(r)) return null;
+  if (r.correct === true) {
+    const a = r.agreesUpTo;
+    if (!isObj(a) || !int(a.length, 1, 10) || !int(a.words, 1, 2000) || (a.skipped !== undefined && !int(a.skipped, 1, 2000))) return null;
+    return { agreesUpTo: { length: a.length, words: a.words, ...(a.skipped !== undefined ? { skipped: a.skipped } : {}) } };
+  }
+  if (isObj(r.nohalt) && typeof r.nohalt.word === "string" && WORD.test(r.nohalt.word)) return { nohalt: { word: r.nohalt.word } };
+  if (r.manualReview === true) return null;                             // fail closed: nothing was judged
+  const ce = r.counterexample;
+  if (isObj(ce) && typeof ce.word === "string" && WORD.test(ce.word)) {
+    if (typeof ce.shouldAccept === "boolean") return { counterexample: { word: ce.word, shouldAccept: ce.shouldAccept } };
+    if (answerOk(ce.expected) && answerOk(ce.got) && ce.expected !== null) return { counterexample: { word: ce.word, expected: ce.expected, got: ce.got } };
+  }
+  const is = r.issue;
+  if (isObj(is) && ISSUES.has(is.code)) return { issue: { code: is.code, ...(int(is.max, 1, 24) ? { max: is.max } : {}) } };
+  return null;
+}
+
+module.exports = { scoreMachineDesign, machineFeedbackOf, rulesOf, MACHINE_DESIGN_FAIL_CLOSED };

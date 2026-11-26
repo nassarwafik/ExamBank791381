@@ -28,7 +28,8 @@ const { gradeExam } = require_("../../src/lib/assignment-grading.js");
 const { sanitizeExamForStudent } = require_("../../src/lib/student-exam-sanitize.js");
 const { canonicalizeExamContent } = require_("../../src/lib/exam-canonical.js");
 const { normalizeDraftAnswers } = require_("../../src/lib/draft-answers.js");
-const { scoreMachineDesign, rulesOf } = require_("../../src/lib/machine-design-grading.js");
+const { scoreMachineDesign, rulesOf, machineFeedbackOf } = require_("../../src/lib/machine-design-grading.js");
+const { questionBreakdown, machineOf } = require_("../../src/lib/student-question-breakdown.js");
 const { evaluateMachineDesign, MACHINE_DESIGN_LIMITS: JUDGE_LIMITS } = require_("../../src/lib/learning-machine-design.js");
 const { MACHINE_DESIGN_LIMITS, answerBetweenDollars } = require_("../../src/lib/shared-finalization/machineDesignQuestion.js");
 const { answerOnTape } = require_("../../src/lib/learning-machine-design.js");
@@ -285,5 +286,58 @@ describe("A11 full platform lifecycle", () => {
     expect(byId.t2.machineDesign).toEqual(configsOf(load()).t2);
     const saved = await p.teacher.saveReview(aid, "md-partial", {}, 1, "مراجعة أسئلة تصميم الآلات");
     expect([saved.status, saved.jsonBody.result.score, saved.jsonBody.result.finalized]).toEqual([200, 5, true]);
+  });
+  // ── AUTO-A11b — the stored feedback, the teacher's review, the released breakdown ─────────────────────────────────────────────────
+  it("A11b — the stored grades keep the machine feedback: the agreement length, the separating word (a language / a function), the rule, the word it did not halt on", () => {
+    const fb = r => Object.fromEntries(r.attempt.questionGrades.map(g => [g.questionId, g.machineFeedback ?? null]));
+    expect(fb(runs.PERFECT)).toEqual({ p1: { agreesUpTo: { length: 8, words: 511 } }, t1: { agreesUpTo: { length: 8, words: 511 } }, t2: { agreesUpTo: { length: 10, words: 11 } }, c1: null });
+    expect(fb(runs.PARTIAL)).toEqual({ p1: { counterexample: { word: "", shouldAccept: true } }, t1: { agreesUpTo: { length: 8, words: 511 } }, t2: { counterexample: { word: "1", expected: "111", got: "11" } }, c1: null });
+    expect(fb(runs.NOHALT).t1).toEqual({ nohalt: { word: "b" } });                       // kept although the grade awaits the teacher
+    const att = p.student("md-attacker").attempt(aid);
+    expect(att.questionGrades.find(g => g.questionId === "p1").machineFeedback).toEqual({ issue: { code: "too-many-states", max: 6 } });
+    expect(JSON.stringify(runs.PARTIAL.attempt.questionGrades)).not.toMatch(/"reference"|"q3"/);
+  });
+  it("A11b — the released result shows the student one line per machine (never the reference); a question awaiting the teacher shows none", () => {
+    const released = runs.PARTIAL.submit.jsonBody.result;
+    expect(released.resultsVisible).toBe(true);
+    expect(released.questionBreakdown.questions.map(q => q.machine ?? null)).toEqual([{ word: "", shouldAccept: true }, { agreesUpTo: { length: 8, words: 511 } }, { word: "1", expected: "111", got: "11" }, null]);
+    expect(JSON.stringify(released)).not.toMatch(/"reference"|"machineFeedback"/);
+    expect(runs.NOHALT.submit.jsonBody.result.questionBreakdown.questions[1]).toMatchObject({ status: "pending" });
+    expect(runs.NOHALT.submit.jsonBody.result.questionBreakdown.questions[1].machine).toBeUndefined();
+  });
+  it("A11b — the teacher's review carries the stored verdict; once the teacher marks the machine that did not halt, the student sees why", async () => {
+    const rv = await p.teacher.reviewGet(aid, "md-partial");
+    const byId = Object.fromEntries(rv.jsonBody.questions.map(q => [q.questionId, q]));
+    expect([byId.p1.autoGrade.machineFeedback, byId.t2.autoGrade.machineFeedback, byId.c1.autoGrade.machineFeedback]).toEqual([{ counterexample: { word: "", shouldAccept: true } }, { counterexample: { word: "1", expected: "111", got: "11" } }, undefined]);
+    const nh = await p.teacher.reviewGet(aid, "md-nohalt");
+    expect(nh.jsonBody.questions.find(q => q.questionId === "t1").autoGrade.machineFeedback).toEqual({ nohalt: { word: "b" } });
+    // the NOHALT test above already saved the teacher's 5 marks for t1: the released breakdown now names the word
+    const b = questionBreakdown(p.student("md-nohalt").attempt(aid));
+    expect(b.questions[1]).toMatchObject({ status: "full", machine: { nohalt: { word: "b" } } });
+  });
+});
+
+describe("A11b — the feedback is rebuilt and bounded on both sides", () => {
+  it("the grader's shape: one kind each; nothing for a fail-closed grade; forged words / answers dropped", () => {
+    expect(machineFeedbackOf({ score: 6, correct: true, manualReview: false, agreesUpTo: { length: 8, words: 511, extra: 1 } })).toEqual({ agreesUpTo: { length: 8, words: 511 } });
+    expect(machineFeedbackOf({ score: 0, correct: false, manualReview: true })).toBeNull();
+    expect(machineFeedbackOf({ score: 0, correct: false, manualReview: true, nohalt: { word: "b" } })).toEqual({ nohalt: { word: "b" } });
+    expect(machineFeedbackOf({ score: 0, correct: false, manualReview: false, counterexample: { word: "<script>", shouldAccept: true } })).toBeNull();
+    expect(machineFeedbackOf({ score: 0, correct: false, manualReview: false, counterexample: { word: "1", expected: "x".repeat(41), got: null } })).toBeNull();
+    expect(machineFeedbackOf({ score: 0, correct: false, manualReview: false, counterexample: { word: "1", expected: "1$1", got: null } })).toBeNull();
+    expect(machineFeedbackOf({ score: 0, correct: false, manualReview: false, issue: { code: "two-arrows", state: "q0" } })).toBeNull();   // not the judge's
+    expect(machineFeedbackOf({ score: 7, correct: true, manualReview: false, agreesUpTo: { length: 99, words: 1 } })).toBeNull();
+  });
+  it("the breakdown's shape: rebuilt field by field from a stored grade; never on a pending or not-counted question", () => {
+    expect(machineOf({ machineFeedback: { counterexample: { word: "ab", shouldAccept: false, reference: "x" } } })).toEqual({ word: "ab", shouldAccept: false });
+    expect(machineOf({ machineFeedback: { counterexample: { word: "1", expected: "111", got: null } } })).toEqual({ word: "1", expected: "111", got: null });
+    expect(machineOf({ machineFeedback: { issue: { code: "too-many-states", max: 6, state: "q0" } } })).toEqual({ issue: { code: "too-many-states", max: 6 } });
+    expect(machineOf({ machineFeedback: { nohalt: { word: "ab".repeat(9) } } })).toBeNull();
+    expect(machineOf({ machineFeedback: "x" })).toBeNull();
+    const b = questionBreakdown({ questionGrades: [
+      { questionId: "a", score: 0, maxMarks: 5, manualReview: true, machineFeedback: { nohalt: { word: "b" } } },
+      { questionId: "b", score: 0, maxMarks: 5, ignored: true, machineFeedback: { counterexample: { word: "", shouldAccept: true } } },
+      { questionId: "c", score: 5, maxMarks: 5, machineFeedback: { agreesUpTo: { length: 8, words: 511 } } }] });
+    expect(b.questions.map(q => q.machine ?? null)).toEqual([null, null, { agreesUpTo: { length: 8, words: 511 } }]);
   });
 });

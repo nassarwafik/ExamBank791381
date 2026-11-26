@@ -4,16 +4,35 @@ import { issueText } from "../../learning/activities/automatonDesign";
 // D4 (item 7) — the student's per-question mark breakdown under a RELEASED result (api: student-submission pub() → questionBreakdown).
 // Marks and the teacher's comment only (owner decision): no correct answer, no model answer, no hidden-test detail ever reaches this
 // screen — the server sends none. AUTO-A8b (owner decision 2026-11-25): an automaton-design question adds ONE word on which the student's
-// machine and the reference disagree (or the public rule the machine broke) — never the reference itself. Collapsed by default so the result card keeps its shape; grouped by section when there are several.
+// machine and the reference disagree (or the public rule the machine broke) — never the reference itself. AUTO-A11b: a machine-design
+// question (push-down / Turing) adds its one line the same way (agreement up to a length, a separating word, a rule, or not halting). Collapsed by default so the result card keeps its shape; grouped by section when there are several.
 export type BreakdownStatus = "full" | "partial" | "zero" | "pending" | "notCounted";
+/** AUTO-A11b — a push-down automaton / Turing machine question: the agreement length (full marks, not a proof), the separating word (or a
+ *  function's expected and given answers), a broken rule, or the word the machine did not halt on — rebuilt by the server, never the reference. */
+export type MachineBreakdown =
+  | { agreesUpTo: { length: number; words: number; skipped?: number } }
+  | { word: string; shouldAccept: boolean }
+  | { word: string; expected: string; got: string | null }
+  | { issue: { code: string; max?: number } }
+  | { nohalt: { word: string } };
 export type AutomatonBreakdown = { word: string; shouldAccept: boolean } | { issue: { code: string; state?: string; symbol?: string; max?: number } };
 export type QuestionBreakdown = {
   sections: Array<{ id: string; title: string; capped: boolean }>;
-  questions: Array<{ number: number; sectionId: string; status: BreakdownStatus; maxMarks: number; score?: number; comment?: string; automaton?: AutomatonBreakdown }>;
+  questions: Array<{ number: number; sectionId: string; status: BreakdownStatus; maxMarks: number; score?: number; comment?: string; automaton?: AutomatonBreakdown; machine?: MachineBreakdown }>;
 };
 
 const STATUS_LABEL: Record<BreakdownStatus, string> = { full: "علامة كاملة", partial: "علامة جزئية", zero: "بلا علامة", pending: "قيد التصحيح", notCounted: "غير محتسب" };
 
+const shownWord = (w: string) => (w === "" ? "ε (الكلمة الفارغة)" : w);
+const shownAnswer = (a: string | null) => (a === null ? "لا جواب بين علامتي $" : "«" + (a === "" ? "ε" : a) + "»");
+/** AUTO-A11b — the one line a machine question adds. */
+function machineLine(m: MachineBreakdown) {
+  if ("agreesUpTo" in m) return <>آلتك تتفق مع الآلة النموذجية في كل ما فُحص حتى الطول {m.agreesUpTo.length} ({m.agreesUpTo.words} كلمة). هذا فحص وليس برهانًا.</>;
+  if ("nohalt" in m) return <>آلتك لم تتوقف على الكلمة <bdi dir="ltr">{shownWord(m.nohalt.word)}</bdi> (بعد ألف خطوة)، والآلة النموذجية تتوقف عليها؛ وضع المعلم العلامة.</>;
+  if ("issue" in m) return <>آلتك تخالف قاعدة في السؤال: {issueText(m.issue)}</>;
+  if ("expected" in m) return <>على المدخل <bdi dir="ltr">{shownWord(m.word)}</bdi> الجواب الصحيح <bdi dir="ltr">{shownAnswer(m.expected)}</bdi>، وآلتك تعطي <bdi dir="ltr">{shownAnswer(m.got)}</bdi>.</>;
+  return <>الكلمة <bdi dir="ltr">{shownWord(m.word)}</bdi> {m.shouldAccept ? "كان يجب أن تُقبل، لكن آلتك ترفضها" : "كان يجب أن تُرفض، لكن آلتك تقبلها"}.</>;
+}
 /** AUTO-A8b — the one line an automaton question adds: the separating word, or the broken rule. */
 function automatonLine(a: AutomatonBreakdown) {
   if ("issue" in a) return <>آلتك تخالف قاعدة في السؤال: {issueText(a.issue)}</>;
@@ -52,6 +71,7 @@ export default function ResultBreakdown({ breakdown }: { breakdown: QuestionBrea
                 <span className="iex-breakdown-status">{STATUS_LABEL[q.status]}</span>
                 {q.comment && <p className="iex-breakdown-comment"><strong>ملاحظة المعلم: </strong>{q.comment}</p>}
                 {q.automaton && <p className="iex-breakdown-comment" data-testid="breakdown-automaton"><strong>تصميم الأوتومات: </strong>{automatonLine(q.automaton)}</p>}
+                {q.machine && <p className="iex-breakdown-comment" data-testid="breakdown-machine"><strong>تصميم الآلة: </strong>{machineLine(q.machine)}</p>}
               </li>
             ))}
           </ol>
