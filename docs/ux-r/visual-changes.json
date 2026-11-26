@@ -1955,6 +1955,11 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "«ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — the search for «الشبكة» also finds the pages of the new practice module m29 «ابنِ الشبكة» in book 791381 (one more module group of results at the end), and the page totals read «من 256»; the result list is taller, nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة» in the summary booklet (docs/enterprise-network-build-exercises.md §5b) — the search for «الشبكة» also finds the pages of the booklet's new practice module 791381s-m37 «ابنِ الشبكة» (one more module group of results); the result list is taller, nothing else on the page moves."
     }
   ]
 }
