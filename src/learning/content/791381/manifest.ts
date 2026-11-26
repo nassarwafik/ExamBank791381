@@ -1202,6 +1202,53 @@ const manifest: LearningCourseManifest = {
         },
       ],
     },
+    {
+      // «ابنِ الشبكة: التوجيه والأمان» (docs/enterprise-network-build-exercises.md §5c, owner decision 2026-11-26): a PRACTICE module —
+      // eight lab-mode build exercises (WAN, routing, ACL, NAT, IPv6); new stable id m30, order 30 (after m29).
+      id: "791381-m30",
+      title: "ابنِ الشبكة: التوجيه والأمان",
+      shortTitle: "التوجيه والأمان",
+      order: 30,
+      lessons: [
+        {
+          id: "791381-m30-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m30-l00-p01", title: "ابنِ الشبكة: التوجيه والأمان", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 207, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["WAN", "Routing", "ACL", "NAT", "IPv6"] },
+          ],
+        },
+        {
+          id: "791381-m30-l01",
+          title: "WAN والتوجيه",
+          order: 1,
+          pages: [
+            { id: "791381-m30-l01-p01", title: "WAN وتوجيه ثابت", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 211, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["WAN", "Serial", "Static Route", "ip route"] },
+            { id: "791381-m30-l01-p02", title: "التوجيه الديناميكي RIP", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 212, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["RIP", "Distance Vector", "version 2"] },
+            { id: "791381-m30-l01-p03", title: "التوجيه الديناميكي OSPF", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 214, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["OSPF", "area 0", "Wildcard"] },
+            { id: "791381-m30-l01-p04", title: "التوجيه الديناميكي EIGRP", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 218, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["EIGRP", "AS"] },
+          ],
+        },
+        {
+          id: "791381-m30-l02",
+          title: "قوائم التحكم ACL",
+          order: 2,
+          pages: [
+            { id: "791381-m30-l02-p01", title: "Standard ACL", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 224, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["Standard ACL", "access-list 1", "ip access-group"] },
+            { id: "791381-m30-l02-p02", title: "Extended ACL", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 227, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["Extended ACL", "access-list 100", "icmp", "HTTP"] },
+          ],
+        },
+        {
+          id: "791381-m30-l03",
+          title: "NAT و IPv6",
+          order: 3,
+          pages: [
+            { id: "791381-m30-l03-p01", title: "NAT / PAT إلى الإنترنت", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 258, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["NAT", "PAT", "overload", "ip nat inside"] },
+            { id: "791381-m30-l03-p02", title: "شبكتان بـ IPv6", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 166, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["IPv6", "ipv6 unicast-routing", "2001:db8"] },
+          ],
+        },
+      ],
+    },
   ],
   // The EIGHT Phase-3 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29);
   // they are NOT themselves canonical modules. The order is the OWNER-approved visible order (intro … summary).
@@ -1216,7 +1263,7 @@ const manifest: LearningCourseManifest = {
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m25", "791381-m26", "791381-m27", "791381-m06"] },
     { id: "summary", label: "التلخيص", moduleIds: ["791381-m28"] },
-    { id: "build", label: "ابنِ الشبكة", moduleIds: ["791381-m29"] },
+    { id: "build", label: "ابنِ الشبكة", moduleIds: ["791381-m29", "791381-m30"] },
   ],
 };
 

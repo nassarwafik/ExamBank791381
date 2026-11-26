@@ -86,7 +86,7 @@ export default function NetworkBuildActivity({ block, commands, emit, check }: L
       </section>
       <div className="learning-lab-stage learning-build-stage">
         <Suspense fallback={<p className="learning-lab-note" role="status">جارٍ تحميل مختبر الشبكات…</p>}>
-          <NetworkLabTool key={commands.reset} draftKey={draftKey} fresh={commands.reset !== firstReset} exercise={{ kinds: task.kinds as LabDeviceKind[] }}
+          <NetworkLabTool key={commands.reset} draftKey={draftKey} fresh={commands.reset !== firstReset} exercise={{ kinds: task.kinds as LabDeviceKind[], lab: task.lab }}
             onLabChange={lab => setNetwork({ net: { config: lab.config as unknown as Record<string, unknown>, actions: lab.actions }, epoch: commands.reset })} />
         </Suspense>
       </div>

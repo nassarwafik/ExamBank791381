@@ -27,14 +27,15 @@ export function readNetworkLabView(config: unknown): NetworkLabView | null {
 
 // «ابنِ الشبكة» — the DEFENSIVE reader of a build-the-network exercise's served config (`simulation` / `network-build` v1): the task only
 // (the statement, the goals and the device kinds the builder offers). Anything else an authored body may carry is ignored.
-export interface NetworkBuildView { intro: string; goals: { id: string; label: string }[]; kinds: string[] }
+export interface NetworkBuildView { intro: string; goals: { id: string; label: string }[]; kinds: string[]; lab: boolean }
 const BUILD_KINDS = ["router", "switch", "pc", "laptop", "ap", "server"];
 export function readNetworkBuildView(config: unknown): NetworkBuildView | null {
   if (!isObj(config) || !isObj(config.task)) return null;
-  const { kinds } = config.task as { kinds?: unknown };
-  if (!Array.isArray(kinds) || kinds.length === 0 || !kinds.every(k => typeof k === "string" && BUILD_KINDS.includes(k))) return null;
+  const { kinds, lab } = config.task as { kinds?: unknown; lab?: unknown };
+  const offered = lab === true ? [...BUILD_KINDS, "hub"] : BUILD_KINDS;
+  if (!Array.isArray(kinds) || kinds.length === 0 || !kinds.every(k => typeof k === "string" && offered.includes(k))) return null;
   const view = readNetworkLabView({ topology: {}, task: config.task });
-  return view ? { intro: view.intro, goals: view.goals, kinds: [...new Set(kinds as string[])] } : null;
+  return view ? { intro: view.intro, goals: view.goals, kinds: [...new Set(kinds as string[])], lab: lab === true } : null;
 }
 /** The browser draft of one «ابنِ الشبكة» exercise (the learner's convenience only; the server never reads it). */
 export const networkBuildDraftKey = (blockId: string): string => "eb.networkBuild.v1." + blockId;

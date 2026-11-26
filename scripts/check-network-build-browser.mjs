@@ -8,6 +8,9 @@
 //   • a reload restores the network from the exercise's draft; no page error, no horizontal scroll of the page.
 //   • the summary booklet 791381s (its own visual theme): the m37 exercise «VTP — Server وClient» is built through the UI — two
 //     switches, a trunk, VTP server / client, VLAN 30 created on the server only — and the server marks every goal ✓.
+//   • 791381 m30 (LAB mode): «WAN وتوجيه ثابت» — PC1 — R1 ═serial═ R2 — PC2 built through the UI, the routers' lines (serial addressing,
+//     clock rate, ip route) typed in their terminals; `show ip route` shows the S route, tracert crosses both routers, and the server,
+//     replaying the lab network with the lab's own engine, marks every goal ✓.
 //
 // Tools are measuring instruments, not project dependencies: PLAYWRIGHT_CORE_DIR (or the global `playwright`), CHROMIUM_PATH.
 // SHOT_DIR (optional) receives screenshots. Exit 1 when a check fails, 2 when a tool or the build is missing.
@@ -160,6 +163,60 @@ for (const [label, viewport, touch] of [["booklet 1280", { width: 1280, height: 
   await ex.getByRole("button", { name: "تحقّق من شبكتي", exact: true }).click();
   await ex.getByText("✓ أحسنت — شبكتك تحقق كل الأهداف.").waitFor({ timeout: 20000 });
   check(await ex.locator(".learning-lab-goal.is-right").count() === 7, "the server: every goal ✓ (VTP server / client, VLAN 30 learned, ping)");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check(overflow <= 1, "no horizontal scroll (" + overflow + "px)");
+  await shot(page, "netbuild-" + label.replace(" ", "-"));
+  await ctx.close();
+}
+
+/** 791381 m30 — the static-routing WAN exercise in LAB mode, built and configured through the UI; the server replays the lab network. */
+for (const [label, viewport, touch] of [["lab 1280", { width: 1280, height: 900 }, false], ["lab 390", { width: 390, height: 844 }, true]]) {
+  console.log("viewport " + label);
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: touch, isMobile: touch, serviceWorkers: "block", locale: "ar" });
+  await ctx.addInitScript(t => { sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "المعلم"); }, teacherToken);
+  const page = await ctx.newPage();
+  page.on("pageerror", e => failures.push("page error: " + e.message));
+  await page.goto(origin + "/#/learning/" + CID + "/read/791381-m30-l01-p01");
+  await page.reload();
+  const ex = page.getByTestId("network-build");
+  await ex.waitFor({ timeout: 20000 });
+  const lab = ex.getByTestId("network-lab");
+  await lab.waitFor({ timeout: 20000 });
+  check((await ex.locator(".learning-lab-goal").count()) === 4, "the four goals are listed");
+  for (const k of ["+ راوتر", "+ راوتر", "+ حاسوب", "+ حاسوب"]) await lab.getByRole("button", { name: k, exact: true }).click();
+  const sel = name => lab.getByRole("combobox", { name, exact: true });
+  for (const [a, ap, b, bp] of [["r1", "s0/0/0", "r2", "s0/0/0"], ["r1", "g0/0", "pc1", "eth0"], ["r2", "g0/0", "pc2", "eth0"]]) {
+    await sel("من الجهاز").selectOption(a); await sel("منفذ الجهاز الأول").selectOption(ap);
+    await sel("إلى الجهاز").selectOption(b); await sel("منفذ الجهاز الثاني").selectOption(bp);
+    await lab.getByRole("button", { name: "صِل", exact: true }).click();
+  }
+  const openDevice = async name => { await lab.getByTestId("network-lab-devices").getByRole("button", { name }).click(); return lab.getByTestId("network-lab-device"); };
+  const lines = {
+    R1: ["enable", "configure terminal", "interface g0/0", "ip address 192.168.1.1 255.255.255.0", "no shutdown", "exit", "interface s0/0/0", "ip address 10.0.0.1 255.255.255.252", "clock rate 64000", "no shutdown", "exit", "ip route 192.168.2.0 255.255.255.0 10.0.0.2", "end"],
+    R2: ["enable", "configure terminal", "interface g0/0", "ip address 192.168.2.1 255.255.255.0", "no shutdown", "exit", "interface s0/0/0", "ip address 10.0.0.2 255.255.255.252", "no shutdown", "exit", "ip route 192.168.1.0 255.255.255.0 10.0.0.1", "end"],
+  };
+  for (const [r, ls] of Object.entries(lines)) {
+    const panel = await openDevice(new RegExp("^" + r));
+    for (const line of ls) { await panel.getByRole("textbox").last().fill(line); await panel.getByRole("button", { name: "تنفيذ" }).click(); }
+  }
+  const r1 = await openDevice(/^R1/);
+  await r1.getByRole("textbox").last().fill("show ip route"); await r1.getByRole("button", { name: "تنفيذ" }).click();
+  check(/S\s+192\.168\.2\.0\/24 \[1\/0\] via 10\.0\.0\.2/.test(await r1.getByTestId("ncli-screen").textContent()), "on screen: R1 has the static route S 192.168.2.0/24 via 10.0.0.2");
+  for (const [name, address, gw] of [[/^PC1/, "192.168.1.10", "192.168.1.1"], [/^PC2/, "192.168.2.10", "192.168.2.1"]]) {
+    const panel = await openDevice(name);
+    await panel.getByRole("button", { name: /IP Configuration/ }).click();
+    const ipc = panel.getByTestId("net2-ipconfig");
+    await ipc.getByLabel("IP Address").fill(address); await ipc.getByLabel("Subnet Mask").fill("255.255.255.0"); await ipc.getByLabel("Default Gateway").fill(gw);
+    await ipc.getByRole("button", { name: /حفظ/ }).click();
+  }
+  const pc1 = await openDevice(/^PC1/);
+  await pc1.getByRole("button", { name: /Command Prompt/ }).click();
+  const cmd = pc1.getByTestId("net2-cmd");
+  await cmd.getByRole("textbox").fill("tracert 192.168.2.10"); await cmd.getByRole("button", { name: "تنفيذ" }).click();
+  check(/1 .*192\.168\.1\.1[\s\S]*2 .*10\.0\.0\.2[\s\S]*3 .*192\.168\.2\.10/.test(await cmd.getByTestId("ncli-screen").textContent()), "on screen: tracert from PC1 crosses R1 and R2");
+  await ex.getByRole("button", { name: "تحقّق من شبكتي", exact: true }).click();
+  await ex.getByText("✓ أحسنت — شبكتك تحقق كل الأهداف.").waitFor({ timeout: 20000 });
+  check(await ex.locator(".learning-lab-goal.is-right").count() === 4, "the server (lab replay): every goal ✓ — the link, both static routes, the ping");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check(overflow <= 1, "no horizontal scroll (" + overflow + "px)");
   await shot(page, "netbuild-" + label.replace(" ", "-"));

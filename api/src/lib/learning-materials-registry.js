@@ -80,7 +80,10 @@ const COURSES = [
       { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 },
       // «ابنِ الشبكة»: a practice module (seven build-the-network exercises judged on the server) — new stable id m29, after the final
       // summary; publishable (the teacher sees it as «مخفي عن الطلاب»); NEVER auto-published to any class.
-      { moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 }
+      { moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 },
+      // «ابنِ الشبكة: التوجيه والأمان»: a practice module (eight lab-mode build exercises — WAN, routing, ACL, NAT, IPv6 — judged on the
+      // server with the network lab's own replay, owner decision 2026-11-26); publishable, NEVER auto-published to any class.
+      { moduleId: "791381-m30", title: "ابنِ الشبكة: التوجيه والأمان", order: 30 }
     ]
   },
   // The summary booklet «أوراق تلخيص للمراجعة» (نموذج 791381) — an independent second course: module mNN is the booklet's

@@ -71,6 +71,7 @@ export const COURSE_CONTENT_MODULE_IDS: Record<string, readonly string[]> = {
     "791381-m06",
     "791381-m28",
     "791381-m29",
+    "791381-m30",
   ],
   // 791381s: every booklet section m00–m36 has a body (book-only, verbatim).
   "791381s": [

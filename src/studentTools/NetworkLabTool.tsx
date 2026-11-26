@@ -24,7 +24,9 @@ import "./networkLab.css";
 // «ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — in a book EXERCISE (`exercise`) the same builder runs in its PLAIN mode:
 // only the device kinds the task offers, networkTopology@2's own ports (no serial), no hub, IPv6 or lab router commands, and the view is
 // replayed by networkTopology@2's own replay — exactly what the server judges, so what the learner sees working is what is judged.
-// No example and no file there; `onLabChange` hands every change to the exercise.
+// No example and no file there; `onLabChange` hands every change to the exercise. A LAB exercise (`exercise.lab`, «ابنِ الشبكة: التوجيه
+// والأمان») keeps the whole lab — serial ports, hubs (when offered), IPv6 and the lab's router commands — and the lab's own replay, which
+// the server runs too.
 
 const ADAPTER_TEXT: Readonly<Record<Net2AdapterKind, string>> = { ethernet: "Ethernet (كابل)", wireless: "Wi-Fi (لاسلكي)" };
 const LABEL: Readonly<Record<LabDeviceKind, string>> = { ...KIND_LABEL, hub: "Hub" };
@@ -59,18 +61,24 @@ const ROUTER_EXTRAS: readonly [string, string][] = [
   ["IPv6", "ipv6 unicast-routing · interface g0/0 · ipv6 address 2001:db8:1::1/64 · ipv6 route 2001:db8:2::/64 2001:db8:12::2"],
   ["عرض", "show ip route · show ip protocols · show ip ospf neighbor · show access-lists · show ip nat translations · show ipv6 route"],
 ];
-function readDraft(key?: string, kinds?: readonly string[]): NetLab {
+function readDraft(key?: string, kinds?: readonly string[], plain = true): NetLab {
   if (!key) return EMPTY_LAB;
-  try { const t = localStorage.getItem(key); const r = t ? parseLab(t) : null; return r && r.ok && (!kinds || plainLab(r.lab, kinds)) ? r.lab : EMPTY_LAB; } catch { return EMPTY_LAB; }
+  try {
+    const t = localStorage.getItem(key); const r = t ? parseLab(t) : null;
+    if (!r || !r.ok) return EMPTY_LAB;
+    if (kinds && !r.lab.config.devices.every(d => kinds.includes(d.kind))) return EMPTY_LAB;
+    return !kinds || !plain || plainLab(r.lab, kinds) ? r.lab : EMPTY_LAB;
+  } catch { return EMPTY_LAB; }
 }
 const isHostCommand = (a: unknown): a is { type: "host.command"; deviceId: string; command: unknown } =>
   !!a && typeof a === "object" && (a as { type?: unknown }).type === "host.command" && typeof (a as { deviceId?: unknown }).deviceId === "string";
 
-export type NetworkLabExercise = { kinds: readonly LabDeviceKind[] };
+export type NetworkLabExercise = { kinds: readonly LabDeviceKind[]; lab?: boolean };
 export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh }: { draftKey?: string; exercise?: NetworkLabExercise; onLabChange?: (lab: NetLab) => void; fresh?: boolean }) {
-  const plain = !!exercise;
-  const kinds: readonly LabDeviceKind[] = exercise ? LAB_DEVICE_KINDS.filter(k => exercise.kinds.includes(k) && k !== "hub") : LAB_DEVICE_KINDS;
-  const [lab, setLabState] = useState<NetLab>(() => (fresh ? EMPTY_LAB : readDraft(draftKey, exercise ? kinds : undefined)));
+  const inExercise = !!exercise;
+  const plain = inExercise && !exercise.lab;
+  const kinds: readonly LabDeviceKind[] = exercise ? LAB_DEVICE_KINDS.filter(k => exercise.kinds.includes(k) && (exercise.lab || k !== "hub")) : LAB_DEVICE_KINDS;
+  const [lab, setLabState] = useState<NetLab>(() => (fresh ? EMPTY_LAB : readDraft(draftKey, exercise ? kinds : undefined, plain)));
   // the draft follows every change (a book only); a full or blocked storage is reported, never thrown
   const [draftFailed, setDraftFailed] = useState(false);
   const setLab = (next: NetLab) => {
@@ -175,8 +183,8 @@ export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh 
       <div className="netlab-bar net2-actions" role="group" aria-label="الشبكة">
         {confirm === "new"
           ? <><button type="button" className="is-danger" onClick={() => replace(EMPTY_LAB, "بدأت شبكة جديدة.")}>تأكيد: امسح الشبكة كلها</button><button type="button" className="is-secondary" onClick={() => setConfirm(null)}>إلغاء</button></>
-          : <button type="button" className="is-secondary" onClick={() => setConfirm("new")} disabled={!cfg.devices.length}>{plain ? "ابدأ من جديد" : "شبكة جديدة"}</button>}
-        {!plain && <>
+          : <button type="button" className="is-secondary" onClick={() => setConfirm("new")} disabled={!cfg.devices.length}>{inExercise ? "ابدأ من جديد" : "شبكة جديدة"}</button>}
+        {!inExercise && <>
         <label className="netlab-select">افتح مثالًا
           <select value="" onChange={e => template(e.target.value)} data-testid="network-lab-example">
             <option value="">اختر…</option>
@@ -188,14 +196,14 @@ export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh 
         <input ref={fileRef} type="file" accept=".json,application/json" hidden data-testid="network-lab-file" onChange={e => { void open(e.target.files?.[0]); e.target.value = ""; }} />
         </>}
       </div>
-      {draftKey && <p className="net2-note" data-testid="network-lab-draft">{draftFailed ? (plain ? "تعذّر حفظ المسودة في هذا المتصفح." : "تعذّر حفظ المسودة في هذا المتصفح؛ احفظ الشبكة في ملف.") : plain ? "شبكتك تُحفظ تلقائيًا مسودةً في هذا المتصفح." : "الشبكة تُحفظ تلقائيًا مسودةً في هذا المتصفح. لنقلها إلى جهاز آخر: «احفظ في ملف»."}</p>}
+      {draftKey && <p className="net2-note" data-testid="network-lab-draft">{draftFailed ? (inExercise ? "تعذّر حفظ المسودة في هذا المتصفح." : "تعذّر حفظ المسودة في هذا المتصفح؛ احفظ الشبكة في ملف.") : inExercise ? "شبكتك تُحفظ تلقائيًا مسودةً في هذا المتصفح." : "الشبكة تُحفظ تلقائيًا مسودةً في هذا المتصفح. لنقلها إلى جهاز آخر: «احفظ في ملف»."}</p>}
 
       <div className="netlab-bar net2-actions" role="group" aria-label="إضافة جهاز">
         {kinds.map(k => <button key={k} type="button" onClick={() => add(k)} disabled={cfg.devices.length >= NET2_LIMITS.devices}>{"+ " + LABEL[k]}</button>)}
       </div>
 
       {cfg.devices.length === 0
-        ? <p className="netlab-empty">{plain ? "ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل وبرمجها." : "ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل — أو افتح مثالًا جاهزًا."}</p>
+        ? <p className="netlab-empty">{inExercise ? "ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل وبرمجها." : "ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل — أو افتح مثالًا جاهزًا."}</p>
         : <Net2Diagram config={cfg} title={"شبكتي: " + cfg.devices.length + " أجهزة و" + cfg.links.length + " كوابل"} selectedId={selected} onSelect={pick} linkDown={linkDown}
             wireless={wireless} editable onMove={(id, x, y) => apply(moveDevice(lab, id, x, y))} testId="network-lab-diagram"
             flow={shown ? { id: shown.id, ok: shown.flow.ok, hops: shown.flow.hops } : null} />}

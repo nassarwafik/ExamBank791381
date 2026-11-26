@@ -418,7 +418,9 @@ export const isMachineDesignBlock = (block: { type: string; simulationType?: unk
  */
 export const NETWORK_BUILD_KEY = "network-build";
 export const NETWORK_BUILD_VERSION = 1;
-export interface NetworkBuildTask { intro: string; goals: NetworkLabGoal[]; kinds: string[] }
+/** `lab: true` — a network-LAB exercise (serial WAN, routing, ACL, NAT, IPv6, hubs): the builder runs the full lab, the server judges it
+ *  on the lab's own replay with lab checks (src/learning/lab/networkBuildJudge.ts). */
+export interface NetworkBuildTask { intro: string; goals: NetworkLabGoal[]; kinds: string[]; lab?: true }
 export interface NetworkBuildConfig {
   task: NetworkBuildTask;
   checks?: Record<string, unknown>[];

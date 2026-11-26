@@ -431,6 +431,7 @@ function checkMachineDesign(block: ActivityBlock, add: (c: ContentIssueCode, m: 
 const LAB_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
 const BUILD_CONFIG_KEYS = new Set(["task", "checks", "feedback", "solution"]);
 const BUILD_DEVICE_KINDS = new Set(["router", "switch", "pc", "laptop", "ap", "server"]);
+const BUILD_LAB_DEVICE_KINDS = new Set([...BUILD_DEVICE_KINDS, "hub"]);
 /**
  * «ابنِ الشبكة» — the STRUCTURE of a build-the-network exercise (`simulation` / `network-build` v1). Whether the checks are a valid key on
  * the solution's network, the empty network earns nothing and the solution passes every check is proven by the real judge
@@ -444,12 +445,14 @@ function checkNetworkBuild(block: ActivityBlock, add: (c: ContentIssueCode, m: s
   const config = block.config as Record<string, unknown> | undefined;
   if (!config || typeof config !== "object" || Array.isArray(config)) { bad("config must be an object"); return; }
   for (const k of Object.keys(config)) if (!BUILD_CONFIG_KEYS.has(k)) bad("unknown config field " + k);
-  const task = config.task as { intro?: unknown; goals?: unknown; kinds?: unknown } | undefined;
+  const task = config.task as { intro?: unknown; goals?: unknown; kinds?: unknown; lab?: unknown } | undefined;
   if (!task || typeof task !== "object" || Array.isArray(task)) { bad("task is required"); return; }
-  for (const k of Object.keys(task)) if (!["intro", "goals", "kinds"].includes(k)) bad("unknown task field " + k);
+  for (const k of Object.keys(task)) if (!["intro", "goals", "kinds", "lab"].includes(k)) bad("unknown task field " + k);
+  if (task.lab !== undefined && task.lab !== true) bad("task.lab is true (a network-lab exercise) or absent");
+  const offered = task.lab === true ? BUILD_LAB_DEVICE_KINDS : BUILD_DEVICE_KINDS;
   if (!isNonEmptyString(task.intro)) bad("task.intro is required");
   const kinds = Array.isArray(task.kinds) ? task.kinds : null;
-  if (!kinds || kinds.length === 0 || !kinds.every(k => typeof k === "string" && BUILD_DEVICE_KINDS.has(k)) || new Set(kinds).size !== kinds.length) bad("task.kinds lists the distinct networkTopology@2 device kinds the builder offers");
+  if (!kinds || kinds.length === 0 || !kinds.every(k => typeof k === "string" && offered.has(k)) || new Set(kinds).size !== kinds.length) bad("task.kinds lists the distinct device kinds the builder offers (the hub in a lab exercise only)");
   const goals = Array.isArray(task.goals) ? (task.goals as { id?: unknown; label?: unknown }[]) : null;
   if (!goals || goals.length === 0 || !goals.every(g => g && typeof g.id === "string" && LAB_ID.test(g.id) && isNonEmptyString(g.label))) bad("task.goals must list one { id, label } per check");
   const checks = config.checks;

@@ -1960,6 +1960,21 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "«ابنِ الشبكة» in the summary booklet (docs/enterprise-network-build-exercises.md §5b) — the search for «الشبكة» also finds the pages of the booklet's new practice module 791381s-m37 «ابنِ الشبكة» (one more module group of results); the result list is taller, nothing else on the page moves."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة: التوجيه والأمان» (docs/enterprise-network-build-exercises.md §5c, owner decision 2026-11-26) — book 791381 gains the practice module m30 (9 pages, 4 lessons) after m29: the overview's «ابنِ الشبكة» section counts 8 lessons and pages 249–265 instead of 4 lessons / 249–256, and the book's totals grow accordingly; nothing else on the page moves."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة: التوجيه والأمان» (docs/enterprise-network-build-exercises.md §5c, owner decision 2026-11-26) — book 791381 gains the practice module m30 (9 pages, 4 lessons) after m29: the reader's page position reads «… / 265» instead of «… / 256» (and the contents list gains the module at its end); nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة: التوجيه والأمان» (docs/enterprise-network-build-exercises.md §5c, owner decision 2026-11-26) — book 791381 gains the practice module m30 (9 pages, 4 lessons) after m29: the search for «الشبكة» also lists the pages of m30 and the totals read «من 265»; the result list is taller, nothing else on the page moves."
     }
   ]
 }
