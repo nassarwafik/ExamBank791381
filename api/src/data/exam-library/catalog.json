@@ -1267,5 +1267,113 @@
       "repository": "899371",
       "sourceFile": "scripts/coding-lab-899371/m11.json"
     }
+  },
+  {
+    "libraryItemId": "AU899271-01",
+    "title": "مختبر الآلات — الأوتومات المنتهي الحتمي (الوحدات 2–4)",
+    "category": "automata-899271",
+    "description": "تمارين «صمّم الآلة» من الوحدات 2–4 في «الأتمتة»: يبني الطالب الأوتومات، ويقارن الخادم لغته بلغة الآلة النموذجية تمامًا. العلامة كاملة أو صفر.",
+    "tags": [
+      "الأتمتة",
+      "صمّم الآلة",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "automata-lab-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "e80e95310a7417104c0cbf5baee1ea30f85219f6ec4d148de9142f309e50ef21",
+    "contentHash": "279231c89bea4c48643d952ae7a3db447869c3312d45a077150cb3ddf2828708",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271",
+      "sourceFile": "scripts/automata-course/u02.mjs scripts/automata-course/u03.mjs scripts/automata-course/u04.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AU899271-02",
+    "title": "مختبر الآلات — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+    "category": "automata-899271",
+    "description": "تمارين «صمّم الآلة» من الوحدات 5–7 في «الأتمتة»: يبني الطالب الأوتومات، ويقارن الخادم لغته بلغة الآلة النموذجية تمامًا. العلامة كاملة أو صفر.",
+    "tags": [
+      "الأتمتة",
+      "صمّم الآلة",
+      "تصحيح آلي"
+    ],
+    "questionCount": 6,
+    "totalMarks": 60,
+    "pageRange": "",
+    "parserFamily": "automata-lab-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 6,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "90526ea8fad99c818a08fc4c08eb0e3ca84ffe0fa48d473c60ca4a22ee616762",
+    "contentHash": "7070b662d868f3fd875c33ec37159fa8e92885ae0cefee0fd2193d8ec4ebbc5a",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271",
+      "sourceFile": "scripts/automata-course/u05.mjs scripts/automata-course/u06.mjs scripts/automata-course/u07.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AU899271-03",
+    "title": "مختبر الآلات — أوتومات المكدّس (الوحدتان 8–9)",
+    "category": "automata-899271",
+    "description": "تمارين «صمّم الآلة» من الوحدتين 8–9 في «الأتمتة»: يبني الطالب الآلة، ويشغّلها الخادم مع الآلة النموذجية على كل الكلمات حتى طول محدد. العلامة كاملة أو صفر.",
+    "tags": [
+      "الأتمتة",
+      "صمّم الآلة",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "automata-lab-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "e390bb20a968d3e47895ec8fabaceeb28fce947fe059bdfee7cd6429de486b1e",
+    "contentHash": "33903a284e3b3d088f17afbfa97f81b973e4add748e97efa1df219417909ec64",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271",
+      "sourceFile": "scripts/automata-course/u08.mjs scripts/automata-course/u09.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AU899271-04",
+    "title": "مختبر الآلات — آلة تورنغ (الوحدة 10)",
+    "category": "automata-899271",
+    "description": "تمارين «صمّم الآلة» من الوحدة 10 في «الأتمتة»: يبني الطالب الآلة، ويشغّلها الخادم مع الآلة النموذجية على كل الكلمات حتى طول محدد؛ آلة لا تتوقف تذهب إلى مراجعة المعلم. العلامة كاملة أو صفر.",
+    "tags": [
+      "الأتمتة",
+      "صمّم الآلة",
+      "تصحيح آلي"
+    ],
+    "questionCount": 7,
+    "totalMarks": 70,
+    "pageRange": "",
+    "parserFamily": "automata-lab-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 7,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "ae65a5efc0e372e9f63c2cb87bca439113b6e14affbfecf741d297e7bc8ca2bd",
+    "contentHash": "615e15322bdf1191dab5f29ecde54d2cac64ccc8eed6f6865f8aa9a0db9c29ce",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271",
+      "sourceFile": "scripts/automata-course/u10.mjs"
+    }
   }
 ]
