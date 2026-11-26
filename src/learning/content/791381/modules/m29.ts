@@ -12,51 +12,12 @@
 // STUDY STRENGTH (owner decision 2026-11-26): «ابنِ الشبكة» counts as the book's 29th study module, worth 20 points like every module
 // (round(completed / 7 × 20)); a right network is recorded once, like every study exercise.
 
-import type { ContentBlock, ContentModule, ContentSource, InlineSpan } from "../../types";
+import type { ContentBlock, ContentModule, ContentSource } from "../../types";
+import { buildExercise as build, cable, cli, dev, howTo, ip, L, linkCheck, net, reach, T } from "../../networkBuildAuthoring";
 
 const CID = "791381";
 const NOTE = "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب).";
 const src = (pdf: number): ContentSource => ({ kind: "book", sourceId: CID, pdfPageStart: pdf, sourceNote: NOTE });
-const T = (text: string): InlineSpan => ({ text });
-const L = (text: string): InlineSpan => ({ text, dir: "ltr", style: "code" });
-
-// ── authoring helpers for the solutions (the network a learner could build with the lab's own buttons) ─────────────────────────
-type Dev = { id: string; kind: string; label: string; x: number; y: number; adapters?: string[] };
-const dev = (id: string, kind: string, x: number, y: number, adapters?: string[]): Dev => ({ id, kind, label: id.replace(/\d+$/, "").toUpperCase() + id.match(/\d+$/)![0], x, y, ...(adapters ? { adapters } : {}) });
-const cable = (n: number, a: string, ap: string, b: string, bp: string) => ({ id: "l" + n, a: { deviceId: a, port: ap }, b: { deviceId: b, port: bp } });
-const net = (devices: Dev[], links: ReturnType<typeof cable>[]) => ({ v: 2, devices, links });
-const cli = (type: "router.command" | "switch.command", deviceId: string, lines: string[]) => lines.map(command => ({ type, deviceId, command }));
-const ip = (deviceId: string, address: string, gateway = "", dns = "", adapter = "eth0") => ({ type: "host.setStatic", deviceId, adapter, address, mask: "255.255.255.0", gateway, dns });
-const goal = (id: string, label: string) => ({ id, label });
-const linkCheck = (id: string, label: string, a: string, b: string) => ({ id, label, kind: "build.link", a, b });
-const reach = (id: string, label: string, source: string, destination: string, value = true) => ({ id, label, weight: 1, kind: "reachability", source, destination, value });
-
-type Exercise = {
-  id: string; title: string; description: string; fallback: string;
-  intro: string; kinds: string[];
-  checks: Record<string, unknown>[];
-  hints: string[]; explanation: string;
-  solution: { config: Record<string, unknown>; actions: Record<string, unknown>[] };
-};
-function build(e: Exercise): ContentBlock {
-  return {
-    // a study activity (owner decision 2026-11-26: m29 is the 29th study module, 20 points)
-    id: e.id, type: "simulation", origin: "teacher-enrichment", simulationType: "network-build", version: 1,
-    title: e.title, description: e.description,
-    capabilities: { fullscreen: true, reset: true, interactive: true },
-    fallback: { text: e.fallback },
-    config: {
-      task: { intro: e.intro, goals: e.checks.map(c => goal(c.id as string, c.label as string)), kinds: e.kinds },
-      checks: e.checks,
-      feedback: { correctFeedback: "ممتاز! بنيت الشبكة وبرمجتها بنفسك، تمامًا كما يعمل فنّي الشبكات.", incorrectFeedback: "شبكتك لا تحقق كل الأهداف بعد. انظر إلى الأهداف المعلّمة بـ ✕.", hints: e.hints, explanation: e.explanation },
-      solution: e.solution,
-    },
-  } as ContentBlock;
-}
-const howTo = (id: string, steps: string[]): ContentBlock => ({
-  id, type: "callout", origin: "teacher-enrichment", kind: "tip", title: "كيف أعمل في المختبر؟",
-  spans: [T(steps.join(" "))],
-} as ContentBlock);
 
 // ── the seven exercises ────────────────────────────────────────────────────────────────────────────────────────────────────────
 const LAN = build({

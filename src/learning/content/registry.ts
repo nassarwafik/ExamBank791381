@@ -111,6 +111,7 @@ export const COURSE_CONTENT_MODULE_IDS: Record<string, readonly string[]> = {
     "791381s-m34",
     "791381s-m35",
     "791381s-m36",
+    "791381s-m37",
   ],
   // 899371: the opening (m00), chapters 1–11 (m01–m11; P2 m00–m04, P3 m05–m12) and the closing word (m12).
   "899371": [

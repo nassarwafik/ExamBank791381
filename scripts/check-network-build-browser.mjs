@@ -6,6 +6,8 @@
 //   • the empty network cannot be checked; a half-built network is judged by the SERVER: some goals ✓, some ✕, and the hints;
 //   • the learner finishes the network (cables, the router's CLI, the PCs' IP Configuration); «تحقّق من شبكتي» → every goal ✓;
 //   • a reload restores the network from the exercise's draft; no page error, no horizontal scroll of the page.
+//   • the summary booklet 791381s (its own visual theme): the m37 exercise «VTP — Server وClient» is built through the UI — two
+//     switches, a trunk, VTP server / client, VLAN 30 created on the server only — and the server marks every goal ✓.
 //
 // Tools are measuring instruments, not project dependencies: PLAYWRIGHT_CORE_DIR (or the global `playwright`), CHROMIUM_PATH.
 // SHOT_DIR (optional) receives screenshots. Exit 1 when a check fails, 2 when a tool or the build is missing.
@@ -112,6 +114,55 @@ for (const [label, viewport, touch] of [["1280", { width: 1280, height: 900 }, f
   await page.reload();
   await page.getByTestId("network-build").getByTestId("network-lab").waitFor({ timeout: 20000 });
   check(await page.getByTestId("network-build").getByTestId("network-lab-devices").getByRole("button").count() === 5, "a reload restores the network from the exercise's draft");
+  await ctx.close();
+}
+
+/** 791381s m37 — the VTP exercise in the booklet, built and configured through the UI; the server judges it. */
+for (const [label, viewport, touch] of [["booklet 1280", { width: 1280, height: 900 }, false], ["booklet 390", { width: 390, height: 844 }, true]]) {
+  console.log("viewport " + label);
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: touch, isMobile: touch, serviceWorkers: "block", locale: "ar" });
+  await ctx.addInitScript(t => { sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "المعلم"); }, teacherToken);
+  const page = await ctx.newPage();
+  page.on("pageerror", e => failures.push("page error: " + e.message));
+  await page.goto(origin + "/#/learning/791381s/read/791381s-m37-l01-p03");
+  await page.reload();
+  const ex = page.getByTestId("network-build");
+  await ex.waitFor({ timeout: 20000 });
+  const lab = ex.getByTestId("network-lab");
+  await lab.waitFor({ timeout: 20000 });
+  check((await ex.locator(".learning-lab-goal").count()) === 7, "the seven goals are listed");
+  for (const k of ["+ سويتش", "+ سويتش", "+ حاسوب", "+ حاسوب"]) await lab.getByRole("button", { name: k, exact: true }).click();
+  const sel = name => lab.getByRole("combobox", { name, exact: true });
+  for (const [a, ap, b, bp] of [["sw1", "g0/1", "sw2", "g0/1"], ["sw1", "f0/1", "pc1", "eth0"], ["sw2", "f0/1", "pc2", "eth0"]]) {
+    await sel("من الجهاز").selectOption(a); await sel("منفذ الجهاز الأول").selectOption(ap);
+    await sel("إلى الجهاز").selectOption(b); await sel("منفذ الجهاز الثاني").selectOption(bp);
+    await lab.getByRole("button", { name: "صِل", exact: true }).click();
+  }
+  const openDevice = async name => { await lab.getByTestId("network-lab-devices").getByRole("button", { name }).click(); return lab.getByTestId("network-lab-device"); };
+  const lines = {
+    SW1: ["enable", "configure terminal", "vtp domain SCHOOL", "vtp mode server", "vlan 30", "exit", "interface f0/1", "switchport mode access", "switchport access vlan 30", "exit", "interface g0/1", "switchport mode trunk", "end"],
+    SW2: ["enable", "configure terminal", "vtp domain SCHOOL", "vtp mode client", "interface g0/1", "switchport mode trunk", "exit", "interface f0/1", "switchport mode access", "switchport access vlan 30", "end"],
+  };
+  for (const [sw, ls] of Object.entries(lines)) {
+    const panel = await openDevice(new RegExp("^" + sw));
+    for (const line of ls) { await panel.getByRole("textbox").last().fill(line); await panel.getByRole("button", { name: "تنفيذ" }).click(); }
+  }
+  const sw2 = await openDevice(/^SW2/);
+  await sw2.getByRole("textbox").last().fill("show vlan brief"); await sw2.getByRole("button", { name: "تنفيذ" }).click();
+  check(/30\s+VLAN0030/.test(await sw2.getByTestId("ncli-screen").textContent()), "on screen: SW2 learned VLAN 30 from the VTP server");
+  for (const [name, address] of [[/^PC1/, "192.168.30.1"], [/^PC2/, "192.168.30.2"]]) {
+    const panel = await openDevice(name);
+    await panel.getByRole("button", { name: /IP Configuration/ }).click();
+    const ipc = panel.getByTestId("net2-ipconfig");
+    await ipc.getByLabel("IP Address").fill(address); await ipc.getByLabel("Subnet Mask").fill("255.255.255.0");
+    await ipc.getByRole("button", { name: /حفظ/ }).click();
+  }
+  await ex.getByRole("button", { name: "تحقّق من شبكتي", exact: true }).click();
+  await ex.getByText("✓ أحسنت — شبكتك تحقق كل الأهداف.").waitFor({ timeout: 20000 });
+  check(await ex.locator(".learning-lab-goal.is-right").count() === 7, "the server: every goal ✓ (VTP server / client, VLAN 30 learned, ping)");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check(overflow <= 1, "no horizontal scroll (" + overflow + "px)");
+  await shot(page, "netbuild-" + label.replace(" ", "-"));
   await ctx.close();
 }
 

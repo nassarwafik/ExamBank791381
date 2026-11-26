@@ -30,9 +30,11 @@ const answer = (config: unknown, actions: unknown[] = []) => ({ kind: "network-b
 const EMPTY = { v: 2, devices: [], links: [] };
 
 describe("every authored «ابنِ الشبكة» exercise is valid and proven by the real judge", () => {
-  it("book 791381 has the seven exercises of m29, all checked on the server and all study activities (owner decision 2026-11-26: the 29th study module)", async () => {
+  it("book 791381 has the seven exercises of m29 and the booklet 791381s the seven of m37, all checked on the server and all study activities (owner decision 2026-11-26: the 29th study module)", async () => {
     const builds = await allBuilds();
-    expect(builds.map(b => b.id)).toEqual(["m29-l01-p01-build-lan", "m29-l01-p02-build-vlan", "m29-l02-p01-build-router", "m29-l02-p02-build-roas", "m29-l03-p01-build-dhcp", "m29-l03-p02-build-wifi", "m29-l03-p03-build-web"]);
+    expect(builds.map(b => b.id)).toEqual(["m29-l01-p01-build-lan", "m29-l01-p02-build-vlan", "m29-l02-p01-build-router", "m29-l02-p02-build-roas", "m29-l03-p01-build-dhcp", "m29-l03-p02-build-wifi", "m29-l03-p03-build-web",
+      // 791381s m37 (owner decision 2026-11-26): seven more, a step deeper
+      "m37-l01-p01-build-trunk", "m37-l01-p02-build-native", "m37-l01-p03-build-vtp", "m37-l02-p01-build-portsec", "m37-l02-p02-build-passwords", "m37-l03-p01-build-dhcp-server", "m37-l03-p02-build-dmz"]);
     for (const b of builds) { expect(studyActivityOf(b), b.id).not.toBeNull(); expect(checkActivityOf(b)?.study, b.id).toBe(true); }
   });
   it("the empty network reaches no goal; the authored solution reaches every goal", async () => {

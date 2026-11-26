@@ -209,7 +209,8 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "791381s-m33", title: "العنونة والتجزئة", order: 33 },
       { moduleId: "791381s-m34", title: "التبديل و VLANs", order: 34 },
       { moduleId: "791381s-m35", title: "التوجيه والأمان", order: 35 },
-      { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 }
+      { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 },
+      { moduleId: "791381s-m37", title: "ابنِ الشبكة", order: 37 }   // the practice module «ابنِ الشبكة» (owner decision 2026-11-26)
     ] }, { courseId: "899371", title: "أسس علم الحاسوب", subject: "علم الحاسوب", modules: [
       // 899371 P2: the C# question bank, an independent third course — listed = publishable, never auto-visible.
       { moduleId: "899371-m00", title: "افتتاحية", order: 0 },

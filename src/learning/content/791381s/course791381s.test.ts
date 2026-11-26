@@ -56,10 +56,10 @@ describe("791381s — identity and registration", () => {
     expect(registeredCourseIds()).toEqual(["791283", "791381", "899271", "899371", CID, "899271d"]);   // integer-like keys first, in numeric order; then the lettered ids as registered
   });
 
-  it("modules m00–m36 in section order; every batch module exists and each module is in exactly one batch", () => {
+  it("modules m00–m36 in section order, then the practice module m37 «ابنِ الشبكة»; every batch module exists and each module is in exactly one batch", () => {
     const ids = manifest.modules.map(m => m.id);
-    expect(ids).toEqual(Array.from({ length: 37 }, (_, n) => CID + "-m" + String(n).padStart(2, "0")));
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 37 }, (_, n) => n));
+    expect(ids).toEqual(Array.from({ length: 38 }, (_, n) => CID + "-m" + String(n).padStart(2, "0")));
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 38 }, (_, n) => n));
     const inBatches = manifest.batches!.flatMap(b => b.moduleIds);
     expect([...inBatches].sort()).toEqual([...ids].sort());
     expect(new Set(inBatches).size).toBe(inBatches.length);
