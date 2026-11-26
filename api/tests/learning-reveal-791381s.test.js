@@ -171,7 +171,7 @@ describe("791381s reveal — the real handler", () => {
     expect(ctx.getJson(studyDocName("u1")).pages[PAGE].completed).toEqual({});
     const state = await get(deps);
     expect(state.jsonBody.totalPoints).toBe(0);
-    expect(state.jsonBody.policy).toEqual({ modulePointsMax: 20, moduleCount: 38 });   // 38 since «ابنِ الشبكة» (m37)
+    expect(state.jsonBody.policy).toEqual({ modulePointsMax: 20, moduleCount: 39 });   // 38 since «ابنِ الشبكة» (m37), 39 since m38
   });
 
   it("STUDENT, right then wrong: the completion stands (never marked revealed, never undone)", async () => {

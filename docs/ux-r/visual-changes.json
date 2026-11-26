@@ -1975,6 +1975,11 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "«ابنِ الشبكة: التوجيه والأمان» (docs/enterprise-network-build-exercises.md §5c, owner decision 2026-11-26) — book 791381 gains the practice module m30 (9 pages, 4 lessons) after m29: the search for «الشبكة» also lists the pages of m30 and the totals read «من 265»; the result list is taller, nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة: التوجيه والأمان» in the summary booklet (docs/enterprise-network-build-exercises.md §5d) — the search for «الشبكة» also lists the pages of the booklet's new practice module 791381s-m38 (one more module group of results); the result list is taller, nothing else on the page moves."
     }
   ]
 }

@@ -133,7 +133,10 @@ const COURSES = [
       { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 },
       // «ابنِ الشبكة»: a practice module (seven build-the-network exercises judged on the server, owner decision 2026-11-26) — not a
       // section of the printed booklet; publishable, NEVER auto-published to any class.
-      { moduleId: "791381s-m37", title: "ابنِ الشبكة", order: 37 }
+      { moduleId: "791381s-m37", title: "ابنِ الشبكة", order: 37 },
+      // «ابنِ الشبكة: التوجيه والأمان»: a practice module (seven lab-mode build exercises judged on the server, owner request 2026-11-26)
+      // — not a section of the printed booklet; publishable, NEVER auto-published to any class.
+      { moduleId: "791381s-m38", title: "ابنِ الشبكة: التوجيه والأمان", order: 38 }
     ]
   },
   // 899371 P2 — «أسس علم الحاسوب» (مجمع أسئلة نموذج 899371, C#): module mNN = chapter NN of the book (m00 = its opening), generated

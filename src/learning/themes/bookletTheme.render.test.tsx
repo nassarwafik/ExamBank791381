@@ -81,11 +81,12 @@ describe("booklet skin — the index", () => {
       <LearningReaderToc manifest={manifest791381s} selectedPageId="791381s-m01-l01-p01" activeModuleId="791381s-m01" onSelectPage={() => {}} idPrefix="t" />,
     );
     const mods = [...container.querySelectorAll(".learning-reader-toc-module")];
-    expect(mods).toHaveLength(38);   // + «ابنِ الشبكة» (m37)
+    expect(mods).toHaveLength(39);   // + «ابنِ الشبكة» (m37, m38)
     expect(mods[0].getAttribute("data-theme-tone")).toBe("intro");
     expect(mods[1].getAttribute("data-theme-tone")).toBe("b1");
     expect(mods[36].getAttribute("data-theme-tone")).toBe("summary");
-    expect(mods[37].getAttribute("data-theme-tone")).toBe("base");   // the practice module: the booklet's neutral tone
+    expect(mods[37].getAttribute("data-theme-tone")).toBe("base");
+    expect(mods[38].getAttribute("data-theme-tone")).toBe("base");   // the practice module: the booklet's neutral tone
     cleanup();
     const other = render(
       <LearningReaderToc manifest={{ ...manifest791381s, courseId: "791381" }} selectedPageId="791381s-m01-l01-p01" activeModuleId="791381s-m01" onSelectPage={() => {}} idPrefix="t" />,

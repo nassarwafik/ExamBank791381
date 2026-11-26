@@ -36,7 +36,9 @@ describe("every authored «ابنِ الشبكة» exercise is valid and proven 
       // 791381 m30 (owner decision 2026-11-26): eight LAB-mode exercises (WAN, routing, ACL, NAT, IPv6)
       "m30-l01-p01-build-static", "m30-l01-p02-build-rip", "m30-l01-p03-build-ospf", "m30-l01-p04-build-eigrp", "m30-l02-p01-build-acl-standard", "m30-l02-p02-build-acl-extended", "m30-l03-p01-build-pat", "m30-l03-p02-build-ipv6",
       // 791381s m37 (owner decision 2026-11-26): seven more, a step deeper
-      "m37-l01-p01-build-trunk", "m37-l01-p02-build-native", "m37-l01-p03-build-vtp", "m37-l02-p01-build-portsec", "m37-l02-p02-build-passwords", "m37-l03-p01-build-dhcp-server", "m37-l03-p02-build-dmz"]);
+      "m37-l01-p01-build-trunk", "m37-l01-p02-build-native", "m37-l01-p03-build-vtp", "m37-l02-p01-build-portsec", "m37-l02-p02-build-passwords", "m37-l03-p01-build-dhcp-server", "m37-l03-p02-build-dmz",
+      // 791381s m38: seven more LAB-mode exercises (a three-router WAN, network-wide ACLs, static NAT, IPv6 static routing)
+      "m38-l01-p01-build-static3", "m38-l01-p02-build-ospf3", "m38-l01-p03-build-eigrp3", "m38-l02-p01-build-acl-one-network", "m38-l02-p02-build-acl-no-web", "m38-l03-p01-build-static-nat", "m38-l03-p02-build-ipv6-static"]);
     for (const b of builds) { expect(studyActivityOf(b), b.id).not.toBeNull(); expect(checkActivityOf(b)?.study, b.id).toBe(true); }
   });
   it("the empty network reaches no goal; the authored solution reaches every goal", async () => {
@@ -171,5 +173,32 @@ describe("LAB mode (791381 m30): the server judges what the lab network really d
     const hub = { ...good.config, devices: [...(good.config.devices as object[]), { id: "hub1", kind: "hub", label: "HUB1", x: 0.5, y: 0.5 }] };
     expect(judgeNetworkBuild(k, answer(hub, good.actions))).toMatchObject({ correct: false, issue: { code: "KIND_NOT_ALLOWED" } });
     expect(judgeNetworkBuild(k, answer({ v: 3 }, []))).toMatchObject({ correct: false, issue: { code: "NETWORK_INVALID" } });
+  });
+});
+
+describe("LAB mode (791381s m38): three routers, network-wide ACLs, static NAT", () => {
+  const byId = async (id: string) => (await allBuilds()).find(b => b.id === id)!;
+  const sol = (b: SimulationBlock) => cfg(b).solution!;
+  it("the middle router without its routes: the ends' default routes alone carry nothing — PC1 does not reach PC3", async () => {
+    const b = await byId("m38-l01-p01-build-static3");
+    const actions = sol(b).actions.filter(a => !(a.deviceId === "r2" && typeof a.command === "string" && a.command.startsWith("ip route")));
+    expect(judgeNetworkBuild(keyOf(b), answer(sol(b).config, actions))).toMatchObject({ correct: false, parts: { d1: true, d3: true, m1: false, m3: false, ping: false } });
+  });
+  it("OSPF missing on the middle router: the far networks are not learned two hops away", async () => {
+    const b = await byId("m38-l01-p02-build-ospf3");
+    const actions = sol(b).actions.filter(a => !(a.deviceId === "r2" && typeof a.command === "string" && /^(router ospf|network )/.test(a.command)));
+    expect(judgeNetworkBuild(keyOf(b), answer(sol(b).config, actions))).toMatchObject({ correct: false, parts: { far1: false, far3: false, link: false, ping: false } });
+  });
+  it("the ACL on the students' port instead of the servers' port blocks them from everything — the «other traffic» goal fails", async () => {
+    const b = await byId("m38-l02-p01-build-acl-one-network");
+    // only the two lines that apply the ACL move (the addressing of g0/2 stays)
+    const at = sol(b).actions.findIndex(a => a.command === "ip access-group 10 out");
+    const actions = sol(b).actions.map((a, i) => (i === at - 1 ? { ...a, command: "interface g0/1" } : i === at ? { ...a, command: "ip access-group 10 in" } : a));
+    expect(judgeNetworkBuild(keyOf(b), answer(sol(b).config, actions))).toMatchObject({ correct: false, parts: { admin: true, students: true, other: false } });
+  });
+  it("without static NAT the server is not reachable from the Internet", async () => {
+    const b = await byId("m38-l03-p01-build-static-nat");
+    const actions = sol(b).actions.filter(a => !(typeof a.command === "string" && /nat/.test(a.command)));
+    expect(judgeNetworkBuild(keyOf(b), answer(sol(b).config, actions))).toMatchObject({ correct: false, parts: { wan: true, public: false, web: false, private: true } });
   });
 });

@@ -8,7 +8,7 @@ import { listLearningCourses, findLearningCourse, listLearningModules, findLearn
 const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06", "791381-m28"];
 
 describe("registry — the summary booklet course 791381s", () => {
-  it("lists the booklet's sections m00–m36 and the practice module m37 in its own order, after the book, with no id shared with 791381", () => {
+  it("lists the booklet's sections m00–m36 and the practice modules m37 / m38 in its own order, after the book, with no id shared with 791381", () => {
     const course = findLearningCourse("791381s");
     expect(course).toMatchObject({ courseId: "791381s", title: "أوراق تلخيص شبكات الاتصال", subject: "أنظمة محوسبة" });
     expect(course.modules).toEqual([
@@ -49,7 +49,8 @@ describe("registry — the summary booklet course 791381s", () => {
       { moduleId: "791381s-m34", title: "التبديل و VLANs", order: 34 },
       { moduleId: "791381s-m35", title: "التوجيه والأمان", order: 35 },
       { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 },
-      { moduleId: "791381s-m37", title: "ابنِ الشبكة", order: 37 }   // the practice module «ابنِ الشبكة» (owner decision 2026-11-26)
+      { moduleId: "791381s-m37", title: "ابنِ الشبكة", order: 37 },   // the practice module «ابنِ الشبكة» (owner decision 2026-11-26)
+      { moduleId: "791381s-m38", title: "ابنِ الشبكة: التوجيه والأمان", order: 38 }   // «ابنِ الشبكة: التوجيه والأمان» (lab mode)
     ]);
     const book = new Set(listLearningModules("791381").map(m => m.moduleId));
     expect(course.modules.some(m => book.has(m.moduleId))).toBe(false);
@@ -58,7 +59,7 @@ describe("registry — the summary booklet course 791381s", () => {
     expect(validateLearningModuleIds("791381s", ["791381s-m36", "791381s-m00"])).toEqual(["791381s-m00", "791381s-m36"]);
     expect(() => validateLearningModuleIds("791381s", ["791381-m01"])).toThrow();
     expect(() => validateLearningModuleIds("791381", ["791381s-m01"])).toThrow();
-    expect(canonicalizeLearningModuleIds("791381s", ["791381s-m38", "791381s-m05", "791381-m05"])).toEqual(["791381s-m05"]);
+    expect(canonicalizeLearningModuleIds("791381s", ["791381s-m39", "791381s-m05", "791381-m05"])).toEqual(["791381s-m05"]);
   });
   it("899371: the C# book's ids are its own — m00–m12 (P2 + P3); a 791381 id or an id past the book is refused", () => {
     expect(listLearningCourses().find(c => c.courseId === "899371").modules.map(m => m.moduleId)).toEqual(Array.from({ length: 13 }, (_, n) => "899371-m" + String(n).padStart(2, "0")));

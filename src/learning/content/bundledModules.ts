@@ -125,6 +125,7 @@ export const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>>
     "791381s-m35": () => import("./791381s/modules/m35"),
     "791381s-m36": () => import("./791381s/modules/m36"),
     "791381s-m37": () => import("./791381s/modules/m37"),
+    "791381s-m38": () => import("./791381s/modules/m38"),
   },
   // 899371 — «أسس علم الحاسوب»: module mNN = chapter NN (m00 = the opening), generated from the owner's Word source
   // (scripts/convert-899371.mjs). P2: m00–m04 · P3: m05–m12.
