@@ -91,6 +91,7 @@ const codes = list => list.locator(".library-item-code").allInnerTexts();
 // asserts the defect is still exactly that one (so a fix, or any other finding, shows here); it is reported in the PR, not hidden.
 const KNOWN_TOPBAR = ".iex-topbar-context";
 async function axeKnown(page, where) {
+  await settled(page);
   await page.evaluate(axeSource + "\n;0");
   const known = await page.evaluate(async sel => (await window.axe.run({ include: [[sel]] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map(v => v.id), KNOWN_TOPBAR);
   console.log("  · " + where + ": the known pre-existing top-bar finding (" + KNOWN_TOPBAR + "): " + (known.join(", ") || "none — fixed"));
@@ -99,7 +100,11 @@ async function axeKnown(page, where) {
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check(over <= 1, where + ": no horizontal overflow (" + over + "px)");
 }
+// axe measures colours as drawn: it runs once no animation or transition is still running (choosing content enables the wizard's
+// steps, which fade from .5 to full opacity in 0.18s — measured mid-fade they read 4.28:1, settled they pass).
+const settled = page => page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
 async function axe(page, where) {
+  await settled(page);
   await page.evaluate(axeSource + "\n;0");
   const r = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map(v => v.id + " ×" + v.nodes.length + " [" + v.nodes.slice(0, 3).map(n => n.target.join(" ") + " :: " + (n.failureSummary || "").split("\n").slice(-1)[0]).join(" ; ") + "]"));
   check(r.length === 0, where + ": axe WCAG 2.1 A/AA — " + (r.join(", ") || "no violation"));
