@@ -24,7 +24,8 @@ describe("course themes — who wears the booklet skin", () => {
     expect(tones["791381s-m20"]).toBe("b5");
     expect(tones["791381s-m26"]).toBe("b6");
     expect(["m31", "m32", "m33", "m34", "m35", "m36"].map(n => tones["791381s-" + n])).toEqual(Array(6).fill("summary"));
-    expect(tones["791381s-m37"]).toBe("base");   // «ابنِ الشبكة» (batch «build», not a booklet group): the neutral tone
+    expect(tones["791381s-m37"]).toBe("base");
+    expect(tones["791381s-m38"]).toBe("base");   // «ابنِ الشبكة» (batch «build», not a booklet group): the neutral tone
     for (const t of Object.values(tones)) expect(THEME_TONES).toContain(t);
   });
 

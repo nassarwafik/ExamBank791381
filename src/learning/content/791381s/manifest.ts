@@ -1320,6 +1320,51 @@ const manifest: LearningCourseManifest = {
         },
       ],
     },
+    {
+      // «ابنِ الشبكة: التوجيه والأمان» (docs/enterprise-network-build-exercises.md §5d): a PRACTICE module — not a section of the printed
+      // booklet. Seven lab-mode build exercises; new stable id m38, order 38 (after m37).
+      id: "791381s-m38",
+      title: "ابنِ الشبكة: التوجيه والأمان",
+      order: 38,
+      lessons: [
+        {
+          id: "791381s-m38-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381s-m38-l00-p01", title: "ابنِ الشبكة: التوجيه والأمان", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 80, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+        {
+          id: "791381s-m38-l01",
+          title: "WAN من ثلاثة راوترات",
+          order: 1,
+          pages: [
+            { id: "791381s-m38-l01-p01", title: "ثلاثة راوترات — توجيه ثابت ومسار افتراضي", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 82, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m38-l01-p02", title: "ثلاثة راوترات — OSPF", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 84, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m38-l01-p03", title: "ثلاثة راوترات — EIGRP", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 87, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+        {
+          id: "791381s-m38-l02",
+          title: "قوائم التحكم ACL",
+          order: 2,
+          pages: [
+            { id: "791381s-m38-l02-p01", title: "Standard ACL — شبكة واحدة فقط إلى الخوادم", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 90, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m38-l02-p02", title: "Extended ACL — بلا ويب للطلاب", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 90, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+        {
+          id: "791381s-m38-l03",
+          title: "NAT و IPv6",
+          order: 3,
+          pages: [
+            { id: "791381s-m38-l03-p01", title: "Static NAT — نشر خادم للإنترنت", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 109, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m38-l03-p02", title: "IPv6 بين راوترين — توجيه ثابت", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 63, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+      ],
+    },
   ],
   // The booklet's own groups (its cover and table of contents): the introduction, the six «دفعات» and «الملخص الشامل».
   batches: [
@@ -1331,7 +1376,7 @@ const manifest: LearningCourseManifest = {
     { id: "b5", label: "Wi-Fi و IPv6 و DHCP والأمان", moduleIds: ["791381s-m20", "791381s-m21", "791381s-m22", "791381s-m23", "791381s-m24", "791381s-m25"] },
     { id: "b6", label: "WAN والتوجيه و ACL", moduleIds: ["791381s-m26", "791381s-m27", "791381s-m28", "791381s-m29", "791381s-m30"] },
     { id: "summary", label: "الملخص الشامل", moduleIds: ["791381s-m31", "791381s-m32", "791381s-m33", "791381s-m34", "791381s-m35", "791381s-m36"] },
-    { id: "build", label: "ابنِ الشبكة", moduleIds: ["791381s-m37"] },
+    { id: "build", label: "ابنِ الشبكة", moduleIds: ["791381s-m37", "791381s-m38"] },
   ],
 };
 

@@ -123,6 +123,29 @@ replays a lab network exactly as the learner's lab ran it.
 - **Study Strength:** the 30th study module (20 points). `STUDY_MODULE_COUNT` 29 → 30 (`STUDY_MAX_TOTAL` 600). The study index of the
   other modules is unchanged (only additions). The overview group «ابنِ الشبكة» holds m29 and m30.
 
+## 5d. Module `791381s-m38` «ابنِ الشبكة: التوجيه والأمان» in the summary booklet (owner request 2026-11-26)
+
+LAB mode, like 791381's m30, but a step further. It follows the same decisions as m37: a practice module after the booklet's sections,
+20 points, added blocks limited to activities and «توضيح» callouts, and the book lock gaining only the empty entry `"791381s-m38": []`.
+
+| Page | Exercise | Booklet topic (PDF) |
+|---|---|---|
+| l01-p01 | ثلاثة راوترات — default routes on the ends, specific static routes in the middle | التوجيه (82) |
+| l01-p02 | ثلاثة راوترات — OSPF (networks learned two hops away) | OSPF (84) |
+| l01-p03 | ثلاثة راوترات — EIGRP AS 20 | EIGRP (87) |
+| l02-p01 | Standard ACL — only the admin network reaches the servers (one permit + the implicit deny) | ACL (90) |
+| l02-p02 | Extended ACL — the students' network is denied HTTP only (`eq 80`), ping still works | ACL (90) |
+| l03-p01 | Static NAT — a server published at 203.0.113.10; the ISP routes the school's public block to R1 | NAT (109) |
+| l03-p02 | IPv6 static routing between two routers (`ipv6 route`) | IPv6 (63) |
+
+Negative proofs:
+- the middle router without its routes → PC1 does not reach PC3;
+- OSPF missing on the middle router → nothing is learned two hops away;
+- the ACL on the students' port (in) instead of the servers' port (out) → the students lose everything, so the «other traffic» goal fails;
+- no static NAT → the server is unreachable from the Internet.
+
+The 791381s study index for m00–m37 is unchanged (additions only).
+
 ## 6. Evidence
 
 - `src/learning/lab/networkBuild.contract.test.ts` — every authored exercise: the empty network reaches no goal, the solution reaches
@@ -136,4 +159,4 @@ replays a lab network exactly as the learner's lab ran it.
 
 ## 7. Not in scope
 
-Lab exercises for the summary booklet 791381s (its own decision, later if wanted).
+Nothing pending from this record.

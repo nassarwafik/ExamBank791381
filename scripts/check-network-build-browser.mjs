@@ -11,6 +11,7 @@
 //   • 791381 m30 (LAB mode): «WAN وتوجيه ثابت» — PC1 — R1 ═serial═ R2 — PC2 built through the UI, the routers' lines (serial addressing,
 //     clock rate, ip route) typed in their terminals; `show ip route` shows the S route, tracert crosses both routers, and the server,
 //     replaying the lab network with the lab's own engine, marks every goal ✓.
+//   • 791381s m38 (LAB mode in the booklet's theme): «Static NAT» shows its goals and the full lab builder (serial ports), with no page scroll.
 //
 // Tools are measuring instruments, not project dependencies: PLAYWRIGHT_CORE_DIR (or the global `playwright`), CHROMIUM_PATH.
 // SHOT_DIR (optional) receives screenshots. Exit 1 when a check fails, 2 when a tool or the build is missing.
@@ -220,6 +221,31 @@ for (const [label, viewport, touch] of [["lab 1280", { width: 1280, height: 900 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check(overflow <= 1, "no horizontal scroll (" + overflow + "px)");
   await shot(page, "netbuild-" + label.replace(" ", "-"));
+  await ctx.close();
+}
+
+/** 791381s m38 — a LAB exercise in the booklet's theme: the goals, the full lab builder (serial ports), no horizontal scroll. */
+for (const [label, viewport, touch] of [["booklet lab 1280", { width: 1280, height: 900 }, false], ["booklet lab 390", { width: 390, height: 844 }, true]]) {
+  console.log("viewport " + label);
+  const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: touch, isMobile: touch, serviceWorkers: "block", locale: "ar" });
+  await ctx.addInitScript(t => { sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "المعلم"); }, teacherToken);
+  const page = await ctx.newPage();
+  page.on("pageerror", e => failures.push("page error: " + e.message));
+  await page.goto(origin + "/#/learning/791381s/read/791381s-m38-l03-p01");
+  await page.reload();
+  const ex = page.getByTestId("network-build");
+  await ex.waitFor({ timeout: 20000 });
+  const lab = ex.getByTestId("network-lab");
+  await lab.waitFor({ timeout: 20000 });
+  check((await ex.locator(".learning-lab-goal").count()) === 4, "the four goals are listed");
+  await lab.getByRole("button", { name: "+ راوتر", exact: true }).click();
+  await lab.getByRole("button", { name: "+ راوتر", exact: true }).click();
+  await lab.getByRole("combobox", { name: "من الجهاز", exact: true }).selectOption("r1");
+  check((await lab.getByRole("combobox", { name: "منفذ الجهاز الأول", exact: true }).locator("option").allTextContents()).includes("s0/0/0"), "the lab builder offers the serial ports");
+  check(await lab.getByTestId("network-lab-router-extras").count() === 1, "the lab's router commands are listed under the terminal");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check(overflow <= 1, "no horizontal scroll (" + overflow + "px)");
+  await shot(page, "netbuild-" + label.replaceAll(" ", "-"));
   await ctx.close();
 }
 
