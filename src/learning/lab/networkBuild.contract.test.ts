@@ -30,10 +30,10 @@ const answer = (config: unknown, actions: unknown[] = []) => ({ kind: "network-b
 const EMPTY = { v: 2, devices: [], links: [] };
 
 describe("every authored «ابنِ الشبكة» exercise is valid and proven by the real judge", () => {
-  it("book 791381 has the seven exercises of m29, all checked on the server and none counted in Study Strength (the 28-module path)", async () => {
+  it("book 791381 has the seven exercises of m29, all checked on the server and all study activities (owner decision 2026-11-26: the 29th study module)", async () => {
     const builds = await allBuilds();
     expect(builds.map(b => b.id)).toEqual(["m29-l01-p01-build-lan", "m29-l01-p02-build-vlan", "m29-l02-p01-build-router", "m29-l02-p02-build-roas", "m29-l03-p01-build-dhcp", "m29-l03-p02-build-wifi", "m29-l03-p03-build-web"]);
-    for (const b of builds) { expect(studyActivityOf(b), b.id).toBeNull(); expect(checkActivityOf(b)?.study, b.id).toBe(false); }
+    for (const b of builds) { expect(studyActivityOf(b), b.id).not.toBeNull(); expect(checkActivityOf(b)?.study, b.id).toBe(true); }
   });
   it("the empty network reaches no goal; the authored solution reaches every goal", async () => {
     for (const b of await allBuilds()) {

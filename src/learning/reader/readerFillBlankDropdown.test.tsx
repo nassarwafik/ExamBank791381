@@ -111,7 +111,7 @@ describe("Reader fillBlank→dropdown — Study Strength unaffected", () => {
       expect(studyActivityOf(block)).toBeNull();
     }
   });
-  it("the committed server study index still holds exactly 475 eligible (257 MC / 91 T/F / 67 shortInput / 60 practice-table) and none of the three converted ids", () => {
+  it("the committed server study index still holds exactly 482 eligible (257 MC / 91 T/F / 67 shortInput / 60 practice-table / 7 network-build since «ابنِ الشبكة») and none of the three converted ids", () => {
     const idx = JSON.parse(readFileSync(resolve(process.cwd(), "api/src/data/learning-study/791381.json"), "utf8"));
     const kinds: Record<string, number> = {};
     let total = 0;
@@ -119,8 +119,8 @@ describe("Reader fillBlank→dropdown — Study Strength unaffected", () => {
     for (const p of Object.values(idx.pages as Record<string, { activities: Record<string, { kind: string }> }>)) {
       for (const [id, a] of Object.entries(p.activities)) { total++; ids.add(id); kinds[a.kind] = (kinds[a.kind] || 0) + 1; }
     }
-    expect(total).toBe(475);
-    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60 });
+    expect(total).toBe(482);
+    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60, "network-build": 7 });
     for (const c of CASES) expect(ids.has(c.blockId)).toBe(false);
   });
 });

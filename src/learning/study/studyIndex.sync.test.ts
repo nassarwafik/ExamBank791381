@@ -21,9 +21,9 @@ describe("the committed server index equals the content-derived one", () => {
     expect(committed).toEqual(derived);
     expect(derived.schemaVersion).toBe(1); expect(derived.courseId).toBe("791381");
   }, 60000);
-  it("pins the current footprint: 230 pages, 475 eligible activities (257 MC · 91 T/F · 67 short input · 60 tables), ALL 28 modules (m01: 9, m02: 13); every id unique and page-scoped", () => {
+  it("pins the current footprint: 237 pages, 482 eligible activities (257 MC · 91 T/F · 67 short input · 60 tables · 7 «ابنِ الشبكة»), ALL 29 modules (m01: 9, m02: 13, m29: 7); every id unique and page-scoped", () => {
     const pages = Object.entries(committed.pages as Record<string, { moduleId: string; activities: Record<string, { kind: string }> }>);
-    expect(pages.length).toBe(230);
+    expect(pages.length).toBe(237);
     const kinds: Record<string, number> = {};
     const ids = new Set<string>();
     const modules = new Set<string>();
@@ -36,13 +36,14 @@ describe("the committed server index equals the content-derived one", () => {
         kinds[key.kind] = (kinds[key.kind] || 0) + 1;
       }
     }
-    expect(ids.size).toBe(475);
-    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60 });
-    expect(modules.size).toBe(28);
+    expect(ids.size).toBe(482);
+    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60, "network-build": 7 });
+    expect(modules.size).toBe(29);
     const perModule: Record<string, number> = {};
     for (const [, p] of pages) perModule[p.moduleId] = (perModule[p.moduleId] || 0) + Object.keys(p.activities).length;
     expect(perModule["791381-m01"]).toBe(9); expect(perModule["791381-m02"]).toBe(13);
-    for (let i = 1; i <= 28; i++) expect(perModule["791381-m" + String(i).padStart(2, "0")], "m" + i).toBeGreaterThan(0);
+    expect(perModule["791381-m29"]).toBe(7);
+    for (let i = 1; i <= 29; i++) expect(perModule["791381-m" + String(i).padStart(2, "0")], "m" + i).toBeGreaterThan(0);
   });
 });
 

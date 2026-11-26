@@ -2,8 +2,8 @@
 // route, on the REAL generated indexes of book 791381 (module m29):
 //   • the generated check index holds the key (kinds, checks, the solution's network as the reference) and the feedback; the served
 //     module body holds the task only;
-//   • the exercises are practice only (`study: false`): the empty network is wrong with per-goal booleans, the authored solution is
-//     right — both answered, NOTHING written (Study Strength stays on the book's 28 modules);
+//   • the exercises are study activities (owner decision 2026-11-26: m29 is the 29th study module, 20 points): the empty network is
+//     wrong with per-goal booleans and nothing is written; the authored solution is right and completed ONCE (m29: 1 of 7 → 3 points);
 //   • the verdict carries booleans and the issue code only — never a check kind, an expected value or the reference;
 //   • a key the judge cannot trust → 503 retryable, nothing written; an answer over 384 KB → 413; an unpublished module → 403;
 //     a teacher is judged and never persisted.
@@ -48,12 +48,13 @@ describe("the generated indexes", () => {
   it("the check index holds the key and the feedback; the served body holds the task only", () => {
     expect(entry.key.kind).toBe("network-build");
     expect(entry.key.rules).toEqual({ kinds: ["switch", "pc"] });
-    expect(entry.study).toBe(false);   // practice only: judged, never counted in Study Strength (the 28-module path)
+    expect(entry.study).toBe(true);   // a study activity: m29 is the 29th study module (owner decision 2026-11-26)
     const served = BODY.lessons.flatMap(l => l.pages).flatMap(p => p.blocks).filter(b => b.simulationType === "network-build");
     expect(served).toHaveLength(7);
     for (const b of served) { expect(Object.keys(b.config)).toEqual(["task"]); expect(b.serverCheck).toBe(true); }
     expect(JSON.stringify(BODY)).not.toMatch(/"checks"|"solution"|"reference"/);
-    expect(Object.keys(STUDY.pages).filter(p => p.startsWith("791381-m29-"))).toEqual([]);   // not in the study index
+    expect(Object.keys(STUDY.pages).filter(p => p.startsWith("791381-m29-")).length).toBe(7);   // one exercise per page
+    expect(STUDY.pages[PAGE].activities[ACT]).toEqual(entry.key);                                    // the study index holds the same key
   });
   it("the judge and the study rule agree", () => {
     expect(evaluateNetworkBuild(entry.key, SOLVED)).toMatchObject({ status: "judged", correct: true });
@@ -67,20 +68,21 @@ describe("the generated indexes", () => {
 });
 
 describe("POST /api/learning-study/791381/attempt — «ابنِ الشبكة»", () => {
-  it("the empty network: wrong, booleans only; the solution: right — judged and answered, NEVER recorded (practice only)", async () => {
+  it("the empty network: wrong, booleans only, nothing written; the solution: completed once (m29 1/7 → 3 points); a repeat is read-only", async () => {
     const ctx = seed();
     const w = await attempt(studentDeps(ctx), ACT, EMPTY);
     expect(w.status).toBe(200);
-    expect(w.jsonBody).toMatchObject({ ok: true, correct: false, persisted: false, gained: 0, study: false });
+    expect(w.jsonBody).toMatchObject({ ok: true, correct: false, persisted: false, gained: 0, study: true });
     expect(Object.keys(w.jsonBody.parts)).toEqual(entry.key.checks.map(c => c.id));
     expect(JSON.stringify(w.jsonBody)).not.toMatch(/build\.|reachability|host\.address|"reference"|"expected"|"actual"|deviceKind/);
     expect(w.jsonBody.feedback.hints.length).toBeGreaterThan(0);
     expect(written(ctx)).toEqual([]);
     const r = await attempt(studentDeps(ctx), ACT, SOLVED);
-    expect(r.jsonBody).toMatchObject({ correct: true, persisted: false, alreadyCompleted: false, gained: 0, study: false });
+    expect(r.jsonBody).toMatchObject({ correct: true, persisted: true, alreadyCompleted: false, gained: 3, study: true, module: { completed: 1, eligible: 7, points: 3, max: 20 } });
     expect(r.jsonBody.feedback.explanation).toBeTruthy();
-    expect(written(ctx)).toEqual([]);
-    expect(ctx.names("platform/").includes(studyDocName("u1"))).toBe(false);
+    const again = await attempt(studentDeps(ctx), ACT, SOLVED);
+    expect(again.jsonBody).toMatchObject({ correct: true, persisted: false, alreadyCompleted: true, gained: 0 });
+    expect(written(ctx)).toEqual([studyDocName("u1")]);
   });
   it("a forged verdict beside the empty network is never read", async () => {
     const ctx = seed();

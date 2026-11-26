@@ -9,8 +9,8 @@
 // LAP1 → lap1, SRV1 → srv1): the goals name the devices exactly as the builder labels them. Each solution is proven by
 // src/learning/lab/networkBuild.contract.test.ts: the empty network earns no goal, the solution reaches every goal.
 // The language stays simple: one idea per sentence, the values written out, the commands in the hints.
-// STUDY STRENGTH: every exercise is `studyEligible: false` — judged on the server and answered, never recorded (the Strength path is
-// calibrated on the book's 28 modules; counting this practice module is the owner's decision).
+// STUDY STRENGTH (owner decision 2026-11-26): «ابنِ الشبكة» counts as the book's 29th study module, worth 20 points like every module
+// (round(completed / 7 × 20)); a right network is recorded once, like every study exercise.
 
 import type { ContentBlock, ContentModule, ContentSource, InlineSpan } from "../../types";
 
@@ -40,9 +40,8 @@ type Exercise = {
 };
 function build(e: Exercise): ContentBlock {
   return {
-    // Practice only, NOT counted in Study Strength: the Strength path is calibrated on the book's 28 modules (28 × 20 = 560,
-    // api/src/lib/student-strength.js). Counting these exercises is an owner decision about the points economy.
-    id: e.id, type: "simulation", origin: "teacher-enrichment", simulationType: "network-build", version: 1, studyEligible: false,
+    // a study activity (owner decision 2026-11-26: m29 is the 29th study module, 20 points)
+    id: e.id, type: "simulation", origin: "teacher-enrichment", simulationType: "network-build", version: 1,
     title: e.title, description: e.description,
     capabilities: { fullscreen: true, reset: true, interactive: true },
     fallback: { text: e.fallback },

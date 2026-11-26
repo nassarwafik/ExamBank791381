@@ -58,7 +58,10 @@ Publishable like every module, never auto-published.
 | l03-p02 | شبكة لاسلكية محميّة | ap, switch, pc, laptop | Wi-Fi (159) |
 | l03-p03 | خادم ويب واسم موقع (HTTP و DNS) | switch, pc, server | البروتوكولات (87) |
 
-**Practice only — not counted in Study Strength** (`studyEligible: false`): the Strength path is calibrated on the book's 28 modules (28 × 20 = 560 of the 2000-point path); counting this module is an owner decision. The exercises are judged and answered, never recorded.
+**Study Strength (owner decision 2026-11-26): «ابنِ الشبكة» is the book's 29th study module, worth 20 points** like every module
+(round(completed / 7 × 20)); a right network is recorded once. `STUDY_MODULE_COUNT` 28 → 29 (`STUDY_MAX_TOTAL` 560 → 580). No student's
+points decrease: the 28 book modules and their eligible counts are unchanged (475). Learning Practice (1440) + the 28 book modules (560)
+still fill the 2000-point path exactly; the 29th module adds up to 20 raw points beyond the capped path, like exams, games and projects.
 
 ## 6. Evidence
 
@@ -68,7 +71,8 @@ Publishable like every module, never auto-published.
 - `api/tests/learning-network-build.test.js` — the real attempt route on the real generated indexes (wrong / right / once / forged /
   kinds / 503 / 413 / 403 / teacher).
 - `src/learning/lab/NetworkBuildActivity.test.tsx` — the plain builder, the check seam, verdict clearing, failure ≠ wrong, draft + reset.
-- Pins updated honestly: the activity registry (26 → 27), the 791381 module count (28 → 29) and the m29 «unknown id» sentinels (now m30).
+- Pins updated honestly: the activity registry (26 → 27), the 791381 module count (28 → 29), the m29 «unknown id» sentinels (now m30), and
+  the study footprint (237 pages, 482 eligible, 29 study modules, 580 maximum).
 
 ## 7. Not in scope
 

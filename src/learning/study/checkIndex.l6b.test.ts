@@ -54,7 +54,7 @@ describe("L.6b — the served module bodies and the check index", () => {
       }
     }
     for (const [pageId, page] of Object.entries(STUDY_INDEX.pages)) for (const id of Object.keys(page.activities)) expect(CHECK_INDEX.pages[pageId].activities[id]?.study, id).toBe(true);
-    expect([study, self]).toEqual([475, 11]);   // 4 self-checks + the 7 «ابنِ الشبكة» exercises (practice only)
+    expect([study, self]).toEqual([482, 4]);   // 475 + the 7 «ابنِ الشبكة» exercises (study activities, owner decision 2026-11-26)
   });
 
   it("the check index keeps every authored message, hint ladder and explanation (the server's feedback is the book's)", async () => {

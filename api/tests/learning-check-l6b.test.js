@@ -53,7 +53,7 @@ describe("L.6b — the check index and the pure checker", () => {
     for (const a of all) kinds[a.key.kind] = (kinds[a.key.kind] || 0) + 1;
     expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 64 });
     expect(new Set(all.map(a => a.moduleId)).size).toBe(28);
-    expect(everything.filter(a => a.key.kind === "network-build").map(a => [a.moduleId, a.study])).toEqual(Array(7).fill(["791381-m29", false]));
+    expect(everything.filter(a => a.key.kind === "network-build").map(a => [a.moduleId, a.study])).toEqual(Array(7).fill(["791381-m29", true]));
     expect(all.filter(a => !a.study).map(a => a.key.kind)).toEqual(["practice-table", "practice-table", "practice-table", "practice-table"]);
     expect(findCheckActivity(CHECKS, all[0].pageId, "nope")).toBeNull();
     expect(findCheckActivity(CHECKS, "../x", all[0].activityId)).toBeNull();
