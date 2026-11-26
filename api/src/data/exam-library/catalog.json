@@ -1375,5 +1375,167 @@
       "repository": "899271",
       "sourceFile": "scripts/automata-course/u10.mjs"
     }
+  },
+  {
+    "libraryItemId": "AT899271-01",
+    "title": "أسئلة نظرية — الكلمات واللغات (الوحدة 1)",
+    "category": "theory-899271",
+    "description": "أسئلة التدريب الذاتي من الوحدة 1 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+    "tags": [
+      "الأتمتة",
+      "أسئلة نظرية",
+      "تصحيح آلي"
+    ],
+    "questionCount": 12,
+    "totalMarks": 16,
+    "pageRange": "",
+    "parserFamily": "automata-theory-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 12,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "0969f2a282ae0e6f1c6482dbb8824212ab2796f47a8e1b00f9fc18fd04fc6f23",
+    "contentHash": "56c8e06ae91015aa6ade60f1314abb21f7e1bd2e5a3f96d6004cc7b24668625c",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-theory",
+      "sourceFile": "scripts/automata-course/u01.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AT899271-02",
+    "title": "أسئلة نظرية — الأوتومات المنتهي الحتمي (الوحدات 2–4)",
+    "category": "theory-899271",
+    "description": "أسئلة التدريب الذاتي من الوحدات 2–4 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+    "tags": [
+      "الأتمتة",
+      "أسئلة نظرية",
+      "تصحيح آلي"
+    ],
+    "questionCount": 26,
+    "totalMarks": 33,
+    "pageRange": "",
+    "parserFamily": "automata-theory-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 26,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "dd59b77936ca0ad6ba13affeeb80d1167aa9597d8df6335e1e23124879220bee",
+    "contentHash": "01512d84a3358b67405c8b0e970d7571e7360594d4e2d2945203b4aea29c47c9",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-theory",
+      "sourceFile": "scripts/automata-course/u02.mjs scripts/automata-course/u03.mjs scripts/automata-course/u04.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AT899271-03",
+    "title": "أسئلة نظرية — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+    "category": "theory-899271",
+    "description": "أسئلة التدريب الذاتي من الوحدات 5–7 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+    "tags": [
+      "الأتمتة",
+      "أسئلة نظرية",
+      "تصحيح آلي"
+    ],
+    "questionCount": 27,
+    "totalMarks": 35,
+    "pageRange": "",
+    "parserFamily": "automata-theory-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 27,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "8287ae0f39dc44c4db58c006c1791a45ab2cadfff260f98ea45b5a2e832bca0c",
+    "contentHash": "95fd97dd21ec71cfcad3e673f325f40e0cd02a20e95df40050185b5b05286cc1",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-theory",
+      "sourceFile": "scripts/automata-course/u05.mjs scripts/automata-course/u06.mjs scripts/automata-course/u07.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AT899271-04",
+    "title": "أسئلة نظرية — أوتومات المكدّس (الوحدات 8–9)",
+    "category": "theory-899271",
+    "description": "أسئلة التدريب الذاتي من الوحدات 8–9 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+    "tags": [
+      "الأتمتة",
+      "أسئلة نظرية",
+      "تصحيح آلي"
+    ],
+    "questionCount": 18,
+    "totalMarks": 23,
+    "pageRange": "",
+    "parserFamily": "automata-theory-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 18,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "a909546d8b58846e4e7547666b044ae0bb229788e4dde257b8246ff2cd1a05a8",
+    "contentHash": "2a6af54026ddc5f2c4764667bd7cc23338e2843706661343849c8301bbb9c5d2",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-theory",
+      "sourceFile": "scripts/automata-course/u08.mjs scripts/automata-course/u09.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AT899271-05",
+    "title": "أسئلة نظرية — آلة تورنغ (الوحدة 10)",
+    "category": "theory-899271",
+    "description": "أسئلة التدريب الذاتي من الوحدة 10 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+    "tags": [
+      "الأتمتة",
+      "أسئلة نظرية",
+      "تصحيح آلي"
+    ],
+    "questionCount": 11,
+    "totalMarks": 14,
+    "pageRange": "",
+    "parserFamily": "automata-theory-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 11,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "70f779b6a40353f066b7558289633ac47add51234015ff51eb7e77d55a8d7325",
+    "contentHash": "76b57c4ef39e9157df9c6592c328888be7be968bcce065cd0e64e55a552572df",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-theory",
+      "sourceFile": "scripts/automata-course/u10.mjs"
+    }
+  },
+  {
+    "libraryItemId": "AT899271-06",
+    "title": "أسئلة نظرية — مراجعة وأسئلة بجروت (الوحدة 11)",
+    "category": "theory-899271",
+    "description": "أسئلة التدريب الذاتي من الوحدة 11 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+    "tags": [
+      "الأتمتة",
+      "أسئلة نظرية",
+      "تصحيح آلي"
+    ],
+    "questionCount": 9,
+    "totalMarks": 12,
+    "pageRange": "",
+    "parserFamily": "automata-theory-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 9,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "9a993ab9f8d2c0211b1bb1f6551006d4bd758919d23f145d3cd13edefbe9efe1",
+    "contentHash": "9558b43d2be54505c652ad1f921f4fe15d2dbfd19b5bc00898282f679237afaa",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-theory",
+      "sourceFile": "scripts/automata-course/u11.mjs"
+    }
   }
 ]

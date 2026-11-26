@@ -64,6 +64,7 @@ describe("registry — the complete Learning-Practice catalog", () => {
     expect(readLibraryCatalog().filter(c => c.source?.repository !== "Book791381").map(c => [c.libraryItemId, c.source?.repository, c.category])).toEqual([
       ...Array.from({ length: 11 }, (_, i) => ["CL899371-" + String(i + 1).padStart(2, "0"), "899371", "coding-899371"]),
       ...[1, 2, 3, 4].map(n => ["AU899271-0" + n, "899271", "automata-899271"]),
+      ...[1, 2, 3, 4, 5, 6].map(n => ["AT899271-0" + n, "899271-theory", "theory-899271"]),   // AUTO-A14
     ]);
     for (const t of list) {
       const item = readLibraryItem(t.trainingId);

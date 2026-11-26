@@ -38,7 +38,9 @@ const ALL36 = ["F01", "F02", "F03", "F04", "F05", "F06", ...Array.from({ length:
 const LAB11 = Array.from({ length: 11 }, (_, i) => "CL899371-" + String(i + 1).padStart(2, "0"));
 // AUTO-A13: the automata lab «مختبر الآلات» (4 items) too — added after the launch, it starts for nobody until the owner chooses
 const AUTOMATA4 = ["AU899271-01", "AU899271-02", "AU899271-03", "AU899271-04"];
-const WHOLE_LIBRARY = [...ALL36, ...LAB11, ...AUTOMATA4];
+// AUTO-A14: the theory exams «أسئلة نظرية» (6 items) likewise
+const THEORY6 = [1, 2, 3, 4, 5, 6].map(n => "AT899271-0" + n);
+const WHOLE_LIBRARY = [...ALL36, ...LAB11, ...AUTOMATA4, ...THEORY6];
 
 function setup({ mode = "enforce" } = {}) {
   resetRevisionCache(); resetOperatorGateCache();
@@ -82,7 +84,7 @@ describe("P6-D launch default — nobody loses anything on day one", () => {
     expect(LA.audienceOf({ items: {} }, "T31")).toMatchObject({ audience: "selected", teachers: [], stored: false });
     expect(LA.inBank({ items: {} }, "T31", SARA)).toBe(false);
     expect([...LA.LAUNCH_ITEMS]).toEqual(ALL36);
-    for (const id of [...LAB11, ...AUTOMATA4]) expect(LA.audienceOf({ items: {} }, id), id).toMatchObject({ audience: "selected", teachers: [], stored: false });
+    for (const id of [...LAB11, ...AUTOMATA4, ...THEORY6]) expect(LA.audienceOf({ items: {} }, id), id).toMatchObject({ audience: "selected", teachers: [], stored: false });
   });
 });
 
@@ -196,7 +198,7 @@ describe("P6-D the owner route", () => {
     await owner(ctx, "set-audience", { itemId: "T05", audience: "selected", teachers: [SARA] });
     const r = await ownerGet(ctx);
     expect(r.jsonBody.items.map(i => i.libraryItemId)).toEqual(WHOLE_LIBRARY);
-    for (const id of [...LAB11, ...AUTOMATA4]) expect(r.jsonBody.items.find(i => i.libraryItemId === id), id).toMatchObject({ audience: "selected", teachers: [] });
+    for (const id of [...LAB11, ...AUTOMATA4, ...THEORY6]) expect(r.jsonBody.items.find(i => i.libraryItemId === id), id).toMatchObject({ audience: "selected", teachers: [] });
     expect(r.jsonBody.items.find(i => i.libraryItemId === "T05")).toMatchObject({ audience: "selected", teachers: [SARA], decided: true });
     expect(r.jsonBody.items.find(i => i.libraryItemId === "F01")).toMatchObject({ audience: "all", teachers: [], decided: true, title: expect.any(String) });
     expect(r.jsonBody.teachers.map(t => t.accountId).sort()).toEqual([SARA, OMAR].sort());

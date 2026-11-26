@@ -18,8 +18,8 @@ const { handler, observed } = require("../src/functions/exam-library.js");
 // 304 only after the builder check, under the shared observability wrapper; the student form of a training is computed once.
 
 // the 36 Book 791381 exams, then the 11 items of the 899371 coding lab «مختبر البرمجة» (P7), then the 4 of the 899271 automata lab
-// «مختبر الآلات» (AUTO-A13)
-const WHOLE_LIBRARY = [...["F01", "F02", "F03", "F04", "F05", "F06"], ...Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0")), ...Array.from({ length: 11 }, (_, i) => "CL899371-" + String(i + 1).padStart(2, "0")), ...["AU899271-01", "AU899271-02", "AU899271-03", "AU899271-04"]];
+// «مختبر الآلات» (AUTO-A13), then the 6 theory exams of 899271 «أسئلة نظرية» (AUTO-A14)
+const WHOLE_LIBRARY = [...["F01", "F02", "F03", "F04", "F05", "F06"], ...Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0")), ...Array.from({ length: 11 }, (_, i) => "CL899371-" + String(i + 1).padStart(2, "0")), ...["AU899271-01", "AU899271-02", "AU899271-03", "AU899271-04"], ...[1, 2, 3, 4, 5, 6].map(n => "AT899271-0" + n)];
 // Tadris+ P6-E — the catalog also lists the exams the owner imported, so it reads their index: an empty store here (nothing imported).
 const BUILDER_OK = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: createMemoryContainer().container };
 const BUILDER_NO = { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) };

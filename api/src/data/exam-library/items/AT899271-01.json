@@ -1,0 +1,520 @@
+{
+  "libraryItemId": "AT899271-01",
+  "title": "أسئلة نظرية — الكلمات واللغات (الوحدة 1)",
+  "category": "theory-899271",
+  "description": "أسئلة التدريب الذاتي من الوحدة 1 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+  "tags": [
+    "الأتمتة",
+    "أسئلة نظرية",
+    "تصحيح آلي"
+  ],
+  "questionCount": 12,
+  "totalMarks": 16,
+  "pageRange": "",
+  "parserFamily": "automata-theory-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 12,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "0969f2a282ae0e6f1c6482dbb8824212ab2796f47a8e1b00f9fc18fd04fc6f23",
+  "contentHash": "56c8e06ae91015aa6ade60f1314abb21f7e1bd2e5a3f96d6004cc7b24668625c",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271-theory",
+    "sourceFile": "scripts/automata-course/u01.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-AT899271-01",
+    "title": "أسئلة نظرية — الكلمات واللغات (الوحدة 1)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "أسئلة نظرية — من كتاب «الأتمتة»",
+      "instructions": "أجب عن كل سؤال. في الأسئلة التي تعطي آلة، الآلة معطاة بجدول انتقالاتها: «→» حالة البداية، «*» حالة قبول. الإجابة القصيرة التي لا تطابق المفتاح حرفيًا تذهب إلى مراجعة المعلم.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u01",
+        "title": "الوحدة 1 — الكلمات واللغات",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AT899271-01-Q01",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l04-p01-b03",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف كل كلمة بالنسبة إلى w = 01102 (الكلمة الجزئية قطعة متتالية منها):",
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "كلمة جزئية من w"
+                },
+                {
+                  "id": "g2",
+                  "label": "ليست كلمة جزئية"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "011"
+                },
+                {
+                  "id": "c2",
+                  "label": "102"
+                },
+                {
+                  "id": "c3",
+                  "label": "110"
+                },
+                {
+                  "id": "c4",
+                  "label": "02"
+                },
+                {
+                  "id": "c5",
+                  "label": "012"
+                },
+                {
+                  "id": "c6",
+                  "label": "201"
+                },
+                {
+                  "id": "c7",
+                  "label": "00"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g1",
+                "c5": "g2",
+                "c6": "g2",
+                "c7": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q02",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l04-p01-b04",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "أي مجموعة هي ثلاث لواحق للكلمة w = 01102؟",
+            "options": [
+              {
+                "text": "2، 02، 102"
+              },
+              {
+                "text": "0، 01، 011"
+              },
+              {
+                "text": "1، 10، 110"
+              },
+              {
+                "text": "2، 20، 201"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q03",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p01-b01",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "ما طول الكلمة w = abba؟",
+            "options": [
+              {
+                "text": "4"
+              },
+              {
+                "text": "2"
+              },
+              {
+                "text": "3"
+              },
+              {
+                "text": "5"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q04",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p01-b02",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "الكلمة الفارغة ε كلمة طولها 0.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q05",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p01-b03",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "أي مما يلي ليست بادئة للكلمة w = abc؟",
+            "options": [
+              {
+                "text": "bc"
+              },
+              {
+                "text": "ε"
+              },
+              {
+                "text": "ab"
+              },
+              {
+                "text": "abc"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q06",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p01-b04",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف كل كلمة: هل تنتمي إلى اللغة L = {aⁿbⁿ | n ≥ 1}؟",
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "تنتمي"
+                },
+                {
+                  "id": "g2",
+                  "label": "لا تنتمي"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "ab"
+                },
+                {
+                  "id": "c2",
+                  "label": "aabb"
+                },
+                {
+                  "id": "c3",
+                  "label": "aaabbb"
+                },
+                {
+                  "id": "c4",
+                  "label": "ε"
+                },
+                {
+                  "id": "c5",
+                  "label": "aab"
+                },
+                {
+                  "id": "c6",
+                  "label": "ba"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g2",
+                "c5": "g2",
+                "c6": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q07",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p01-b05",
+            "presentationType": "wordBank",
+            "marks": 2,
+            "text": "أكمل التعريف:\nالأبجدية مجموعة ____ غير خالية من الرموز، و ____ مجموعة من الكلمات فوق الأبجدية.",
+            "wordBank": [
+              "الكلمة",
+              "اللغة",
+              "خالية",
+              "غير منتهية",
+              "منتهية"
+            ],
+            "fields": [
+              {
+                "id": "w1",
+                "label": "الفراغ 1",
+                "correct": "منتهية"
+              },
+              {
+                "id": "w2",
+                "label": "الفراغ 2",
+                "correct": "اللغة"
+              }
+            ],
+            "answer": {
+              "values": [
+                "منتهية",
+                "اللغة"
+              ]
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q08",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p02-b01",
+            "presentationType": "matching",
+            "marks": 2,
+            "text": "صِل كل رمز بمعناه:",
+            "fields": [
+              {
+                "id": "l1",
+                "label": "Σ",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "الكلمة الفارغة"
+                  },
+                  {
+                    "text": "مجموعة جزئية"
+                  },
+                  {
+                    "text": "المجموعة الخالية"
+                  },
+                  {
+                    "text": "الأبجدية"
+                  },
+                  {
+                    "text": "طول الكلمة"
+                  }
+                ],
+                "correct": "الأبجدية"
+              },
+              {
+                "id": "l2",
+                "label": "ε",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "الكلمة الفارغة"
+                  },
+                  {
+                    "text": "مجموعة جزئية"
+                  },
+                  {
+                    "text": "المجموعة الخالية"
+                  },
+                  {
+                    "text": "الأبجدية"
+                  },
+                  {
+                    "text": "طول الكلمة"
+                  }
+                ],
+                "correct": "الكلمة الفارغة"
+              },
+              {
+                "id": "l3",
+                "label": "∅",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "الكلمة الفارغة"
+                  },
+                  {
+                    "text": "مجموعة جزئية"
+                  },
+                  {
+                    "text": "المجموعة الخالية"
+                  },
+                  {
+                    "text": "الأبجدية"
+                  },
+                  {
+                    "text": "طول الكلمة"
+                  }
+                ],
+                "correct": "المجموعة الخالية"
+              },
+              {
+                "id": "l4",
+                "label": "|w|",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "الكلمة الفارغة"
+                  },
+                  {
+                    "text": "مجموعة جزئية"
+                  },
+                  {
+                    "text": "المجموعة الخالية"
+                  },
+                  {
+                    "text": "الأبجدية"
+                  },
+                  {
+                    "text": "طول الكلمة"
+                  }
+                ],
+                "correct": "طول الكلمة"
+              },
+              {
+                "id": "l5",
+                "label": "⊆",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "الكلمة الفارغة"
+                  },
+                  {
+                    "text": "مجموعة جزئية"
+                  },
+                  {
+                    "text": "المجموعة الخالية"
+                  },
+                  {
+                    "text": "الأبجدية"
+                  },
+                  {
+                    "text": "طول الكلمة"
+                  }
+                ],
+                "correct": "مجموعة جزئية"
+              }
+            ],
+            "answer": {
+              "text": "Σ=الأبجدية;ε=الكلمة الفارغة;∅=المجموعة الخالية;|w|=طول الكلمة;⊆=مجموعة جزئية"
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q09",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p02-b02",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "اللغة {ε} هي نفسها اللغة ∅.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 1
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q10",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p02-b03",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "كم بادئة مختلفة للكلمة w = 0110 (مع ε والكلمة نفسها)؟",
+            "options": [
+              {
+                "text": "5"
+              },
+              {
+                "text": "4"
+              },
+              {
+                "text": "6"
+              },
+              {
+                "text": "10"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q11",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p02-b04",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "{b, ab} ⊆ {aⁿbᵐ | n, m ≥ 0}",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-01-Q12",
+            "origin": "imported",
+            "sourceId": "AT899271-01",
+            "sourceQuestionId": "m01-l05-p02-b05",
+            "presentationType": "shortAnswer",
+            "marks": 1,
+            "text": "ما أقصر كلمة في اللغة L = {aⁿbᵐ | n ≥ 2، m ≥ 1}؟ (اكتب الكلمة)",
+            "answer": {
+              "text": "aab"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

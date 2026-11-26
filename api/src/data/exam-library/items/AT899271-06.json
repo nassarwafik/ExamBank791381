@@ -1,0 +1,578 @@
+{
+  "libraryItemId": "AT899271-06",
+  "title": "أسئلة نظرية — مراجعة وأسئلة بجروت (الوحدة 11)",
+  "category": "theory-899271",
+  "description": "أسئلة التدريب الذاتي من الوحدة 11 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+  "tags": [
+    "الأتمتة",
+    "أسئلة نظرية",
+    "تصحيح آلي"
+  ],
+  "questionCount": 9,
+  "totalMarks": 12,
+  "pageRange": "",
+  "parserFamily": "automata-theory-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 9,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "9a993ab9f8d2c0211b1bb1f6551006d4bd758919d23f145d3cd13edefbe9efe1",
+  "contentHash": "9558b43d2be54505c652ad1f921f4fe15d2dbfd19b5bc00898282f679237afaa",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271-theory",
+    "sourceFile": "scripts/automata-course/u11.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-AT899271-06",
+    "title": "أسئلة نظرية — مراجعة وأسئلة بجروت (الوحدة 11)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "أسئلة نظرية — من كتاب «الأتمتة»",
+      "instructions": "أجب عن كل سؤال. في الأسئلة التي تعطي آلة، الآلة معطاة بجدول انتقالاتها: «→» حالة البداية، «*» حالة قبول. الإجابة القصيرة التي لا تطابق المفتاح حرفيًا تذهب إلى مراجعة المعلم.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u11",
+        "title": "الوحدة 11 — مراجعة وأسئلة بجروت",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AT899271-06-Q01",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p01-b01",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف كل لغة حسب أبسط نموذج يقبلها:",
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "أوتومات منتهٍ"
+                },
+                {
+                  "id": "g2",
+                  "label": "أوتومات مكدّس"
+                },
+                {
+                  "id": "g3",
+                  "label": "آلة تورنغ فقط"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "{w | |w| زوجي}"
+                },
+                {
+                  "id": "c2",
+                  "label": "{ab, aab}"
+                },
+                {
+                  "id": "c3",
+                  "label": "{aⁿbⁿ | n ≥ 0}"
+                },
+                {
+                  "id": "c4",
+                  "label": "{aⁿbᶠᵒᵒ⁽ⁿ⁾ | n > 0}"
+                },
+                {
+                  "id": "c5",
+                  "label": "{aⁿbⁿcⁿ | n ≥ 0}"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g2",
+                "c4": "g2",
+                "c5": "g3"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q02",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p01-b02",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "كل لغة منتهية خالية من السياق.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q03",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p01-b03",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "ما الكلمة في L = {aⁿbᵏ | n > 0، k = n/2 + n%2} حين n = 4؟",
+            "options": [
+              {
+                "text": "aaaabb"
+              },
+              {
+                "text": "aaaab"
+              },
+              {
+                "text": "aaaabbb"
+              },
+              {
+                "text": "aabb"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q04",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p01-b04",
+            "presentationType": "ordering",
+            "marks": 2,
+            "text": "رتّب النماذج من الأضعف إلى الأقوى:",
+            "fields": [
+              {
+                "id": "o1",
+                "label": "الخطوة 1",
+                "correct": "أوتومات منتهٍ"
+              },
+              {
+                "id": "o2",
+                "label": "الخطوة 2",
+                "correct": "أوتومات مكدّس"
+              },
+              {
+                "id": "o3",
+                "label": "الخطوة 3",
+                "correct": "آلة تورنغ"
+              }
+            ],
+            "wordBank": [
+              "آلة تورنغ",
+              "أوتومات مكدّس",
+              "أوتومات منتهٍ"
+            ],
+            "answer": {
+              "mode": "exactSequence",
+              "values": [
+                "أوتومات منتهٍ",
+                "أوتومات مكدّس",
+                "آلة تورنغ"
+              ]
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q05",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p01-b05",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "اللغات المنتظمة منغلقة على المتمّمة، واللغات الخالية من السياق ليست منغلقة عليها.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q06",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p02-b02",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "ما أقصر كلمة يقبلها الأوتومات المعطى؟\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b | c\n→ q0 | q1 | ∅ | ∅\nq1 | ∅ | q3، q4 | ∅\nq2 * | q6، q7 | q2، q6، q7 | q6\nq3 | ∅ | q2 | ∅\nq4 | q4، q5 | q4 | q4\nq5 | ∅ | q3 | ∅\nq6 | q6، q7 | q6، q7 | q6\nq7 | ∅ | q8 | ∅\nq8 * | ∅ | ∅ | ∅",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "ما أقصر كلمة يقبلها الأوتومات المعطى؟"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b",
+                    "c"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q1",
+                      "∅",
+                      "∅"
+                    ],
+                    [
+                      "q1",
+                      "∅",
+                      "q3، q4",
+                      "∅"
+                    ],
+                    [
+                      "q2 *",
+                      "q6، q7",
+                      "q2، q6، q7",
+                      "q6"
+                    ],
+                    [
+                      "q3",
+                      "∅",
+                      "q2",
+                      "∅"
+                    ],
+                    [
+                      "q4",
+                      "q4، q5",
+                      "q4",
+                      "q4"
+                    ],
+                    [
+                      "q5",
+                      "∅",
+                      "q3",
+                      "∅"
+                    ],
+                    [
+                      "q6",
+                      "q6، q7",
+                      "q6، q7",
+                      "q6"
+                    ],
+                    [
+                      "q7",
+                      "∅",
+                      "q8",
+                      "∅"
+                    ],
+                    [
+                      "q8 *",
+                      "∅",
+                      "∅",
+                      "∅"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "abb"
+              },
+              {
+                "text": "ab"
+              },
+              {
+                "text": "abab"
+              },
+              {
+                "text": "abbb"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q07",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p02-b03",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "الأوتومات المعطى يقبل الكلمة abcabb.\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b | c\n→ q0 | q1 | ∅ | ∅\nq1 | ∅ | q3، q4 | ∅\nq2 * | q6، q7 | q2، q6، q7 | q6\nq3 | ∅ | q2 | ∅\nq4 | q4، q5 | q4 | q4\nq5 | ∅ | q3 | ∅\nq6 | q6، q7 | q6، q7 | q6\nq7 | ∅ | q8 | ∅\nq8 * | ∅ | ∅ | ∅",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "الأوتومات المعطى يقبل الكلمة abcabb."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b",
+                    "c"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q1",
+                      "∅",
+                      "∅"
+                    ],
+                    [
+                      "q1",
+                      "∅",
+                      "q3، q4",
+                      "∅"
+                    ],
+                    [
+                      "q2 *",
+                      "q6، q7",
+                      "q2، q6، q7",
+                      "q6"
+                    ],
+                    [
+                      "q3",
+                      "∅",
+                      "q2",
+                      "∅"
+                    ],
+                    [
+                      "q4",
+                      "q4، q5",
+                      "q4",
+                      "q4"
+                    ],
+                    [
+                      "q5",
+                      "∅",
+                      "q3",
+                      "∅"
+                    ],
+                    [
+                      "q6",
+                      "q6، q7",
+                      "q6، q7",
+                      "q6"
+                    ],
+                    [
+                      "q7",
+                      "∅",
+                      "q8",
+                      "∅"
+                    ],
+                    [
+                      "q8 *",
+                      "∅",
+                      "∅",
+                      "∅"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q08",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p02-b04",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف الكلمات حسب الأوتومات المعطى:\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b | c\n→ q0 | q1 | ∅ | ∅\nq1 | ∅ | q3، q4 | ∅\nq2 * | q6، q7 | q2، q6، q7 | q6\nq3 | ∅ | q2 | ∅\nq4 | q4، q5 | q4 | q4\nq5 | ∅ | q3 | ∅\nq6 | q6، q7 | q6، q7 | q6\nq7 | ∅ | q8 | ∅\nq8 * | ∅ | ∅ | ∅",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "صنّف الكلمات حسب الأوتومات المعطى:"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b",
+                    "c"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q1",
+                      "∅",
+                      "∅"
+                    ],
+                    [
+                      "q1",
+                      "∅",
+                      "q3، q4",
+                      "∅"
+                    ],
+                    [
+                      "q2 *",
+                      "q6، q7",
+                      "q2، q6، q7",
+                      "q6"
+                    ],
+                    [
+                      "q3",
+                      "∅",
+                      "q2",
+                      "∅"
+                    ],
+                    [
+                      "q4",
+                      "q4، q5",
+                      "q4",
+                      "q4"
+                    ],
+                    [
+                      "q5",
+                      "∅",
+                      "q3",
+                      "∅"
+                    ],
+                    [
+                      "q6",
+                      "q6، q7",
+                      "q6، q7",
+                      "q6"
+                    ],
+                    [
+                      "q7",
+                      "∅",
+                      "q8",
+                      "∅"
+                    ],
+                    [
+                      "q8 *",
+                      "∅",
+                      "∅",
+                      "∅"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "مقبولة"
+                },
+                {
+                  "id": "g2",
+                  "label": "مرفوضة"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "abb"
+                },
+                {
+                  "id": "c2",
+                  "label": "abbcab"
+                },
+                {
+                  "id": "c3",
+                  "label": "abcabbab"
+                },
+                {
+                  "id": "c4",
+                  "label": "abab"
+                },
+                {
+                  "id": "c5",
+                  "label": "abba"
+                },
+                {
+                  "id": "c6",
+                  "label": "babb"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g2",
+                "c5": "g2",
+                "c6": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-06-Q09",
+            "origin": "imported",
+            "sourceId": "AT899271-06",
+            "sourceQuestionId": "m11-l04-p02-b05",
+            "presentationType": "shortAnswer",
+            "marks": 1,
+            "text": "كم خطوة تحتاج آلة البجروت 2016 لتعرف باقي x على 3 حين x = 7؟ (عدد الآحاد التي تقرأها قبل #)",
+            "answer": {
+              "text": "7"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
