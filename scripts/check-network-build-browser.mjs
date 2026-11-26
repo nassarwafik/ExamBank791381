@@ -6,6 +6,8 @@
 //   • the empty network cannot be checked; a half-built network is judged by the SERVER: some goals ✓, some ✕, and the hints;
 //   • the learner finishes the network (cables, the router's CLI, the PCs' IP Configuration); «تحقّق من شبكتي» → every goal ✓;
 //   • a reload restores the network from the exercise's draft; no page error, no horizontal scroll of the page.
+//   • the Desktop's IP Configuration fields fit their columns: each input lies inside its own field box, so a saved address stays
+//     visible (it was clipped under the next column — the value was saved but looked empty);
 //   • the summary booklet 791381s (its own visual theme): the m37 exercise «VTP — Server وClient» is built through the UI — two
 //     switches, a trunk, VTP server / client, VLAN 30 created on the server only — and the server marks every goal ✓.
 //   • 791381 m30 (LAB mode): «WAN وتوجيه ثابت» — PC1 — R1 ═serial═ R2 — PC2 built through the UI, the routers' lines (serial addressing,
@@ -103,6 +105,11 @@ for (const [label, viewport, touch] of [["1280", { width: 1280, height: 900 }, f
     await ipc.getByLabel("IP Address").fill(address); await ipc.getByLabel("Subnet Mask").fill("255.255.255.0"); await ipc.getByLabel("Default Gateway").fill(gw);
     await ipc.getByRole("button", { name: /حفظ/ }).click();
   }
+  // the saved address is still shown, inside its own field (no input wider than its column)
+  const ipcBox = lab.getByTestId("network-lab-device").getByTestId("net2-ipconfig");
+  const fit = await ipcBox.evaluate(root => [...root.querySelectorAll(".net2-field")].map(f => { const i = f.querySelector("input"); if (!i) return true; const a = f.getBoundingClientRect(), b = i.getBoundingClientRect(); return b.left >= a.left - 0.5 && b.right <= a.right + 0.5; }));
+  check(fit.length >= 4 && fit.every(Boolean), "IP Configuration: every input lies inside its own field (" + fit.join(",") + ")");
+  check((await ipcBox.getByLabel("IP Address").inputValue()) === "192.168.2.10", "IP Configuration: the saved address is shown after «حفظ»");
   const pc1 = await openDevice(/^PC1/);
   await pc1.getByRole("button", { name: /Command Prompt/ }).click();
   const cmd = pc1.getByTestId("net2-cmd");
