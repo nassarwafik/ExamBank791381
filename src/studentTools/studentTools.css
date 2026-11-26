@@ -66,6 +66,11 @@
   .stt-dock { inset-inline: var(--eb-space-2); inset-block-end: calc(var(--eb-space-6) + 56px); align-items: flex-end; }
   .stt-panel { position: fixed; inset-inline: 0; inset-block-end: 0; width: 100%; max-height: 75vh; border-radius: var(--eb-r-xl) var(--eb-r-xl) 0 0; }
 }
+/* N1 — in the teacher's shell a phone also shows the bottom bar (bottom-bar.css, 56 px + the safe area): the sheet sits ABOVE it, so its last
+   control (a «حفظ» at the end of a long tool) is never under the bar. The student pages have no bottom bar: unchanged there. */
+@media (max-width: 640px) {
+  .eb-shell .stt-panel:not(.is-fullscreen) { inset-block-end: calc(56px + env(safe-area-inset-bottom, 0px)); max-height: calc(75vh - 56px); }
+}
 @media print { .stt-dock { display: none; } }
 @media (prefers-reduced-motion: no-preference) { .stt-fab, .stt-menu-item, .stt-key { transition: background-color var(--eb-dur) var(--eb-ease); } }
 /* Phase T3 — base converter. */

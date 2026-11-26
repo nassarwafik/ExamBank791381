@@ -42,7 +42,7 @@ describe("T14 — contract", () => {
   it("csharpEditor follows every earlier contract id, has a UI, defaults to write only, and validates with closed keys", () => {
     // its exact place: the fourteenth id, after T13's (AUTO-A4's automataLab was added after it, additively)
     expect(STUDENT_TOOL_IDS.indexOf("csharpEditor")).toBe(13);
-    expect(STUDENT_TOOL_IDS.slice(14)).toEqual(["automataLab"]);
+    expect(STUDENT_TOOL_IDS.slice(14)).toEqual(["automataLab", "networkLab"]);   // N1 — the network lab, additively
     expect(studentToolHasUi("csharpEditor")).toBe(true);
     expect(defaultStudentToolConfig("csharpEditor")).toEqual({ id: "csharpEditor", allowRun: false });
     expect(validateStudentTools(RUN)).toMatchObject({ ok: true, value: RUN });

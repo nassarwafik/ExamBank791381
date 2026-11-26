@@ -27,6 +27,10 @@ const PeriodicTableTool = lazy(() => import("./PeriodicTableTool"));
 const CSharpEditorTool = lazy(() => import("./CSharpEditorTool"));
 // AUTO-A4 — the automata lab carries the book's machine player and drawing: its own chunk.
 const AutomataLabTool = lazy(() => import("./AutomataLabTool"));
+// N1 — the network lab carries the network simulator's engines and device surfaces: its own chunk.
+const NetworkLabTool = lazy(() => import("./NetworkLabTool"));
+/** N1 — the network lab keeps a draft in the browser only in a BOOK (an exam page never keeps one). */
+const NETWORK_LAB_DRAFT_KEY = "eb.networkLab.draft.v1";
 
 // Phase T2 — the student's tool bar inside a running exam.
 //
@@ -46,10 +50,10 @@ const AutomataLabTool = lazy(() => import("./AutomataLabTool"));
 type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner; labHandoff?: boolean };
 type Incoming = { draft: LabDraft; seq: number };
 type CSharpRun = { runner?: CSharpToolRunner };
-const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab"]);
+const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab", "networkLab"]);
 /** Phase E1 (owner request) — the tools whose panel can fill the screen («ملء الشاشة»), as the course's «وضع العرض» does. */
-const FULLSCREEN_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab"]);
-const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor", "automataLab"]);
+const FULLSCREEN_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab", "networkLab"]);
+const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor", "automataLab", "networkLab"]);
 
 class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -60,7 +64,7 @@ class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 
-function ToolBody({ tool, csharp, full = false, incoming }: { tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean; incoming?: Incoming | null }) {
+function ToolBody({ tool, csharp, full = false, incoming, book = false }: { tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean; incoming?: Incoming | null; book?: boolean }) {
   switch (tool.id) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
@@ -77,6 +81,7 @@ function ToolBody({ tool, csharp, full = false, incoming }: { tool: StudentToolC
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
     case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} full={full} /></Suspense>;
     case "automataLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الآلات…</p>}><AutomataLabTool config={tool} incoming={incoming ?? undefined} /></Suspense>;
+    case "networkLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الشبكات…</p>}><NetworkLabTool draftKey={book ? NETWORK_LAB_DRAFT_KEY : undefined} /></Suspense>;
     default: return null;
   }
 }
@@ -209,7 +214,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
                 <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
               </span>
             </header>
-            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} incoming={t.id === "automataLab" ? incoming : null} /></ToolBoundary></div>
+            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} incoming={t.id === "automataLab" ? incoming : null} book={labHandoff} /></ToolBoundary></div>
           </section>
         );
       })}

@@ -25,7 +25,7 @@ const ALL: AutomataLabToolV1 = { id: "automataLab", kinds: ["DFA", "NFA", "PDA",
 describe("A4 — the contract", () => {
   it("automataLab joins version 1 after every earlier id; its default offers the four machines; closed keys", () => {
     expect(STUDENT_TOOL_IDS.indexOf("automataLab")).toBe(14);
-    expect(STUDENT_TOOL_IDS.at(-1)).toBe("automataLab");
+    expect(STUDENT_TOOL_IDS.slice(15)).toEqual(["networkLab"]);   // N1 added the network lab after it, additively
     expect(defaultStudentToolConfig("automataLab")).toEqual(ALL);
     expect(validateStudentTools({ version: 1, tools: [ALL] })).toMatchObject({ ok: true, value: { version: 1, tools: [ALL] } });
     for (const bad of [{ id: "automataLab" }, { id: "automataLab", kinds: [] }, { id: "automataLab", kinds: ["DFA", "DFA"] }, { id: "automataLab", kinds: ["CFG"] },
