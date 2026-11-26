@@ -92,3 +92,25 @@ describe("A15a — the platform", () => {
     void isAnsweredForSelection;
   });
 });
+
+describe("A15a — the acceptance exam (docs/fixtures/machine-trace-a15, exercised by the 20G capability matrix)", () => {
+  const fs = require_("node:fs"), path = require_("node:path");
+  const { evaluateExamFinalization } = require_("../src/lib/shared-finalization/examFinalization.js");
+  const { engineOfTraceMachine, trueTrace, rowOfConfig } = require_("../src/lib/shared-finalization/machineTraceQuestion.js");
+  const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "docs/fixtures/machine-trace-a15/ExamBank_A15_Machine_Trace_Acceptance.json"), "utf8"));
+  const qs = fixture.sections.flatMap(s => s.questions);
+  it("four trace questions, one per machine kind, 16 marks; the exam finalizes", () => {
+    expect(qs.map(q => [q.examQuestionId, q.presentationType, q.machineTrace.machine.kind])).toEqual([["d1", "machineTrace", "DFA"], ["n1", "machineTrace", "NFA"], ["p1", "machineTrace", "PDA"], ["t1", "machineTrace", "TM"]]);
+    expect(evaluateExamFinalization(fixture).canFinalize).toBe(true);
+  });
+  it("each true run, written as a student writes it, earns every mark through the official grader; the student copy keeps every machine and no key", () => {
+    const answers = Object.fromEntries(qs.map(q => {
+      const m = engineOfTraceMachine(q.machineTrace.machine), run = trueTrace(m, [...q.machineTrace.word]);
+      return [q.examQuestionId, { kind: "machineTrace", rows: run.rows.map(c => rowOfConfig(m, c)), verdict: run.verdict }];
+    }));
+    const r = gradeExam(fixture, answers);
+    expect([r.score, r.totalMarks, r.manualReviewMarks]).toEqual([16, 16, 0]);
+    const view = sanitizeExamForStudent(fixture);
+    expect(view.sections.flatMap(s => s.questions).map(q => q.machineTrace)).toEqual(qs.map(q => q.machineTrace));
+  });
+});

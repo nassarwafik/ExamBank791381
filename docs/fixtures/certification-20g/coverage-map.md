@@ -20,6 +20,7 @@
 | `meshPartSelection@1` | type | auto | ✓ | meshPartSelection | — | — | — | ✓ | registered | A | 21DB3 |
 | `automatonDesign@1` | type | auto | — | automatonDesign | — | — | — | ✓ | registered | A | A8 |
 | `machineDesign@1` | type | auto | — | machineDesign | — | — | — | ✓ | registered | A | A11 |
+| `machineTrace@1` | type | auto | ✓ | machineTrace | — | — | — | ✓ | registered | A | A15 |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | ✓ | ✓ | registered | A | A, B, E, S |
 | `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | ✓ | ✓ | registered | A | 21A1, 21DD3, A, B, D, E, S |
 | `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | registered | A | D, E, S |
