@@ -98,7 +98,7 @@ describe("L3-B search panel — results", () => {
     const lists = screen.getAllByRole("list");
     expect(lists.every(l => l.getAttribute("aria-labelledby"))).toBe(true);
     expect(document.querySelectorAll("mark.eb-search-mark").length).toBeGreaterThan(0);
-    expect(hitButtons()[0].textContent).toMatch(/الصفحة \d+ من 248/);
+    expect(hitButtons()[0].textContent).toMatch(/الصفحة \d+ من 256/);
   });
 
   it("opens a result by click and by Enter in the field (first result)", () => {
@@ -170,6 +170,6 @@ describe("L3-7 — the UI runs unchanged on a swapped provider", () => {
     expect(status().textContent).toBe("نتيجة واحدة.");
     fireEvent.click(hitButtons()[0]);
     expect(onOpen.mock.calls[0][0].pageId).toBe(page.id);
-    expect(within(hitButtons()[0]).getByText(new RegExp("الصفحة \\d+ من 248"))).toBeTruthy();
+    expect(within(hitButtons()[0]).getByText(new RegExp("الصفحة \\d+ من 256"))).toBeTruthy();
   });
 });

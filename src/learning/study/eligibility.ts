@@ -23,7 +23,7 @@
 //
 // IDENTITY: the activity id is the block's own id, which the content validator guarantees unique per course and
 // which the authoring contract treats as stable (renaming a block id is a content change, never a cosmetic one).
-import { isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, isMachineDesignBlock, MACHINE_DESIGN_VERSION, isServerJudgedSimulation, AUTOMATON_DESIGN_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
+import { isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, isMachineDesignBlock, MACHINE_DESIGN_VERSION, isNetworkBuildBlock, NETWORK_BUILD_VERSION, isServerJudgedSimulation, AUTOMATON_DESIGN_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
 
 /** Decision Q10 (899371 plan §18): Arabic-Indic «٠–٩» and Persian «۰–۹» digits and the Arabic decimal separator «٫» read as «0–9» / «.». */
 export const foldArabicDigits = (s: string): string =>
@@ -43,6 +43,7 @@ export type StudyActivityKey =
   | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] }
   | { kind: "automaton-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; complete?: boolean }; reference: Record<string, unknown> }
   | { kind: "machine-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; mode?: string; leftEnd?: boolean; maxLength?: number }; reference: Record<string, unknown> }
+  | { kind: "network-build"; rules: { kinds: string[] }; reference: Record<string, unknown>; checks: Record<string, unknown>[] }
   | { kind: "exam-item"; itemId: string };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
@@ -121,9 +122,19 @@ export function machineDesignKey(block: SimulationBlock): StudyActivityKey | nul
   return { kind: "machine-design", rules, reference };
 }
 
-/** The key of a server-judged simulation (a network lab or a «صمّم الآلة» exercise), or null. Pure. */
+/** «ابنِ الشبكة» — the key of a build-the-network exercise (v1: the offered kinds, the checks and the solution's network as the reference
+ *  the server verifies the checks against), or null — e.g. a served body (the checks stayed on the server). Structural only. Pure. */
+export function networkBuildKey(block: SimulationBlock): StudyActivityKey | null {
+  if (!isNetworkBuildBlock(block) || block.version !== NETWORK_BUILD_VERSION || !isPlainObject(block.config)) return null;
+  const { task, checks, solution } = block.config as { task?: unknown; checks?: unknown; solution?: unknown };
+  if (!isPlainObject(task) || !Array.isArray(task.kinds) || !Array.isArray(checks) || checks.length === 0 || !checks.every(isPlainObject)) return null;
+  if (!isPlainObject(solution) || !isPlainObject(solution.config)) return null;
+  return { kind: "network-build", rules: { kinds: (task.kinds as unknown[]).map(String) }, reference: solution.config, checks: checks as Record<string, unknown>[] };
+}
+
+/** The key of a server-judged simulation (a network lab, a «صمّم الآلة» or an «ابنِ الشبكة» exercise), or null. Pure. */
 export function serverSimulationKey(block: SimulationBlock): StudyActivityKey | null {
-  return isNetworkLabBlock(block) ? networkLabKey(block) : isAutomatonDesignBlock(block) ? automatonDesignKey(block) : isMachineDesignBlock(block) ? machineDesignKey(block) : null;
+  return isNetworkLabBlock(block) ? networkLabKey(block) : isAutomatonDesignBlock(block) ? automatonDesignKey(block) : isMachineDesignBlock(block) ? machineDesignKey(block) : isNetworkBuildBlock(block) ? networkBuildKey(block) : null;
 }
 
 /** The eligible activity of one block, or null. Pure.

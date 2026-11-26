@@ -1,7 +1,7 @@
 // Learning Materials — content MANIFEST for book 791381 (شبكات الاتصال).
 //
 // The lightweight table of contents: module / lesson / page IDENTITIES, titles and source references — and NO block
-// bodies. Each module's page bodies live in its own code-split chunk (`modules/mNN.ts`). Every one of the 28 modules
+// bodies. Each module's page bodies live in its own code-split chunk (`modules/mNN.ts`). Every one of the 28 book modules
 // is converted (Batches 1–10 and the final summary m28); the book's introduction (the «المقدمة» overview section) has
 // no module yet, so that section carries an empty `moduleIds` and the course overview shows it as «قريبًا».
 //
@@ -1155,6 +1155,53 @@ const manifest: LearningCourseManifest = {
         },
       ],
     },
+    {
+      // «ابنِ الشبكة» (docs/enterprise-network-build-exercises.md): a PRACTICE module — not a book section. Seven build-the-network
+      // exercises (simulation / network-build v1), each on the topic of one of the book's units; new stable id m29, order 29 (after the
+      // final summary).
+      id: "791381-m29",
+      title: "ابنِ الشبكة",
+      shortTitle: "ابنِ الشبكة",
+      order: 29,
+      lessons: [
+        {
+          id: "791381-m29-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m29-l00-p01", title: "ابنِ الشبكة بنفسك", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 7, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["ابنِ الشبكة", "مختبر الشبكات", "تمارين"] },
+          ],
+        },
+        {
+          id: "791381-m29-l01",
+          title: "الشبكة المحلية و VLAN",
+          order: 1,
+          pages: [
+            { id: "791381-m29-l01-p01", title: "شبكة محلية بسويتش", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 48, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["Switch", "LAN", "ping", "IP"] },
+            { id: "791381-m29-l01-p02", title: "قسمان على سويتش واحد (VLAN)", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 121, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["VLAN", "switchport access vlan", "Switch"] },
+          ],
+        },
+        {
+          id: "791381-m29-l02",
+          title: "التوجيه بين الشبكات",
+          order: 2,
+          pages: [
+            { id: "791381-m29-l02-p01", title: "راوتر يصل شبكتين", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 52, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["Router", "Default Gateway", "ip address", "no shutdown"] },
+            { id: "791381-m29-l02-p02", title: "Router on a Stick", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 146, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["Router on a Stick", "Trunk", "dot1Q", "Subinterface"] },
+          ],
+        },
+        {
+          id: "791381-m29-l03",
+          title: "خدمات الشبكة",
+          order: 3,
+          pages: [
+            { id: "791381-m29-l03-p01", title: "الراوتر يوزّع العناوين (DHCP)", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 170, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["DHCP", "ip dhcp pool", "default-router"] },
+            { id: "791381-m29-l03-p02", title: "شبكة لاسلكية محميّة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 159, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["Wi-Fi", "Access Point", "SSID", "WPA2"] },
+            { id: "791381-m29-l03-p03", title: "خادم ويب واسم موقع (HTTP و DNS)", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 87, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." }, keywords: ["HTTP", "DNS", "Server", "Browser"] },
+          ],
+        },
+      ],
+    },
   ],
   // The EIGHT Phase-3 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29);
   // they are NOT themselves canonical modules. The order is the OWNER-approved visible order (intro … summary).
@@ -1169,6 +1216,7 @@ const manifest: LearningCourseManifest = {
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m25", "791381-m26", "791381-m27", "791381-m06"] },
     { id: "summary", label: "التلخيص", moduleIds: ["791381-m28"] },
+    { id: "build", label: "ابنِ الشبكة", moduleIds: ["791381-m29"] },
   ],
 };
 

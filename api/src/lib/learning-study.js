@@ -109,6 +109,11 @@ function evaluateStudyResponse(key, response) {
       const lab = require("./learning-lab").evaluateNetworkLab(key, response);
       return lab.status === "judged" && lab.correct === true;
     }
+    // «ابنِ الشبكة» — the network the learner built, judged check by check; right only when every check passes.
+    case "network-build": {
+      const lab = require("./learning-network-build").evaluateNetworkBuild(key, response);
+      return lab.status === "judged" && lab.correct === true;
+    }
     default:
       return false;
   }

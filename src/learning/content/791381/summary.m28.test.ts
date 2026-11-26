@@ -34,6 +34,7 @@ import m26 from "./modules/m26";
 import m27 from "./modules/m27";
 import m06 from "./modules/m06";
 import m28 from "./modules/m28";
+import m29 from "./modules/m29";
 import manifest from "./manifest";
 import { hasModuleContent } from "../registry";
 import { loadBundledModuleContent as loadModuleContent } from "../bundledModules";
@@ -47,9 +48,10 @@ import { createSession, submitCommand, goalStatus, CLI_FEEDBACK, type CliSession
 import * as apiRegistry from "../../../../api/src/lib/learning-materials-registry.js";
 
 const PREV = [m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03, m19, m04, m20, m21, m22, m23, m24, m05, m25, m26, m27, m06];
-const ALL = [...PREV, m28];
+const BOOK = [...PREV, m28];
+const ALL = [...BOOK, m29];   // + «ابنِ الشبكة» (m29), a practice module after the summary (its pages point at the topics' book pages)
 const course: LearningCourseContent = { schemaVersion: LEARNING_CONTENT_SCHEMA_VERSION, courseId: "791381", title: "شبكات الاتصال", direction: "rtl", modules: ALL };
-const M28 = "791381-m28", M06 = "791381-m06", UNKNOWN = "791381-m29";
+const M28 = "791381-m28", M06 = "791381-m06", UNKNOWN = "791381-m30";   // m30 since «ابنِ الشبكة» (m29) followed the summary
 const pagesOf = (m: ContentModule): ContentPage[] => [...m.lessons].sort((a, b) => a.order - b.order).flatMap(l => [...l.pages].sort((a, b) => a.order - b.order));
 const pages = pagesOf(m28);
 const byPdf = (n: number): ContentPage => pages.find(p => p.source.pdfPageStart === n)!;
@@ -88,12 +90,12 @@ describe("Final summary — identity, structure, mapping PDF 231–263, covers 2
     expect(refs).toEqual(pages.map(p => [p.id, p.title, p.source.pdfPageStart, p.source.printedPage]));
   });
   it("EXACTLY ONE new module m28 «الملخّص الشامل» (shortTitle «الملخّص», order 28, the LAST); eight lessons in the book's section order; module source 230–264 (cover / back cover are metadata only)", () => {
-    expect(manifest.modules.filter(m => !PREV.some(p => p.id === m.id)).map(m => m.id)).toEqual([M28]);
+    expect(manifest.modules.filter(m => !PREV.some(p => p.id === m.id)).map(m => m.id)).toEqual([M28, "791381-m29"]);   // + the practice module «ابنِ الشبكة» after the summary
     expect([m28.id, m28.title, m28.shortTitle, m28.order, m28.partial]).toEqual([M28, "الملخّص الشامل", "الملخّص", 28, undefined]);
     expect([byId[M28].title, byId[M28].shortTitle, byId[M28].order]).toEqual(["الملخّص الشامل", "الملخّص", 28]);
-    expect(orderedModules(manifest).at(-1)!.id).toBe(M28);
-    expect(orderedModules(manifest).at(-2)!.id).toBe(M06);
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 28 }, (_, i) => i + 1));
+    expect(orderedModules(manifest).filter(m => m.id !== "791381-m29").at(-1)!.id).toBe(M28);   // the last BOOK module; the practice module «ابنِ الشبكة» (m29) follows it
+    expect(orderedModules(manifest).at(-3)!.id).toBe(M06);
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 29 }, (_, i) => i + 1));   // 29 since «ابنِ الشبكة» (m29)
     expect(m28.lessons.map(l => [l.id, l.title, l.order, l.pages.length])).toEqual([
       [M28 + "-l01", "الأساسيات", 1, 6], [M28 + "-l02", "النماذج والبروتوكولات", 2, 4], [M28 + "-l03", "العنونة والتجزئة", 3, 4], [M28 + "-l04", "التبديل و VLANs", 4, 6],
       [M28 + "-l05", "التوجيه", 5, 3], [M28 + "-l06", "الأمان", 6, 4], [M28 + "-l07", "الخدمات والأوامر", 7, 5], [M28 + "-l08", "كلمة الختام", 8, 1],
@@ -111,7 +113,7 @@ describe("Final summary — identity, structure, mapping PDF 231–263, covers 2
       expect([p.id, p.title, p.source.printedPage, p.source.sourceId, p.source.pdfPageEnd], String(p.source.pdfPageStart)).toEqual([id, title, printed, "791381", undefined]);
       expect(p.source.pdfPageStart <= 262 ? p.source.printedPage : undefined, p.id).toBe(p.source.pdfPageStart <= 262 ? p.source.pdfPageStart - 2 : undefined);
     }
-    const everyPdf = ALL.flatMap(m => m.lessons.flatMap(l => l.pages.map(p => p.source.pdfPageStart)));
+    const everyPdf = BOOK.flatMap(m => m.lessons.flatMap(l => l.pages.map(p => p.source.pdfPageStart)));
     expect(everyPdf.includes(230)).toBe(false);
     expect(everyPdf.includes(264)).toBe(false);
     expect(Math.max(...everyPdf)).toBe(263);
@@ -127,7 +129,7 @@ describe("Final summary — identity, structure, mapping PDF 231–263, covers 2
     expect(g.b6).toEqual(["791381-m25", "791381-m26", "791381-m27", M06]);
     expect(g.b5).toEqual(["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"]);
     expect(g.b4).toEqual(["791381-m03", "791381-m19", "791381-m04"]);
-    expect(manifest.batches!.map(b => b.id)).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary"]);
+    expect(manifest.batches!.map(b => b.id)).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary", "build"]);   // + «ابنِ الشبكة» (m29)
     const all = manifest.batches!.flatMap(b => b.moduleIds);
     expect(new Set(all).size).toBe(all.length);
     expect(manifest.batches!.filter(b => b.moduleIds.includes(M28)).map(b => b.id)).toEqual(["summary"]);
@@ -135,9 +137,9 @@ describe("Final summary — identity, structure, mapping PDF 231–263, covers 2
   it("navigation: m06 PDF 229 → m28 PDF 231 (230 skipped), 231 → … → 263 in order, 263 has NO next page, 264 never appears; previous of 231 is 229; the loader resolves m28 lazily", async () => {
     expect(nextPage(manifest, M06 + "-l02-p02")?.id).toBe(M28 + "-l01-p01");
     expect(previousPage(manifest, M28 + "-l01-p01")?.id).toBe(M06 + "-l02-p02");
-    expect(nextPage(manifest, M28 + "-l08-p01")).toBeNull();
+    expect(nextPage(manifest, M28 + "-l08-p01")?.id).toBe("791381-m29-l00-p01");   // the practice module «ابنِ الشبكة» follows the book's last page
     const walk: number[] = []; let cur = nextPage(manifest, M06 + "-l02-p02");
-    while (cur) { walk.push(cur.source!.pdfPageStart); cur = nextPage(manifest, cur.id); }
+    while (cur && !cur.id.startsWith("791381-m29-")) { walk.push(cur.source!.pdfPageStart); cur = nextPage(manifest, cur.id); }
     expect(walk).toEqual(PDFS);
     expect(walk).not.toContain(230);
     expect(walk).not.toContain(264);
@@ -288,7 +290,7 @@ describe("Final summary — the ten REAL book CLI exercises (simulation / cli-te
       if (cfg!.kind === "task") expect(cfg!.goals!.length, e.block.id).toBe((raw.goals as unknown[]).length);
       else expect(cfg!.steps!.length, e.block.id).toBe((raw.steps as unknown[]).length);
     }
-    expect(productionActivityRegistry.list().length).toBe(26);   // + hw-part-3d/v1 (HW-A1), machine-design/v1 (AUTO-A10), + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1), + automaton-design/v1 (AUTO-A3), + ds-trace/v1, ds-lab/v1 and ds-figure/v1 (DS-A1), + ds-solution/v1 (DS-A3)
+    expect(productionActivityRegistry.list().length).toBe(27);   // + network-build/v1 («ابنِ الشبكة»), + hw-part-3d/v1 (HW-A1), machine-design/v1 (AUTO-A10), + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1), + automaton-design/v1 (AUTO-A3), + ds-trace/v1, ds-lab/v1 and ds-figure/v1 (DS-A1), + ds-solution/v1 (DS-A3)
     const cfgText = JSON.stringify(list.map(s => s.block.config));
     expect(cfgText).not.toMatch(/ping|tracert|ipconfig|nslookup|arp -a|restrict|protect|show interfaces trunk|show mac address-table|show spanning-tree/i);
     expect(list.map(s => (s.block.config as { kind: string }).kind)).toEqual(["task", "guided", "guided", "task", "challenge", "guided", "task", "task", "task", "challenge"]);
@@ -410,18 +412,19 @@ describe("Final summary — the ten REAL book CLI exercises (simulation / cli-te
   });
 });
 
-describe("Final summary — publication invariants (publishable, NEVER auto-published) and the m29 unknown-id sentinel", () => {
+describe("Final summary — publication invariants (publishable, NEVER auto-published) and the m30 unknown-id sentinel", () => {
   it("FRONTEND ↔ SERVER agreement: the server registry lists every manifest module (28) with the same title and order, m28 LAST as {الملخّص الشامل, 28}; identity + title + order only", () => {
     const expected = manifest.modules.filter(m => hasModuleContent("791381", m.id)).map(m => ({ moduleId: m.id, title: m.title, order: m.order })).sort((a, b) => a.order - b.order);
     const s = server().listLearningModules("791381");
     expect(s).toEqual(expected);
-    expect(s).toHaveLength(28);
-    expect(s.at(-1)).toEqual({ moduleId: M28, title: "الملخّص الشامل", order: 28 });
-    expect(s.at(-2)).toEqual({ moduleId: M06, title: "قوائم التحكم ACL", order: 27 });
+    expect(s).toHaveLength(29);   // 29 since «ابنِ الشبكة» (m29)
+    expect(s.at(-1)).toEqual({ moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 });   // the practice module «ابنِ الشبكة» follows the summary
+    expect(s.at(-2)).toEqual({ moduleId: M28, title: "الملخّص الشامل", order: 28 });
+    expect(s.at(-3)).toEqual({ moduleId: M06, title: "قوائم التحكم ACL", order: 27 });
     for (const m of s) expect(Object.keys(m).sort()).toEqual(["moduleId", "order", "title"]);
     expect(JSON.stringify(s)).not.toMatch(/pages|lessons|blocks|pdf|visibleModuleIds|published|simulation|cli-terminal|config/i);
   });
-  it("m28 is publishable on explicit request only: validate([m28]) → [m28]; a mixed list canonicalizes by order with m28 LAST (never by id); m29 is unknown (rejected, absent, no body)", () => {
+  it("m28 is publishable on explicit request only: validate([m28]) → [m28]; a mixed list canonicalizes by order with m28 LAST (never by id); m30 is unknown (rejected, absent, no body)", () => {
     expect(server().validateLearningModuleIds("791381", [M28])).toEqual([M28]);
     expect(server().validateLearningModuleIds("791381", [M28, "791381-m25", M06, "791381-m01"])).toEqual(["791381-m01", "791381-m25", M06, M28]);
     expect(server().canonicalizeLearningModuleIds("791381", [M28, " 791381-m01 ", UNKNOWN, "", null])).toEqual(["791381-m01", M28]);

@@ -77,7 +77,10 @@ const COURSES = [
       { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 },
       // Final summary phase: the book's closing reference «الملخّص الشامل» (PDF 230–263) — new stable id m28, the LAST
       // module; publishable (the teacher sees it as «مخفي عن الطلاب»); NEVER auto-published to any class.
-      { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 }
+      { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 },
+      // «ابنِ الشبكة»: a practice module (seven build-the-network exercises judged on the server) — new stable id m29, after the final
+      // summary; publishable (the teacher sees it as «مخفي عن الطلاب»); NEVER auto-published to any class.
+      { moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 }
     ]
   },
   // The summary booklet «أوراق تلخيص للمراجعة» (نموذج 791381) — an independent second course: module mNN is the booklet's
