@@ -21,7 +21,9 @@ const NETWORKS: StudentToolsSpecV1 = {
     { id: "bitwiseCalculator", width: 32 },
     { id: "unitConverter", categories: ["data", "dataRate"] },
     { ...calculator },
-    { ...scratchPad }
+    { ...scratchPad },
+    // N1 (owner decision 2026-11-26) — «مختبر الشبكات»: the learner builds and tests a network with the course's simulator
+    { id: "networkLab" }
   ]
 };
 
@@ -57,7 +59,7 @@ export const COURSE_STUDENT_TOOLS: Readonly<Record<string, StudentToolsSpecV1>> 
   // أنظمة محوسبة (HW-A2) — units of data (Bit / Byte / KB / MB) and the hexadecimal of a MAC address
   "791283": {
     version: 1,
-    tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }]
+    tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }, { id: "networkLab" }]
   }
 });
 

@@ -15,7 +15,8 @@ const NETWORKS = {
         { id: "bitwiseCalculator", width: 32 },
         { id: "unitConverter", categories: ["data", "dataRate"] },
         { ...calculator },
-        { ...scratchPad }
+        { ...scratchPad },
+        { id: "networkLab" }
     ]
 };
 exports.COURSE_STUDENT_TOOLS = Object.freeze({
@@ -44,7 +45,7 @@ exports.COURSE_STUDENT_TOOLS = Object.freeze({
     },
     "791283": {
         version: 1,
-        tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }]
+        tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }, { id: "networkLab" }]
     }
 });
 function courseStudentTools(courseId) {

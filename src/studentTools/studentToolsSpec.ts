@@ -23,9 +23,10 @@ export const STUDENT_TOOLS_VERSION = 1 as const;
 // Phase T13 — the owner's two binary-conversion aids (place-value boxes, the hex ↔ binary table), added additively in the same way.
 // Phase T14 — the C# editor (docs/enterprise-student-tools-csharp-editor-design.md), added additively in the same way.
 // AUTO-A4 — the automata lab «مختبر الآلات» (docs/enterprise-automata-lab-a4.md), added additively in the same way.
+// N1 — the network lab «مختبر الشبكات» (docs/enterprise-network-lab-tool-design.md), added additively in the same way.
 export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
   "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor",
-  "automataLab"] as const;
+  "automataLab", "networkLab"] as const;
 export type StudentToolId = (typeof STUDENT_TOOL_IDS)[number];
 
 export const NUMBER_BASES = [2, 8, 10, 16] as const;
@@ -91,9 +92,13 @@ export type CSharpEditorToolV1 = { id: "csharpEditor"; allowRun: boolean; allowV
  *  The machine is data the learner builds: nothing is executed, nothing is stored or sent, nothing is graded. At least one kind. */
 /** AUTO-A6 — `level`, additive within version 1: the canonical form carries it only when it restricts, so every earlier spec keeps its shape. */
 export type AutomataLabToolV1 = { id: "automataLab"; kinds: AutomataLabKind[]; level?: AutomataLabLevel };
+/** N1 — the network lab: the learner BUILDS a network (routers, switches, PCs, laptops, servers, access points, cables) and configures and
+ *  tests it with the platform's network simulator (networkTopology@2's engines, unchanged). Data only: nothing executed, nothing sent,
+ *  nothing graded. The network is kept only in the learner's browser (a draft) or in a file the learner saves. No options in v1. */
+export type NetworkLabToolV1 = { id: "networkLab" };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
-  | CSharpEditorToolV1 | AutomataLabToolV1;
+  | CSharpEditorToolV1 | AutomataLabToolV1 | NetworkLabToolV1;
 
 export type StudentToolsSectionOverrideV1 = { disabled: StudentToolId[] };
 export type StudentToolsSpecV1 = {
@@ -135,6 +140,7 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "hexBinaryTable": return { id, showDecimal: true };
     case "csharpEditor": return { id, allowRun: false };   // exams: always write only; a book's teacher may switch running on
     case "automataLab": return { id, kinds: [...AUTOMATA_LAB_KINDS] };
+    case "networkLab": return { id };
   }
 }
 
@@ -154,7 +160,8 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   placeValueBoxes: ["id", "width"],
   hexBinaryTable: ["id", "showDecimal"],
   csharpEditor: ["id", "allowRun", "allowVisual"],
-  automataLab: ["id", "kinds", "level"]
+  automataLab: ["id", "kinds", "level"],
+  networkLab: ["id"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -327,6 +334,9 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
         ...((AUTOMATA_LAB_LEVELS as readonly unknown[]).includes(raw.level) ? { level: raw.level as AutomataLabLevel } : {}) };
       break;
     }
+    case "networkLab":
+      value = { id };
+      break;
   }
   return issues.length === before ? value : null;
 }
