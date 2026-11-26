@@ -74,7 +74,9 @@ async function session(role, viewport, { touch = false } = {}) {
 async function composerOnLab(page) {
   await page.goto(origin + "/");
   await page.waitForLoadState("networkidle").catch(() => {});
-  await page.getByRole("button", { name: "الواجبات" }).first().click({ timeout: 15000 });
+  // the app's own navigation (the side bar, or the bottom bar on a phone) — the teacher dashboard's cards carry «الواجبات» buttons too,
+  // and on a phone the first of them is a card, not the navigation (F1)
+  await page.locator("nav").getByRole("button", { name: "الواجبات", exact: true }).locator("visible=true").first().click({ timeout: 15000 });
   await page.getByRole("button", { name: "إنشاء واجب" }).first().click({ timeout: 15000 });
   const composer = page.getByRole("region", { name: "إنشاء واجب جديد" });
   await composer.getByRole("button", { name: "المكتبة الرسمية" }).click();
@@ -84,7 +86,11 @@ async function composerOnLab(page) {
   return { composer, list };
 }
 const codes = list => list.locator(".library-item-code").allInnerTexts();
+// axe measures colours as drawn: it runs once no animation or transition is still running (choosing content enables the wizard's
+// steps, which fade from .5 to full opacity in 0.18s — measured mid-fade they read 4.28:1, settled they pass).
+const settled = page => page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
 async function axe(page, where) {
+  await settled(page);
   await page.evaluate(axeSource + "\n;0");
   const r = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map(v => v.id + " ×" + v.nodes.length));
   check(r.length === 0, where + ": axe WCAG 2.1 A/AA — " + (r.join(", ") || "no violation"));

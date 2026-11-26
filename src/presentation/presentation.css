@@ -34,6 +34,9 @@
 
 /* exam header (top bar / cover) and navigation variants — colours / weight only */
 .exam-presentation[data-xp-exam-header="hero"] :is(.iex-topbar,.iex-cover-card){ background:color-mix(in srgb,var(--xp-primary) 6%,var(--xp-surface)); }
+/* F1 — on the hero tint the policy's muted colour is not guaranteed (modernAcademic: 4.32:1): the bar's context line (class · attempt)
+   takes the text colour its title already uses on the same tint (src/presentation/heroHeaderContrast.f1.test.ts: ≥ 4.5 on every preset). */
+.exam-presentation[data-xp-exam-header="hero"] .iex-topbar-context{ color:var(--xp-text); }
 .exam-presentation[data-xp-exam-header="banded"] :is(.iex-topbar,.iex-cover-card){ border-block-end:3px solid var(--xp-primary); }
 .exam-presentation[data-xp-exam-header="minimal"] .iex-topbar{ box-shadow:none; }
 .exam-presentation[data-xp-navigation="modern"] .iex-bottom-nav .eb-button{ border-radius:999px; }
