@@ -208,3 +208,24 @@ IPv6 و WAN التسلسلي يبقيان خارج النطاق إلا إذا ط
 | `networkLab.n1.tool.test.tsx` (+1) | الـ Hub بلا إعدادات، نموذج IPv6 يحفظ، قائمة أوامر الراوتر الإضافية والمنافذ التسلسلية |
 | حزم المحاكي القائمة (170 + الباقي) | تمرّ دون أي تغيير بعد إضافة الخطافات |
 | `scripts/check-network-lab-browser.mjs` | يضيف على 1280: شبكة PC1 — R1 ═Serial═ R2 — PC2 تُبنى بالواجهة، والراوتران يُبرمجان بسطر الأوامر (عناوين، `clock rate`، OSPF)؛ `show ip route` في R1 فيه `O 192.168.2.0/24 [110/65] via 10.0.0.2`؛ `tracert` من PC1 يعبر R1 و R2؛ ومسار الحركة يُعلَن |
+
+## 12. Fix — the IP Configuration fields looked empty after «حفظ» (2026-11-26)
+
+**Symptom.** In networkTopology@2's Desktop (`src/networkTopology2/Net2Panels.tsx`, IP Configuration), a saved address looked empty. The
+value was saved and used: ping worked and the server judged it right.
+
+**Cause.**
+- Each `.net2-field` is a grid item with the default `min-width: auto`, so its input kept its intrinsic ~20ch width (≈335 px) inside a
+  ≈200 px column.
+- The left-aligned LTR value therefore slid under the neighbouring field.
+
+**Fix** (`src/networkTopology2/net2.css`):
+- `.net2-fields > *, .net2-field { min-width: 0 }`;
+- `.net2-field > input, .net2-field > select { width: 100%; min-width: 0; box-sizing: border-box }`.
+
+**Fail-first evidence.** `scripts/check-network-build-browser.mjs` measures that every input lies inside its field:
+- on the baseline `735b9b7e`: ✗ at 1280 and 390;
+- with the fix: ✓.
+
+A CSS pin (`src/networkTopology2/net2FieldsFit.test.ts`) keeps the rules. The same panel serves exam smartSim questions, which get the
+same fix.
