@@ -23,17 +23,22 @@ function scoreMachineTrace({ config, answerKey, response, maxMarks }) {
     const g = gradeTrace(auth.machine, auth.config.word, ans.answer);
     if (!g) return { ...MACHINE_TRACE_FAIL_CLOSED };
     const score = max * g.right / g.parts;
-    return { score, correct: g.right === g.parts, manualReview: false, parts: { correct: g.right, total: g.parts }, trace: { rows: g.rows, verdict: g.verdict, trueRows: g.trueRows } };
+    return { score, correct: g.right === g.parts, manualReview: false, parts: { correct: g.right, total: g.parts }, trace: { rows: g.rows, verdict: g.verdict, trueRows: g.trueRows, truth: g.truth, trueVerdict: g.trueVerdict } };
   } catch {
     return { ...MACHINE_TRACE_FAIL_CLOSED };
   }
 }
 
-/** The stored feedback of one graded answer, or null: which of the true run's rows the student got right, and the verdict — bounded. */
+/** The stored feedback of one graded answer, or null: which of the true run's rows the student got right, the verdict, and (AUTO-A15b)
+ *  the true run as text rows and its verdict — shown to the teacher, and to the student once the results are released (owner decision:
+ *  the machine and the word were the question; after the exam the run is no secret). Rebuilt field by field and bounded. */
+const ROW_TEXT = /^[^\u0000-\u001f]{1,60}$/u;
 function traceFeedbackOf(r) {
   const t = r && r.trace;
   if (!t || !Array.isArray(t.rows) || t.rows.length > 64 || typeof t.verdict !== "boolean" || !Number.isInteger(t.trueRows)) return null;
-  return { rows: t.rows.map(x => x === true), verdict: t.verdict, trueRows: t.trueRows };
+  const truth = Array.isArray(t.truth) && t.truth.length === t.trueRows && t.truth.every(x => typeof x === "string" && ROW_TEXT.test(x)) ? [...t.truth] : null;
+  const trueVerdict = t.trueVerdict === "accept" || t.trueVerdict === "reject" ? t.trueVerdict : null;
+  return { rows: t.rows.map(x => x === true), verdict: t.verdict, trueRows: t.trueRows, ...(truth && trueVerdict ? { truth, trueVerdict } : {}) };
 }
 
 module.exports = { scoreMachineTrace, traceFeedbackOf, MACHINE_TRACE_FAIL_CLOSED };

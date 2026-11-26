@@ -88,7 +88,7 @@ describe("A15a — grading: partial, and an error is never counted twice", () =>
   it("the true run and its verdict earn every part", () => {
     expect(trueTrace(m, [..."abab"])!.rows.map(c => c.states[0])).toEqual(["q0", "q1", "q2", "q1", "q2"]);
     expect(gradeTrace(m, "abab", ans(["q0", "q1", "q2", "q1", "q2"].map(state => ({ state })), "accept")))
-      .toEqual({ parts: 6, right: 6, rows: [true, true, true, true, true], verdict: true, trueRows: 5 });
+      .toEqual({ parts: 6, right: 6, rows: [true, true, true, true, true], verdict: true, trueRows: 5, truth: ["q0", "q1", "q2", "q1", "q2"], trueVerdict: "accept" });
   });
   it("one wrong row costs ONE part: the next row, the true step from the student's own wrong row, is right", () => {
     // row 2 written q0 (wrong); from q0 reading «a» the machine goes to q1 — the student's q1 is right, then q2 (the true one) is right

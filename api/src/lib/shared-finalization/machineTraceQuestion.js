@@ -10,6 +10,7 @@ exports.trueTrace = trueTrace;
 exports.parseTape = parseTape;
 exports.configOfRow = configOfRow;
 exports.rowOfConfig = rowOfConfig;
+exports.rowLabel = rowLabel;
 exports.gradeTrace = gradeTrace;
 exports.validateMachineTraceConfig = validateMachineTraceConfig;
 exports.validateMachineTraceQuestion = validateMachineTraceQuestion;
@@ -184,6 +185,14 @@ function rowOfConfig(m, c) {
         return { state: c.states[0], tape: (0, exports.tapeText)(c.cells ?? [], c.head ?? 0) };
     return { state: c.states[0] };
 }
+function rowLabel(row) {
+    if (!isPlain(row))
+        return "—";
+    if (Array.isArray(row.states))
+        return row.states.length ? "{" + row.states.filter(s => typeof s === "string").join(", ") + "}" : "∅";
+    const parts = [row.state, row.stack, row.tape].filter((v) => typeof v === "string" && v !== "");
+    return parts.length ? parts.join(" ").slice(0, 60) : "—";
+}
 const sameConfig = (a, b) => !!a && !!b && JSON.stringify([a.states, a.read, a.stack ?? null, a.cells ?? null, a.head ?? null]) === JSON.stringify([b.states, b.read, b.stack ?? null, b.cells ?? null, b.head ?? null]);
 function gradeTrace(m, word, answer) {
     const split = (0, automaton_1.splitWord)(m, word);
@@ -203,7 +212,8 @@ function gradeTrace(m, word, answer) {
         return !!prev && sameConfig(got, stepTrace(m, prev, split.symbols));
     });
     const verdict = answer.verdict === run.verdict;
-    return { parts: run.rows.length + 1, right: rows.filter(Boolean).length + (verdict ? 1 : 0), rows, verdict, trueRows: run.rows.length };
+    return { parts: run.rows.length + 1, right: rows.filter(Boolean).length + (verdict ? 1 : 0), rows, verdict, trueRows: run.rows.length,
+        truth: run.rows.map(c => rowLabel(rowOfConfig(m, c))), trueVerdict: run.verdict };
 }
 function validateMachineTraceConfig(raw) {
     if (!isPlain(raw) || !onlyKeys(raw, ["v", "machine", "word"]))

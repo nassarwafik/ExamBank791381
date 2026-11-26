@@ -61,6 +61,21 @@ function machineOf(g) {
   return null;
 }
 
+// AUTO-A15b — a machineTrace@1 question shows the student, after the results are released, each of their rows beside the true run's row
+// (owner decision: the machine and the word were the question, so the run is no secret after the exam), which rows were right, and the
+// verdict both ways. Built from the stored grade's traceFeedback and the student's own stored answer only; bounded.
+const { rowLabel } = require("./shared-finalization/machineTraceQuestion");
+function traceOf(g, answer) {
+  const f = isObj(g.traceFeedback) ? g.traceFeedback : null;
+  if (!f || !Array.isArray(f.rows) || !Array.isArray(f.truth) || f.truth.length !== f.rows.length || f.rows.length > 64) return null;
+  const mine = isObj(answer) && answer.kind === "machineTrace" && Array.isArray(answer.rows) ? answer.rows : [];
+  const verdictWord = v => (v === "accept" ? "accept" : v === "reject" ? "reject" : null);
+  return {
+    rows: f.truth.map((truth, k) => ({ mine: rowLabel(mine[k]), truth: String(truth).slice(0, 60), right: f.rows[k] === true })),
+    verdict: { mine: verdictWord(isObj(answer) ? answer.verdict : null), truth: verdictWord(f.trueVerdict), right: f.verdict === true },
+  };
+}
+
 function statusOf(g) {
   if (g.ignored === true) return "notCounted";
   if (g.manualReview === true || isObj(g.technicalFailure) && g.reviewed !== true) return "pending";
@@ -72,6 +87,7 @@ function statusOf(g) {
 
 /** PURE: the student-safe breakdown of one attempt → { sections: [...], questions: [...] } or null when there is nothing to show. */
 function questionBreakdown(attempt) {
+  const answers = attempt && isObj(attempt.answers) ? attempt.answers : {};
   const grades = attempt && Array.isArray(attempt.questionGrades) ? attempt.questionGrades.filter(isObj) : [];
   if (!grades.length) return null;
   const questions = grades.map((g, i) => {
@@ -84,6 +100,8 @@ function questionBreakdown(attempt) {
     if (automaton) item.automaton = automaton;
     const machine = status === "pending" || status === "notCounted" ? null : machineOf(g);
     if (machine) item.machine = machine;
+    const trace = status === "pending" || status === "notCounted" ? null : traceOf(g, typeof g.questionId === "string" && Object.prototype.hasOwnProperty.call(answers, g.questionId) ? answers[g.questionId] : null);
+    if (trace) item.trace = trace;
     return item;
   });
   const sections = (attempt && Array.isArray(attempt.sections) ? attempt.sections.filter(isObj) : []).map(s => ({
@@ -96,4 +114,4 @@ function questionBreakdown(attempt) {
   return { sections, questions };
 }
 
-module.exports = { questionBreakdown, statusOf, automatonOf, machineOf };
+module.exports = { questionBreakdown, statusOf, automatonOf, machineOf, traceOf };

@@ -26,7 +26,7 @@ describe("A15a — the grader", () => {
   it("the true run and the verdict: every mark; feedback marks each row", () => {
     const r = score(ans(TRUE_ROWS));
     expect(r).toMatchObject({ score: 6, correct: true, manualReview: false, parts: { correct: 6, total: 6 } });
-    expect(traceFeedbackOf(r)).toEqual({ rows: [true, true, true, true, true], verdict: true, trueRows: 5 });
+    expect(traceFeedbackOf(r)).toEqual({ rows: [true, true, true, true, true], verdict: true, trueRows: 5, truth: ["q0 ⏊", "q1 ⏊S", "q1 ⏊SA", "q1 ⏊S", "q2 ⏊"], trueVerdict: "accept" });   // A15b: + the true run
   });
   it("an error is never counted twice: a wrong row costs one part, the rows that follow from it are right", () => {
     // row 2 forgets to push A (⏊S instead of ⏊SA); from (q1, ⏊S) reading «b» the machine pops S → (q2, ⏊): the student's own row 3 is that
@@ -67,7 +67,7 @@ describe("A15a — the platform", () => {
     const t = r.questions.find(q => q.questionId === "t1");
     expect([r.totalMarks, t.maxMarks, t.manualReview]).toEqual([8, 6, false]);
     expect(t.score).toBeCloseTo(5, 2);
-    expect(t.traceFeedback).toEqual({ rows: [true, true, false, true, true], verdict: true, trueRows: 5 });
+    expect(t.traceFeedback).toEqual({ rows: [true, true, false, true, true], verdict: true, trueRows: 5, truth: ["q0 ⏊", "q1 ⏊S", "q1 ⏊SA", "q1 ⏊S", "q2 ⏊"], trueVerdict: "accept" });
     expect(gradeExam(exam(), { t1: ans(TRUE_ROWS) }).questions[0]).toMatchObject({ score: 6, correct: true });
   });
   it("the student sees the machine and the word as authored — and no key", () => {
@@ -112,5 +112,29 @@ describe("A15a — the acceptance exam (docs/fixtures/machine-trace-a15, exercis
     expect([r.score, r.totalMarks, r.manualReviewMarks]).toEqual([16, 16, 0]);
     const view = sanitizeExamForStudent(fixture);
     expect(view.sections.flatMap(s => s.questions).map(q => q.machineTrace)).toEqual(qs.map(q => q.machineTrace));
+  });
+});
+
+describe("AUTO-A15b — the true run for the teacher, and for the student once the results are released", () => {
+  const { questionBreakdown } = require_("../src/lib/student-question-breakdown.js");
+  const slip = [TRUE_ROWS[0], TRUE_ROWS[1], { state: "q1", stack: "⏊S" }, { state: "q2", stack: "⏊" }, { state: "q2", stack: "⏊" }];
+  it("the stored feedback carries the true run as text rows and its verdict — bounded; a malformed truth is dropped, never stored", () => {
+    const f = traceFeedbackOf(score(ans(slip)));
+    expect(f).toEqual({ rows: [true, true, false, true, true], verdict: true, trueRows: 5, truth: ["q0 ⏊", "q1 ⏊S", "q1 ⏊SA", "q1 ⏊S", "q2 ⏊"], trueVerdict: "accept" });
+    expect(traceFeedbackOf({ trace: { rows: [true], verdict: true, trueRows: 1, truth: ["x".repeat(61)], trueVerdict: "accept" } })).toEqual({ rows: [true], verdict: true, trueRows: 1 });
+    expect(traceFeedbackOf({ trace: { rows: [true], verdict: true, trueRows: 1, truth: ["q0"], trueVerdict: "maybe" } })).toEqual({ rows: [true], verdict: true, trueRows: 1 });
+  });
+  it("the released breakdown: each of the student's rows beside the true row and its part, the verdict both ways; nothing while pending", () => {
+    const grade = gradeExam(exam(), { t1: ans(slip, "reject") }).questions[0];
+    const attempt = { answers: { t1: ans(slip, "reject") }, questionGrades: [grade], sections: [] };
+    expect(questionBreakdown(attempt).questions[0].trace).toEqual({
+      rows: [
+        { mine: "q0 ⏊", truth: "q0 ⏊", right: true }, { mine: "q1 ⏊S", truth: "q1 ⏊S", right: true }, { mine: "q1 ⏊S", truth: "q1 ⏊SA", right: false },
+        { mine: "q2 ⏊", truth: "q1 ⏊S", right: true }, { mine: "q2 ⏊", truth: "q2 ⏊", right: true },
+      ],
+      verdict: { mine: "reject", truth: "accept", right: false },
+    });
+    expect(questionBreakdown({ ...attempt, questionGrades: [{ ...grade, manualReview: true }] }).questions[0].trace).toBeUndefined();
+    expect(questionBreakdown({ ...attempt, answers: {} }).questions[0].trace.rows.map(r => r.mine)).toEqual(["—", "—", "—", "—", "—"]);
   });
 });
