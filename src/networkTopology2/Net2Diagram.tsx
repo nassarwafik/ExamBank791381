@@ -15,7 +15,9 @@ const py = (y: number) => PAD_Y + y * (H - 2 * PAD_Y - 60);
 const clamp01 = (n: number) => Math.min(1, Math.max(0, Math.round(n * 1000) / 1000));
 
 function Glyph({ kind }: { kind: Net2Device["kind"] }) {
-  switch (kind) {
+  switch (kind as string) {
+    // N2 — the network lab's hub (a lab-only kind): a flat box with plain ports, no arrows (it only repeats)
+    case "hub": return (<><rect className="net2-shape" x={-50} y={-22} width={100} height={44} rx={6} /><path className="net2-glyph" d="M-34 0h68M-26-8v16M-9-8v16M9-8v16M26-8v16" /></>);
     case "router": return (<><circle className="net2-shape" r={38} /><path className="net2-glyph" d="M-20 0h40M0-20v40M14-6l6 6-6 6M-14-6l-6 6 6 6M-6-14l6-6 6 6M-6 14l6 6 6-6" /></>);
     case "switch": return (<><rect className="net2-shape" x={-50} y={-28} width={100} height={56} rx={10} /><path className="net2-glyph" d="M-30-8h56l-8-7M30 8h-56l8 7" /></>);
     case "ap": return (<><rect className="net2-shape" x={-36} y={-6} width={72} height={30} rx={8} /><path className="net2-glyph" d="M-14-16a20 20 0 0 1 28 0M-24-26a34 34 0 0 1 48 0M0 4v6" /></>);

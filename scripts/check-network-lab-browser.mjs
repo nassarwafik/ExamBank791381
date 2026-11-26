@@ -98,7 +98,49 @@ for (const [label, viewport, touch] of [["1280", { width: 1280, height: 900 }, f
   await page.getByRole("button", { name: "مختبر الشبكات" }).click();
   await page.getByTestId("network-lab").waitFor({ timeout: 20000 });
   check(await page.getByTestId("network-lab-devices").getByRole("button").count() === 3, "a reload restores the network from the draft");
+  if (label === "1280") await wanScenario(page);
   await ctx.close();
+}
+
+/** N2 — PC1 — R1 ═serial═ R2 — PC2 with OSPF, built and configured through the UI and the routers' terminals. */
+async function wanScenario(page) {
+  console.log("  WAN + OSPF (N2)");
+  const lab = page.getByTestId("network-lab");
+  await lab.getByRole("button", { name: "شبكة جديدة", exact: true }).click();
+  await lab.getByRole("button", { name: /تأكيد: امسح الشبكة كلها/ }).click();
+  for (const k of ["+ راوتر", "+ راوتر", "+ حاسوب", "+ حاسوب"]) await lab.getByRole("button", { name: k, exact: true }).click();
+  const sel = name => lab.getByRole("combobox", { name, exact: true });
+  for (const [a, ap, b, bp] of [["r1", "g0/0", "pc1", "eth0"], ["r1", "s0/0/0", "r2", "s0/0/0"], ["r2", "g0/0", "pc2", "eth0"]]) {
+    await sel("من الجهاز").selectOption(a); await sel("منفذ الجهاز الأول").selectOption(ap);
+    await sel("إلى الجهاز").selectOption(b); await sel("منفذ الجهاز الثاني").selectOption(bp);
+    await lab.getByRole("button", { name: "صِل", exact: true }).click();
+  }
+  const openDevice = async name => { await lab.getByTestId("network-lab-devices").getByRole("button", { name }).click(); return lab.getByTestId("network-lab-device"); };
+  for (const [name, address, gw] of [[/^PC1/, "192.168.1.10", "192.168.1.1"], [/^PC2/, "192.168.2.10", "192.168.2.1"]]) {
+    const panel = await openDevice(name);
+    await panel.getByRole("button", { name: /IP Configuration/ }).click();
+    const ipc = panel.getByTestId("net2-ipconfig");
+    await ipc.getByLabel("IP Address").fill(address); await ipc.getByLabel("Subnet Mask").fill("255.255.255.0"); await ipc.getByLabel("Default Gateway").fill(gw);
+    await ipc.getByRole("button", { name: /حفظ/ }).click();
+  }
+  const routerLines = {
+    R1: ["enable", "configure terminal", "interface g0/0", "ip address 192.168.1.1 255.255.255.0", "no shutdown", "interface s0/0/0", "ip address 10.0.0.1 255.255.255.252", "clock rate 64000", "no shutdown", "router ospf 1", "network 192.168.1.0 0.0.0.255 area 0", "network 10.0.0.0 0.0.0.3 area 0", "end"],
+    R2: ["enable", "configure terminal", "interface g0/0", "ip address 192.168.2.1 255.255.255.0", "no shutdown", "interface s0/0/0", "ip address 10.0.0.2 255.255.255.252", "no shutdown", "router ospf 1", "network 192.168.2.0 0.0.0.255 area 0", "network 10.0.0.0 0.0.0.3 area 0", "end"],
+  };
+  for (const [r, lines] of Object.entries(routerLines)) {
+    const panel = await openDevice(new RegExp("^" + r));
+    for (const line of lines) { await panel.getByRole("textbox").last().fill(line); await panel.getByRole("button", { name: "تنفيذ" }).click(); }
+  }
+  const r1 = await openDevice(/^R1/);
+  await r1.getByRole("textbox").last().fill("show ip route"); await r1.getByRole("button", { name: "تنفيذ" }).click();
+  check(/O +192\.168\.2\.0\/24 \[110\/65\] via 10\.0\.0\.2/.test(await r1.getByTestId("ncli-screen").textContent()), "R1 learned 192.168.2.0/24 by OSPF over the serial link");
+  const pc1 = await openDevice(/^PC1/);
+  await pc1.getByRole("button", { name: /Command Prompt/ }).click();
+  const cmd = pc1.getByTestId("net2-cmd");
+  await cmd.getByRole("textbox").fill("tracert 192.168.2.10"); await cmd.getByRole("button", { name: "تنفيذ" }).click();
+  check(/1 .*192\.168\.1\.1[\s\S]*2 .*10\.0\.0\.2[\s\S]*3 .*192\.168\.2\.10/.test(await cmd.getByTestId("ncli-screen").textContent()), "tracert from PC1 crosses R1 and R2 to PC2");
+  check(/^نجح tracert من PC1/.test((await lab.getByTestId("network-lab-flow").textContent()).trim()), "the flow status announces the path over both routers");
+  await shot(page, "netlab-wan-ospf");
 }
 
 await browser.close();

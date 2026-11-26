@@ -1,16 +1,17 @@
 import { useMemo, useRef, useState } from "react";
-import { NET2_DEVICE_KINDS, NET2_LIMITS, devicePorts, deviceAdapters, isHostKind, type Net2AdapterKind, type Net2Config, type Net2DeviceKind, type Net2Link } from "../net2Model";
-import { replayNet2Cached, type Net2ReplayCache } from "../net2Plugin";
+import { NET2_LIMITS, deviceAdapters, isHostKind, adapterNames, type Net2AdapterKind, type Net2Config, type Net2Device, type Net2Link } from "../net2Model";
 import { linkUp, makeNet } from "../net2Network";
 import { traceHostCommandFlow, type Net2Flow } from "../net2Flow";
 import Net2Diagram from "../networkTopology2/Net2Diagram";
-import { DevicePanel } from "../networkTopology2/Net2Panels";
+import { DevicePanel, type Net2View } from "../networkTopology2/Net2Panels";
 import { KIND_LABEL } from "../networkTopology2/net2Labels";
 import { NET2_TEMPLATES } from "../networkTopology2/net2Templates";
 import {
-  EMPTY_LAB, addDevice, addLink, appendActions, clearConfiguration, freePorts, labFileName, moveDevice, parseLab, removeDevice, removeLink,
-  renameDevice, serializeLab, setAdapters, type NetLab, type NetLabResult,
+  EMPTY_LAB, LAB_DEVICE_KINDS, addDevice, addLink, appendActions, clearConfiguration, freePorts, labFileName, moveDevice, parseLab, removeDevice, removeLink,
+  renameDevice, serializeLab, setAdapters, type LabDeviceKind, type NetLab, type NetLabResult,
 } from "./networkLab";
+import { labDevicePorts } from "./netLabModel";
+import { replayLab, type LabReplay, type LabReplayCache } from "./netLabReplay";
 import "../networkTopology2/net2.css";
 import "./networkLab.css";
 
@@ -21,13 +22,27 @@ import "./networkLab.css";
 // «احفظ في ملف» / «افتح ملفًا» move it through a file on the learner's own device.
 
 const ADAPTER_TEXT: Readonly<Record<Net2AdapterKind, string>> = { ethernet: "Ethernet (كابل)", wireless: "Wi-Fi (لاسلكي)" };
+const LABEL: Readonly<Record<LabDeviceKind, string>> = { ...KIND_LABEL, hub: "Hub" };
+const kindLabel = (d: Net2Device) => LABEL[d.kind as LabDeviceKind] ?? d.kind;
 type ShownFlow = { id: number; at: number; flow: Net2Flow };
-const caches = new WeakMap<Net2Config, Net2ReplayCache>();
-function replayOf(cfg: Net2Config, actions: readonly unknown[]) {
-  const step = replayNet2Cached(cfg, actions, caches.get(cfg));
+const caches = new WeakMap<Net2Config, LabReplayCache>();
+function replayOf(cfg: Net2Config, actions: readonly unknown[]): LabReplay {
+  const step = replayLab(cfg, actions, caches.get(cfg));
   if (step.cache) caches.set(cfg, step.cache);
   return step.replay;
 }
+/** N2 — the commands the lab adds to the router CLI (a reminder under the router's terminal). */
+const ROUTER_EXTRAS: readonly [string, string][] = [
+  ["الواجهة التسلسلية (WAN)", "interface s0/0/0 · ip address … · clock rate 64000 · encapsulation ppp · no shutdown"],
+  ["التوجيه الثابت", "ip route 192.168.2.0 255.255.255.0 10.0.0.2 · ip route 0.0.0.0 0.0.0.0 s0/0/0"],
+  ["RIP", "router rip · version 2 · network 10.0.0.0 · no auto-summary"],
+  ["OSPF", "router ospf 1 · network 10.0.0.0 0.0.0.255 area 0"],
+  ["EIGRP", "router eigrp 10 · network 10.0.0.0"],
+  ["ACL", "access-list 1 deny host 192.168.1.10 · access-list 100 deny icmp any any · interface g0/0 · ip access-group 1 in"],
+  ["NAT / PAT", "ip nat inside source static 192.168.1.10 200.0.0.10 · ip nat inside source list 1 interface s0/0/0 overload · ip nat inside | outside"],
+  ["IPv6", "ipv6 unicast-routing · interface g0/0 · ipv6 address 2001:db8:1::1/64 · ipv6 route 2001:db8:2::/64 2001:db8:12::2"],
+  ["عرض", "show ip route · show ip protocols · show ip ospf neighbor · show access-lists · show ip nat translations · show ipv6 route"],
+];
 function readDraft(key?: string): NetLab {
   if (!key) return EMPTY_LAB;
   try { const t = localStorage.getItem(key); const r = t ? parseLab(t) : null; return r && r.ok ? r.lab : EMPTY_LAB; } catch { return EMPTY_LAB; }
@@ -75,9 +90,9 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
       </div>
     );
   }
-  const view = replay;
+  const view = replay as unknown as Net2View;   // networkTopology@2's replay shape (+ the lab state), for its own device surfaces
   const label = (id: string) => cfg.devices.find(d => d.id === id)?.label ?? id;
-  const net = makeNet(cfg, view.state.devices, view.state.ops);
+  const net = makeNet(replay.engine, view.state.devices, view.state.ops);
   const linkDown = (l: Net2Link) => !linkUp(net, l.a.deviceId, l.a.port);
   const wireless = Object.entries(view.state.ops.wifi).filter(([, w]) => w.status === "associated" && w.ap).map(([host, w]) => ({ host, ap: w.ap! }));
   const remainingTotal = Math.max(0, NET2_LIMITS.actions - lab.actions.length);
@@ -93,12 +108,12 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
     const r = appendActions(lab, more);
     if (!r.ok) { setNotice({ text: r.message, error: true }); return; }
     const added = more.length === 1 ? more[0] : undefined;
-    const traced = isHostCommand(added) ? traceHostCommandFlow(cfg, view.state, added.deviceId, added.command) : null;
+    const traced = isHostCommand(added) ? traceHostCommandFlow(replay.engine, view.state, added.deviceId, added.command) : null;
     setLab(r.lab); setNotice(null);
     setFlow(traced ? { id: ++flowSeq.current, at: r.lab.actions.length, flow: traced } : null);
   };
   const pick = (id: string) => { setSelected(id); setConfirm(null); setNotice(null); };
-  const add = (kind: Net2DeviceKind) => {
+  const add = (kind: LabDeviceKind) => {
     const before = new Set(cfg.devices.map(d => d.id));
     const r = addDevice(lab, kind);
     if (apply(r) && r.ok) { const fresh = r.lab.config.devices.find(d => !before.has(d.id)); if (fresh) setSelected(fresh.id); }
@@ -148,7 +163,7 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
       {draftKey && <p className="net2-note" data-testid="network-lab-draft">{draftFailed ? "تعذّر حفظ المسودة في هذا المتصفح؛ احفظ الشبكة في ملف." : "الشبكة تُحفظ تلقائيًا مسودةً في هذا المتصفح. لنقلها إلى جهاز آخر: «احفظ في ملف»."}</p>}
 
       <div className="netlab-bar net2-actions" role="group" aria-label="إضافة جهاز">
-        {NET2_DEVICE_KINDS.map(k => <button key={k} type="button" onClick={() => add(k)} disabled={cfg.devices.length >= NET2_LIMITS.devices}>{"+ " + KIND_LABEL[k]}</button>)}
+        {LAB_DEVICE_KINDS.map(k => <button key={k} type="button" onClick={() => add(k)} disabled={cfg.devices.length >= NET2_LIMITS.devices}>{"+ " + LABEL[k]}</button>)}
       </div>
 
       {cfg.devices.length === 0
@@ -161,7 +176,7 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
 
       {cfg.devices.length > 0 && (
         <ul className="net2-devices" aria-label="الأجهزة في الشبكة" data-testid="network-lab-devices">
-          {cfg.devices.map(d => <li key={d.id}><button type="button" aria-pressed={selected === d.id} onClick={() => pick(d.id)}>{d.label} ({KIND_LABEL[d.kind]})</button></li>)}
+          {cfg.devices.map(d => <li key={d.id}><button type="button" aria-pressed={selected === d.id} onClick={() => pick(d.id)}>{d.label} ({kindLabel(d)})</button></li>)}
         </ul>
       )}
 
@@ -179,7 +194,7 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
             <ul className="netlab-links" aria-label="الكوابل" data-testid="network-lab-links">
               {cfg.links.map(l => (
                 <li key={l.id}>
-                  <span><bdi>{label(l.a.deviceId)}</bdi> <span className="net2-ltr">{l.a.port}</span> ↔ <bdi>{label(l.b.deviceId)}</bdi> <span className="net2-ltr">{l.b.port}</span>{linkDown(l) ? " — مقطوع" : ""}</span>
+                  <span><span dir="ltr" className="netlab-cable-text"><bdi>{label(l.a.deviceId)}</bdi> {l.a.port} ↔ <bdi>{label(l.b.deviceId)}</bdi> {l.b.port}</span>{linkDown(l) ? " — مقطوع" : ""}</span>
                   <button type="button" className="netlab-x" aria-label={"احذف الكابل بين " + label(l.a.deviceId) + " و" + label(l.b.deviceId)} onClick={() => apply(removeLink(lab, l.id), "حُذف الكابل.")}>✕</button>
                 </li>
               ))}
@@ -190,7 +205,7 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
 
       {device && (
         <section className="net2-panel netlab-device" data-testid="network-lab-device" aria-labelledby={"netlab-sel-" + device.id}>
-          <h4 id={"netlab-sel-" + device.id} aria-live="polite">{device.label} ({KIND_LABEL[device.kind]})</h4>
+          <h4 id={"netlab-sel-" + device.id} aria-live="polite">{device.label} ({kindLabel(device)})</h4>
           <div className="netlab-cable">
             <label>اسم الجهاز<input key={device.id + "|" + device.label} defaultValue={device.label} maxLength={NET2_LIMITS.labelChars}
               onBlur={e => { const v = e.currentTarget.value; if (v.trim() && v !== device.label) { if (!apply(renameDevice(lab, device.id, v))) e.currentTarget.value = device.label; } else e.currentTarget.value = device.label; }} /></label>
@@ -203,13 +218,21 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
               </fieldset>
             )}
           </div>
-          <p className="net2-note">المنافذ: <span className="net2-ltr">{devicePorts(device).join(", ") || "—"}</span></p>
+          <p className="net2-note">المنافذ: <span className="net2-ltr">{labDevicePorts(device).join(", ") || "—"}</span></p>
           <div className="net2-actions">
             {confirm === "remove"
               ? <><button type="button" className="is-danger" onClick={() => { if (apply(removeDevice(lab, device.id), "حُذف " + device.label + " مع كوابله وإعداداته.")) { setSelected(null); setConfirm(null); } }}>تأكيد حذف {device.label}</button><button type="button" className="is-secondary" onClick={() => setConfirm(null)}>إلغاء</button></>
               : <button type="button" className="is-secondary" onClick={() => setConfirm("remove")}>احذف الجهاز</button>}
           </div>
-          <DevicePanel cfg={cfg} view={view} device={device} base={lab.actions} emit={emit} label={"مختبر الشبكات"} remainingTotal={remainingTotal} name={label} />
+          {(device.kind as string) === "hub"
+            ? <p className="net2-note" data-testid="network-lab-hub">الـ Hub لا يُبرمج: كل ما يصل إلى منفذ يخرج من كل المنافذ الأخرى (مجال تصادم واحد لكل الأجهزة الموصولة به).</p>
+            : <DevicePanel cfg={cfg} view={view} device={device} base={lab.actions} emit={emit} label={"مختبر الشبكات"} remainingTotal={remainingTotal} name={label} />}
+          {isHostKind(device.kind) && <Ipv6Form key={device.id + "|" + JSON.stringify(replay.state.lab.hosts6[device.id] ?? null)} device={device} current={replay.state.lab.hosts6[device.id]} emit={emit} />}
+          {device.kind === "router" && (
+            <details className="netlab-extras" data-testid="network-lab-router-extras"><summary>أوامر إضافية في المختبر: WAN، التوجيه، ACL، NAT، IPv6</summary>
+              <dl>{ROUTER_EXTRAS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="net2-ltr">{v}</dd></div>)}</dl>
+            </details>
+          )}
         </section>
       )}
       {!device && cfg.devices.length > 0 && <p className="net2-note">اختر جهازًا من الرسم أو من القائمة لبرمجته (سطر الأوامر، سطح المكتب، إعدادات نقطة الوصول) أو لتغيير اسمه أو حذفه.</p>}
@@ -223,5 +246,28 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** N2 — a host's IPv6 address (the lab action host.setIpv6), next to its IPv4 IP Configuration. */
+function Ipv6Form({ device, current, emit }: { device: Net2Device; current?: { iface: string; addr: string; len: number; gw: string }; emit: (a: Record<string, unknown>[]) => void }) {
+  const names = adapterNames(device);
+  const [adapter, setAdapter] = useState(current?.iface ?? names[0]);
+  const [address, setAddress] = useState(current ? current.addr + "/" + current.len : "");
+  const [gateway, setGateway] = useState(current?.gw ?? "");
+  return (
+    <fieldset className="netlab-box netlab-v6" data-testid="network-lab-ipv6">
+      <legend>IPv6</legend>
+      <div className="netlab-cable">
+        {names.length > 1 && <label>المحوّل<select value={adapter} onChange={e => setAdapter(e.target.value as typeof adapter)} dir="ltr">{names.map(n => <option key={n} value={n}>{n}</option>)}</select></label>}
+        <label>IPv6 Address / Prefix<input className="net2-ltr" dir="ltr" value={address} placeholder="2001:db8:1::10/64" maxLength={49} onChange={e => setAddress(e.target.value)} /></label>
+        <label>Default Gateway (IPv6)<input className="net2-ltr" dir="ltr" value={gateway} placeholder="2001:db8:1::1" maxLength={45} onChange={e => setGateway(e.target.value)} /></label>
+        <div className="net2-actions">
+          <button type="button" onClick={() => emit([{ type: "host.setIpv6", deviceId: device.id, adapter, address: address.trim(), gateway: address.trim() ? gateway.trim() : "" }])}>حفظ IPv6</button>
+          {current && <button type="button" className="is-secondary" onClick={() => emit([{ type: "host.setIpv6", deviceId: device.id, adapter, address: "", gateway: "" }])}>إزالة IPv6</button>}
+        </div>
+      </div>
+      <p className="net2-note">جرّب في Command Prompt: <span className="net2-ltr">ping 2001:db8:2::10</span> و <span className="net2-ltr">ipconfig</span></p>
+    </fieldset>
   );
 }

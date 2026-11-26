@@ -97,6 +97,14 @@ function tracertLines(net: Net, host: string, target: string, address: string): 
   if (!src) { out.push(lossLine(1)); }
   else {
     const p = probe(net, src, address);
+    if (p.hops) {
+      // N2 (lab only): every router hop answers from its ingress address; the destination closes the trace
+      p.hops.forEach((h, i) => out.push(hopLine(i + 1, h)));
+      if (p.ok && p.hops[p.hops.length - 1] !== address) out.push(hopLine(p.hops.length + 1, address));
+      else if (!p.ok) out.push(lossLine(p.hops.length + 1));
+      out.push("", "Trace complete.");
+      return out;
+    }
     const routerHop = p.gateway && p.routers.length ? p.gateway : undefined;
     const targetIsRouter = p.ok && p.routers.length > 0 && p.target?.dev === p.routers[0];
     if (p.ok && !routerHop) out.push(hopLine(1, address));

@@ -64,6 +64,28 @@ export type NetTraceSegment = { phase: "request" | "reply"; from: string; to: st
 export type NetTrace = { phase: "request" | "reply"; lastTrail: string[]; segments: NetTraceSegment[] };
 export type Ep = { dev: string; iface: string };
 export type L3 = { ip: string; mask: string; gateway?: string };
+
+// ── N2 — the network LAB's extension hooks (docs/enterprise-network-lab-tool-design.md §7) ──────────────────────────────────────────
+// The student tool «مختبر الشبكات» extends the simulator (the Hub, serial WAN links, static and dynamic routing, ACLs, NAT, IPv6) for the
+// networks the learner builds there. It attaches these hooks to the configuration object it passes in (`labHooks`). A configuration that
+// comes through validateNet2Config — every exam question and every book lab — can never carry them (unknown keys are refused), so for
+// networkTopology@2 every hook below is absent and each call site takes its original path unchanged.
+export type Net2Proto = { p: "icmp" | "tcp" | "udp"; port?: number };
+export type Net2LabHooks = {
+  /** The cabled-port inventory of a device the lab adds (a router's serial ports, a hub), or null for the device's own list. */
+  ports: (d: Net2Device) => readonly string[] | null;
+  /** The administrative state of a lab port end (a serial port, a hub port), or null for the original rule. */
+  adminUp: (net: Net, dev: string, port: string) => boolean | null;
+  /** The L3 address of a lab endpoint (a router's serial interface), or null for the original rule. */
+  l3: (net: Net, ep: Ep) => L3 | undefined | null;
+  /** The extra addressable endpoints of a device (a router's serial interfaces). */
+  endpoints: (net: Net, id: string) => Ep[];
+  /** The port a frame sent from a lab endpoint leaves through, `false` when it cannot be sent, or null for the original rule. */
+  inject: (net: Net, from: Ep) => string | false | null;
+  /** The two-way exchange (routing, ACLs, NAT) of the lab. */
+  probe: (net: Net, from: Ep, dst: string, proto: Net2Proto) => Probe;
+};
+export const labHooksOf = (net: Net): Net2LabHooks | undefined => (net.config as { labHooks?: Net2LabHooks }).labHooks;
 const key = (dev: string, port: string) => dev + "|" + port;
 const sameEp = (a: Ep, b: Ep) => a.dev === b.dev && a.iface === b.iface;
 const sortedIds = (net: Net, kind?: string) => net.config.devices.filter(d => !kind || d.kind === kind).map(d => d.id).sort();
@@ -73,7 +95,8 @@ export function makeNet(config: Net2Config, devices: Record<string, Net2DeviceSt
   const peers = new Map<string, Net2Endpoint>();
   for (const l of config.links) { peers.set(key(l.a.deviceId, l.a.port), l.b); peers.set(key(l.b.deviceId, l.b.port), l.a); }
   const cabled = new Map<string, { port: string; peer: Net2Endpoint }[]>();
-  for (const d of config.devices) cabled.set(d.id, (d.kind === "switch" ? SWITCH_PORTS : d.kind === "router" ? ROUTER_PORTS : ["eth0"]).flatMap(p => { const peer = peers.get(key(d.id, p)); return peer ? [{ port: p, peer }] : []; }));
+  const lab = (config as { labHooks?: Net2LabHooks }).labHooks;
+  for (const d of config.devices) cabled.set(d.id, (lab?.ports(d) ?? (d.kind === "switch" ? SWITCH_PORTS : d.kind === "router" ? ROUTER_PORTS : ["eth0"])).flatMap(p => { const peer = peers.get(key(d.id, p)); return peer ? [{ port: p, peer }] : []; }));
   const net: Net = { config, devices, ops, record, dev, peers, vlanDb: new Map(), learn: false, eff: new Map(), cabled, up: new Map(), swPorts: new Map() };
   refreshVlanDb(net);
   return net;
@@ -108,6 +131,8 @@ const apState = (net: Net, id: string) => net.devices[id] as Net2ApState;
 export const isErrDisabled = (net: Net, dev: string, port: string): boolean => net.ops.portSecurity[key(dev, port)]?.errDisabled === true;
 /** Administrative state of one port end, ignoring err-disable (static for the lifetime of a view). */
 function portAdminUp(net: Net, dev: string, port: string): boolean {
+  const lab = labHooksOf(net)?.adminUp(net, dev, port);
+  if (lab !== undefined && lab !== null) return lab;
   switch (kindOf(net, dev)) {
     case "switch": return !effIf(net, dev, port).shutdown;
     case "router": return physicalAdminUp(rtState(net, dev), port);
@@ -131,6 +156,8 @@ export const peerOf = (net: Net, dev: string, port: string): Net2Endpoint | unde
 export const hostConnected = (net: Net, dev: string, iface: string): boolean => (iface === "wlan0" ? net.ops.wifi[dev]?.status === "associated" : linkUp(net, dev, "eth0"));
 /** The L3 address of an endpoint, when it is operational. */
 export function l3Of(net: Net, ep: Ep): L3 | undefined {
+  const hooks = labHooksOf(net);
+  if (hooks) { const lab = hooks.l3(net, ep); if (lab !== null) return lab; }
   switch (kindOf(net, ep.dev)) {
     case "router": {
       const st = rtState(net, ep.dev);
@@ -160,8 +187,9 @@ export function l3Of(net: Net, ep: Ep): L3 | undefined {
 export function endpointsOf(net: Net, id: string): Ep[] {
   const d = net.dev.get(id);
   if (!d) return [];
+  const hooks = labHooksOf(net);
   switch (d.kind) {
-    case "router": return routerAddresses(rtState(net, id)).map(a => ({ dev: id, iface: a.name }));
+    case "router": return [...routerAddresses(rtState(net, id)).map(a => ({ dev: id, iface: a.name })), ...(hooks ? hooks.endpoints(net, id) : [])];
     case "switch": return Object.keys(swState(net, id).interfaces).filter(n => /^vlan\d+$/.test(n)).concat(swState(net, id).interfaces.vlan1 ? [] : ["vlan1"]).sort().map(iface => ({ dev: id, iface }));
     case "ap": return [{ dev: id, iface: "mgmt" }];
     default: return adapterNames(d).map(iface => ({ dev: id, iface }));
@@ -249,7 +277,10 @@ export function l2Deliver(net: Net, from: Ep, mac: string, accept: (ep: Ep) => b
   };
   // injection at the sender
   const k = kindOf(net, from.dev);
-  if (k === "router") {
+  const labPort = labHooksOf(net)?.inject(net, from);
+  if (labPort === false) return null;
+  if (typeof labPort === "string") cross(from.dev, labPort, null, []);
+  else if (k === "router") {
     const st = rtState(net, from.dev), parent = parentOf(from.iface);
     if (!router2IfUp(st, from.iface, p => linkUp(net, from.dev, p))) return null;
     const sub = from.iface.includes(".") ? st.subinterfaces[from.iface] : undefined;
@@ -282,6 +313,12 @@ export function l2Deliver(net: Net, from: Ep, mac: string, accept: (ep: Ep) => b
       if (a.tag === null) { const nat = subs.find(n => st.subinterfaces[n].native); offer({ dev: a.dev, iface: nat ?? a.port }, a.trail); }
       else { const s = subs.find(n => !st.subinterfaces[n].native && st.subinterfaces[n].vlan === a.tag); if (s) offer({ dev: a.dev, iface: s }, a.trail); }
     } else if (kind === "ap") { if (a.port === "eth0" && a.tag === null) bridge(a.dev, null, false, a.trail); }
+    else if ((kind as string) === "hub") {
+      // N2 (lab only — no validated configuration has a hub): a hub repeats the frame out of every other port, one collision domain
+      if (visited.has("hub|" + a.dev + "|" + (a.tag ?? ""))) continue;
+      visited.add("hub|" + a.dev + "|" + (a.tag ?? ""));
+      for (const c of net.cabled.get(a.dev) ?? []) if (c.port !== a.port) cross(a.dev, c.port, a.tag, a.trail);
+    }
     else if (kind && a.port === "eth0" && a.tag === null) offer({ dev: a.dev, iface: "eth0" }, a.trail);
   }
   const hit = found as { ep: Ep; trail: Learn[] } | null;
@@ -356,9 +393,13 @@ export function forwardLeg(net: Net, from: Ep, dst: string): Leg {
   const t = arpResolve(net, egress, dst);
   return t ? { ok: true, target: t, routers, gateway: gw } : { ok: false, reason: "DESTINATION_UNREACHABLE", routers, gateway: gw };
 }
-export type Probe = { ok: boolean; reason: string; target?: Ep; routers: string[]; replyRouters: string[]; gateway?: string; ttl?: number };
+export type Probe = { ok: boolean; reason: string; target?: Ep; routers: string[]; replyRouters: string[]; gateway?: string; ttl?: number;
+  /** N2 (lab only): the address each router hop answered from, in order (tracert); absent for networkTopology@2. */
+  hops?: string[] };
 /** A two-way exchange (request + reply). The reply must reach exactly the requesting endpoint. */
-export function probe(net: Net, from: Ep, dst: string): Probe {
+export function probe(net: Net, from: Ep, dst: string, proto: Net2Proto = { p: "icmp" }): Probe {
+  const hooks = labHooksOf(net);
+  if (hooks) return hooks.probe(net, from, dst, proto);
   if (net.trace) net.trace.phase = "request";
   const f = forwardLeg(net, from, dst);
   if (!f.ok) return { ok: false, reason: f.reason, routers: f.routers, replyRouters: [], ...(f.gateway ? { gateway: f.gateway } : {}) };
@@ -398,7 +439,7 @@ export function dnsLookup(net: Net, host: string, name: string): DnsResult {
   const dns = ep ? net.ops.adapters[host + "/" + ep.iface]?.dns : undefined;
   if (!ep || !dns) return { ok: false, reason: "NO_DNS_SERVER" };
   const src = pickSource(net, host, dns)!;
-  const p = probe(net, src, dns);
+  const p = probe(net, src, dns, { p: "udp", port: 53 });
   const svc = p.ok && p.target && kindOf(net, p.target.dev) === "server" ? hostState(net, p.target.dev).services?.dns : undefined;
   if (!svc || !svc.enabled) return { ok: false, reason: "DNS_UNREACHABLE", server: dns };
   const rec = svc.records.find(r => r.name === name.toLowerCase());
@@ -410,7 +451,7 @@ export function httpGet(net: Net, host: string, target: string): HttpResult {
   if (!/^\d+\.\d+\.\d+\.\d+$/.test(target)) { const r = dnsLookup(net, host, target); if (!r.ok) return { ok: false, reason: "UNRESOLVED" }; address = r.address; }
   const src = pickSource(net, host, address);
   if (!src) return { ok: false, reason: "NO_ADDRESS" };
-  const p = probe(net, src, address);
+  const p = probe(net, src, address, { p: "tcp", port: 80 });
   const svc = p.ok && p.target && kindOf(net, p.target.dev) === "server" ? hostState(net, p.target.dev).services?.http : undefined;
   return svc && svc.enabled ? { ok: true, title: svc.title, body: svc.body, address } : { ok: false, reason: "TIMEOUT" };
 }
@@ -494,6 +535,7 @@ function staticallyUsed(net: Net): Set<string> {
   const used = new Set<string>();
   for (const d of net.config.devices) {
     const st = net.devices[d.id];
+    if (!st) continue;   // N2: a lab hub has no state (every device of a validated configuration has one)
     if (d.kind === "router") for (const a of routerAddresses(st as Net2RouterState)) used.add(a.ipAddress);
     else if (d.kind === "switch") for (const c of Object.values((st as Net2SwitchState).interfaces)) { if (c.ipAddress) used.add(c.ipAddress); }
     else if (d.kind === "ap") { if ((st as Net2ApState).address) used.add((st as Net2ApState).address!); }

@@ -12,10 +12,16 @@
 .netlab-cable select { min-width: 7rem; }
 .netlab-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .netlab-links li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 8px; background: var(--eb-content-ground); overflow-wrap: anywhere; }
+.netlab-cable-text { unicode-bidi: isolate; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .netlab-x { min-width: 44px; min-height: 44px; border: 1px solid var(--eb-content-grid); border-radius: 8px; background: var(--eb-surface); cursor: pointer; font: inherit; }
 .netlab-adapters { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .netlab-adapters legend { font-size: 0.9rem; padding: 0; margin-bottom: 3px; }
 .netlab-adapters label { display: inline-flex; gap: 6px; align-items: center; min-height: 44px; }
+.netlab-extras { border: 1px solid var(--eb-content-grid); border-radius: 10px; padding: 8px 10px; }
+.netlab-extras summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.netlab-extras dl { display: grid; gap: 6px; margin: 8px 0 0; }
+.netlab-extras dt { font-weight: 700; }
+.netlab-extras dd { margin: 0; overflow-wrap: anywhere; font-size: 0.85rem; }
 .netlab-device { border-top: 1px solid var(--eb-content-grid); padding-top: 10px; }
 @media (min-width: 1100px) {
   .stt-panel.is-fullscreen .netlab { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }

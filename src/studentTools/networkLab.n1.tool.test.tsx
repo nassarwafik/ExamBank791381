@@ -101,3 +101,20 @@ describe("building and testing a network", () => {
     expect(within(within(lab()).getByTestId("network-lab-devices")).getAllByRole("button").length).toBe(6);   // the network stays
   });
 });
+
+describe("N2 — the lab's extensions in the UI", () => {
+  it("a hub has no configuration; a host offers IPv6 next to its Desktop; a router lists the lab's extra commands", async () => {
+    render(<NetworkLabTool />);
+    await click(button("+ Hub")); await click(button("+ حاسوب")); await click(button("+ راوتر"));
+    expect((await openDevice(/^HUB1/)).textContent).toMatch(/الـ Hub لا يُبرمج/);
+    const pc = await openDevice(/^PC1/);
+    const v6 = within(pc).getByTestId("network-lab-ipv6");
+    fireEvent.change(within(v6).getByLabelText("IPv6 Address / Prefix"), { target: { value: "2001:db8:1::10/64" } });
+    await click(within(v6).getByRole("button", { name: "حفظ IPv6" }));
+    expect((within(lab()).getByTestId("network-lab-ipv6").querySelector("input") as HTMLInputElement).value).toBe("2001:db8:1::10/64");
+    expect(within(lab()).getByRole("button", { name: "إزالة IPv6" })).toBeTruthy();
+    const r = await openDevice(/^R1/);
+    expect(within(r).getByTestId("network-lab-router-extras").textContent).toMatch(/router ospf 1/);
+    expect(within(r).getByText(/s0\/0\/0, s0\/0\/1/)).toBeTruthy();
+  });
+});

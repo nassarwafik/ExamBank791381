@@ -10,10 +10,14 @@
 // adapter it used) is dropped — the rest keep their order, so a device keeps its configuration when cables change, as in Packet Tracer.
 //
 // No eval, no network, no timers, no storage here: the file and the draft are plain strings; the tool decides where they go.
-import { NET2_DEVICE_KINDS, NET2_LIMITS, devicePorts, isHostKind, validateNet2Config, type Net2AdapterKind, type Net2Config, type Net2Device, type Net2DeviceKind, type Net2Link } from "../net2Model";
-import { normalizeNet2Action, validateNet2Actions } from "../net2Plugin";
+import { NET2_DEVICE_KINDS, NET2_LIMITS, isHostKind, type Net2AdapterKind, type Net2Config, type Net2Device, type Net2Link } from "../net2Model";
+import { labDevicePorts, validateLabConfig } from "./netLabModel";
+import { normalizeLabAction, validateLabActions, type LabAction } from "./netLabReplay";
 
 export type NetLab = { config: Net2Config; actions: unknown[] };
+/** N2 — the lab's device kinds: networkTopology@2's six, and the hub. */
+export const LAB_DEVICE_KINDS = [...NET2_DEVICE_KINDS, "hub"] as const;
+export type LabDeviceKind = (typeof LAB_DEVICE_KINDS)[number];
 export type NetLabResult = { ok: true; lab: NetLab } | { ok: false; message: string };
 
 export const EMPTY_LAB: NetLab = Object.freeze({ config: { v: 2, devices: [], links: [] }, actions: [] }) as NetLab;
@@ -23,31 +27,31 @@ export const NETLAB_FILE_VERSION = 1;
 /** A saved network is at most this many characters (the engine's own bounds keep a real one far below it). */
 export const NETLAB_FILE_MAX_CHARS = 600_000;
 
-const PREFIX: Readonly<Record<Net2DeviceKind, { id: string; label: string }>> = Object.freeze({
-  router: { id: "r", label: "R" }, switch: { id: "sw", label: "SW" }, pc: { id: "pc", label: "PC" }, laptop: { id: "lap", label: "LAP" }, ap: { id: "ap", label: "AP" }, server: { id: "srv", label: "SRV" },
+const PREFIX: Readonly<Record<LabDeviceKind, { id: string; label: string }>> = Object.freeze({
+  router: { id: "r", label: "R" }, switch: { id: "sw", label: "SW" }, pc: { id: "pc", label: "PC" }, laptop: { id: "lap", label: "LAP" }, ap: { id: "ap", label: "AP" }, server: { id: "srv", label: "SRV" }, hub: { id: "hub", label: "HUB" },
 });
 /** Where a new device of each kind first appears (routers at the top, hosts at the bottom), before the learner drags it. */
-const ROW_Y: Readonly<Record<Net2DeviceKind, number>> = Object.freeze({ router: 0.1, switch: 0.42, ap: 0.62, server: 0.78, pc: 0.88, laptop: 0.94 });
+const ROW_Y: Readonly<Record<LabDeviceKind, number>> = Object.freeze({ router: 0.1, switch: 0.42, hub: 0.5, ap: 0.62, server: 0.78, pc: 0.88, laptop: 0.94 });
 const round = (n: number) => Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000;
 const nextNumber = (ids: readonly string[], prefix: string) => 1 + ids.reduce((m, id) => { const k = new RegExp("^" + prefix + "(\\d+)$").exec(id); return k ? Math.max(m, Number(k[1])) : m; }, 0);
 
 /** Re-validates a candidate topology and keeps only the actions that still apply to it (same order). */
 function settle(config: unknown, actions: readonly unknown[]): NetLabResult {
-  const v = validateNet2Config(config);
-  if (!v.ok) return { ok: false, message: v.issues[0]?.message ?? "الشبكة غير صالحة." };
-  const kept = actions.filter(a => normalizeNet2Action(a, v.config).ok);
+  const v = validateLabConfig(config);
+  if (!v.ok) return { ok: false, message: v.message };
+  const kept = actions.filter(a => normalizeLabAction(a, v.config).ok);
   return { ok: true, lab: { config: v.config, actions: kept } };
 }
 const clone = (c: Net2Config): { devices: Net2Device[]; links: Net2Link[] } => JSON.parse(JSON.stringify({ devices: c.devices, links: c.links }));
 
 /** Adds a device of `kind` with the next free name (R1, SW2 …), placed in its row, to the right of the devices already there. */
-export function addDevice(lab: NetLab, kind: Net2DeviceKind): NetLabResult {
-  if (!(NET2_DEVICE_KINDS as readonly string[]).includes(kind)) return { ok: false, message: "نوع جهاز غير معروف." };
+export function addDevice(lab: NetLab, kind: LabDeviceKind): NetLabResult {
+  if (!(LAB_DEVICE_KINDS as readonly string[]).includes(kind)) return { ok: false, message: "نوع جهاز غير معروف." };
   if (lab.config.devices.length >= NET2_LIMITS.devices) return { ok: false, message: "وصلت إلى الحد الأقصى: " + NET2_LIMITS.devices + " جهازًا." };
   const { devices, links } = clone(lab.config);
   const p = PREFIX[kind], n = nextNumber(devices.map(d => d.id), p.id);
   const sameRow = devices.filter(d => d.kind === kind).length;
-  const device: Net2Device = { id: p.id + n, kind, label: p.label + n, x: round(0.08 + ((sameRow * 0.17) % 0.85)), y: ROW_Y[kind] };
+  const device = { id: p.id + n, kind, label: p.label + n, x: round(0.08 + ((sameRow * 0.17) % 0.85)), y: ROW_Y[kind] } as Net2Device;
   return settle({ v: 2, devices: [...devices, device], links }, lab.actions);
 }
 
@@ -63,7 +67,7 @@ export function freePorts(config: Net2Config, id: string): string[] {
   const d = config.devices.find(x => x.id === id);
   if (!d) return [];
   const used = new Set(config.links.flatMap(l => [l.a, l.b]).filter(e => e.deviceId === id).map(e => e.port));
-  return devicePorts(d).filter(p => !used.has(p));
+  return labDevicePorts(d).filter(p => !used.has(p));
 }
 
 /** Connects two free ports with a cable (the validator refuses a used port, a self cable or a port the device lacks). */
@@ -108,7 +112,7 @@ export function setAdapters(lab: NetLab, id: string, adapters: readonly Net2Adap
   if (!adapters.length) return { ok: false, message: "يحتاج الجهاز محوّل شبكة واحدًا على الأقل." };
   d.adapters = (["ethernet", "wireless"] as const).filter(a => adapters.includes(a));
   delete d.initial;   // an initial state names the adapters it was written for; the learner configures the device again
-  const ports = new Set(devicePorts(d));
+  const ports = new Set(labDevicePorts(d));
   return settle({ v: 2, devices, links: links.filter(l => ![l.a, l.b].some(e => e.deviceId === id && !ports.has(e.port))) }, lab.actions);
 }
 
@@ -116,10 +120,10 @@ export function setAdapters(lab: NetLab, id: string, adapters: readonly Net2Adap
 export function appendActions(lab: NetLab, more: readonly unknown[]): NetLabResult {
   const next = [...lab.actions, ...more];
   if (next.length > NET2_LIMITS.actions) return { ok: false, message: "وصلت إلى الحد الأقصى لعدد العمليات في الشبكة (" + NET2_LIMITS.actions + ")." };
-  const normalized = [];
-  for (const a of next) { const n = normalizeNet2Action(a, lab.config); if (!n.ok) return { ok: false, message: "تعذّر تنفيذ العملية." }; normalized.push(n.action); }
-  const code = validateNet2Actions(normalized);
-  if (code) return { ok: false, message: code === "NET2_DEVICE_COMMANDS_TOO_MANY" ? "اكتمل الحد الأقصى لأوامر هذا الجهاز." : code === "NET2_HOST_COMMANDS_TOO_MANY" ? "اكتمل الحد الأقصى لأوامر هذا الحاسوب." : code === "NET2_WIFI_ACTIONS_TOO_MANY" ? "اكتمل الحد الأقصى لعمليات الاتصال اللاسلكي لهذا الجهاز." : "تعذّر تنفيذ العملية." };
+  const normalized: LabAction[] = [];
+  for (const a of next) { const n = normalizeLabAction(a, lab.config); if (!n.ok) return { ok: false, message: "تعذّر تنفيذ العملية." }; normalized.push(n.action); }
+  const code = validateLabActions(normalized);
+  if (code) return { ok: false, message: code === "NET2_DEVICE_COMMANDS_TOO_MANY" ? "اكتمل الحد الأقصى لأوامر هذا الجهاز." : code === "NET2_HOST_COMMANDS_TOO_MANY" ? "اكتمل الحد الأقصى لأوامر هذا الحاسوب." : code === "NET2_WIFI_ACTIONS_TOO_MANY" ? "اكتمل الحد الأقصى لعمليات الاتصال اللاسلكي لهذا الجهاز." : code === "LAB_IPV6_ACTIONS_TOO_MANY" ? "اكتمل الحد الأقصى لإعدادات IPv6 لهذا الجهاز." : "تعذّر تنفيذ العملية." };
   return { ok: true, lab: { config: lab.config, actions: next } };
 }
 
@@ -143,8 +147,8 @@ export function parseLab(text: unknown): NetLabResult {
   if (Object.keys(o).some(k => !["format", "version", "config", "actions"].includes(k)) || o.format !== NETLAB_FILE_FORMAT) return bad("هذا ليس ملف شبكة من مختبر الشبكات.");
   if (o.version !== NETLAB_FILE_VERSION) return bad("إصدار الملف غير مدعوم.");
   if (!Array.isArray(o.actions)) return bad("الملف تالف: قائمة العمليات غير صالحة.");
-  const v = validateNet2Config(o.config);
-  if (!v.ok) return bad("الملف تالف: " + (v.issues[0]?.message ?? "الشبكة غير صالحة."));
+  const v = validateLabConfig(o.config);
+  if (!v.ok) return bad("الملف تالف: " + v.message);
   const appended = appendActions({ config: v.config, actions: [] }, o.actions);
   if (!appended.ok) return bad("الملف تالف: " + appended.message);
   return appended;

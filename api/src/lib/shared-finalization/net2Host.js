@@ -117,6 +117,15 @@ function tracertLines(net, host, target, address) {
     }
     else {
         const p = (0, net2Network_1.probe)(net, src, address);
+        if (p.hops) {
+            p.hops.forEach((h, i) => out.push(hopLine(i + 1, h)));
+            if (p.ok && p.hops[p.hops.length - 1] !== address)
+                out.push(hopLine(p.hops.length + 1, address));
+            else if (!p.ok)
+                out.push(lossLine(p.hops.length + 1));
+            out.push("", "Trace complete.");
+            return out;
+        }
         const routerHop = p.gateway && p.routers.length ? p.gateway : undefined;
         const targetIsRouter = p.ok && p.routers.length > 0 && p.target?.dev === p.routers[0];
         if (p.ok && !routerHop)
