@@ -41,6 +41,10 @@ exports.COURSE_STUDENT_TOOLS = Object.freeze({
     "899271d": {
         version: 1,
         tools: [{ ...calculator }, { ...allBases, bases: [...allBases.bases] }, { id: "bitwiseCalculator", width: 32 }, { ...scratchPad }, { ...csharpEditor }]
+    },
+    "791283": {
+        version: 1,
+        tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }]
     }
 });
 function courseStudentTools(courseId) {

@@ -26,6 +26,8 @@ const COURSE_THEMES: Readonly<Record<string, CourseThemeId>> = {
   "899271": "booklet",
   // DS-A2 — «الوحدة الرابعة: مبنى المعطيات»: the same skin, a colour per section.
   "899271d": "booklet",
+  // HW-A2 — «أنظمة محوسبة» (791283): the same skin, a colour per unit (b1–b4).
+  "791283": "booklet",
 };
 
 /** The theme a page is drawn with: the skin and the colour of the group its module belongs to. */

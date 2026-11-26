@@ -53,6 +53,11 @@ export const COURSE_STUDENT_TOOLS: Readonly<Record<string, StudentToolsSpecV1>> 
   "899271d": {
     version: 1,
     tools: [{ ...calculator }, { ...allBases, bases: [...allBases.bases] }, { id: "bitwiseCalculator", width: 32 }, { ...scratchPad }, { ...csharpEditor }]
+  },
+  // أنظمة محوسبة (HW-A2) — units of data (Bit / Byte / KB / MB) and the hexadecimal of a MAC address
+  "791283": {
+    version: 1,
+    tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }]
   }
 });
 
