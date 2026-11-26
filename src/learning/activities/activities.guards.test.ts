@@ -120,13 +120,14 @@ describe("production registry is an exact allowlist", () => {
       { kind: "simulation", key: "automaton-trace", versions: [1] },    // AUTO-A1 — the automaton tracer (DFA / NFA / PDA / TM, data only)
       { kind: "simulation", key: "automaton-design", versions: [1] },   // AUTO-A3 — «صمّم الآلة» (the server judges the machine)
       { kind: "simulation", key: "machine-design", versions: [1] },     // AUTO-A10 — «صمّم الآلة» for a push-down automaton / Turing machine (the server judges it on every word up to a length)
+      { kind: "simulation", key: "network-build", versions: [1] },      // «ابنِ الشبكة» — the learner builds the network; the server judges it goal by goal
       { kind: "simulation", key: "ds-trace", versions: [1] },           // DS-A1 — a program on a data structure, step by step (recorded steps, data only)
       { kind: "simulation", key: "ds-lab", versions: [1] },             // DS-A1 — the data-structure lab (stack / queue / chain / binary tree)
       { kind: "interactive-diagram", key: "ds-figure", versions: [1] }, // DS-A1 — a drawing of the structures written as data
       { kind: "guided", key: "ds-solution", versions: [1] },            // DS-A3 — the «الحل» button and its solution window
       { kind: "interactive-diagram", key: "hw-part-3d", versions: [1] }, // HW-A1 — a computer part as a 3D model to explore (791283)
     ]);
-    expect(productionActivityRegistry.size).toBe(26);
+    expect(productionActivityRegistry.size).toBe(27);   // 27 since «ابنِ الشبكة» (network-build)
     expect(productionActivityRegistry.list().filter(e => /cli/i.test(e.key)).map(e => e.key)).toEqual(["cli-terminal"]);
     expect(productionActivityRegistry.list().some(e => /vlan|subnet-calc/i.test(e.key))).toBe(false);
   });

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NET2_LIMITS, deviceAdapters, isHostKind, adapterNames, type Net2AdapterKind, type Net2Config, type Net2Device, type Net2Link } from "../net2Model";
 import { linkUp, makeNet } from "../net2Network";
 import { traceHostCommandFlow, type Net2Flow } from "../net2Flow";
@@ -10,8 +10,9 @@ import {
   EMPTY_LAB, LAB_DEVICE_KINDS, addDevice, addLink, appendActions, clearConfiguration, freePorts, labFileName, moveDevice, parseLab, removeDevice, removeLink,
   renameDevice, serializeLab, setAdapters, type LabDeviceKind, type NetLab, type NetLabResult,
 } from "./networkLab";
-import { labDevicePorts } from "./netLabModel";
+import { isSerialPort, labDevicePorts } from "./netLabModel";
 import { replayLab, type LabReplay, type LabReplayCache } from "./netLabReplay";
+import { replayNet2Cached, type Net2ReplayCache } from "../net2Plugin";
 import "../networkTopology2/net2.css";
 import "./networkLab.css";
 
@@ -20,6 +21,10 @@ import "./networkLab.css";
 // services); ping / tracert draw the packet's path. Everything is networkTopology@2's engines, unchanged (networkLab.ts keeps the topology
 // and the action list valid for them). Nothing is sent or graded. In a BOOK (`draftKey`) the network is kept as a draft in this browser;
 // «احفظ في ملف» / «افتح ملفًا» move it through a file on the learner's own device.
+// «ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — in a book EXERCISE (`exercise`) the same builder runs in its PLAIN mode:
+// only the device kinds the task offers, networkTopology@2's own ports (no serial), no hub, IPv6 or lab router commands, and the view is
+// replayed by networkTopology@2's own replay — exactly what the server judges, so what the learner sees working is what is judged.
+// No example and no file there; `onLabChange` hands every change to the exercise.
 
 const ADAPTER_TEXT: Readonly<Record<Net2AdapterKind, string>> = { ethernet: "Ethernet (كابل)", wireless: "Wi-Fi (لاسلكي)" };
 const LABEL: Readonly<Record<LabDeviceKind, string>> = { ...KIND_LABEL, hub: "Hub" };
@@ -31,6 +36,17 @@ function replayOf(cfg: Net2Config, actions: readonly unknown[]): LabReplay {
   if (step.cache) caches.set(cfg, step.cache);
   return step.replay;
 }
+const plainCaches = new WeakMap<Net2Config, Net2ReplayCache>();
+/** The exercise's view: networkTopology@2's own replay (the server's), in the lab's replay shape (no lab state; the engine is the config). */
+function plainReplayOf(cfg: Net2Config, actions: readonly unknown[]): LabReplay {
+  const step = replayNet2Cached(cfg, actions, plainCaches.get(cfg));
+  if (step.cache) plainCaches.set(cfg, step.cache);
+  const r = step.replay;
+  return r.ok ? { ...r, state: { ...r.state, lab: { routers: {}, hosts6: {} } }, engine: cfg } as LabReplay : r;
+}
+/** A network the plain mode can hold: the offered kinds only, no serial cable. */
+const plainLab = (lab: NetLab, kinds: readonly string[]): boolean =>
+  lab.config.devices.every(d => kinds.includes(d.kind)) && lab.config.links.every(l => !isSerialPort(l.a.port) && !isSerialPort(l.b.port));
 /** N2 — the commands the lab adds to the router CLI (a reminder under the router's terminal). */
 const ROUTER_EXTRAS: readonly [string, string][] = [
   ["الواجهة التسلسلية (WAN)", "interface s0/0/0 · ip address … · clock rate 64000 · encapsulation ppp · no shutdown"],
@@ -43,25 +59,34 @@ const ROUTER_EXTRAS: readonly [string, string][] = [
   ["IPv6", "ipv6 unicast-routing · interface g0/0 · ipv6 address 2001:db8:1::1/64 · ipv6 route 2001:db8:2::/64 2001:db8:12::2"],
   ["عرض", "show ip route · show ip protocols · show ip ospf neighbor · show access-lists · show ip nat translations · show ipv6 route"],
 ];
-function readDraft(key?: string): NetLab {
+function readDraft(key?: string, kinds?: readonly string[]): NetLab {
   if (!key) return EMPTY_LAB;
-  try { const t = localStorage.getItem(key); const r = t ? parseLab(t) : null; return r && r.ok ? r.lab : EMPTY_LAB; } catch { return EMPTY_LAB; }
+  try { const t = localStorage.getItem(key); const r = t ? parseLab(t) : null; return r && r.ok && (!kinds || plainLab(r.lab, kinds)) ? r.lab : EMPTY_LAB; } catch { return EMPTY_LAB; }
 }
 const isHostCommand = (a: unknown): a is { type: "host.command"; deviceId: string; command: unknown } =>
   !!a && typeof a === "object" && (a as { type?: unknown }).type === "host.command" && typeof (a as { deviceId?: unknown }).deviceId === "string";
 
-export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
-  const [lab, setLabState] = useState<NetLab>(() => readDraft(draftKey));
+export type NetworkLabExercise = { kinds: readonly LabDeviceKind[] };
+export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh }: { draftKey?: string; exercise?: NetworkLabExercise; onLabChange?: (lab: NetLab) => void; fresh?: boolean }) {
+  const plain = !!exercise;
+  const kinds: readonly LabDeviceKind[] = exercise ? LAB_DEVICE_KINDS.filter(k => exercise.kinds.includes(k) && k !== "hub") : LAB_DEVICE_KINDS;
+  const [lab, setLabState] = useState<NetLab>(() => (fresh ? EMPTY_LAB : readDraft(draftKey, exercise ? kinds : undefined)));
   // the draft follows every change (a book only); a full or blocked storage is reported, never thrown
   const [draftFailed, setDraftFailed] = useState(false);
   const setLab = (next: NetLab) => {
     setLabState(next);
+    onLabChange?.(next);
     if (!draftKey) return;
     try {
       if (next.config.devices.length === 0 && next.actions.length === 0) localStorage.removeItem(draftKey); else localStorage.setItem(draftKey, serializeLab(next));
       setDraftFailed(false);
     } catch { setDraftFailed(true); }
   };
+  // the exercise learns the network it starts with (an empty one, or this browser's draft); a FRESH start removes the old draft
+  useEffect(() => {
+    if (fresh && draftKey) { try { localStorage.removeItem(draftKey); } catch { /* a blocked storage keeps nothing anyway */ } }
+    onLabChange?.(lab);
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps -- once, on mount
   const [selected, setSelected] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
   const [confirm, setConfirm] = useState<"new" | "clear" | "remove" | null>(null);
@@ -70,7 +95,7 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
   const flowSeq = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const replay = useMemo(() => replayOf(lab.config, lab.actions), [lab]);
+  const replay = useMemo(() => (plain ? plainReplayOf : replayOf)(lab.config, lab.actions), [lab, plain]);
   const cfg = lab.config;
   const device = selected ? cfg.devices.find(d => d.id === selected) ?? null : null;
 
@@ -118,7 +143,8 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
     const r = addDevice(lab, kind);
     if (apply(r) && r.ok) { const fresh = r.lab.config.devices.find(d => !before.has(d.id)); if (fresh) setSelected(fresh.id); }
   };
-  const portsA = cable.a ? freePorts(cfg, cable.a) : [], portsB = cable.b ? freePorts(cfg, cable.b) : [];
+  const portsOf = (id: string) => freePorts(cfg, id).filter(p => !plain || !isSerialPort(p));
+  const portsA = cable.a ? portsOf(cable.a) : [], portsB = cable.b ? portsOf(cable.b) : [];
   const connect = () => {
     if (apply(addLink(lab, { deviceId: cable.a, port: cable.ap }, { deviceId: cable.b, port: cable.bp }), "وُصل الكابل بين " + label(cable.a) + " (" + cable.ap + ") و" + label(cable.b) + " (" + cable.bp + ").")) setCable({ a: cable.a, ap: "", b: "", bp: "" });
   };
@@ -149,7 +175,8 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
       <div className="netlab-bar net2-actions" role="group" aria-label="الشبكة">
         {confirm === "new"
           ? <><button type="button" className="is-danger" onClick={() => replace(EMPTY_LAB, "بدأت شبكة جديدة.")}>تأكيد: امسح الشبكة كلها</button><button type="button" className="is-secondary" onClick={() => setConfirm(null)}>إلغاء</button></>
-          : <button type="button" className="is-secondary" onClick={() => setConfirm("new")} disabled={!cfg.devices.length}>شبكة جديدة</button>}
+          : <button type="button" className="is-secondary" onClick={() => setConfirm("new")} disabled={!cfg.devices.length}>{plain ? "ابدأ من جديد" : "شبكة جديدة"}</button>}
+        {!plain && <>
         <label className="netlab-select">افتح مثالًا
           <select value="" onChange={e => template(e.target.value)} data-testid="network-lab-example">
             <option value="">اختر…</option>
@@ -159,15 +186,16 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
         <button type="button" className="is-secondary" onClick={save} disabled={!cfg.devices.length}>احفظ في ملف</button>
         <button type="button" className="is-secondary" onClick={() => fileRef.current?.click()}>افتح ملفًا</button>
         <input ref={fileRef} type="file" accept=".json,application/json" hidden data-testid="network-lab-file" onChange={e => { void open(e.target.files?.[0]); e.target.value = ""; }} />
+        </>}
       </div>
-      {draftKey && <p className="net2-note" data-testid="network-lab-draft">{draftFailed ? "تعذّر حفظ المسودة في هذا المتصفح؛ احفظ الشبكة في ملف." : "الشبكة تُحفظ تلقائيًا مسودةً في هذا المتصفح. لنقلها إلى جهاز آخر: «احفظ في ملف»."}</p>}
+      {draftKey && <p className="net2-note" data-testid="network-lab-draft">{draftFailed ? (plain ? "تعذّر حفظ المسودة في هذا المتصفح." : "تعذّر حفظ المسودة في هذا المتصفح؛ احفظ الشبكة في ملف.") : plain ? "شبكتك تُحفظ تلقائيًا مسودةً في هذا المتصفح." : "الشبكة تُحفظ تلقائيًا مسودةً في هذا المتصفح. لنقلها إلى جهاز آخر: «احفظ في ملف»."}</p>}
 
       <div className="netlab-bar net2-actions" role="group" aria-label="إضافة جهاز">
-        {LAB_DEVICE_KINDS.map(k => <button key={k} type="button" onClick={() => add(k)} disabled={cfg.devices.length >= NET2_LIMITS.devices}>{"+ " + LABEL[k]}</button>)}
+        {kinds.map(k => <button key={k} type="button" onClick={() => add(k)} disabled={cfg.devices.length >= NET2_LIMITS.devices}>{"+ " + LABEL[k]}</button>)}
       </div>
 
       {cfg.devices.length === 0
-        ? <p className="netlab-empty">ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل — أو افتح مثالًا جاهزًا.</p>
+        ? <p className="netlab-empty">{plain ? "ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل وبرمجها." : "ابدأ بإضافة الأجهزة من الأزرار في الأعلى، ثم صِلها بالكوابل — أو افتح مثالًا جاهزًا."}</p>
         : <Net2Diagram config={cfg} title={"شبكتي: " + cfg.devices.length + " أجهزة و" + cfg.links.length + " كوابل"} selectedId={selected} onSelect={pick} linkDown={linkDown}
             wireless={wireless} editable onMove={(id, x, y) => apply(moveDevice(lab, id, x, y))} testId="network-lab-diagram"
             flow={shown ? { id: shown.id, ok: shown.flow.ok, hops: shown.flow.hops } : null} />}
@@ -184,9 +212,9 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
         <fieldset className="netlab-box">
           <legend>توصيل كابل</legend>
           <div className="netlab-cable">
-            <label>من الجهاز<select aria-label="من الجهاز" value={cable.a} onChange={e => setCable({ ...cable, a: e.target.value, ap: "" })}><option value="">اختر…</option>{cfg.devices.filter(d => freePorts(cfg, d.id).length).map(d => <option key={d.id} value={d.id}>{d.label}</option>)}</select></label>
+            <label>من الجهاز<select aria-label="من الجهاز" value={cable.a} onChange={e => setCable({ ...cable, a: e.target.value, ap: "" })}><option value="">اختر…</option>{cfg.devices.filter(d => portsOf(d.id).length).map(d => <option key={d.id} value={d.id}>{d.label}</option>)}</select></label>
             <label>المنفذ<select aria-label="منفذ الجهاز الأول" value={cable.ap} onChange={e => setCable({ ...cable, ap: e.target.value })} disabled={!cable.a} dir="ltr"><option value="">…</option>{portsA.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
-            <label>إلى الجهاز<select aria-label="إلى الجهاز" value={cable.b} onChange={e => setCable({ ...cable, b: e.target.value, bp: "" })}><option value="">اختر…</option>{cfg.devices.filter(d => d.id !== cable.a && freePorts(cfg, d.id).length).map(d => <option key={d.id} value={d.id}>{d.label}</option>)}</select></label>
+            <label>إلى الجهاز<select aria-label="إلى الجهاز" value={cable.b} onChange={e => setCable({ ...cable, b: e.target.value, bp: "" })}><option value="">اختر…</option>{cfg.devices.filter(d => d.id !== cable.a && portsOf(d.id).length).map(d => <option key={d.id} value={d.id}>{d.label}</option>)}</select></label>
             <label>المنفذ<select aria-label="منفذ الجهاز الثاني" value={cable.bp} onChange={e => setCable({ ...cable, bp: e.target.value })} disabled={!cable.b} dir="ltr"><option value="">…</option>{portsB.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
             <div className="net2-actions"><button type="button" onClick={connect} disabled={!cable.a || !cable.ap || !cable.b || !cable.bp}>صِل</button></div>
           </div>
@@ -218,7 +246,7 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
               </fieldset>
             )}
           </div>
-          <p className="net2-note">المنافذ: <span className="net2-ltr">{labDevicePorts(device).join(", ") || "—"}</span></p>
+          <p className="net2-note">المنافذ: <span className="net2-ltr">{labDevicePorts(device).filter(p => !plain || !isSerialPort(p)).join(", ") || "—"}</span></p>
           <div className="net2-actions">
             {confirm === "remove"
               ? <><button type="button" className="is-danger" onClick={() => { if (apply(removeDevice(lab, device.id), "حُذف " + device.label + " مع كوابله وإعداداته.")) { setSelected(null); setConfirm(null); } }}>تأكيد حذف {device.label}</button><button type="button" className="is-secondary" onClick={() => setConfirm(null)}>إلغاء</button></>
@@ -227,8 +255,8 @@ export default function NetworkLabTool({ draftKey }: { draftKey?: string }) {
           {(device.kind as string) === "hub"
             ? <p className="net2-note" data-testid="network-lab-hub">الـ Hub لا يُبرمج: كل ما يصل إلى منفذ يخرج من كل المنافذ الأخرى (مجال تصادم واحد لكل الأجهزة الموصولة به).</p>
             : <DevicePanel cfg={cfg} view={view} device={device} base={lab.actions} emit={emit} label={"مختبر الشبكات"} remainingTotal={remainingTotal} name={label} />}
-          {isHostKind(device.kind) && <Ipv6Form key={device.id + "|" + JSON.stringify(replay.state.lab.hosts6[device.id] ?? null)} device={device} current={replay.state.lab.hosts6[device.id]} emit={emit} />}
-          {device.kind === "router" && (
+          {!plain && isHostKind(device.kind) && <Ipv6Form key={device.id + "|" + JSON.stringify(replay.state.lab.hosts6[device.id] ?? null)} device={device} current={replay.state.lab.hosts6[device.id]} emit={emit} />}
+          {!plain && device.kind === "router" && (
             <details className="netlab-extras" data-testid="network-lab-router-extras"><summary>أوامر إضافية في المختبر: WAN، التوجيه، ACL، NAT، IPv6</summary>
               <dl>{ROUTER_EXTRAS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="net2-ltr">{v}</dd></div>)}</dl>
             </details>

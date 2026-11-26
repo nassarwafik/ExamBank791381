@@ -15,7 +15,9 @@ export type StudyResponse =
   | { kind: "network-lab"; actions: unknown[] }
   /** AUTO-A3 — «صمّم الآلة»: the learner's machine (the server compares its language with the reference). */
   | { kind: "automaton-design"; machine: AutomatonDesignMachine }
-  | { kind: "machine-design"; machine: Record<string, unknown> };
+  | { kind: "machine-design"; machine: Record<string, unknown> }
+  /** «ابنِ الشبكة» — the network the learner built: its topology and its action list (the server validates, replays and judges it). */
+  | { kind: "network-build"; config: Record<string, unknown>; actions: unknown[] };
 
 /** The server's study policy: each module is worth up to `modulePointsMax` (20) = round(completed / eligible × 20). */
 export type StudyPolicy = { modulePointsMax: number; moduleCount: number };

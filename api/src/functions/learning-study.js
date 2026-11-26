@@ -12,6 +12,7 @@ const { listLearningModules } = require("../lib/learning-materials-registry");
 const { teacherCourseDecision, classCourseDecision, courseRefusal } = require("../lib/access/course-access");   // Tadris+ P5-A
 const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/learning-check");
 const { SMART_SIM_LIMITS } = require("../lib/shared-finalization/trustedSimRegistry");
+const { NETWORK_BUILD_ANSWER_BYTES } = require("../lib/learning-network-build");
 
 // Study Practice Strength API — the SERVER AUTHORITY for in-page learning exercises. Routes (one function):
 //   GET  /api/learning-study/{courseId}          → the caller's study state for the course: per-page completed
@@ -34,6 +35,9 @@ const { SMART_SIM_LIMITS } = require("../lib/shared-finalization/trustedSimRegis
 //                                                   actions } — replayed and judged on the server (learning-lab.js), a
 //                                                   verdict per check (`parts`, booleans only); a judge that cannot run
 //                                                   → 503 retryable, nothing written; > 256 KB → 413.
+//                                                   «ابنِ الشبكة»: `response` = { kind: "network-build", config, actions }
+//                                                   — the learner's own network, judged by learning-network-build.js the
+//                                                   same way (per-check booleans; > 384 KB → 413).
 // The browser sends only the learner's response: any client-supplied "correct", "points" or "gained" is ignored.
 // Teachers (builder token) may try any exercise: judged and answered, never persisted. Nothing here touches
 // assignments, the gradebook, class membership or publication.
@@ -128,6 +132,8 @@ async function handler(request, deps = {}, obs = null) {
       // A network lab's answer is an action list (791381s Phase 8B): bounded like every smartSim answer (256 KB, ≤ 1000 actions,
       // enforced again by the simulator's replay).
       if (check.key.kind === "network-lab" && responseBytes(body.response) > SMART_SIM_LIMITS.answerBytes) return TOO_LARGE;
+      // «ابنِ الشبكة» — the learner's whole network (its topology and its actions): bounded at 384 KB.
+      if (check.key.kind === "network-build" && responseBytes(body.response) > NETWORK_BUILD_ANSWER_BYTES) return TOO_LARGE;
       // AUTO-A3 — a «صمّم الآلة» answer is one small machine (≤ 12 states, ≤ 200 arrows): 16 KB is far above any real one.
       if ((check.key.kind === "automaton-design" || check.key.kind === "machine-design") && responseBytes(body.response) > AUTOMATON_DESIGN_ANSWER_BYTES) return TOO_LARGE;
       // The gate: the page's OWN module must be published to the student's class (the same authority as the Reader

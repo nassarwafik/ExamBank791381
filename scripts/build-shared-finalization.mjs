@@ -107,6 +107,9 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   // AUTO-A10 — the book's automaton engine (the player that runs every machine of the course): the server judge of the push-down /
   // Turing machine «صمّم الآلة» exercises (api/src/lib/learning-machine-design.js) runs a machine exactly as the book's player does.
   "src/learning/activities/automaton.ts",
+  // «ابنِ الشبكة» — the judge of a build-the-network exercise (the learner's own networkTopology@2 network, build checks + the simulator's
+  // checks): the server (api/src/lib/learning-network-build.js) and the content proof test run the same rules.
+  "src/learning/lab/networkBuildJudge.ts",
   // Phase 21I — multi-subject exam request routing (subject detection, bank / composer route decision, composer pre-fill): the
   // interpret-exam-request endpoint and the Builder route with byte-identical rules.
   "src/examRequestRouting.ts",
