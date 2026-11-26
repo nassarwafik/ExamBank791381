@@ -22,9 +22,9 @@ const P = (m, i) => INDEX.modules[m][i];
 const seed = (visible, extra = {}) => createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", visible), ...extra });
 
 describe("the generated page index", () => {
-  it("covers the real book: 28 publishable modules, 248 pages; unknown ids resolve to null", () => {
+  it("covers the real book: 29 publishable modules (28 + «ابنِ الشبكة»), 256 pages; unknown ids resolve to null", () => {
     expect(Object.keys(INDEX.modules).sort()).toEqual(listLearningModules("791381").map(m => m.moduleId).sort());
-    expect(Object.values(INDEX.modules).flat()).toHaveLength(248);
+    expect(Object.values(INDEX.modules).flat()).toHaveLength(256);
     expect(moduleOfPage(INDEX, P(M02, 0))).toBe(M02);
     for (const bad of ["791381-m99-l01-p01", "", "../x", null, 42]) expect(moduleOfPage(INDEX, bad)).toBeNull();
     expect(loadPageIndex("999999")).toBeNull();
