@@ -13,7 +13,7 @@
 .net2-node .net2-shape { stroke: var(--eb-content-text); stroke-width: 3; fill: #fff6e5; }
 .net2-node[data-kind="router"] .net2-shape { fill: #e8f1ff; }
 .net2-node[data-kind="switch"] .net2-shape { fill: #e9f8ef; }
-.net2-node[data-kind="hub"] .net2-shape { fill: #f4f4f4; }
+.net2-node[data-kind="hub"] .net2-shape { fill: var(--eb-content-ground); }
 .net2-node[data-kind="ap"] .net2-shape { fill: #f3ecff; }
 .net2-node[data-kind="server"] .net2-shape { fill: var(--eb-content-ground); }
 .net2-node .net2-glyph { stroke: var(--eb-content-text); stroke-width: 3; fill: none; stroke-linecap: round; }
