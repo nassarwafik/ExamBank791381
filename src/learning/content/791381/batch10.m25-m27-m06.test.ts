@@ -36,6 +36,7 @@ import m26 from "./modules/m26";
 import m27 from "./modules/m27";
 import m06 from "./modules/m06";
 import m28 from "./modules/m28";
+import m29 from "./modules/m29";
 import manifest from "./manifest";
 import { hasModuleContent } from "../registry";
 import { loadBundledModuleContent as loadModuleContent } from "../bundledModules";
@@ -51,7 +52,7 @@ import * as apiRegistry from "../../../../api/src/lib/learning-materials-registr
 
 const PREV = [m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03, m19, m04, m20, m21, m22, m23, m24, m05];
 const BATCH = [m25, m26, m27, m06];
-const ALL = [...PREV, ...BATCH, m28];   // m28 (the final summary, PDF 231–263) came after Batch 10 and is pinned in summary.m28.test.ts
+const ALL = [...PREV, ...BATCH, m28, m29];   // + m29 «ابنِ الشبكة», the practice module after the summary   // m28 (the final summary, PDF 231–263) came after Batch 10 and is pinned in summary.m28.test.ts
 const course: LearningCourseContent = { schemaVersion: LEARNING_CONTENT_SCHEMA_VERSION, courseId: "791381", title: "شبكات الاتصال", direction: "rtl", modules: ALL };
 const pagesOf = (m: ContentModule): ContentPage[] => [...m.lessons].sort((a, b) => a.order - b.order).flatMap(l => [...l.pages].sort((a, b) => a.order - b.order));
 const pages = BATCH.flatMap(pagesOf);
@@ -314,7 +315,7 @@ describe("Batch 10 — the fifteen REAL book CLI exercises (simulation / cli-ter
     }
     expect(sims(m26)).toHaveLength(0);
     expect(allBlocks.filter(b => b.type === "animation" || b.type === "guided" || b.type === "interactive-diagram")).toHaveLength(0);
-    expect(productionActivityRegistry.list().length).toBe(26);   // + hw-part-3d/v1 (HW-A1), machine-design/v1 (AUTO-A10), + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1), + automaton-design/v1 (AUTO-A3), + ds-trace/v1, ds-lab/v1 and ds-figure/v1 (DS-A1), + ds-solution/v1 (DS-A3)
+    expect(productionActivityRegistry.list().length).toBe(27);   // + network-build/v1 («ابنِ الشبكة»), + hw-part-3d/v1 (HW-A1), machine-design/v1 (AUTO-A10), + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1), + automaton-design/v1 (AUTO-A3), + ds-trace/v1, ds-lab/v1 and ds-figure/v1 (DS-A1), + ds-solution/v1 (DS-A3)
   });
   it("PDF 202 VLAN task (regression): the book's range completes it; VLAN 10 on ONLY f0/1 + f0/10 (+ trunk) stays incomplete; a missing middle port (f0/5) is reported unmet; goals cover every port f0/1 … f0/10", () => {
     const vlan = exOf("m25-l01-p02-sim");

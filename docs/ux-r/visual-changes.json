@@ -1940,6 +1940,11 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "HW-A2 — the same sixth course card «أنظمة محوسبة» (791283) in the library under the search panel; the page is one card taller, nothing else moves."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — the book 791381's overview lists a ninth section «ابنِ الشبكة» (the practice module m29: seven build-the-network exercises, the owner's request) after «التلخيص», and the book's page / lesson totals grow by its 8 pages / 4 lessons; the section list is one row taller, nothing else on the page moves."
     }
   ]
 }

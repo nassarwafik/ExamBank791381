@@ -37,6 +37,6 @@ describe("21E L1-B — course section counts originate from manifest", () => {
       count += pages.length;
     }
     expect(count).toBe(flat.length);
-    expect(flat.length).toBe(248);
+    expect(flat.length).toBe(256);   // 248 book pages + 8 «ابنِ الشبكة» pages
   });
 });

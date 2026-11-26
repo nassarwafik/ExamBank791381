@@ -10,6 +10,7 @@ import {
 } from "../src/lib/student-strength.js";
 import { listLearningTrainings } from "../src/lib/learning-training-registry.js";
 import { listLearningModules } from "../src/lib/learning-materials-registry.js";
+import STUDY_791381 from "../src/data/learning-study/791381.json";
 
 // The Unified Strength policy — 25 stages × 80 points = 2000 visible points fed by finalized school exams (each the
 // rounded FINAL percentage, 0..100, uncapped total), Learning Practice (36 items × 40 = 1440), Study Practice
@@ -38,7 +39,10 @@ describe("constants — the centralized policy", () => {
     const registry = listLearningTrainings().map(t => t.trainingId).sort();
     expect(registry).toEqual([...ALL_IDS].sort());
     expect(registry).toHaveLength(LEARNING_PRACTICE_ITEM_COUNT);
-    expect(listLearningModules("791381")).toHaveLength(STUDY_MODULE_COUNT);
+    // the STUDY modules (those with study activities) are exactly 28; the practice module «ابنِ الشبكة» (m29) counts nothing
+    const studyModules = new Set(Object.values(STUDY_791381.pages).map(p => p.moduleId));
+    expect(listLearningModules("791381").filter(m => studyModules.has(m.moduleId))).toHaveLength(STUDY_MODULE_COUNT);
+    expect(listLearningModules("791381").filter(m => !studyModules.has(m.moduleId)).map(m => m.moduleId)).toEqual(["791381-m29"]);
   });
 });
 

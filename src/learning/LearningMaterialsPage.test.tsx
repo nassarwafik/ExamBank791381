@@ -32,6 +32,7 @@ const EXPECTED_TARGETS: Record<string, string> = {
   b5: "791381-m20-l01-p01",
   b6: "791381-m25-l01-p01",
   summary: "791381-m28-l01-p01",
+  build: "791381-m29-l00-p01",   // «ابنِ الشبكة» (m29)
 };
 const openOverview = () => fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
 const POPULATED = course.overviewBatches.filter(b => b.id !== "intro");
@@ -80,10 +81,10 @@ describe("Learning Materials — Phase 1 library", () => {
     expect(within(batchList).getAllByText("قريبًا")).toHaveLength(1);
     expect(screen.queryByText("ستُتاح هذه الأقسام تفاعليًا في القارئ تدريجيًا.")).toBeNull();
     expect(screen.getByText("اختر قسمًا للانتقال مباشرة إلى محتواه في القارئ التفاعلي.")).toBeTruthy();
-    // eight sections; the seven with pages are interactive controls with a meaningful accessible name "فتح قسم <label>"
-    expect(within(batchList).getAllByRole("listitem")).toHaveLength(8);
+    // nine sections (eight + «ابنِ الشبكة»); the eight with pages are interactive controls with a meaningful accessible name "فتح قسم <label>"
+    expect(within(batchList).getAllByRole("listitem")).toHaveLength(9);
     const controls = within(batchList).getAllByRole("button");
-    expect(controls.length).toBe(7);
+    expect(controls.length).toBe(8);
     expect(controls.map(b => b.getAttribute("aria-label"))).toEqual(POPULATED.map(b => "فتح قسم " + b.label));
     // each row still shows its number, title and the "فتح القسم" affordance
     course.overviewBatches.forEach((b, i) => {
@@ -116,7 +117,7 @@ describe("Learning Materials — Course-Overview section navigation", () => {
     openOverview();
     await detailsLoaded();
     const controls = within(batchList()).getAllByRole("button");
-    expect(controls.length).toBe(7);
+    expect(controls.length).toBe(8);
     for (const c of controls) {
       expect(c.tagName).toBe("BUTTON");
       expect(c.getAttribute("type")).toBe("button");
@@ -193,7 +194,8 @@ describe("Learning Materials — Phase 1 catalog", () => {
       "الأمان · Wi-Fi · IPv6 · DHCP",
       "ACL · التوجيه · WAN",
       "التلخيص",
+      "ابنِ الشبكة",
     ]);
-    expect(course.overviewBatches.map(b => b.id)).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary"]);
+    expect(course.overviewBatches.map(b => b.id)).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary", "build"]);
   });
 });

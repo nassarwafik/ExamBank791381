@@ -58,7 +58,7 @@ Publishable like every module, never auto-published.
 | l03-p02 | شبكة لاسلكية محميّة | ap, switch, pc, laptop | Wi-Fi (159) |
 | l03-p03 | خادم ويب واسم موقع (HTTP و DNS) | switch, pc, server | البروتوكولات (87) |
 
-Every exercise counts in Study Strength (a study activity, like the network labs).
+**Practice only — not counted in Study Strength** (`studyEligible: false`): the Strength path is calibrated on the book's 28 modules (28 × 20 = 560 of the 2000-point path); counting this module is an owner decision. The exercises are judged and answered, never recorded.
 
 ## 6. Evidence
 

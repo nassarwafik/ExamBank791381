@@ -103,7 +103,8 @@ describe("policy — the authoritative module formula", () => {
     expect(Object.values(ELIGIBLE).reduce((s, n) => s + n, 0)).toBe(475);
     expect(Object.keys(ELIGIBLE).length).toBe(28);
     expect(ELIGIBLE["791381-m01"]).toBe(9); expect(ELIGIBLE["791381-m02"]).toBe(13);
-    for (const id of ORDER) expect(ELIGIBLE[id], id).toBeGreaterThan(0);
+    for (const id of ORDER.filter(id => id !== "791381-m29")) expect(ELIGIBLE[id], id).toBeGreaterThan(0);
+    expect(ELIGIBLE["791381-m29"]).toBeUndefined();   // «ابنِ الشبكة» is practice only: no study activity, never in Strength
     for (const id of Object.keys(ELIGIBLE)) expect(ORDER).toContain(id);
     expect(pageEligibleCount(INDEX, P1.pageId)).toBe(P1.activities.length); expect(pageEligibleCount(INDEX, "791381-m99-l01-p01")).toBe(0);
   });
@@ -198,7 +199,7 @@ describe("API — attempts through the real handler (student)", () => {
     const a = act(P1, 0), b = act(P1, 1), c = act(P1, 2);
     const before = await get(studentDeps(ctx));
     expect(before.status).toBe(200);
-    expect(before.jsonBody).toMatchObject({ ok: true, actor: "student", courseId: "791381", policy: { modulePointsMax: 20, moduleCount: 28 }, pages: {}, totalPoints: 0 });
+    expect(before.jsonBody).toMatchObject({ ok: true, actor: "student", courseId: "791381", policy: { modulePointsMax: 20, moduleCount: 29 }, pages: {}, totalPoints: 0 });   // the publishable modules (29 since «ابنِ الشبكة», a practice module with no study activity, as 791381s counts its cover m00); Strength stays 28 × 20
     expect(before.jsonBody.modules[M08]).toEqual({ completed: 0, eligible: 14, points: 0, max: 20 });
     expect(Object.keys(before.jsonBody.modules).length).toBe(28);
     const wrong = await attempt(studentDeps(ctx), { pageId: a.pageId, activityId: a.activityId, response: wrongResponse(a.key) });
