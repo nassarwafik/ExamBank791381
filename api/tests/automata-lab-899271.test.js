@@ -52,7 +52,8 @@ describe("AUTO-A13 — the shipped automata lab is exactly the build of the cour
     expect(fs.readdirSync(path.join(LIB, "items")).filter(f => f.startsWith("AU899271-")).sort()).toEqual(IDS.map(id => id + ".json"));
     const ours = catalogFile().filter(e => e.source?.repository === B.REPOSITORY);
     expect(ours.map(e => e.libraryItemId)).toEqual(IDS);
-    expect(catalogFile().slice(-4)).toEqual(ours);   // after every other source's entries
+    const at = catalogFile().findIndex(e => e.libraryItemId === IDS[0]);
+    expect(catalogFile().slice(at, at + 4)).toEqual(ours);   // together, after the sources before them (AUTO-A14's theory exams follow)
     const counts = [];
     for (const entry of ours) {
       const item = readItem(entry.libraryItemId);

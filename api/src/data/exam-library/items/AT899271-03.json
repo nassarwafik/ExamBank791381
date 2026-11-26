@@ -1,0 +1,1440 @@
+{
+  "libraryItemId": "AT899271-03",
+  "title": "أسئلة نظرية — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+  "category": "theory-899271",
+  "description": "أسئلة التدريب الذاتي من الوحدات 5–7 في «الأتمتة»: اختيار من متعدد، صح أو خطأ، تصنيف، ترتيب، مطابقة وإجابة قصيرة؛ الآلة التي يسأل عنها السؤال معطاة بجدول انتقالاتها.",
+  "tags": [
+    "الأتمتة",
+    "أسئلة نظرية",
+    "تصحيح آلي"
+  ],
+  "questionCount": 27,
+  "totalMarks": 35,
+  "pageRange": "",
+  "parserFamily": "automata-theory-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 27,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "8287ae0f39dc44c4db58c006c1791a45ab2cadfff260f98ea45b5a2e832bca0c",
+  "contentHash": "95fd97dd21ec71cfcad3e673f325f40e0cd02a20e95df40050185b5b05286cc1",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271-theory",
+    "sourceFile": "scripts/automata-course/u05.mjs scripts/automata-course/u06.mjs scripts/automata-course/u07.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-AT899271-03",
+    "title": "أسئلة نظرية — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "أسئلة نظرية — من كتاب «الأتمتة»",
+      "instructions": "أجب عن كل سؤال. في الأسئلة التي تعطي آلة، الآلة معطاة بجدول انتقالاتها: «→» حالة البداية، «*» حالة قبول. الإجابة القصيرة التي لا تطابق المفتاح حرفيًا تذهب إلى مراجعة المعلم.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u05",
+        "title": "الوحدة 5 — الأوتومات المنتهي غير الحتمي",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AT899271-03-Q01",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p01-b02",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "ما مجموعة الحالات الممكنة بعد قراءة الكلمة ba في الأوتومات المعطى؟\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 | q0، q1 | q0\nq1 | q2 | ∅\nq2 * | q2 | q2",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "ما مجموعة الحالات الممكنة بعد قراءة الكلمة ba في الأوتومات المعطى؟"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q0، q1",
+                      "q0"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "∅"
+                    ],
+                    [
+                      "q2 *",
+                      "q2",
+                      "q2"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "{q0, q1}"
+              },
+              {
+                "text": "{q1}"
+              },
+              {
+                "text": "{q0}"
+              },
+              {
+                "text": "{q0, q1, q2}"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q02",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p01-b03",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "الأوتومات المعطى يقبل الكلمة abaab.\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 | q0، q1 | q0\nq1 | q2 | ∅\nq2 * | q2 | q2",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "الأوتومات المعطى يقبل الكلمة abaab."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q0، q1",
+                      "q0"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "∅"
+                    ],
+                    [
+                      "q2 *",
+                      "q2",
+                      "q2"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q03",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p01-b04",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "في أوتومات غير حتمي تُرفض الكلمة إذا وُجد لها مسار واحد ينتهي في حالة ليست حالة قبول.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 1
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q04",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p01-b05",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "في التحويل إلى أوتومات حتمي، متى تكون الحالة q0q2 حالة قبول؟",
+            "options": [
+              {
+                "text": "إذا كانت q0 أو q2 حالة قبول"
+              },
+              {
+                "text": "إذا كانت q0 و q2 كلتاهما حالتي قبول"
+              },
+              {
+                "text": "دائمًا"
+              },
+              {
+                "text": "أبدًا"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q05",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p01-b06",
+            "presentationType": "ordering",
+            "marks": 2,
+            "text": "رتّب خطوات التحويل من غير حتمي إلى حتمي:",
+            "fields": [
+              {
+                "id": "o1",
+                "label": "الخطوة 1",
+                "correct": "نبدأ من حالة البداية"
+              },
+              {
+                "id": "o2",
+                "label": "الخطوة 2",
+                "correct": "نحسب لكل رمز مجموعة الحالات التي نصل إليها"
+              },
+              {
+                "id": "o3",
+                "label": "الخطوة 3",
+                "correct": "نضيف كل مجموعة جديدة كحالة ونعالجها"
+              },
+              {
+                "id": "o4",
+                "label": "الخطوة 4",
+                "correct": "نعلّم كل مجموعة فيها حالة قبول"
+              },
+              {
+                "id": "o5",
+                "label": "الخطوة 5",
+                "correct": "نضيف حالة مصيدة إن لزم"
+              }
+            ],
+            "wordBank": [
+              "نضيف حالة مصيدة إن لزم",
+              "نعلّم كل مجموعة فيها حالة قبول",
+              "نضيف كل مجموعة جديدة كحالة ونعالجها",
+              "نحسب لكل رمز مجموعة الحالات التي نصل إليها",
+              "نبدأ من حالة البداية"
+            ],
+            "answer": {
+              "mode": "exactSequence",
+              "values": [
+                "نبدأ من حالة البداية",
+                "نحسب لكل رمز مجموعة الحالات التي نصل إليها",
+                "نضيف كل مجموعة جديدة كحالة ونعالجها",
+                "نعلّم كل مجموعة فيها حالة قبول",
+                "نضيف حالة مصيدة إن لزم"
+              ]
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q06",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p02-b02",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف الكلمات حسب الأوتومات المعطى:\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 | q0 | q0، q1\nq1 | q2 | q2\nq2 * | ∅ | ∅",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "صنّف الكلمات حسب الأوتومات المعطى:"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q0",
+                      "q0، q1"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "q2"
+                    ],
+                    [
+                      "q2 *",
+                      "∅",
+                      "∅"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "مقبولة"
+                },
+                {
+                  "id": "g2",
+                  "label": "مرفوضة"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "ba"
+                },
+                {
+                  "id": "c2",
+                  "label": "abb"
+                },
+                {
+                  "id": "c3",
+                  "label": "abba"
+                },
+                {
+                  "id": "c4",
+                  "label": "b"
+                },
+                {
+                  "id": "c5",
+                  "label": "ab"
+                },
+                {
+                  "id": "c6",
+                  "label": "bbab"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g2",
+                "c5": "g2",
+                "c6": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q07",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p02-b03",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "ما مجموعة الحالات الممكنة بعد قراءة bb في الأوتومات المعطى؟\n\nأوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 | q0 | q0، q1\nq1 | q2 | q2\nq2 * | ∅ | ∅",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "ما مجموعة الحالات الممكنة بعد قراءة bb في الأوتومات المعطى؟"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ غير حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0",
+                      "q0",
+                      "q0، q1"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "q2"
+                    ],
+                    [
+                      "q2 *",
+                      "∅",
+                      "∅"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "{q0, q1, q2}"
+              },
+              {
+                "text": "{q1, q2}"
+              },
+              {
+                "text": "{q0, q1}"
+              },
+              {
+                "text": "{q2}"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q08",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p02-b04",
+            "presentationType": "shortAnswer",
+            "marks": 1,
+            "text": "كم حالة في الأوتومات الحتمي الناتج من تحويل أوتومات «تنتهي بـ b» (حالتان)؟",
+            "answer": {
+              "text": "2"
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q09",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m05-l05-p02-b05",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "كل لغة يقبلها أوتومات منتهٍ غير حتمي هي لغة منتظمة.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "sec-u06",
+        "title": "الوحدة 6 — اللغات غير المنتظمة",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AT899271-03-Q10",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p01-b01",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف كل لغة:",
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "منتظمة"
+                },
+                {
+                  "id": "g2",
+                  "label": "غير منتظمة"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "{aⁿ | n ≥ 0}"
+                },
+                {
+                  "id": "c2",
+                  "label": "{aⁿbⁿ | 50 ≥ n ≥ 0}"
+                },
+                {
+                  "id": "c3",
+                  "label": "{ab, ba, aab}"
+                },
+                {
+                  "id": "c4",
+                  "label": "{aⁿbⁿ | n ≥ 0}"
+                },
+                {
+                  "id": "c5",
+                  "label": "{aⁿb²ⁿ | n ≥ 1}"
+                },
+                {
+                  "id": "c6",
+                  "label": "{w | #a(w) = #b(w)}"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g2",
+                "c5": "g2",
+                "c6": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q11",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p01-b02",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "كل لغة غير منتهية هي لغة غير منتظمة.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 1
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q12",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p01-b03",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "كل لغة منتهية هي لغة منتظمة.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q13",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p01-b04",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "في البرهان على أن {aⁿbⁿ | n ≥ 1} غير منتظمة، لماذا توجد كلمتان في W تصلان إلى الحالة نفسها؟",
+            "options": [
+              {
+                "text": "لأن W غير منتهية وعدد حالات الأوتومات منتهٍ"
+              },
+              {
+                "text": "لأن W منتهية"
+              },
+              {
+                "text": "لأن الأوتومات غير حتمي"
+              },
+              {
+                "text": "لأن aⁱbⁱ في اللغة"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q14",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p01-b05",
+            "presentationType": "wordBank",
+            "marks": 2,
+            "text": "أكمل خطوة البرهان:\nالأوتومات يصل بعد aⁱ وبعد aʲ إلى الحالة نفسها، فإذا قبل ____ فإنه يقبل أيضًا ____ التي ____ في اللغة.",
+            "wordBank": [
+              "ليست",
+              "هي",
+              "aⁱbⁱ",
+              "aⁱbʲ",
+              "aʲbⁱ",
+              "aʲbʲ"
+            ],
+            "fields": [
+              {
+                "id": "w1",
+                "label": "الفراغ 1",
+                "correct": "aⁱbⁱ"
+              },
+              {
+                "id": "w2",
+                "label": "الفراغ 2",
+                "correct": "aʲbⁱ"
+              },
+              {
+                "id": "w3",
+                "label": "الفراغ 3",
+                "correct": "ليست"
+              }
+            ],
+            "answer": {
+              "values": [
+                "aⁱbⁱ",
+                "aʲbⁱ",
+                "ليست"
+              ]
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q15",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p02-b02",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "الأوتومات المعطى يقبل aaaabbbb.\n\nأوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 * | q1 | t\nq1 | q2 | p0\nq2 | q3 | p1\nq3 | t | p2\np2 | t | p1\np1 | t | p0\np0 * | t | t\nt | t | t",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "الأوتومات المعطى يقبل aaaabbbb."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0 *",
+                      "q1",
+                      "t"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "p0"
+                    ],
+                    [
+                      "q2",
+                      "q3",
+                      "p1"
+                    ],
+                    [
+                      "q3",
+                      "t",
+                      "p2"
+                    ],
+                    [
+                      "p2",
+                      "t",
+                      "p1"
+                    ],
+                    [
+                      "p1",
+                      "t",
+                      "p0"
+                    ],
+                    [
+                      "p0 *",
+                      "t",
+                      "t"
+                    ],
+                    [
+                      "t",
+                      "t",
+                      "t"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 1
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q16",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p02-b03",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "في أي حالة يكون الأوتومات المعطى بعد قراءة aaab؟\n\nأوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 * | q1 | t\nq1 | q2 | p0\nq2 | q3 | p1\nq3 | t | p2\np2 | t | p1\np1 | t | p0\np0 * | t | t\nt | t | t",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "في أي حالة يكون الأوتومات المعطى بعد قراءة aaab؟"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0 *",
+                      "q1",
+                      "t"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "p0"
+                    ],
+                    [
+                      "q2",
+                      "q3",
+                      "p1"
+                    ],
+                    [
+                      "q3",
+                      "t",
+                      "p2"
+                    ],
+                    [
+                      "p2",
+                      "t",
+                      "p1"
+                    ],
+                    [
+                      "p1",
+                      "t",
+                      "p0"
+                    ],
+                    [
+                      "p0 *",
+                      "t",
+                      "t"
+                    ],
+                    [
+                      "t",
+                      "t",
+                      "t"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "p2"
+              },
+              {
+                "text": "q3"
+              },
+              {
+                "text": "p1"
+              },
+              {
+                "text": "t"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q17",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p02-b04",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "لماذا لا يمكن تمديد الأوتومات المعطى ليقبل aⁿbⁿ لكل n؟\n\nأوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 * | q1 | t\nq1 | q2 | p0\nq2 | q3 | p1\nq3 | t | p2\np2 | t | p1\np1 | t | p0\np0 * | t | t\nt | t | t",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "لماذا لا يمكن تمديد الأوتومات المعطى ليقبل aⁿbⁿ لكل n؟"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0 *",
+                      "q1",
+                      "t"
+                    ],
+                    [
+                      "q1",
+                      "q2",
+                      "p0"
+                    ],
+                    [
+                      "q2",
+                      "q3",
+                      "p1"
+                    ],
+                    [
+                      "q3",
+                      "t",
+                      "p2"
+                    ],
+                    [
+                      "p2",
+                      "t",
+                      "p1"
+                    ],
+                    [
+                      "p1",
+                      "t",
+                      "p0"
+                    ],
+                    [
+                      "p0 *",
+                      "t",
+                      "t"
+                    ],
+                    [
+                      "t",
+                      "t",
+                      "t"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "لأنه يحتاج حالة لكل عدد ممكن من a، أي عددًا غير منتهٍ من الحالات"
+              },
+              {
+                "text": "لأن الأبجدية فيها رمزان"
+              },
+              {
+                "text": "لأن فيه حالة مصيدة"
+              },
+              {
+                "text": "لأن q0 حالة قبول"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q18",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m06-l03-p02-b05",
+            "presentationType": "ordering",
+            "marks": 2,
+            "text": "رتّب أول خطوات البرهان بالتناقض:",
+            "fields": [
+              {
+                "id": "o1",
+                "label": "الخطوة 1",
+                "correct": "نفرض أن اللغة منتظمة ويوجد أوتومات حتمي A يقبلها"
+              },
+              {
+                "id": "o2",
+                "label": "الخطوة 2",
+                "correct": "نختار مجموعة غير منتهية W من البادئات"
+              },
+              {
+                "id": "o3",
+                "label": "الخطوة 3",
+                "correct": "توجد كلمتان مختلفتان في W تصلان إلى الحالة نفسها"
+              },
+              {
+                "id": "o4",
+                "label": "الخطوة 4",
+                "correct": "نُلحق بهما لاحقة واحدة: واحدة في اللغة والأخرى ليست فيها"
+              },
+              {
+                "id": "o5",
+                "label": "الخطوة 5",
+                "correct": "نصل إلى تناقض"
+              }
+            ],
+            "wordBank": [
+              "نصل إلى تناقض",
+              "نُلحق بهما لاحقة واحدة: واحدة في اللغة والأخرى ليست فيها",
+              "توجد كلمتان مختلفتان في W تصلان إلى الحالة نفسها",
+              "نختار مجموعة غير منتهية W من البادئات",
+              "نفرض أن اللغة منتظمة ويوجد أوتومات حتمي A يقبلها"
+            ],
+            "answer": {
+              "mode": "exactSequence",
+              "values": [
+                "نفرض أن اللغة منتظمة ويوجد أوتومات حتمي A يقبلها",
+                "نختار مجموعة غير منتهية W من البادئات",
+                "توجد كلمتان مختلفتان في W تصلان إلى الحالة نفسها",
+                "نُلحق بهما لاحقة واحدة: واحدة في اللغة والأخرى ليست فيها",
+                "نصل إلى تناقض"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "sec-u07",
+        "title": "الوحدة 7 — العمليات على اللغات وخصائص الانغلاق",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AT899271-03-Q19",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p01-b01",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف: هل اللغات المنتظمة منغلقة على العملية؟",
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "منغلقة"
+                },
+                {
+                  "id": "g2",
+                  "label": "غير منغلقة"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "الاتحاد"
+                },
+                {
+                  "id": "c2",
+                  "label": "التقاطع"
+                },
+                {
+                  "id": "c3",
+                  "label": "المتمّمة"
+                },
+                {
+                  "id": "c4",
+                  "label": "العكس"
+                },
+                {
+                  "id": "c5",
+                  "label": "التسلسل"
+                },
+                {
+                  "id": "c6",
+                  "label": "لغة جزئية"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g1",
+                "c5": "g1",
+                "c6": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q20",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p01-b02",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "ما (ab)²؟",
+            "options": [
+              {
+                "text": "abab"
+              },
+              {
+                "text": "aabb"
+              },
+              {
+                "text": "a²b²"
+              },
+              {
+                "text": "ab"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q21",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p01-b03",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "L⁰ = ∅ لكل لغة L.",
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 1
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q22",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p01-b04",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "لماذا لا يكفي تبديل حالات القبول في أوتومات حتمي غير كامل لنحصل على المتمّمة؟",
+            "options": [
+              {
+                "text": "لأن الكلمة التي يعلق عليها الأوتومات لا تصل إلى أي حالة، فلن تُقبل بعد التبديل أيضًا"
+              },
+              {
+                "text": "لأن الأبجدية تتغير"
+              },
+              {
+                "text": "لأن حالة البداية تتغير"
+              },
+              {
+                "text": "بل يكفي دائمًا"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q23",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p01-b05",
+            "presentationType": "matching",
+            "marks": 2,
+            "text": "صِل كل عملية بطريقة بناء أوتوماتها:",
+            "fields": [
+              {
+                "id": "l1",
+                "label": "الاتحاد",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "أوتومات الجداء: كلتاهما حالتا قبول"
+                  },
+                  {
+                    "text": "عكس الأسهم، والبداية الأصلية تصبح حالة القبول"
+                  },
+                  {
+                    "text": "تبديل حالات القبول وغير القبول"
+                  },
+                  {
+                    "text": "حالة بداية جديدة تأخذ انتقالات البدايتين"
+                  }
+                ],
+                "correct": "حالة بداية جديدة تأخذ انتقالات البدايتين"
+              },
+              {
+                "id": "l2",
+                "label": "المتمّمة",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "أوتومات الجداء: كلتاهما حالتا قبول"
+                  },
+                  {
+                    "text": "عكس الأسهم، والبداية الأصلية تصبح حالة القبول"
+                  },
+                  {
+                    "text": "تبديل حالات القبول وغير القبول"
+                  },
+                  {
+                    "text": "حالة بداية جديدة تأخذ انتقالات البدايتين"
+                  }
+                ],
+                "correct": "تبديل حالات القبول وغير القبول"
+              },
+              {
+                "id": "l3",
+                "label": "العكس",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "أوتومات الجداء: كلتاهما حالتا قبول"
+                  },
+                  {
+                    "text": "عكس الأسهم، والبداية الأصلية تصبح حالة القبول"
+                  },
+                  {
+                    "text": "تبديل حالات القبول وغير القبول"
+                  },
+                  {
+                    "text": "حالة بداية جديدة تأخذ انتقالات البدايتين"
+                  }
+                ],
+                "correct": "عكس الأسهم، والبداية الأصلية تصبح حالة القبول"
+              },
+              {
+                "id": "l4",
+                "label": "التقاطع",
+                "kind": "select",
+                "options": [
+                  {
+                    "text": "أوتومات الجداء: كلتاهما حالتا قبول"
+                  },
+                  {
+                    "text": "عكس الأسهم، والبداية الأصلية تصبح حالة القبول"
+                  },
+                  {
+                    "text": "تبديل حالات القبول وغير القبول"
+                  },
+                  {
+                    "text": "حالة بداية جديدة تأخذ انتقالات البدايتين"
+                  }
+                ],
+                "correct": "أوتومات الجداء: كلتاهما حالتا قبول"
+              }
+            ],
+            "answer": {
+              "text": "الاتحاد=حالة بداية جديدة تأخذ انتقالات البدايتين;المتمّمة=تبديل حالات القبول وغير القبول;العكس=عكس الأسهم، والبداية الأصلية تصبح حالة القبول;التقاطع=أوتومات الجداء: كلتاهما حالتا قبول"
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q24",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p02-b02",
+            "presentationType": "trueFalse",
+            "marks": 1,
+            "text": "الأوتومات المعطى يقبل الكلمة babab.\n\nأوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 * | q1 | q0\nq1 * | q2 | q0\nq2 | q2 | q2",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "الأوتومات المعطى يقبل الكلمة babab."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0 *",
+                      "q1",
+                      "q0"
+                    ],
+                    [
+                      "q1 *",
+                      "q2",
+                      "q0"
+                    ],
+                    [
+                      "q2",
+                      "q2",
+                      "q2"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "options": [
+              {
+                "text": "صحيح"
+              },
+              {
+                "text": "غير صحيح"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q25",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p02-b03",
+            "presentationType": "categorization",
+            "marks": 2,
+            "text": "صنّف الكلمات حسب الأوتومات المعطى:\n\nأوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 * | q1 | q0\nq1 * | q2 | q0\nq2 | q2 | q2",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "صنّف الكلمات حسب الأوتومات المعطى:"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0 *",
+                      "q1",
+                      "q0"
+                    ],
+                    [
+                      "q1 *",
+                      "q2",
+                      "q0"
+                    ],
+                    [
+                      "q2",
+                      "q2",
+                      "q2"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "questionTypeVersion": 1,
+            "categorization": {
+              "categories": [
+                {
+                  "id": "g1",
+                  "label": "مقبولة"
+                },
+                {
+                  "id": "g2",
+                  "label": "مرفوضة"
+                }
+              ],
+              "items": [
+                {
+                  "id": "c1",
+                  "label": "ε"
+                },
+                {
+                  "id": "c2",
+                  "label": "a"
+                },
+                {
+                  "id": "c3",
+                  "label": "abab"
+                },
+                {
+                  "id": "c4",
+                  "label": "aa"
+                },
+                {
+                  "id": "c5",
+                  "label": "baab"
+                },
+                {
+                  "id": "c6",
+                  "label": "abaa"
+                }
+              ]
+            },
+            "answer": {
+              "correctCategoryByItem": {
+                "c1": "g1",
+                "c2": "g1",
+                "c3": "g1",
+                "c4": "g2",
+                "c5": "g2",
+                "c6": "g2"
+              }
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q26",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p02-b04",
+            "presentationType": "shortAnswer",
+            "marks": 1,
+            "text": "كم حالة قبول في الأوتومات المعطى؟\n\nأوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول\nالحالة | a | b\n→ q0 * | q1 | q0\nq1 * | q2 | q0\nq2 | q2 | q2",
+            "richContent": {
+              "schemaVersion": 1,
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "runs": [
+                    {
+                      "text": "كم حالة قبول في الأوتومات المعطى؟"
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "caption": "أوتومات منتهٍ حتمي — جدول الانتقالات δ؛ «→» حالة البداية، «*» حالة قبول",
+                  "columnHeaders": [
+                    "الحالة",
+                    "a",
+                    "b"
+                  ],
+                  "rows": [
+                    [
+                      "→ q0 *",
+                      "q1",
+                      "q0"
+                    ],
+                    [
+                      "q1 *",
+                      "q2",
+                      "q0"
+                    ],
+                    [
+                      "q2",
+                      "q2",
+                      "q2"
+                    ]
+                  ],
+                  "responsive": "scroll"
+                }
+              ]
+            },
+            "answer": {
+              "text": "2"
+            }
+          },
+          {
+            "examQuestionId": "AT899271-03-Q27",
+            "origin": "imported",
+            "sourceId": "AT899271-03",
+            "sourceQuestionId": "m07-l03-p02-b05",
+            "presentationType": "multipleChoice",
+            "marks": 1,
+            "text": "R(L) للغة L = {ab, abb, ε}؟",
+            "options": [
+              {
+                "text": "{ba, bba, ε}"
+              },
+              {
+                "text": "{ab, abb, ε}"
+              },
+              {
+                "text": "{ba, abb}"
+              },
+              {
+                "text": "{ba, bba}"
+              }
+            ],
+            "answer": {
+              "correctOptionIndex": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

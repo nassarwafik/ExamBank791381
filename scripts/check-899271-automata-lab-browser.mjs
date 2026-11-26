@@ -88,7 +88,11 @@ async function composerOnLab(page) {
   return { composer, list };
 }
 const codes = list => list.locator(".library-item-code").allInnerTexts();
+// axe measures colours as drawn: it runs once no animation or transition is still running (choosing content enables the wizard's
+// steps, which fade from .5 to full opacity in 0.18s — measured mid-fade they read 4.28:1, settled they pass).
+const settled = page => page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
 async function axe(page, where) {
+  await settled(page);
   await page.evaluate(axeSource + "\n;0");
   const r = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map(v => v.id + " ×" + v.nodes.length));
   check(r.length === 0, where + ": axe WCAG 2.1 A/AA — " + (r.join(", ") || "no violation"));
