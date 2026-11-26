@@ -1,0 +1,645 @@
+{
+  "libraryItemId": "AU899271-03",
+  "title": "مختبر الآلات — أوتومات المكدّس (الوحدتان 8–9)",
+  "category": "automata-899271",
+  "description": "تمارين «صمّم الآلة» من الوحدتين 8–9 في «الأتمتة»: يبني الطالب الآلة، ويشغّلها الخادم مع الآلة النموذجية على كل الكلمات حتى طول محدد. العلامة كاملة أو صفر.",
+  "tags": [
+    "الأتمتة",
+    "صمّم الآلة",
+    "تصحيح آلي"
+  ],
+  "questionCount": 4,
+  "totalMarks": 40,
+  "pageRange": "",
+  "parserFamily": "automata-lab-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 4,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "e390bb20a968d3e47895ec8fabaceeb28fce947fe059bdfee7cd6429de486b1e",
+  "contentHash": "33903a284e3b3d088f17afbfa97f81b973e4add748e97efa1df219417909ec64",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271",
+    "sourceFile": "scripts/automata-course/u08.mjs scripts/automata-course/u09.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-AU899271-03",
+    "title": "مختبر الآلات — أوتومات المكدّس (الوحدتان 8–9)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "«صمّم الآلة» — من كتاب «الأتمتة»",
+      "instructions": "ابنِ في كل سؤال الآلة المطلوبة: الحالات، وحالة البداية، وحالات القبول، والانتقالات بترميز المادة — بالصفوف أو بالرسم بالفأرة. يشغّل التصحيح آلتك والآلة النموذجية على كل الكلمات حتى طول معيّن: اتفاقهما العلامة كاملة.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u08",
+        "title": "الوحدة 8 — أوتومات المكدّس",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AU899271-03-Q01",
+            "origin": "imported",
+            "sourceId": "AU899271-03",
+            "sourceQuestionId": "u08-design-1",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {aⁿb²ⁿ | 0 ≤ n}: لكل a اثنان من b.",
+            "presentationType": "machineDesign",
+            "machineDesign": {
+              "v": 1,
+              "machine": "PDA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 6,
+              "examples": {
+                "accept": [
+                  "",
+                  "abb",
+                  "aabbbb"
+                ],
+                "reject": [
+                  "ab",
+                  "abbb",
+                  "ba"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "SA",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "AA",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q3"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "examQuestionId": "AU899271-03-Q02",
+            "origin": "imported",
+            "sourceId": "AU899271-03",
+            "sourceQuestionId": "u08-design-2",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {(ab)ⁿbⁿ | 0 ≤ n}.",
+            "presentationType": "machineDesign",
+            "machineDesign": {
+              "v": 1,
+              "machine": "PDA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 7,
+              "examples": {
+                "accept": [
+                  "",
+                  "abb",
+                  "ababbb"
+                ],
+                "reject": [
+                  "ab",
+                  "abbb",
+                  "aabb"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q4"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q4"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "sec-u09",
+        "title": "الوحدة 9 — اللغات الخالية من السياق وخصائص انغلاقها",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AU899271-03-Q03",
+            "origin": "imported",
+            "sourceId": "AU899271-03",
+            "sourceQuestionId": "u09-design-1",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {wcR(w) | w فوق {a, b}}: كلمة، ثم c، ثم الكلمة معكوسة.",
+            "presentationType": "machineDesign",
+            "machineDesign": {
+              "v": 1,
+              "machine": "PDA",
+              "alphabet": [
+                "a",
+                "b",
+                "c"
+              ],
+              "maxStates": 5,
+              "examples": {
+                "accept": [
+                  "c",
+                  "aca",
+                  "abcba"
+                ],
+                "reject": [
+                  "",
+                  "abcab",
+                  "cc"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "⏊",
+                    "op": "none",
+                    "write": "",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "T",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "T",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "B",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "T",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "B",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "T",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "B",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "B",
+                    "op": "pop",
+                    "write": "B",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "T",
+                    "op": "pop",
+                    "write": "T",
+                    "to": "q2"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "examQuestionId": "AU899271-03-Q04",
+            "origin": "imported",
+            "sourceId": "AU899271-03",
+            "sourceQuestionId": "u09-design-2",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "صمّم أوتومات مكدّس حتميًا يقبل اللغة {a²ⁿbᵐcᵏ | n, m ≥ 0، k < n + m}.",
+            "presentationType": "machineDesign",
+            "machineDesign": {
+              "v": 1,
+              "machine": "PDA",
+              "alphabet": [
+                "a",
+                "b",
+                "c"
+              ],
+              "maxStates": 8,
+              "examples": {
+                "accept": [
+                  "aa",
+                  "b",
+                  "aabc",
+                  "bbc"
+                ],
+                "reject": [
+                  "a",
+                  "c",
+                  "aabcc",
+                  "bcc"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2",
+                  "q4",
+                  "q5"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
