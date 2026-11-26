@@ -318,6 +318,12 @@ describe("A11 full platform lifecycle", () => {
 });
 
 describe("A11b — the feedback is rebuilt and bounded on both sides", () => {
+  it("a question that does not count (first N answered) keeps no feedback; the one that counts keeps its own", () => {
+    const e = load();
+    e.sections = [{ ...e.sections[1], gradingPolicy: "firstNAnswered", requiredAnswers: 1 }];
+    const g = gradeExam(e, { t1: PERFECT.t1, t2: PARTIAL.t2 });
+    expect(g.questions.map(x => [x.questionId, x.ignored, x.machineFeedback ?? null])).toEqual([["t1", false, { agreesUpTo: { length: 8, words: 511 } }], ["t2", true, null]]);
+  });
   it("the grader's shape: one kind each; nothing for a fail-closed grade; forged words / answers dropped", () => {
     expect(machineFeedbackOf({ score: 6, correct: true, manualReview: false, agreesUpTo: { length: 8, words: 511, extra: 1 } })).toEqual({ agreesUpTo: { length: 8, words: 511 } });
     expect(machineFeedbackOf({ score: 0, correct: false, manualReview: true })).toBeNull();
