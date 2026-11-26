@@ -75,6 +75,15 @@ describe("AUTO-A15b — the trace exams are exactly the build of the course's si
     for (const q of ALL) kinds[q.machineTrace.machine.kind] = (kinds[q.machineTrace.machine.kind] ?? 0) + 1;
     expect(kinds).toEqual({ DFA: 47, NFA: 19, PDA: 8, TM: 12 });
   });
+  it("the build's own gates: a node the shared validator refuses, and an exam the finalization refuses, are reported", () => {
+    const q = qs(readItem(IDS[0]))[0];
+    expect(B.validatorProblems(q)).toEqual([]);
+    const bad = { ...q, machineTrace: { v: 1, machine: { ...q.machineTrace.machine, start: "zz" }, word: q.machineTrace.word } };
+    expect(B.validatorProblems(bad)[0]).toMatch(/^TRACE_MACHINE_INVALID /);
+    const exam = readItem(IDS[0]).examSnapshot;
+    expect(B.finalizationProblems(exam)).toEqual([]);
+    expect(B.finalizationProblems({ ...exam, sections: [{ ...exam.sections[0], questions: [bad] }] }).length).toBeGreaterThan(0);
+  });
   it("every item is a finalizable structured exam; the student sees the machines and the words, no key", () => {
     for (const id of IDS) {
       const item = readItem(id);

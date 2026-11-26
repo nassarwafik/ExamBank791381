@@ -51,6 +51,8 @@ const PROTECTED: [string, string, string, string][] = [
   // AUTO-A8b — the automatonDesign@1 review (both machines drawn, the stored separating word): teacher-only lazy chunk
   ["./AssignmentReview.tsx", "AutomatonDesignReview", "./automata/AutomatonDesignReview", "teacher-automaton-review"],
   ["./AssignmentReview.tsx", "MachineDesignReview", "./automata/MachineDesignReview", "teacher-machine-review"],
+  // AUTO-A15b — the machineTrace@1 review (the student's rows beside the true run): teacher-only lazy chunk
+  ["./AssignmentReview.tsx", "MachineTraceReview", "./automata/MachineTraceReview", "teacher-trace-review"],
   ["./App.tsx", "ExamPreview", "./ExamPreview", "teacher-theme-preview"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
