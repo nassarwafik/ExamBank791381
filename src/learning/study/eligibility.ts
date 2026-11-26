@@ -43,7 +43,7 @@ export type StudyActivityKey =
   | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] }
   | { kind: "automaton-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; complete?: boolean }; reference: Record<string, unknown> }
   | { kind: "machine-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; mode?: string; leftEnd?: boolean; maxLength?: number }; reference: Record<string, unknown> }
-  | { kind: "network-build"; rules: { kinds: string[] }; reference: Record<string, unknown>; checks: Record<string, unknown>[] }
+  | { kind: "network-build"; rules: { kinds: string[]; lab?: true }; reference: Record<string, unknown>; checks: Record<string, unknown>[] }
   | { kind: "exam-item"; itemId: string };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
@@ -129,7 +129,7 @@ export function networkBuildKey(block: SimulationBlock): StudyActivityKey | null
   const { task, checks, solution } = block.config as { task?: unknown; checks?: unknown; solution?: unknown };
   if (!isPlainObject(task) || !Array.isArray(task.kinds) || !Array.isArray(checks) || checks.length === 0 || !checks.every(isPlainObject)) return null;
   if (!isPlainObject(solution) || !isPlainObject(solution.config)) return null;
-  return { kind: "network-build", rules: { kinds: (task.kinds as unknown[]).map(String) }, reference: solution.config, checks: checks as Record<string, unknown>[] };
+  return { kind: "network-build", rules: { kinds: (task.kinds as unknown[]).map(String), ...(task.lab === true ? { lab: true as const } : {}) }, reference: solution.config, checks: checks as Record<string, unknown>[] };
 }
 
 /** The key of a server-judged simulation (a network lab, a «صمّم الآلة» or an «ابنِ الشبكة» exercise), or null. Pure. */

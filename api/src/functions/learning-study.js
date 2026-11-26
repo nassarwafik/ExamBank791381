@@ -55,7 +55,7 @@ const AUTOMATON_DESIGN_ANSWER_BYTES = 16 * 1024;
 const DESIGN_UNAVAILABLE = { status: 503, jsonBody: { ok: false, retryable: true, error: "تعذّر فحص الآلة حاليًا. حاول مرة أخرى بعد قليل." } };
 const responseBytes = v => { try { return Buffer.byteLength(JSON.stringify(v ?? null), "utf8"); } catch { return Infinity; } };
 // Study policy as the API advertises it (the UI reads it from here, never hardcodes it): each module is worth up to
-// 20 points, round(completed / eligible × 20). `moduleCount` is the COURSE's publishable module count (791381: 29 → 580;
+// 20 points, round(completed / eligible × 20). `moduleCount` is the COURSE's publishable module count (791381: 30 → 600;
 // 791381s: 37), falling back to the 791381 count for a course the registry does not list.
 const policyFor = courseId => {
   const n = (listLearningModules(courseId) || []).length;

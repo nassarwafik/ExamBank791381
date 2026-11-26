@@ -14,13 +14,13 @@ import STUDY_791381 from "../src/data/learning-study/791381.json";
 
 // The Unified Strength policy — 25 stages × 80 points = 2000 visible points fed by finalized school exams (each the
 // rounded FINAL percentage, 0..100, uncapped total), Learning Practice (36 items × 40 = 1440), Study Practice
-// (29 modules × 20 = 580: the 28 book modules + «ابنِ الشبكة», owner decision 2026-11-26) and projects (≤ 400 each).
+// (30 modules × 20 = 600: the 28 book modules + «ابنِ الشبكة» m29 and m30, owner decisions 2026-11-26) and projects (≤ 400 each).
 const T_IDS = Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0"));
 const F_IDS = Array.from({ length: 6 }, (_, i) => "F0" + (i + 1));
 const ALL_IDS = [...T_IDS, ...F_IDS];
 
 describe("constants — the centralized policy", () => {
-  it("25 stages × 80 points = 2000 visible points; 36 × 40 = 1440; 29 × 20 = 580; 1440 + the 28 book modules' 560 = 2000, the 29th adds 20 beyond the capped path", () => {
+  it("25 stages × 80 points = 2000 visible points; 36 × 40 = 1440; 30 × 20 = 600; 1440 + the 28 book modules' 560 = 2000, the 29th and 30th add 40 beyond the capped path", () => {
     expect(STRENGTH_STAGE_COUNT).toBe(25);
     expect(STRENGTH_STAGE_POINTS).toBe(80);
     expect(STRENGTH_STAGE_MAX_POINTS).toBe(2000);
@@ -29,18 +29,18 @@ describe("constants — the centralized policy", () => {
     expect(LEARNING_PRACTICE_ITEM_COUNT).toBe(36);
     expect(LEARNING_PRACTICE_MAX_TOTAL).toBe(1440);
     expect(STUDY_MODULE_MAX_POINTS).toBe(20);
-    expect(STUDY_MODULE_COUNT).toBe(29);
-    expect(STUDY_MAX_TOTAL).toBe(580);
-    expect(LEARNING_PRACTICE_MAX_TOTAL + (STUDY_MODULE_COUNT - 1) * STUDY_MODULE_MAX_POINTS).toBe(STRENGTH_STAGE_MAX_POINTS);   // the 28 book modules
-    expect(LEARNING_PRACTICE_MAX_TOTAL + STUDY_MAX_TOTAL - STRENGTH_STAGE_MAX_POINTS).toBe(20);                                // «ابنِ الشبكة»: raw points beyond the path
+    expect(STUDY_MODULE_COUNT).toBe(30);
+    expect(STUDY_MAX_TOTAL).toBe(600);
+    expect(LEARNING_PRACTICE_MAX_TOTAL + (STUDY_MODULE_COUNT - 2) * STUDY_MODULE_MAX_POINTS).toBe(STRENGTH_STAGE_MAX_POINTS);   // the 28 book modules
+    expect(LEARNING_PRACTICE_MAX_TOTAL + STUDY_MAX_TOTAL - STRENGTH_STAGE_MAX_POINTS).toBe(40);                                // «ابنِ الشبكة» m29 + m30: raw points beyond the path
     expect(FINALIZED_EXAM_MAX_POINTS).toBe(100);
     expect(PROJECT_MAX_STRENGTH_POINTS).toBe(400);
   });
-  it("the 36 canonical items are exactly the registry's Learning-Practice ids; the 29 modules are exactly the course's modules", () => {
+  it("the 36 canonical items are exactly the registry's Learning-Practice ids; the 30 modules are exactly the course's modules", () => {
     const registry = listLearningTrainings().map(t => t.trainingId).sort();
     expect(registry).toEqual([...ALL_IDS].sort());
     expect(registry).toHaveLength(LEARNING_PRACTICE_ITEM_COUNT);
-    // every module of the course is a study module: 29 since «ابنِ الشبكة» (owner decision 2026-11-26)
+    // every module of the course is a study module: 30 since «ابنِ الشبكة» m29 and m30 (owner decisions 2026-11-26)
     const studyModules = new Set(Object.values(STUDY_791381.pages).map(p => p.moduleId));
     expect(listLearningModules("791381")).toHaveLength(STUDY_MODULE_COUNT);
     expect(listLearningModules("791381").filter(m => !studyModules.has(m.moduleId))).toEqual([]);
@@ -75,7 +75,7 @@ describe("Learning Practice — every one of the 36 items, max 40, best percenta
   });
 });
 
-describe("Study Practice — 29 modules × 20", () => {
+describe("Study Practice — 30 modules × 20", () => {
   it("round(completed / eligible × 20): 0% → 0, 25% → 5, 50% → 10, 75% → 15, 100% → 20; eligible 0 → 0; completed is clamped to eligible", () => {
     expect(studyPointsForModule({ completed: 0, eligible: 40 })).toBe(0);
     expect(studyPointsForModule({ completed: 10, eligible: 40 })).toBe(5);
@@ -89,9 +89,9 @@ describe("Study Practice — 29 modules × 20", () => {
     expect(studyPointsForModule({ completed: -3, eligible: 10 })).toBe(0);
     expect(studyPointsForModule(null)).toBe(0); expect(studyPointsForModule({})).toBe(0);
   });
-  it("29 fully completed modules = 580; a partially completed set sums module by module; nothing stored is trusted", () => {
-    const full = Object.fromEntries(Array.from({ length: 29 }, (_, i) => ["791381-m" + String(i + 1).padStart(2, "0"), { completed: 7, eligible: 7 }]));
-    expect(studyPointsFromModules(full)).toBe(580);
+  it("30 fully completed modules = 600; a partially completed set sums module by module; nothing stored is trusted", () => {
+    const full = Object.fromEntries(Array.from({ length: 30 }, (_, i) => ["791381-m" + String(i + 1).padStart(2, "0"), { completed: 7, eligible: 7 }]));
+    expect(studyPointsFromModules(full)).toBe(600);
     expect(studyPointsFromModules({ a: { completed: 1, eligible: 4 }, b: { completed: 3, eligible: 4 }, c: { completed: 0, eligible: 0 }, d: { points: 999 } })).toBe(5 + 15);
     expect(studyPointsFromModules(null)).toBe(0);
   });

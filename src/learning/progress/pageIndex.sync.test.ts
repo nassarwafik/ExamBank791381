@@ -21,7 +21,7 @@ describe("the committed server page index equals the manifest-derived one", () =
     const flat = flattenPageRefs(manifest);
     const fromIndex = Object.values(committed.modules as Record<string, string[]>).flat();
     expect(fromIndex).toEqual(flat.map(r => r.page.id));
-    expect(new Set(fromIndex).size).toBe(256);   // 248 book pages + the 8 pages of «ابنِ الشبكة» (m29)
+    expect(new Set(fromIndex).size).toBe(265);   // 248 book pages + «ابنِ الشبكة» m29 (8) and m30 (9)
     const server = (apiRegistry as unknown as { listLearningModules: (c: string) => { moduleId: string }[] }).listLearningModules("791381").map(m => m.moduleId);
     expect(Object.keys(committed.modules).sort()).toEqual([...server].sort());
     for (const [moduleId, pages] of Object.entries(committed.modules as Record<string, string[]>)) {

@@ -18,7 +18,7 @@ describe("L3-B searchGrouped — module → lesson in reading order", () => {
     const hits = groups[0].modules.flatMap(m => m.lessons.flatMap(l => l.hits));
     expect(hits.length).toBeGreaterThan(1);
     expect(hits.map(h => h.ordinal)).toEqual([...hits.map(h => h.ordinal)].sort((a, b) => a - b));
-    expect(hits.every(h => h.total === 256)).toBe(true);
+    expect(hits.every(h => h.total === 265)).toBe(true);
     for (const m of groups[0].modules) {
       const mod = manifest.modules.find(x => x.id === m.moduleId)!;
       expect(m.moduleTitle).toBe(mod.title);

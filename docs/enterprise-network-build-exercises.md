@@ -84,6 +84,45 @@ A practice module after the booklet's last section (order 37), seven exercises a
   points. The overview shows a ninth group «ابنِ الشبكة» in the booklet's neutral tone.
 - **Authoring:** both modules use `src/learning/content/networkBuildAuthoring.ts`; m29's generated data is byte-identical after the refactor.
 
+## 5c. LAB mode and module `791381-m30` «ابنِ الشبكة: التوجيه والأمان» (owner decision 2026-11-26)
+
+**LAB mode** (`task.lab: true`, key `rules.lab: true`): the exercise runs in the full network lab — serial WAN, static / RIP / OSPF /
+EIGRP routing, standard and extended ACLs, NAT / PAT, IPv6 and (when offered) the hub — and the server judges it on the lab's own
+replay. `src/studentTools/netLabReplay.ts` (with the lab engine, CLI and model it imports) is now a shared-finalization entry, so the API
+replays a lab network exactly as the learner's lab ran it.
+
+- **Key verification (fail closed):** the reference is a valid lab network of the offered kinds. Only build checks and lab checks are
+  allowed, and each lab check names devices of the right kind in the reference with well-formed values. An untrusted key is
+  `unavailable`.
+- **The learner's network:** validated by the lab's validator (`NETWORK_INVALID`), limited to the offered kinds (`KIND_NOT_ALLOWED`),
+  replayed once (`ACTIONS_INVALID` when it does not replay).
+- **Lab checks** judge behaviour, not typing:
+  - `lab.reach` {source, destination IPv4, proto icmp | http, value}: a two-way exchange through ACLs and NAT;
+  - `lab.route` {deviceId, network a.b.c.d/len, code C | S | R | O | D}: the router's routing table holds the network, learned that way;
+  - `lab.reach6` {source, destination IPv6, value}.
+- **Builder:** a lab exercise keeps serial ports, the hub (if offered), the IPv6 form and the lab's router commands; still no example and
+  no file.
+
+| Page | Exercise | Book topic (PDF) |
+|---|---|---|
+| l01-p01 | WAN وتوجيه ثابت (serial link, ip route both ways) | Static Route (211) |
+| l01-p02 | التوجيه الديناميكي RIP v2 | RIP (212) |
+| l01-p03 | التوجيه الديناميكي OSPF (area 0, wildcards) | OSPF (214) |
+| l01-p04 | التوجيه الديناميكي EIGRP (AS 10) | EIGRP (218) |
+| l02-p01 | Standard ACL (one host denied, near the destination) | Standard ACL (224) |
+| l02-p02 | Extended ACL (ping denied, HTTP allowed, near the source) | Extended ACL (227) |
+| l03-p01 | NAT / PAT to the Internet (default route + overload; the ISP has no route back) | NAT و PAT (258) |
+| l03-p02 | شبكتان بـ IPv6 (unicast-routing, addresses, gateways) | IPv6 (166) |
+
+- **Negative proofs** (`networkBuild.contract.test.ts`):
+  - the static solution fails the RIP goals (wrong route code);
+  - OSPF missing on R2 → no routes and no ping;
+  - no ACL → PC2 gets through; deny-all → the web is blocked;
+  - no PAT → no reply from the ISP;
+  - no `ipv6 unicast-routing` → no IPv6 forwarding.
+- **Study Strength:** the 30th study module (20 points). `STUDY_MODULE_COUNT` 29 → 30 (`STUDY_MAX_TOTAL` 600). The study index of the
+  other modules is unchanged (only additions). The overview group «ابنِ الشبكة» holds m29 and m30.
+
 ## 6. Evidence
 
 - `src/learning/lab/networkBuild.contract.test.ts` — every authored exercise: the empty network reaches no goal, the solution reaches
@@ -97,5 +136,4 @@ A practice module after the booklet's last section (order 37), seven exercises a
 
 ## 7. Not in scope
 
-Hub, serial WAN, static / dynamic routing, ACL, NAT and IPv6 stay lab-only (N2) — they are not networkTopology@2 features, so the server
-cannot judge them yet. A later phase could move the lab extensions into the shared finalization and add exercises for them.
+Lab exercises for the summary booklet 791381s (its own decision, later if wanted).

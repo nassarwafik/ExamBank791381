@@ -33,6 +33,8 @@ describe("every authored «ابنِ الشبكة» exercise is valid and proven 
   it("book 791381 has the seven exercises of m29 and the booklet 791381s the seven of m37, all checked on the server and all study activities (owner decision 2026-11-26: the 29th study module)", async () => {
     const builds = await allBuilds();
     expect(builds.map(b => b.id)).toEqual(["m29-l01-p01-build-lan", "m29-l01-p02-build-vlan", "m29-l02-p01-build-router", "m29-l02-p02-build-roas", "m29-l03-p01-build-dhcp", "m29-l03-p02-build-wifi", "m29-l03-p03-build-web",
+      // 791381 m30 (owner decision 2026-11-26): eight LAB-mode exercises (WAN, routing, ACL, NAT, IPv6)
+      "m30-l01-p01-build-static", "m30-l01-p02-build-rip", "m30-l01-p03-build-ospf", "m30-l01-p04-build-eigrp", "m30-l02-p01-build-acl-standard", "m30-l02-p02-build-acl-extended", "m30-l03-p01-build-pat", "m30-l03-p02-build-ipv6",
       // 791381s m37 (owner decision 2026-11-26): seven more, a step deeper
       "m37-l01-p01-build-trunk", "m37-l01-p02-build-native", "m37-l01-p03-build-vtp", "m37-l02-p01-build-portsec", "m37-l02-p02-build-passwords", "m37-l03-p01-build-dhcp-server", "m37-l03-p02-build-dmz"]);
     for (const b of builds) { expect(studyActivityOf(b), b.id).not.toBeNull(); expect(checkActivityOf(b)?.study, b.id).toBe(true); }
@@ -118,5 +120,56 @@ describe("the validator", () => {
     expect(codes(block({ ...good, solution: [] }))).not.toEqual([]);
     expect(codes(block({ ...good, topology: {} }))).not.toEqual([]);
     expect(codes(block(good, { serverCheck: true } as Partial<SimulationBlock>))).not.toEqual([]);
+    // LAB mode: `task.lab` is true or absent; the hub is offered only in a lab exercise
+    expect(codes(block({ ...good, task: { ...good.task, lab: true, kinds: ["switch", "hub"] } }))).toEqual([]);
+    expect(codes(block({ ...good, task: { ...good.task, kinds: ["switch", "hub"] } }))).not.toEqual([]);
+    expect(codes(block({ ...good, task: { ...good.task, lab: "yes" } }))).not.toEqual([]);
+  });
+});
+
+describe("LAB mode (791381 m30): the server judges what the lab network really does", () => {
+  const byId = async (id: string) => (await allBuilds()).find(b => b.id === id)!;
+  const sol = (b: SimulationBlock) => cfg(b).solution!;
+  const withoutLines = (b: SimulationBlock, drop: RegExp) => sol(b).actions.filter(a => !(typeof a.command === "string" && drop.test(a.command)));
+  it("a route must be learned the way the task asks: the static solution fails the RIP goals (R), but its ping passes", async () => {
+    const rip = await byId("m30-l01-p02-build-rip"), stat = await byId("m30-l01-p01-build-static");
+    const r = judgeNetworkBuild(keyOf(rip), answer(sol(stat).config, sol(stat).actions));
+    expect(r).toMatchObject({ status: "judged", correct: false, parts: { wan: true, r1: false, r2: false, ping: true } });
+  });
+  it("routing missing on one router: the far network is not learned and the ping (its reply) fails", async () => {
+    const ospf = await byId("m30-l01-p03-build-ospf");
+    const actions = sol(ospf).actions.filter(a => !(a.deviceId === "r2" && typeof a.command === "string" && /^(router ospf|network )/.test(a.command)));
+    expect(judgeNetworkBuild(keyOf(ospf), answer(sol(ospf).config, actions))).toMatchObject({ correct: false, parts: { r1: false, r2: false, ping: false } });
+  });
+  it("an ACL is judged by the traffic: no ACL → PC2 gets through (wrong); deny everything → the web is blocked too (wrong)", async () => {
+    const std = await byId("m30-l02-p01-build-acl-standard"), ext = await byId("m30-l02-p02-build-acl-extended");
+    expect(judgeNetworkBuild(keyOf(std), answer(sol(std).config, withoutLines(std, /access-/)))).toMatchObject({ correct: false, parts: { pc1: true, pc2: false, gw2: true } });
+    const denyAll = withoutLines(ext, /permit ip any any/);
+    expect(judgeNetworkBuild(keyOf(ext), answer(sol(ext).config, denyAll))).toMatchObject({ correct: false, parts: { noping: true, web1: false, web2: false } });
+  });
+  it("without PAT the ISP cannot answer the private addresses: the pings fail; the default route alone is not enough", async () => {
+    const pat = await byId("m30-l03-p01-build-pat");
+    expect(judgeNetworkBuild(keyOf(pat), answer(sol(pat).config, withoutLines(pat, /nat/)))).toMatchObject({ correct: false, parts: { wan: true, default: true, pc1: false, pc2: false } });
+  });
+  it("IPv6 without ipv6 unicast-routing: the router does not forward, so PC1 does not reach PC2", async () => {
+    const v6 = await byId("m30-l03-p02-build-ipv6");
+    expect(judgeNetworkBuild(keyOf(v6), answer(sol(v6).config, withoutLines(v6, /unicast-routing/)))).toMatchObject({ correct: false, parts: { ping6: false } });
+  });
+  it("the key is verified: lab checks need lab mode, name devices of the right kind and well-formed values; the hub only in lab mode", async () => {
+    const stat = await byId("m30-l01-p01-build-static"), lan = await byId("m29-l01-p01-build-lan");
+    const k = keyOf(stat), good = sol(stat);
+    const broken = [
+      { ...k, rules: { kinds: k.rules.kinds } },                                                                                     // lab checks without lab mode
+      { ...k, checks: [...k.checks, { id: "x", kind: "lab.reach", source: "r1", destination: "1.1.1.1", value: true }] },           // the source is not a host
+      { ...k, checks: [...k.checks, { id: "y", kind: "lab.route", deviceId: "r1", network: "192.168.2.0/40", code: "S" }] },          // no such prefix
+      { ...k, checks: [...k.checks, { id: "z", kind: "lab.reach", source: "pc1", destination: "999.1.1.1", value: true }] },        // not an address
+      { ...k, rules: { kinds: ["router", "pc", "hub"], lab: "yes" } },
+    ];
+    for (const b of broken) expect(judgeNetworkBuild(b, answer(good.config, good.actions))).toEqual({ status: "unavailable" });
+    expect(judgeNetworkBuild({ ...keyOf(lan), rules: { kinds: ["switch", "pc", "hub"] } }, answer(EMPTY))).toEqual({ status: "unavailable" });
+    // a learner's lab network with a kind the task does not offer, or an invalid lab network
+    const hub = { ...good.config, devices: [...(good.config.devices as object[]), { id: "hub1", kind: "hub", label: "HUB1", x: 0.5, y: 0.5 }] };
+    expect(judgeNetworkBuild(k, answer(hub, good.actions))).toMatchObject({ correct: false, issue: { code: "KIND_NOT_ALLOWED" } });
+    expect(judgeNetworkBuild(k, answer({ v: 3 }, []))).toMatchObject({ correct: false, issue: { code: "NETWORK_INVALID" } });
   });
 });
