@@ -49,6 +49,13 @@ describe("A15a — the one step is the book engine's semantics", () => {
     expect(runs).toBeGreaterThan(150);
   });
 
+  it("ε-arrows: every configuration of a non-deterministic automaton is closed under ε, the start included — as the engine (no book machine has ε)", () => {
+    const eps = machineOf({ kind: "NFA", states: ["p", "q", "r", "s"], alphabet: ["a", "b"], start: "p", accept: ["s"], transitions: [["p", "ε", "q"], ["q", "a", "r"], ["r", "ε", "s"], ["p", "b", "p"]] });
+    expect(trueTrace(eps, [..."a"])!.rows.map(c => c.states)).toEqual([["p", "q"], ["r", "s"]]);
+    expect(trueTrace(eps, [..."ba"])!.rows.map(c => c.states)).toEqual([["p", "q"], ["p", "q"], ["r", "s"]]);
+    for (const w of ["", "a", "b", "ba", "ab", "bba"]) expect(trueTrace(eps, [...w], 2000)!.rows, "«" + w + "»").toEqual(engineConfigs(eps, [...w]));
+  });
+
   it("each row reads back to its configuration: rowOfConfig then configOfRow is the identity on every true run", () => {
     for (const s of sims) {
       const cfg = readAutomatonConfig(s.block.config)!;
