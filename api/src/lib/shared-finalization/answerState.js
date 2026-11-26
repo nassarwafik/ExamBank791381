@@ -37,6 +37,8 @@ function answered(a) {
         return !!a.machine && ((Array.isArray(a.machine.transitions) && a.machine.transitions.length > 0) || (Array.isArray(a.machine.accept) && a.machine.accept.length > 0) || (Array.isArray(a.machine.states) && a.machine.states.length > 1));
     if (a.kind === "machineDesign")
         return !!a.machine && ((Array.isArray(a.machine.transitions) && a.machine.transitions.length > 0) || (Array.isArray(a.machine.accept) && a.machine.accept.length > 0) || (Array.isArray(a.machine.states) && a.machine.states.length > 1));
+    if (a.kind === "machineTrace")
+        return a.verdict === "accept" || a.verdict === "reject" || (Array.isArray(a.rows) && a.rows.some(r => !!r && ((typeof r.state === "string" && r.state !== "") || (Array.isArray(r.states) && r.states.length > 0) || (typeof r.stack === "string" && r.stack !== "") || (typeof r.tape === "string" && r.tape !== ""))));
     if (a.kind === "smartSim")
         return Array.isArray(a.actions) && a.actions.length > 0;
     if (a.kind === "composite")

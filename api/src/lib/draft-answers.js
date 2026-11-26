@@ -42,6 +42,8 @@ const { bindMeshPartSelectionAnswerToQuestion, normalizeMeshPartSelectionAnswer 
 const { bindAutomatonDesignAnswerToQuestion, normalizeAutomatonDesignAnswer } = require("./shared-finalization/automatonDesignQuestion");
 // AUTO-A11a — machineDesign@1: the same — the machine's SHAPE (bounded); a machine that breaks a rule is kept and judged wrong.
 const { bindMachineDesignAnswerToQuestion, normalizeMachineDesignAnswer } = require("./shared-finalization/machineDesignQuestion");
+// AUTO-A15a — machineTrace@1: the rows' SHAPE (bounded); whether a row is a configuration of the machine is the grader's to judge.
+const { bindMachineTraceAnswerToQuestion, normalizeMachineTraceAnswer } = require("./shared-finalization/machineTraceQuestion");
 // Phase 19E — an answer on an openResponse question is rebuilt to exactly { kind: "text", value } (a client score / rubric awards /
 // model answer / comment are dropped), the text kept verbatim and bounded by the question's maxChars (over-long ⇒ rejected, never
 // truncated); any other kind is rejected.
@@ -97,6 +99,8 @@ const isAutomatonDesign = a => !!a && typeof a === "object" && a.kind === "autom
 const isAutomatonDesignQuestion = q => !!q && typeof q === "object" && q.presentationType === "automatonDesign";
 const isMachineDesign = a => !!a && typeof a === "object" && a.kind === "machineDesign";
 const isMachineDesignQuestion = q => !!q && typeof q === "object" && q.presentationType === "machineDesign";
+const isMachineTrace = a => !!a && typeof a === "object" && a.kind === "machineTrace";
+const isMachineTraceQuestion = q => !!q && typeof q === "object" && q.presentationType === "machineTrace";
 const isSmartSim = a => !!a && typeof a === "object" && a.kind === "smartSim";
 const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "smartSim";
 
@@ -132,6 +136,7 @@ function bindAnswer(id, a, q, bound, reject, placement) {
   if (isMeshPartSelection(a) || (bound && isMeshPartSelectionQuestion(q))) return bound ? (isMeshPartSelectionQuestion(q) ? bindMeshPartSelectionAnswerToQuestion(a, q) : { ok: false, code: "MESH_SELECTION_QUESTION_MISMATCH" }) : normalizeMeshPartSelectionAnswer(a);
   if (isAutomatonDesign(a) || (bound && isAutomatonDesignQuestion(q))) return bound ? (isAutomatonDesignQuestion(q) ? bindAutomatonDesignAnswerToQuestion(a, q) : { ok: false, code: "AUTOMATON_QUESTION_MISMATCH" }) : normalizeAutomatonDesignAnswer(a);
   if (isMachineDesign(a) || (bound && isMachineDesignQuestion(q))) return bound ? (isMachineDesignQuestion(q) ? bindMachineDesignAnswerToQuestion(a, q) : { ok: false, code: "MACHINE_QUESTION_MISMATCH" }) : normalizeMachineDesignAnswer(a);
+  if (isMachineTrace(a) || (bound && isMachineTraceQuestion(q))) return bound ? (isMachineTraceQuestion(q) ? bindMachineTraceAnswerToQuestion(a, q) : { ok: false, code: "TRACE_QUESTION_MISMATCH" }) : normalizeMachineTraceAnswer(a);
   if (bound && isLabelDiagramQuestion(q)) return bindLabelDiagramAnswerToQuestion(a, q);
   if (bound && isOpenResponseQuestion(q)) return bindOpenResponseAnswerToQuestion(a, q);
   if (bound && isParametricQuestion(q)) return bindParametricNumericAnswer(a);

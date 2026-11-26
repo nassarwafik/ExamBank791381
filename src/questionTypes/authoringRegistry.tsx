@@ -42,6 +42,7 @@ registerAuthoringEditor("scene3DSelection", 1, lazy(() => import("./editors/Scen
 registerAuthoringEditor("meshPartSelection", 1, lazy(() => import("./editors/MeshPartSelectionEditor")));
 registerAuthoringEditor("automatonDesign", 1, lazy(() => import("./editors/AutomatonDesignEditor")));
 registerAuthoringEditor("machineDesign", 1, lazy(() => import("./editors/MachineDesignEditor")));
+registerAuthoringEditor("machineTrace", 1, lazy(() => import("./editors/MachineTraceEditor")));
 registerAuthoringEditor("openResponse", 1, lazy(() => import("./editors/OpenResponseEditor")));
 // Phase 20A — trusted SmartSim authoring (lazy: the plugin editor — topology, devices, links, private checks — never enters the initial graph).
 registerAuthoringEditor("smartSim", 1, lazy(() => import("./editors/SmartSimEditor")));

@@ -286,8 +286,9 @@ function gradeQuestion(question,response,context,placement){
     const manualReview=r.manualReview===true;
     // AUTO-A8b — automatonDesign@1 keeps its separating word / broken rule (rebuilt and bounded by its grader) beside the score; no other
     // handler returns the field, so every other grade is byte-for-byte unchanged. AUTO-A11b — machineDesign@1 keeps its feedback too, ALSO
-    // when the grade awaits the teacher (a Turing machine that did not halt: the word is what the teacher decides on)
-    return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{}),...(r.automatonFeedback&&!manualReview?{automatonFeedback:r.automatonFeedback}:{}),...(r.machineFeedback?{machineFeedback:r.machineFeedback}:{})};
+    // when the grade awaits the teacher (a Turing machine that did not halt: the word is what the teacher decides on). AUTO-A15a —
+    // machineTrace@1 keeps which rows of the run were right, and the verdict (only with an automatic grade)
+    return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{}),...(r.automatonFeedback&&!manualReview?{automatonFeedback:r.automatonFeedback}:{}),...(r.machineFeedback?{machineFeedback:r.machineFeedback}:{}),...(r.traceFeedback&&!manualReview?{traceFeedback:r.traceFeedback}:{})};
   }
   return gradeLegacyQuestion(question,response,max,placement);
 }
@@ -358,7 +359,7 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys,generation){
   const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
   // Phase 20D — an excess (first-N) or otherwise uncounted composite is ignored WHOLE: its parts carry no counted marks either.
   const parts=r.composite&&!counted&&Array.isArray(r.parts)?r.parts.map(p=>({...p,score:0,countedMaxMarks:0,manualReview:false,correct:false,counted:false,ignored:true})):(r.parts||null);
-  return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isAdmittedAnswered(q,resp),parts,...(r.composite?{composite:r.composite}:{}),...(r.automatonFeedback&&counted?{automatonFeedback:r.automatonFeedback}:{}),...(r.machineFeedback&&counted?{machineFeedback:r.machineFeedback}:{})};
+  return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isAdmittedAnswered(q,resp),parts,...(r.composite?{composite:r.composite}:{}),...(r.automatonFeedback&&counted?{automatonFeedback:r.automatonFeedback}:{}),...(r.machineFeedback&&counted?{machineFeedback:r.machineFeedback}:{}),...(r.traceFeedback&&counted?{traceFeedback:r.traceFeedback}:{})};
 }
 
 // Section-aware, backward-compatible exam grader.
@@ -413,7 +414,8 @@ function gradeExam(exam,answers,context){
         parts:g.parts||null,
         ...(g.composite?{composite:g.composite}:{}),
         ...(g.automatonFeedback?{automatonFeedback:g.automatonFeedback}:{}),
-        ...(g.machineFeedback?{machineFeedback:g.machineFeedback}:{})
+        ...(g.machineFeedback?{machineFeedback:g.machineFeedback}:{}),
+        ...(g.traceFeedback?{traceFeedback:g.traceFeedback}:{})
       });
     });
     sections.push({

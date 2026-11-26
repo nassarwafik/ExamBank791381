@@ -95,6 +95,9 @@ registerTypeDefaults("automatonDesign", 1, ensure => { ensure("automatonDesign",
 // AUTO-A11a — machineDesign@1: a push-down automaton over {a, b} with up to 6 states, and NO reference machine yet — finalization blocks until
 // the teacher builds it in the lazy editor. Literal on purpose (initial graph); the model's defaultMachineDesignConfig is the same value.
 registerTypeDefaults("machineDesign", 1, ensure => { ensure("machineDesign", { v: 1, machine: "PDA", alphabet: ["a", "b"], maxStates: 6 }); ensure("answer", {}); });
+// AUTO-A15a — machineTrace@1: a small deterministic automaton and a word, ready to trace (the key stays empty: the server computes the run).
+// Literal on purpose (initial graph); the model's defaultMachineTraceConfig is the same value.
+registerTypeDefaults("machineTrace", 1, ensure => { ensure("machineTrace", { v: 1, machine: { kind: "DFA", states: ["q0", "q1"], alphabet: ["a", "b"], start: "q0", accept: ["q1"], transitions: [["q0", "a", "q1"], ["q0", "b", "q0"], ["q1", "a", "q1"], ["q1", "b", "q0"]] }, word: "ab" }); ensure("answer", {}); });
 registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 // Phase 19E — openResponse@1: the general profile and an EMPTY rubric that blocks finalization until the teacher builds one (the lazy
 // editor offers the useful 10-point default rubric in one click). Literal on purpose (initial graph); parity-tested against the model.

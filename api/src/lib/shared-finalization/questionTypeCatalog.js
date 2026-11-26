@@ -34,6 +34,7 @@ const PRODUCTION_ROWS = [
     ["meshPartSelection", "نموذج 3D واقعي", "interactive", "auto", 41, ["meshPartSelection"], false],
     ["automatonDesign", "تصميم أوتومات", "interactive", "auto", 161, ["automatonDesign"], false],
     ["machineDesign", "تصميم آلة: مكدّس أو تورنغ", "interactive", "auto", 161, ["machineDesign"], false],
+    ["machineTrace", "تتبّع تشغيل آلة", "interactive", "auto", 169, ["machineTrace"], false],
     ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
     ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
     ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],

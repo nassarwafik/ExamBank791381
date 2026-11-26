@@ -16,6 +16,7 @@ import { validateScene3DSelectionQuestion } from "./scene3DSelectionQuestion";
 import { validateMeshPartSelectionQuestion } from "./meshPartSelectionQuestion";
 import { validateAutomatonDesignQuestion } from "./automatonDesignQuestion";
 import { validateMachineDesignQuestion } from "./machineDesignQuestion";
+import { validateMachineTraceQuestion } from "./machineTraceQuestion";
 import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
 import { validateOpenResponseQuestion } from "./openResponseQuestion";
 import { validateSmartSimQuestion } from "./trustedSimPlugins";
@@ -147,6 +148,7 @@ registerTypeValidator("scene3DSelection", 1, node => validateScene3DSelectionQue
 registerTypeValidator("meshPartSelection", 1, node => validateMeshPartSelectionQuestion(node));
 registerTypeValidator("automatonDesign", 1, node => validateAutomatonDesignQuestion(node));
 registerTypeValidator("machineDesign", 1, node => validateMachineDesignQuestion(node));
+registerTypeValidator("machineTrace", 1, node => validateMachineTraceQuestion(node));
 // Phase 19E — openResponse@1: public config, the private rubric (strict, never repaired), the model answer bound and positive marks.
 registerTypeValidator("openResponse", 1, node => validateOpenResponseQuestion(node));
 // Phase 20A — smartSim@1: the strict public envelope (exact plugin identity, plugin-validated config) and the private weighted checks

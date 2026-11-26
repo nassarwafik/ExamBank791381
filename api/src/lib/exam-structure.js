@@ -20,6 +20,7 @@ const { isCompositeQuestionNode, compositeQuestionMaxMarks, isCompositeAnswerAns
 const { legacyResponseAdmitted } = require("./question-type-graders");
 const { isAutomatonDesignAnswerAnswered } = require("./shared-finalization/automatonDesignQuestion");
 const { isMachineDesignAnswerAnswered } = require("./shared-finalization/machineDesignQuestion");
+const { isMachineTraceAnswerAnswered } = require("./shared-finalization/machineTraceQuestion");
 const { compositeStructure, compositeChildNode } = require("./shared-finalization/compositeQuestion");
 
 // Stable identity helpers. These MUST match src/StudentQuestionCard.tsx's qid() and the front-end
@@ -161,6 +162,9 @@ function isResponseAnswered(a) {
     // AUTO-A11a — a push-down / Turing machine design counts the same way (mirror of answerState.ts).
     case "machineDesign":
       return isMachineDesignAnswerAnswered(a);
+    // AUTO-A15a — a machine trace counts when it carries a verdict or a row with something written (mirror of answerState.ts).
+    case "machineTrace":
+      return isMachineTraceAnswerAnswered(a);
     // Phase 20A — a trusted SmartSim answer counts when it carries at least one action (mirror of answerState.ts).
     case "smartSim":
       return Array.isArray(a.actions) && a.actions.length > 0;

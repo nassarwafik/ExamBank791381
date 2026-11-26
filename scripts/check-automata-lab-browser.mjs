@@ -25,7 +25,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(process.env.HARNESS_OUT || path.join(os.tmpdir(), "harness-automata-lab"));
 const { chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core");
 
-await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html"), question: path.join(root, "browser-harness/automaton-question.html"), machineQuestion: path.join(root, "browser-harness/machine-question.html") } } } });
+await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html"), question: path.join(root, "browser-harness/automaton-question.html"), machineQuestion: path.join(root, "browser-harness/machine-question.html"), machineTrace: path.join(root, "browser-harness/machine-trace.html") } } } });
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -407,6 +407,49 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     check(lines.length === 2 && /على المدخل\s*1\s*الجواب الصحيح\s*«111»، وآلتك تعطي\s*«11»/.test(lines[0]) && /حتى الطول 8 \(511 كلمة\). هذا فحص وليس برهانًا/.test(lines[1]), name + ": the student's released breakdown: one line per machine question («" + lines.join(" | ").slice(0, 120) + "»)");
     if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "machine-question-" + name + ".png"), fullPage: true });
     if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the machine question (" + (await sideways()) + " px)");
+  }
+  // AUTO-A15a — the exam question «تتبّع تشغيل آلة»: the student sees the machine as a TABLE (no player, no run button), writes the run with
+  // the symbol buttons (├ ∆ never typed) and the head chosen from the cells, and the verdict; the saved answer is the rows as written. The
+  // teacher writes a push-down automaton in the book's notation and sees the true run; the key stays empty
+  {
+    console.log(name + ": the exam question «تتبّع تشغيل آلة»");
+    await page.goto(origin + "/browser-harness/machine-trace.html");
+    const tr = page.getByTestId("machine-trace-response");
+    await tr.waitFor({ timeout: 20000 });
+    const saved = async () => JSON.parse((await page.getByTestId("saved-answer").textContent()) || "null");
+    check(/آلة تورنغ — الانتقالات/.test(await tr.getByTestId("machine-trace-machine").innerText()) && await tr.locator("svg, canvas").count() === 0
+      && await tr.getByRole("button", { name: /شغّل/ }).count() === 0, name + ": the machine is a table — no drawing to run, no «شغّل»");
+    const rowN = k => tr.getByTestId("machine-trace-row").nth(k);
+    const fillRow = async (k, state, cells, head) => {
+      await rowN(k).getByLabel("الحالة").selectOption(state);
+      const tape = rowN(k).getByRole("textbox");
+      await tape.fill("");
+      for (const c of cells) await rowN(k).getByRole("button", { name: "أضف " + c, exact: true }).click();
+      await rowN(k).getByLabel("موضع الرأس").selectOption(String(head));
+    };
+    await fillRow(0, "q0", ["├", "a", "b"], 1);
+    await tr.getByRole("button", { name: /أضف خطوة/ }).click();
+    await fillRow(1, "q0", ["├", "A", "b"], 2);
+    await tr.getByRole("button", { name: /أضف خطوة/ }).click();
+    await rowN(2).getByLabel("الحالة").selectOption("q1");
+    await tr.getByLabel("الكلمة مقبولة").check();
+    const a = await saved();
+    check(a && JSON.stringify(a) === JSON.stringify({ kind: "machineTrace", rows: [{ state: "q0", tape: "├[a]b" }, { state: "q0", tape: "├A[b]" }, { state: "q1", tape: "├A[b]" }], verdict: "accept" }),
+      name + ": the saved answer is the three rows as written (├ and the head by buttons) and the verdict — " + JSON.stringify(a));
+    if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the trace question (" + (await sideways()) + " px)");
+    const ed = page.getByTestId("qt-editor-machineTrace");
+    await ed.getByRole("radio", { name: "أوتومات مكدّس" }).check();
+    await ed.getByLabel(/^حالات القبول/).fill("q1");
+    await ed.getByLabel(/^الانتقالات، سطر لكل انتقال/).fill("q0 → q0 : ادفع a,⏊/A\nq0 → q0 : ادفع a,A/A\nq0 → q1 : اسحب b,A/A\nq1 → q1 : اسحب b,A/A");
+    await ed.getByLabel(/^الكلمة التي يتتبّعها الطالب/).fill("aabb");
+    check(await ed.getByRole("radio", { name: "أوتومات مكدّس" }).isChecked() && !(await ed.getByRole("radio", { name: "أوتومات منتهٍ غير حتمي" }).isChecked()), name + ": the kind's radio shows «أوتومات مكدّس» chosen (one radio group)");
+    const run = await ed.getByTestId("machine-trace-true-run").locator("li").allInnerTexts();
+    const sq = JSON.parse((await page.getByTestId("saved-question").textContent()) || "{}");
+    check(JSON.stringify(run.map(t => t.replace(/\s+/g, " "))) === JSON.stringify(["q0 ⏊", "q0 ⏊A", "q0 ⏊AA", "q1 ⏊A", "q1 ⏊"]) && sq.machineTrace.machine.kind === "PDA" && sq.machineTrace.word === "aabb"
+      && JSON.stringify(sq.answer) === "{}" && await page.getByTestId("machine-trace-issues").count() === 0,
+      name + ": teacher: a push-down automaton in the book's notation; the true run shown (" + run.join(" | ") + "); the key stays empty; the question is complete");
+    if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "machine-trace-" + name + ".png"), fullPage: true });
+    if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the trace editor (" + (await sideways()) + " px)");
   }
   check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
   check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
