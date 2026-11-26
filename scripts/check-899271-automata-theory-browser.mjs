@@ -86,20 +86,6 @@ async function composerOnLab(page) {
   return { composer, list };
 }
 const codes = list => list.locator(".library-item-code").allInnerTexts();
-// A defect of the exam page's own top bar, PRE-EXISTING on main and outside this phase: `.iex-topbar-context` (the class · attempt line)
-// is --eb-muted on the bar's tint, contrast 4.32 < 4.5. The student exam is checked with that ONE element excluded, and the check
-// asserts the defect is still exactly that one (so a fix, or any other finding, shows here); it is reported in the PR, not hidden.
-const KNOWN_TOPBAR = ".iex-topbar-context";
-async function axeKnown(page, where) {
-  await settled(page);
-  await page.evaluate(axeSource + "\n;0");
-  const known = await page.evaluate(async sel => (await window.axe.run({ include: [[sel]] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map(v => v.id), KNOWN_TOPBAR);
-  console.log("  · " + where + ": the known pre-existing top-bar finding (" + KNOWN_TOPBAR + "): " + (known.join(", ") || "none — fixed"));
-  const r = await page.evaluate(async sel => (await window.axe.run({ exclude: [[sel]] }, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map(v => v.id + " ×" + v.nodes.length + " [" + v.nodes.slice(0, 3).map(n => n.target.join(" ")).join(" ; ") + "]"), KNOWN_TOPBAR);
-  check(r.length === 0, where + ": axe WCAG 2.1 A/AA (all but the known top-bar line) — " + (r.join(", ") || "no violation"));
-  const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  check(over <= 1, where + ": no horizontal overflow (" + over + "px)");
-}
 // axe measures colours as drawn: it runs once no animation or transition is still running (choosing content enables the wizard's
 // steps, which fade from .5 to full opacity in 0.18s — measured mid-fade they read 4.28:1, settled they pass).
 const settled = page => page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
@@ -163,6 +149,7 @@ for (const [viewport, touch, label] of [[{ width: 390, height: 844 }, true, "390
   const cover = page.getByRole("button", { name: "ابدأ الامتحان" });   // the exam's cover page (its instructions name «→» and «*»); a resumed attempt skips it
   if (await cover.waitFor({ timeout: 8000 }).then(() => true, () => false)) {
     check(/«→» حالة البداية، «\*» حالة قبول/.test(await page.locator("body").innerText()), label + ": the cover's instructions explain the tables («→» start, «*» accepting)");
+    await axe(page, "exam cover " + label);   // the «hero» header of this preset tints the cover card too
     await cover.click();
   }
   await table.waitFor({ timeout: 20000 });
@@ -187,7 +174,7 @@ for (const [viewport, touch, label] of [[{ width: 390, height: 844 }, true, "390
   }
   await table.scrollIntoViewIfNeeded();
   await shot(page, "a14-student-" + label);
-  await axeKnown(page, "student exam " + label);
+  await axe(page, "student exam " + label);
   await ctx.close();
 }
 
