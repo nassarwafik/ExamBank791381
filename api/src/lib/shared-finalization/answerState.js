@@ -35,6 +35,8 @@ function answered(a) {
         return Array.isArray(a.parts) && a.parts.length > 0;
     if (a.kind === "automatonDesign")
         return !!a.machine && ((Array.isArray(a.machine.transitions) && a.machine.transitions.length > 0) || (Array.isArray(a.machine.accept) && a.machine.accept.length > 0) || (Array.isArray(a.machine.states) && a.machine.states.length > 1));
+    if (a.kind === "machineDesign")
+        return !!a.machine && ((Array.isArray(a.machine.transitions) && a.machine.transitions.length > 0) || (Array.isArray(a.machine.accept) && a.machine.accept.length > 0) || (Array.isArray(a.machine.states) && a.machine.states.length > 1));
     if (a.kind === "smartSim")
         return Array.isArray(a.actions) && a.actions.length > 0;
     if (a.kind === "composite")

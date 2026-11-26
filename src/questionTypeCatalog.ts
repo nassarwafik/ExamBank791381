@@ -79,6 +79,11 @@ const PRODUCTION_ROWS = [
   // teacher's reference exactly (full marks or zero, owner decision); interactive; offline; not a compound part. Inserted right after
   // meshPartSelection (as 21D-B.3 after scene3DSelection) so the legacy order and every append position stay unchanged.
   ["automatonDesign", "تصميم أوتومات", "interactive", "auto", 161, ["automatonDesign"], false],
+  // AUTO-A11a — machineDesign@1: the student BUILDS a push-down automaton or a Turing machine (recognise a language, or compute a function);
+  // the server runs it and the teacher's reference on every word up to a length (owner decisions: agreement → full marks with the length
+  // noted for the teacher; a certain separating word → 0; a Turing machine that does not halt → teacher review). Interactive; offline; not
+  // a compound part. Inserted right after automatonDesign so the legacy order and every append position stay unchanged.
+  ["machineDesign", "تصميم آلة: مكدّس أو تورنغ", "interactive", "auto", 161, ["machineDesign"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],

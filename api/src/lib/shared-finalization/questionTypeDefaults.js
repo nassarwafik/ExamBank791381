@@ -62,6 +62,7 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
 (0, exports.registerTypeDefaults)("scene3DSelection", 1, () => { });
 (0, exports.registerTypeDefaults)("meshPartSelection", 1, () => { });
 (0, exports.registerTypeDefaults)("automatonDesign", 1, ensure => { ensure("automatonDesign", { v: 1, machine: "DFA", alphabet: ["a", "b"], maxStates: 4 }); ensure("answer", {}); });
+(0, exports.registerTypeDefaults)("machineDesign", 1, ensure => { ensure("machineDesign", { v: 1, machine: "PDA", alphabet: ["a", "b"], maxStates: 6 }); ensure("answer", {}); });
 (0, exports.registerTypeDefaults)("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 (0, exports.registerTypeDefaults)("openResponse", 1, ensure => { ensure("openResponse", { v: 1, profile: "general", instructions: "", response: { minChars: 0, maxChars: 6000 }, studentRubricVisibility: "hidden" }); ensure("answer", { rubric: { v: 1, criteria: [] }, modelAnswer: "" }); });
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
