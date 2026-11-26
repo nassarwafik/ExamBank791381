@@ -232,6 +232,8 @@ const { projectMeshPartSelectionConfigForStudent } = require("./shared-finalizat
 const { projectAutomatonDesignConfigForStudent } = require("./shared-finalization/automatonDesignQuestion");
 // AUTO-A11a — the machineDesign@1 rules the same way; its reference machine stays under `answer`, which is never sent.
 const { projectMachineDesignConfigForStudent } = require("./shared-finalization/machineDesignQuestion");
+// AUTO-A15a — the machineTrace@1 question (the machine and the word are its public content; there is no key).
+const { projectMachineTraceConfigForStudent } = require("./shared-finalization/machineTraceQuestion");
 function applyVisualProjection(node) {
   if ("chartSelection" in node) { const p = projectChartSelectionConfigForStudent(node.chartSelection); if (p) node.chartSelection = p; else delete node.chartSelection; }
   if ("functionGraphSelection" in node) { const p = projectFunctionGraphSelectionConfigForStudent(node.functionGraphSelection); if (p) node.functionGraphSelection = p; else delete node.functionGraphSelection; }
@@ -239,6 +241,7 @@ function applyVisualProjection(node) {
   if ("meshPartSelection" in node) { const p = projectMeshPartSelectionConfigForStudent(node.meshPartSelection); if (p) node.meshPartSelection = p; else delete node.meshPartSelection; }
   if ("automatonDesign" in node) { const p = projectAutomatonDesignConfigForStudent(node.automatonDesign); if (p) node.automatonDesign = p; else delete node.automatonDesign; }
   if ("machineDesign" in node) { const p = projectMachineDesignConfigForStudent(node.machineDesign); if (p) node.machineDesign = p; else delete node.machineDesign; }
+  if ("machineTrace" in node) { const p = projectMachineTraceConfigForStudent(node.machineTrace); if (p) node.machineTrace = p; else delete node.machineTrace; }
   if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
   if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
 }

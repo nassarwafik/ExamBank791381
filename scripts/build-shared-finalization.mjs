@@ -104,6 +104,8 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   "src/automatonDesignQuestion.ts",
   // AUTO-A11a — machineDesign@1: the push-down / Turing machine exam question (its contract reads the reference with the book's engine).
   "src/machineDesignQuestion.ts",
+  // AUTO-A15a — machineTrace@1: «تتبّع تشغيل آلة» (its contract steps a machine with the book engine's semantics; the grader computes the run).
+  "src/machineTraceQuestion.ts",
   // AUTO-A10 — the book's automaton engine (the player that runs every machine of the course): the server judge of the push-down /
   // Turing machine «صمّم الآلة» exercises (api/src/lib/learning-machine-design.js) runs a machine exactly as the book's player does.
   "src/learning/activities/automaton.ts",

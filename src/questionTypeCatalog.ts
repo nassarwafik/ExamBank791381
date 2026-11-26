@@ -84,6 +84,10 @@ const PRODUCTION_ROWS = [
   // noted for the teacher; a certain separating word → 0; a Turing machine that does not halt → teacher review). Interactive; offline; not
   // a compound part. Inserted right after automatonDesign so the legacy order and every append position stay unchanged.
   ["machineDesign", "تصميم آلة: مكدّس أو تورنغ", "interactive", "auto", 161, ["machineDesign"], false],
+  // AUTO-A15a — machineTrace@1: the question GIVES a machine (any of the four) and a word; the student writes its run row by row and the
+  // verdict. The server computes the true run with the book engine's semantics; partial credit, an error never counted twice (owner
+  // decisions). Interactive; offline; partial credit; not a compound part. Inserted right after machineDesign (legacy order unchanged).
+  ["machineTrace", "تتبّع تشغيل آلة", "interactive", "auto", 169, ["machineTrace"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],

@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-A15-MACHINE-TRACE",
+  "title": "ExamBank A15 — اختبار القبول لأسئلة تتبّع تشغيل الآلة",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "تتبّع تشغيل الآلات الأربع",
+    "instructions": "اكتب تشغيل كل آلة على كلمتها سطرًا سطرًا، ثم النتيجة. كل خطوة صحيحة تأخذ جزءًا من العلامة، والخطأ لا يُحسب مرتين.",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-fa",
+      "title": "أ — الأوتومات المنتهي",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "machineTrace",
+          "questionTypeVersion": 1,
+          "text": "تتبّع تشغيل الأوتومات الحتمي على الكلمة.",
+          "marks": 4,
+          "machineTrace": {
+            "v": 1,
+            "machine": {
+              "kind": "DFA",
+              "states": [
+                "q0",
+                "q1",
+                "q2"
+              ],
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "start": "q0",
+              "accept": [
+                "q2"
+              ],
+              "transitions": [
+                [
+                  "q0",
+                  "a",
+                  "q1"
+                ],
+                [
+                  "q0",
+                  "b",
+                  "q0"
+                ],
+                [
+                  "q1",
+                  "a",
+                  "q1"
+                ],
+                [
+                  "q1",
+                  "b",
+                  "q2"
+                ],
+                [
+                  "q2",
+                  "a",
+                  "q1"
+                ],
+                [
+                  "q2",
+                  "b",
+                  "q0"
+                ]
+              ]
+            },
+            "word": "abab"
+          },
+          "answer": {}
+        },
+        {
+          "examQuestionId": "n1",
+          "presentationType": "machineTrace",
+          "questionTypeVersion": 1,
+          "text": "تتبّع تشغيل الأوتومات غير الحتمي على الكلمة (مجموعة الحالات بعد كل رمز).",
+          "marks": 4,
+          "machineTrace": {
+            "v": 1,
+            "machine": {
+              "kind": "NFA",
+              "states": [
+                "p",
+                "q",
+                "r"
+              ],
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "start": "p",
+              "accept": [
+                "r"
+              ],
+              "transitions": [
+                [
+                  "p",
+                  "a",
+                  "p"
+                ],
+                [
+                  "p",
+                  "b",
+                  "p"
+                ],
+                [
+                  "p",
+                  "a",
+                  "q"
+                ],
+                [
+                  "q",
+                  "b",
+                  "r"
+                ]
+              ]
+            },
+            "word": "aab"
+          },
+          "answer": {}
+        }
+      ]
+    },
+    {
+      "id": "sec-pda-tm",
+      "title": "ب — المكدّس وتورنغ",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "p1",
+          "presentationType": "machineTrace",
+          "questionTypeVersion": 1,
+          "text": "تتبّع تشغيل أوتومات المكدّس على الكلمة (المكدّس من القاع إلى القمة).",
+          "marks": 4,
+          "machineTrace": {
+            "v": 1,
+            "machine": {
+              "kind": "PDA",
+              "states": [
+                "q0",
+                "q1",
+                "q2"
+              ],
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "start": "q0",
+              "accept": [
+                "q0",
+                "q2"
+              ],
+              "transitions": [
+                {
+                  "from": "q0",
+                  "read": "a",
+                  "top": "⏊",
+                  "op": "push",
+                  "write": "S",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "a",
+                  "top": "S",
+                  "op": "push",
+                  "write": "A",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "a",
+                  "top": "A",
+                  "op": "push",
+                  "write": "A",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "b",
+                  "top": "A",
+                  "op": "pop",
+                  "write": "A",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "b",
+                  "top": "S",
+                  "op": "pop",
+                  "write": "S",
+                  "to": "q2"
+                }
+              ]
+            },
+            "word": "aabb"
+          },
+          "answer": {}
+        },
+        {
+          "examQuestionId": "t1",
+          "presentationType": "machineTrace",
+          "questionTypeVersion": 1,
+          "text": "تتبّع تشغيل آلة تورنغ على الكلمة (الشريط وموضع الرأس بعد كل خطوة).",
+          "marks": 4,
+          "machineTrace": {
+            "v": 1,
+            "machine": {
+              "kind": "TM",
+              "states": [
+                "q0",
+                "q1",
+                "q2",
+                "q3"
+              ],
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "start": "q0",
+              "accept": [
+                "q3"
+              ],
+              "leftEnd": "├",
+              "transitions": [
+                {
+                  "from": "q0",
+                  "read": "a",
+                  "write": "a",
+                  "move": "R",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "a",
+                  "write": "a",
+                  "move": "R",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "b",
+                  "write": "b",
+                  "move": "R",
+                  "to": "q1"
+                },
+                {
+                  "from": "q1",
+                  "read": "∆",
+                  "write": "∆",
+                  "move": "L",
+                  "to": "q2"
+                },
+                {
+                  "from": "q2",
+                  "read": "b",
+                  "write": "b",
+                  "move": "R",
+                  "to": "q3"
+                }
+              ]
+            },
+            "word": "abb"
+          },
+          "answer": {}
+        }
+      ]
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import type { Scene3DSelectionConfigV1 } from "./scene3DSelectionQuestion";
 import type { MeshPartSelectionConfigV1 } from "./meshPartSelectionQuestion";
 import type { AutomatonDesignConfigV1 } from "./automatonDesignQuestion";
 import type { MachineDesignConfigV1 } from "./machineDesignQuestion";
+import type { MachineTraceConfigV1 } from "./machineTraceQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { RichContentV1 } from "./richContent/richContentModel";
@@ -178,6 +179,8 @@ export type BuilderQuestion = {
   // AUTO-A11a — PUBLIC machineDesign@1 rules (push-down / Turing machine, mode, alphabet, state limit, ├, longest word tried, examples);
   // the reference machine stays under answer.
   machineDesign?: MachineDesignConfigV1;
+  // AUTO-A15a — the PUBLIC machineTrace@1 question: the machine to trace and the word (the key stays empty; the server computes the run).
+  machineTrace?: MachineTraceConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
@@ -244,6 +247,8 @@ export type QuestionBody = {
   // AUTO-A11a — PUBLIC machineDesign@1 rules (push-down / Turing machine, mode, alphabet, state limit, ├, longest word tried, examples);
   // the reference machine stays under answer.
   machineDesign?: MachineDesignConfigV1;
+  // AUTO-A15a — the PUBLIC machineTrace@1 question: the machine to trace and the word (the key stays empty; the server computes the run).
+  machineTrace?: MachineTraceConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;

@@ -90,6 +90,8 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
   if (node.presentationType === "automatonDesign" && isObj(answer.reference) && Array.isArray(answer.reference.transitions) && answer.reference.transitions.length) return true;
   // AUTO-A11a — the same for a push-down / Turing machine reference.
   if (node.presentationType === "machineDesign" && isObj(answer.reference) && Array.isArray(answer.reference.transitions) && answer.reference.transitions.length) return true;
+  // AUTO-A15a — a machine to trace (the question's whole content) would be lost on a type change.
+  if (isObj(node.machineTrace) && isObj(node.machineTrace.machine) && Array.isArray(node.machineTrace.machine.transitions) && node.machineTrace.machine.transitions.length) return true;
   // Phase 19E — open response: authored instructions, rubric criteria or a model answer would be lost on a type change.
   if (isObj(node.openResponse) && text(node.openResponse.instructions)) return true;
   if (node.presentationType === "openResponse" && isObj(node.answer) && ((isObj(node.answer.rubric) && Array.isArray(node.answer.rubric.criteria) && node.answer.rubric.criteria.length) || text(node.answer.modelAnswer))) return true;

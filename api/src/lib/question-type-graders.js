@@ -53,6 +53,9 @@ const { scoreAutomatonDesign, automatonFeedbackOf } = require("./automaton-desig
 // then the book exercises' judge runs both machines on every word up to a length: agreement → full marks (owner decision: not a proof,
 // the teacher is told the length — A11b), a certain separating word → 0, a Turing machine that does not halt → teacher review, never 0.
 const { scoreMachineDesign, machineFeedbackOf } = require("./machine-design-grading");
+// AUTO-A15a — machineTrace@1: the shared contract reads the machine and the word (unreadable ⇒ 0 + manual review) and computes the true run;
+// partial credit, an error never counted twice (owner decisions). machine-trace-grading.js.
+const { scoreMachineTrace, traceFeedbackOf } = require("./machine-trace-grading");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -200,6 +203,11 @@ registerBuiltIn("machineDesign", (question, response, max) => {
   const r = scoreMachineDesign({ config: question.machineDesign, answerKey: question.answer, response, maxMarks: max });
   const feedback = machineFeedbackOf(r);   // AUTO-A11b — the agreement length / separating word / broken rule / non-halting word, kept with the grade
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, ...(feedback ? { machineFeedback: feedback } : {}) };
+});
+registerBuiltIn("machineTrace", (question, response, max) => {
+  const r = scoreMachineTrace({ config: question.machineTrace, answerKey: question.answer, response, maxMarks: max });
+  const feedback = traceFeedbackOf(r);   // which rows were right and the verdict, kept with the grade (the teacher's review)
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, ...(r.parts ? { parts: r.parts } : {}), ...(feedback ? { traceFeedback: feedback } : {}) };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {
   const r = inlineCloze.scoreInlineCloze({ config: question.inlineCloze, answerKey: question.answer, response, maxMarks: max });

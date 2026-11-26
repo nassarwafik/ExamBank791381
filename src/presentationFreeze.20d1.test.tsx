@@ -125,7 +125,7 @@ describe("20D.1 FREEZE — student delivery and grading (PINS captured on 0b2208
     pin("grade", { mixed: scrub(mixed as never), arabic: scrub(arabic as never) });
   });
   // Phase 21A.1 inserts chartSelection@1 right after composite@1 (an additive type; every 20D.1 identity keeps its position)
-  it("L-9 the production catalog is pinned (20D.1 added NO question type; 21A.1 adds chartSelection, 21A.2 adds functionGraphSelection, 21C adds scene3DSelection, 21D-B.3 adds meshPartSelection, AUTO-A8 adds automatonDesign and AUTO-A11a adds machineDesign: 31 types)", () => {
+  it("L-9 the production catalog is pinned (20D.1 added NO question type; 21A.1 adds chartSelection, 21A.2 adds functionGraphSelection, 21C adds scene3DSelection, 21D-B.3 adds meshPartSelection, AUTO-A8 adds automatonDesign and AUTO-A15a adds machineTrace (after machineDesign) · AUTO-A11a adds machineDesign: 31 types)", () => {
     pin("catalog", QUESTION_TYPE_CATALOG.map(d => d.key + "@" + d.version));
   });
 });
@@ -327,6 +327,7 @@ const PIN = {
   "automatonDesign@1",
   // AUTO-A11a: additive machine design (a push-down automaton / Turing machine built by the student, run with the reference up to a length).
   "machineDesign@1",
+  "machineTrace@1",   // AUTO-A15a
   "multipleSelect@1",
   "numericResponse@1",
   "matrix@1",

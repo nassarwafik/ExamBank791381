@@ -1,0 +1,29 @@
+/* AUTO-A15a — «تتبّع تشغيل آلة» (machineTrace@1): the machine's table, the rows the student writes, the verdict. Tokens only; a phone
+   never scrolls sideways (the table scrolls inside its own box). */
+.mt-table-wrap { position: relative; max-width: 100%; overflow-x: auto; margin-block: var(--eb-space-2); }
+.mt-table { border-collapse: collapse; min-width: 100%; font-size: var(--eb-fs-14); }
+.mt-table caption { caption-side: top; text-align: start; padding-block-end: var(--eb-space-1); color: var(--eb-text); font-weight: var(--eb-fw-semibold); }
+.mt-table th, .mt-table td { border: 1px solid var(--eb-line-2); padding: var(--eb-space-1) var(--eb-space-2); text-align: center; white-space: nowrap; }
+.mt-table thead th { background: var(--eb-surface-2); color: var(--eb-text-heading); }
+.mt-states { margin: var(--eb-space-1) 0 0; color: var(--eb-text); }
+.mt-word { margin: var(--eb-space-2) 0; color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); }
+.mt-word-value { font-family: var(--eb-font-mono, monospace); }
+.mt-help { margin: 0 0 var(--eb-space-2); color: var(--eb-text); }
+.mt-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--eb-space-2); }
+.mt-row { display: flex; align-items: flex-start; gap: var(--eb-space-2); min-width: 0; }
+.mt-row-n { flex: 0 0 auto; inline-size: 28px; block-size: 28px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--eb-surface-2); color: var(--eb-text-heading); font-size: var(--eb-fs-12); }
+.mt-row-fields { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; gap: var(--eb-space-2); margin: 0; padding: var(--eb-space-2); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); }
+.mt-field { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-1); min-width: 0; color: var(--eb-text); }
+.mt-field select, .mt-field input[type="text"] { min-height: 36px; max-width: 100%; }
+.mt-symbols input[type="text"] { inline-size: 12rem; max-width: 100%; font-family: var(--eb-font-mono, monospace); }
+.mt-symbol-buttons { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.mt-symbol { min-inline-size: 36px; min-height: 36px; border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-xs, 6px); background: var(--eb-surface); color: var(--eb-text-heading); font: inherit; cursor: pointer; }
+.mt-symbol:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.mt-check { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; }
+.mt-empty { color: var(--eb-text); }
+.mt-row-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); margin-block: var(--eb-space-2); }
+.mt-verdict { display: flex; flex-wrap: wrap; gap: var(--eb-space-3); margin: 0; padding: var(--eb-space-2); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); }
+.mt-verdict label { display: inline-flex; align-items: center; gap: var(--eb-space-1); min-height: 36px; }
+.mt-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.mt-run { margin: var(--eb-space-2) 0 0; padding-inline-start: var(--eb-space-4); }
+.mt-run li { margin-block: 2px; }
