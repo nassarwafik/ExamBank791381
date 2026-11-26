@@ -29,6 +29,10 @@
 .net2-app { display: grid; gap: 8px; min-width: 0; }
 .net2-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .net2-fields label, .net2-field { display: grid; gap: 4px; }
+/* A field never grows past its column: a grid item defaults to min-width:auto, so an input (its intrinsic ~20ch width) overflowed the
+   column, and its left-aligned LTR value slid under the neighbouring field — a saved address looked empty. */
+.net2-fields > *, .net2-field { min-width: 0; }
+.net2-field > input, .net2-field > select { width: 100%; min-width: 0; box-sizing: border-box; }
 .net2 input, .net2 select, .net2 textarea, .net2-editor input, .net2-editor select, .net2-editor textarea { min-height: 38px; padding: 5px 8px; border: 1px solid var(--line, var(--eb-content-grid)); border-radius: 8px; font: inherit; max-width: 100%; }
 .net2 input[readonly] { background: var(--eb-content-ground); color: var(--eb-content-text); }
 .net2-radios { display: flex; flex-wrap: wrap; gap: 14px; border: 0; padding: 0; margin: 0; }
