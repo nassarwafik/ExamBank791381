@@ -116,3 +116,34 @@ describe("POST /api/learning-study/791381/attempt — «ابنِ الشبكة»"
     expect(written(ctx)).toEqual([]);
   });
 });
+
+// 791381s m37 (owner decision 2026-11-26) — the booklet's seven exercises, through the same real route with the booklet's own indexes:
+// the served body holds the task only, every exercise is a study activity, and a right VTP network is completed once.
+import m37 from "../../src/learning/content/791381s/modules/m37";
+describe("POST /api/learning-study/791381s/attempt — «ابنِ الشبكة» in the booklet (m37)", () => {
+  const SCID = "791381s", SMID = "791381s-m37", SPAGE = "791381s-m37-l01-p03", SACT = "m37-l01-p03-build-vtp";
+  const SCHECKS = readJson("../src/data/learning-check/791381s.json"), SSTUDY = readJson("../src/data/learning-study/791381s.json");
+  const SBODY = readJson("../src/data/learning-content/791381s/791381s-m37.json");
+  const vtp = m37.lessons.flatMap(l => l.pages).flatMap(p => p.blocks).find(b => b.id === SACT).config.solution;
+  const sDeps = ctx => ({ ...BUILDER_NO, loadCheckIndex: id => (id === SCID ? SCHECKS : null), loadStudyIndex: id => (id === SCID ? SSTUDY : null), requireStudentAuth: () => ({ ok: true, user: { sub: "u1", sv: 1, role: "student", classId: "STALE" } }), container: ctx.container, getContainer: () => ctx.container });
+  const sSeed = () => createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: { ...room("cA", []), learningMaterials: [{ courseId: SCID, visibleModuleIds: [SMID] }] } });
+  const sAttempt = (deps, response) => handler({ method: "POST", url: "https://x/api/learning-study", headers: { get: () => null }, params: { courseId: SCID, action: "attempt" }, json: async () => ({ pageId: SPAGE, activityId: SACT, response }) }, deps);
+
+  it("the generated indexes: seven study exercises; the served body holds the task only", () => {
+    expect(Object.keys(SSTUDY.pages).filter(p => p.startsWith(SMID + "-")).length).toBe(7);
+    const served = SBODY.lessons.flatMap(l => l.pages).flatMap(p => p.blocks).filter(b => b.simulationType === "network-build");
+    expect(served).toHaveLength(7);
+    for (const b of served) expect(Object.keys(b.config)).toEqual(["task"]);
+    expect(JSON.stringify(SBODY)).not.toMatch(/"checks"|"solution"|"reference"/);
+  });
+  it("the empty network is wrong (nothing written); the VTP solution is completed once (m37 1/7 → 3 points)", async () => {
+    const ctx = sSeed();
+    const w = await sAttempt(sDeps(ctx), EMPTY);
+    expect(w.jsonBody).toMatchObject({ ok: true, correct: false, persisted: false, gained: 0, study: true });
+    expect(written(ctx)).toEqual([]);
+    const r = await sAttempt(sDeps(ctx), { kind: "network-build", config: vtp.config, actions: vtp.actions });
+    expect(r.jsonBody).toMatchObject({ correct: true, persisted: true, gained: 3, module: { completed: 1, eligible: 7, points: 3, max: 20 } });
+    expect((await sAttempt(sDeps(ctx), { kind: "network-build", config: vtp.config, actions: vtp.actions })).jsonBody).toMatchObject({ correct: true, persisted: false, alreadyCompleted: true, gained: 0 });
+    expect(written(ctx)).toEqual([studyDocName("u1")]);
+  });
+});

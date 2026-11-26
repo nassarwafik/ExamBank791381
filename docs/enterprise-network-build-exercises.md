@@ -63,13 +63,34 @@ Publishable like every module, never auto-published.
 points decrease: the 28 book modules and their eligible counts are unchanged (475). Learning Practice (1440) + the 28 book modules (560)
 still fill the 2000-point path exactly; the 29th module adds up to 20 raw points beyond the capped path, like exams, games and projects.
 
+## 5b. Content: module `791381s-m37` «ابنِ الشبكة» in the summary booklet (owner decision 2026-11-26)
+
+A practice module after the booklet's last section (order 37), seven exercises a step deeper than m29, each on a booklet section:
+
+| Page | Exercise | Kinds | Booklet topic (PDF) |
+|---|---|---|---|
+| l01-p01 | VLAN على سويتشين بـ Trunk | switch, pc | Trunk (54) |
+| l01-p02 | Native VLAN على الـ Trunk (+ allowed list) | switch, pc | Native / Tagged (48) |
+| l01-p03 | VTP — Server وClient | switch, pc | VTP (51) |
+| l02-p01 | حماية المنافذ Port Security | switch, pc | Port Security (70) |
+| l02-p02 | احمِ الراوتر بكلمات المرور | router, switch, pc | حماية أجهزة Cisco (73) |
+| l03-p01 | خادم DHCP في الشبكة (a Server device) | switch, pc, server | DHCP (66) |
+| l03-p02 | خادم ويب في المنطقة العازلة DMZ | router, switch, pc, server | DMZ (59) |
+
+- **Book lock:** the printed booklet is unchanged (202 pages, 32 drawings, same fingerprints). The owner chose a new module, so the lock
+  gains only the empty order entry `"791381s-m37": []`. The module follows the booklet's rule for added blocks: activities and «توضيح»
+  callouts only.
+- **Study Strength:** one more study module (20 points). The study index of m00–m36 is unchanged (only additions), so no student loses
+  points. The overview shows a ninth group «ابنِ الشبكة» in the booklet's neutral tone.
+- **Authoring:** both modules use `src/learning/content/networkBuildAuthoring.ts`; m29's generated data is byte-identical after the refactor.
+
 ## 6. Evidence
 
 - `src/learning/lab/networkBuild.contract.test.ts` — every authored exercise: the empty network reaches no goal, the solution reaches
   every goal, the bare solution topology never passes; served body = task only; judge per goal; issues; untrusted keys → unavailable;
   validator.
 - `api/tests/learning-network-build.test.js` — the real attempt route on the real generated indexes (wrong / right / once / forged /
-  kinds / 503 / 413 / 403 / teacher).
+  kinds / 503 / 413 / 403 / teacher), and for the booklet's m37 (a VTP network completed once).
 - `src/learning/lab/NetworkBuildActivity.test.tsx` — the plain builder, the check seam, verdict clearing, failure ≠ wrong, draft + reset.
 - Pins updated honestly: the activity registry (26 → 27), the 791381 module count (28 → 29), the m29 «unknown id» sentinels (now m30), and
   the study footprint (237 pages, 482 eligible, 29 study modules, 580 maximum).

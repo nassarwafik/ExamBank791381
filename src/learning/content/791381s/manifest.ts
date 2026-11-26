@@ -1275,6 +1275,51 @@ const manifest: LearningCourseManifest = {
         },
       ],
     },
+    {
+      // «ابنِ الشبكة» (docs/enterprise-network-build-exercises.md, owner decision 2026-11-26): a PRACTICE module — not a section of the
+      // printed booklet. Seven build-the-network exercises; new stable id m37, order 37 (after the booklet's last section).
+      id: "791381s-m37",
+      title: "ابنِ الشبكة",
+      order: 37,
+      lessons: [
+        {
+          id: "791381s-m37-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381s-m37-l00-p01", title: "ابنِ الشبكة بنفسك", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 44, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+        {
+          id: "791381s-m37-l01",
+          title: "السويتشات و VLAN",
+          order: 1,
+          pages: [
+            { id: "791381s-m37-l01-p01", title: "VLAN على سويتشين بـ Trunk", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 54, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m37-l01-p02", title: "Native VLAN على الـ Trunk", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 48, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m37-l01-p03", title: "VTP — Server وClient", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 51, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+        {
+          id: "791381s-m37-l02",
+          title: "الحماية",
+          order: 2,
+          pages: [
+            { id: "791381s-m37-l02-p01", title: "حماية المنافذ Port Security", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 70, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m37-l02-p02", title: "احمِ الراوتر بكلمات المرور", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 73, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+        {
+          id: "791381s-m37-l03",
+          title: "الخدمات",
+          order: 3,
+          pages: [
+            { id: "791381s-m37-l03-p01", title: "خادم DHCP في الشبكة", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 66, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+            { id: "791381s-m37-l03-p02", title: "خادم ويب في المنطقة العازلة DMZ", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 59, sourceNote: "تمرين «ابنِ الشبكة» على موضوع هذه الصفحة من الكتاب (ليس صفحة من الكتاب)." } },
+          ],
+        },
+      ],
+    },
   ],
   // The booklet's own groups (its cover and table of contents): the introduction, the six «دفعات» and «الملخص الشامل».
   batches: [
@@ -1286,6 +1331,7 @@ const manifest: LearningCourseManifest = {
     { id: "b5", label: "Wi-Fi و IPv6 و DHCP والأمان", moduleIds: ["791381s-m20", "791381s-m21", "791381s-m22", "791381s-m23", "791381s-m24", "791381s-m25"] },
     { id: "b6", label: "WAN والتوجيه و ACL", moduleIds: ["791381s-m26", "791381s-m27", "791381s-m28", "791381s-m29", "791381s-m30"] },
     { id: "summary", label: "الملخص الشامل", moduleIds: ["791381s-m31", "791381s-m32", "791381s-m33", "791381s-m34", "791381s-m35", "791381s-m36"] },
+    { id: "build", label: "ابنِ الشبكة", moduleIds: ["791381s-m37"] },
   ],
 };
 

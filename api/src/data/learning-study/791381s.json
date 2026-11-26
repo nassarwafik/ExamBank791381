@@ -4602,6 +4602,980 @@
           ]
         }
       }
+    },
+    "791381s-m37-l01-p01": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l01-p01-build-trunk": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "switch",
+              "pc"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.25,
+                "y": 0.42
+              },
+              {
+                "id": "sw2",
+                "kind": "switch",
+                "label": "SW2",
+                "x": 0.75,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.1,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              },
+              {
+                "id": "pc3",
+                "kind": "pc",
+                "label": "PC3",
+                "x": 0.4,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "sw2",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw2",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l4",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc3",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "link",
+              "label": "SW1 موصول بـ SW2",
+              "kind": "build.link",
+              "a": "sw1",
+              "b": "sw2"
+            },
+            {
+              "id": "t1",
+              "label": "SW1: المنفذ g0/1 في وضع Trunk",
+              "weight": 1,
+              "kind": "switch.portMode",
+              "deviceId": "sw1",
+              "interface": "g0/1",
+              "value": "trunk"
+            },
+            {
+              "id": "t2",
+              "label": "SW2: المنفذ g0/1 في وضع Trunk",
+              "weight": 1,
+              "kind": "switch.portMode",
+              "deviceId": "sw2",
+              "interface": "g0/1",
+              "value": "trunk"
+            },
+            {
+              "id": "a1",
+              "label": "SW1: المنفذ f0/1 في VLAN 10",
+              "weight": 1,
+              "kind": "switch.accessVlan",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": 10
+            },
+            {
+              "id": "a2",
+              "label": "SW2: المنفذ f0/1 في VLAN 10",
+              "weight": 1,
+              "kind": "switch.accessVlan",
+              "deviceId": "sw2",
+              "interface": "f0/1",
+              "value": 10
+            },
+            {
+              "id": "a3",
+              "label": "SW1: المنفذ f0/2 في VLAN 20",
+              "weight": 1,
+              "kind": "switch.accessVlan",
+              "deviceId": "sw1",
+              "interface": "f0/2",
+              "value": 20
+            },
+            {
+              "id": "same",
+              "label": "PC1 يصل إلى PC2 عبر الـ Trunk (نفس VLAN)",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            },
+            {
+              "id": "apart",
+              "label": "PC1 لا يصل إلى PC3 (VLAN مختلفة)",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc3",
+              "value": false
+            }
+          ]
+        }
+      }
+    },
+    "791381s-m37-l01-p02": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l01-p02-build-native": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "switch",
+              "pc"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.25,
+                "y": 0.42
+              },
+              {
+                "id": "sw2",
+                "kind": "switch",
+                "label": "SW2",
+                "x": 0.75,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "sw2",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw2",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "link",
+              "label": "SW1 موصول بـ SW2",
+              "kind": "build.link",
+              "a": "sw1",
+              "b": "sw2"
+            },
+            {
+              "id": "n1",
+              "label": "SW1: الـ Native VLAN على g0/1 هي 99",
+              "weight": 1,
+              "kind": "switch.nativeVlan",
+              "deviceId": "sw1",
+              "interface": "g0/1",
+              "value": 99
+            },
+            {
+              "id": "n2",
+              "label": "SW2: الـ Native VLAN على g0/1 هي 99",
+              "weight": 1,
+              "kind": "switch.nativeVlan",
+              "deviceId": "sw2",
+              "interface": "g0/1",
+              "value": 99
+            },
+            {
+              "id": "al1",
+              "label": "SW1: الـ Trunk يسمح بـ VLAN 10 و99 فقط",
+              "weight": 1,
+              "kind": "switch.allowedVlans",
+              "deviceId": "sw1",
+              "interface": "g0/1",
+              "value": "10,99"
+            },
+            {
+              "id": "al2",
+              "label": "SW2: الـ Trunk يسمح بـ VLAN 10 و99 فقط",
+              "weight": 1,
+              "kind": "switch.allowedVlans",
+              "deviceId": "sw2",
+              "interface": "g0/1",
+              "value": "10,99"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381s-m37-l01-p03": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l01-p03-build-vtp": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "switch",
+              "pc"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.25,
+                "y": 0.42
+              },
+              {
+                "id": "sw2",
+                "kind": "switch",
+                "label": "SW2",
+                "x": 0.75,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "sw2",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw2",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "m1",
+              "label": "SW1 في وضع VTP Server",
+              "weight": 1,
+              "kind": "switch.vtpMode",
+              "deviceId": "sw1",
+              "value": "server"
+            },
+            {
+              "id": "m2",
+              "label": "SW2 في وضع VTP Client",
+              "weight": 1,
+              "kind": "switch.vtpMode",
+              "deviceId": "sw2",
+              "value": "client"
+            },
+            {
+              "id": "d1",
+              "label": "نطاق VTP على SW1 هو SCHOOL",
+              "weight": 1,
+              "kind": "switch.vtpDomain",
+              "deviceId": "sw1",
+              "value": "SCHOOL"
+            },
+            {
+              "id": "d2",
+              "label": "نطاق VTP على SW2 هو SCHOOL",
+              "weight": 1,
+              "kind": "switch.vtpDomain",
+              "deviceId": "sw2",
+              "value": "SCHOOL"
+            },
+            {
+              "id": "learned",
+              "label": "VLAN 30 موجودة على SW2 (وصلت من الـ Server)",
+              "weight": 1,
+              "kind": "switch.vlanExists",
+              "deviceId": "sw2",
+              "vlan": 30
+            },
+            {
+              "id": "a2",
+              "label": "SW2: المنفذ f0/1 في VLAN 30",
+              "weight": 1,
+              "kind": "switch.accessVlan",
+              "deviceId": "sw2",
+              "interface": "f0/1",
+              "value": 30
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2 في VLAN 30",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381s-m37-l02-p01": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l02-p01-build-portsec": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "switch",
+              "pc"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "ps1",
+              "label": "SW1: Port Security مفعّل على f0/1",
+              "weight": 1,
+              "kind": "switch.portSecurity",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": true
+            },
+            {
+              "id": "ps2",
+              "label": "SW1: Port Security مفعّل على f0/2",
+              "weight": 1,
+              "kind": "switch.portSecurity",
+              "deviceId": "sw1",
+              "interface": "f0/2",
+              "value": true
+            },
+            {
+              "id": "max",
+              "label": "SW1: جهاز واحد فقط على f0/1 (maximum 1)",
+              "weight": 1,
+              "kind": "switch.portSecurityMaximum",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": 1
+            },
+            {
+              "id": "sticky",
+              "label": "SW1: Sticky MAC على f0/1",
+              "weight": 1,
+              "kind": "switch.portSecuritySticky",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": true
+            },
+            {
+              "id": "viol",
+              "label": "SW1: المخالفة على f0/1 = restrict",
+              "weight": 1,
+              "kind": "switch.portSecurityViolation",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": "restrict"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 ما زال يصل إلى PC2",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381s-m37-l02-p02": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l02-p02-build-passwords": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "switch",
+              "pc"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.1
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.5,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "secret",
+              "label": "R1: enable secret مضبوطة",
+              "weight": 1,
+              "kind": "router.enableSecret",
+              "deviceId": "r1",
+              "value": "Class123"
+            },
+            {
+              "id": "con",
+              "label": "R1: كلمة مرور خط Console مضبوطة",
+              "weight": 1,
+              "kind": "router.consolePassword",
+              "deviceId": "r1",
+              "value": "Cisco123"
+            },
+            {
+              "id": "conlogin",
+              "label": "R1: login على خط Console",
+              "weight": 1,
+              "kind": "router.consoleLogin",
+              "deviceId": "r1",
+              "value": true
+            },
+            {
+              "id": "vty",
+              "label": "R1: كلمة مرور خطوط VTY مضبوطة",
+              "weight": 1,
+              "kind": "router.vtyPassword",
+              "deviceId": "r1",
+              "value": "Cisco123"
+            },
+            {
+              "id": "vtylogin",
+              "label": "R1: login على خطوط VTY",
+              "weight": 1,
+              "kind": "router.vtyLogin",
+              "deviceId": "r1",
+              "value": true
+            },
+            {
+              "id": "enc",
+              "label": "R1: service password-encryption مفعّل",
+              "weight": 1,
+              "kind": "router.passwordEncryption",
+              "deviceId": "r1",
+              "value": true
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى R1",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "r1",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381s-m37-l03-p01": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l03-p01-build-dhcp-server": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "switch",
+              "pc",
+              "server"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.42
+              },
+              {
+                "id": "srv1",
+                "kind": "server",
+                "label": "SRV1",
+                "x": 0.2,
+                "y": 0.78
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.5,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.8,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "srv1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/3"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "srv",
+              "label": "في الشبكة خادم SRV1",
+              "kind": "build.device",
+              "deviceId": "srv1",
+              "deviceKind": "server"
+            },
+            {
+              "id": "link",
+              "label": "SRV1 موصول بالسويتش SW1",
+              "kind": "build.link",
+              "a": "srv1",
+              "b": "sw1"
+            },
+            {
+              "id": "l1",
+              "label": "PC1 أخذ عنوانه من DHCP",
+              "weight": 1,
+              "kind": "host.dhcpLease",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": true
+            },
+            {
+              "id": "l2",
+              "label": "PC2 أخذ عنوانه من DHCP",
+              "weight": 1,
+              "kind": "host.dhcpLease",
+              "deviceId": "pc2",
+              "adapter": "eth0",
+              "value": true
+            },
+            {
+              "id": "from",
+              "label": "الذي أعطى PC1 عنوانه هو SRV1 (192.168.1.2)",
+              "weight": 1,
+              "kind": "host.dhcpServer",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": "192.168.1.2"
+            },
+            {
+              "id": "dns",
+              "label": "خادم DNS الذي وصل إلى PC1 هو 192.168.1.2",
+              "weight": 1,
+              "kind": "host.dns",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": "192.168.1.2"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381s-m37-l03-p02": {
+      "moduleId": "791381s-m37",
+      "activities": {
+        "m37-l03-p02-build-dmz": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "switch",
+              "pc",
+              "server"
+            ]
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.1
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.25,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "srv1",
+                "kind": "server",
+                "label": "SRV1",
+                "x": 0.75,
+                "y": 0.78
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "srv1",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "dmz",
+              "label": "SRV1 موصول بالراوتر R1 مباشرة (منطقة منفصلة)",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "srv1"
+            },
+            {
+              "id": "lan",
+              "label": "R1 موصول بالسويتش SW1 (الشبكة الداخلية)",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "sw1"
+            },
+            {
+              "id": "ip1",
+              "label": "R1: المنفذ g0/1 بالعنوان 172.16.1.1",
+              "weight": 1,
+              "kind": "router.ipAddress",
+              "deviceId": "r1",
+              "interface": "g0/1",
+              "value": "172.16.1.1"
+            },
+            {
+              "id": "gw",
+              "label": "بوابة SRV1 هي 172.16.1.1",
+              "weight": 1,
+              "kind": "host.gateway",
+              "deviceId": "srv1",
+              "adapter": "eth0",
+              "value": "172.16.1.1"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى SRV1 عبر الراوتر",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "srv1",
+              "value": true
+            },
+            {
+              "id": "web",
+              "label": "المتصفح في PC1 يفتح http://172.16.1.10",
+              "weight": 1,
+              "kind": "browse",
+              "source": "pc1",
+              "url": "http://172.16.1.10",
+              "value": true
+            }
+          ]
+        }
+      }
     }
   }
 }
