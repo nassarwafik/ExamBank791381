@@ -12,6 +12,8 @@
 // A «صمّم الآلة» key is { kind: "automaton-design", rules, reference } (AUTO-A3): judged by learning-automaton-design.js.
 // AUTO-A10 — a push-down / Turing machine «صمّم الآلة» key is { kind: "machine-design", rules, reference }: judged on every word up to a
 // length by learning-machine-design.js (agreement up to that length, or the shortest word on which the machines certainly disagree).
+// «ابنِ الشبكة» — a build-the-network key is { kind: "network-build", rules, reference, checks }: judged by learning-network-build.js on the
+// network the learner built (per-check booleans, like a network lab; a broken key is unavailable).
 //
 // The API judges every answer here and returns the verdict with ONLY the feedback that answer earns: a right answer gets the right
 // message and the explanation, a wrong one gets the wrong message and the hint ladder. Study points stay with the study index.
@@ -22,6 +24,7 @@ const { evaluateStudyResponse, structuredKeyMap } = require("./learning-study");
 const { evaluateNetworkLab } = require("./learning-lab");
 const { evaluateAutomatonDesign } = require("./learning-automaton-design");
 const { evaluateMachineDesign } = require("./learning-machine-design");
+const { evaluateNetworkBuild } = require("./learning-network-build");
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const cleanId = v => (typeof v === "string" ? v.trim() : "");
@@ -65,6 +68,11 @@ function checkResponse(activity, response) {
     lab = evaluateNetworkLab(activity.key, response);
     if (lab.status !== "judged") return { unavailable: true };
   }
+  // «ابنِ الشبكة» — judged like a lab (per-check booleans), on the network the learner built; `issue` says why a network could not count.
+  if (activity.key && activity.key.kind === "network-build") {
+    lab = evaluateNetworkBuild(activity.key, response);
+    if (lab.status !== "judged") return { unavailable: true };
+  }
   // AUTO-A3 — a «صمّم الآلة» exercise is judged by language equivalence with the reference machine: a broken key is `unavailable`
   // (retryable, nothing written); a wrong machine carries the broken public rule (`issue`) or the shortest separating word.
   let design = null;
@@ -97,6 +105,7 @@ function checkResponse(activity, response) {
   }
   const parts = lab ? lab.parts : design ? null : partsOf(activity.key, response);
   if (parts) out.parts = parts;
+  if (lab && !correct && lab.issue) out.issue = lab.issue;   // «ابنِ الشبكة» — the network itself could not be judged as built
   if (design && !correct) {
     if (design.issue) out.issue = design.issue;
     if (design.counterexample) out.counterexample = design.counterexample;

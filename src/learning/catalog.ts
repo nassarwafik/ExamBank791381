@@ -70,6 +70,7 @@ export const LEARNING_COURSES: LearningCourse[] = [
       { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP" },
       { id: "b6", label: "ACL · التوجيه · WAN" },
       { id: "summary", label: "التلخيص" },
+      { id: "build", label: "ابنِ الشبكة" },   // the practice module «ابنِ الشبكة» (m29)
     ],
   },
   /**

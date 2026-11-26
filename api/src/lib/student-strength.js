@@ -12,9 +12,9 @@
 //                        percentage                                             = round(best × 40 / 100)  (≤ 40 each)
 //                        36 × 40 = 1440. One item = ONE bucket, wherever it was opened (Training Library or the
 //                        Learning-Materials Reader): the same id, the same best percentage, the same 40-point cap.
-//   STUDY PRACTICE     — each of the 28 course modules, from its uniquely completed eligible in-page exercises
+//   STUDY PRACTICE     — each of the 29 course modules, from its uniquely completed eligible in-page exercises
 //                                                                               = round(completed / eligible × 20)  (≤ 20 each)
-//                        28 × 20 = 560. Completion STATE, never a counter (see learning-study.js); a module without
+//                        29 × 20 = 580 (28 book modules + «ابنِ الشبكة», owner decision 2026-11-26). Completion STATE, never a counter (see learning-study.js); a module without
 //                        eligible exercises contributes 0. Library-training blocks embedded in a module are NOT study
 //                        exercises — they belong only to their canonical 40-point Learning-Practice bucket.
 //   EDUCATIONAL GAMES  — each teacher-ASSIGNED game's BEST performance percentage  = round(best × 20 / 100)  (≤ 20 each)
@@ -28,8 +28,9 @@
 //   stagePoints    = min(rawTotalPoints, 2000)                                           (the VISIBLE path only)
 //   stageNumber    = stagePoints ≥ 2000 ? 25 : floor(stagePoints / 80) + 1                (1..25 — there is NO stage 26)
 //
-// Learning Practice (1440) + Study Practice (560) = exactly the 2000 visible points by design; exams and projects can
-// push the raw total beyond 2000 — that raw total is kept and reported, only the path presentation is capped.
+// Learning Practice (1440) + Study Practice (560 from the 28 book modules) = exactly the 2000 visible points by design; the 29th
+// module «ابنِ الشبكة» (+20, owner decision 2026-11-26), exams, games and projects can push the raw total beyond 2000 — that raw
+// total is kept and reported, only the path presentation is capped. No student's points decrease: the 28 book modules are unchanged.
 //
 // The SERVER is authoritative for every stage field below (buildStrengthSummary); the browser never derives a stage
 // from a total. Practice points come from the per-student BEST percentage per item (retries only ever improve it,
@@ -50,10 +51,10 @@ const LEARNING_PRACTICE_ITEM_ID = /^(?:T(?:0[1-9]|[12]\d|30)|F0[1-6])$/;
 const LEARNING_PRACTICE_ITEM_COUNT = 36;
 const LEARNING_PRACTICE_MAX_TOTAL = LEARNING_PRACTICE_ITEM_COUNT * LEARNING_PRACTICE_MAX_POINTS;   // 1440
 
-// ── Study Practice (the 28 modules) ─────────────────────────────────────────────────────────────────────────
+// ── Study Practice (the 29 modules: the 28 book modules + «ابنِ الشبكة») ─────────────────────────────────────────────────────────────────────────
 const STUDY_MODULE_MAX_POINTS = 20;
-const STUDY_MODULE_COUNT = 28;
-const STUDY_MAX_TOTAL = STUDY_MODULE_COUNT * STUDY_MODULE_MAX_POINTS;                                // 560
+const STUDY_MODULE_COUNT = 29;
+const STUDY_MAX_TOTAL = STUDY_MODULE_COUNT * STUDY_MODULE_MAX_POINTS;                                // 580
 
 // ── Projects ────────────────────────────────────────────────────────────────────────────────────────────────
 const PROJECT_MAX_STRENGTH_POINTS = 400;

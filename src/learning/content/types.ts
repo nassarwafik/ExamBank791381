@@ -403,9 +403,34 @@ export interface MachineDesignConfig {
 /** A machine-design block (any version). A plain boolean, as isAutomatonDesignBlock. */
 export const isMachineDesignBlock = (block: { type: string; simulationType?: unknown }): boolean =>
   block.type === "simulation" && block.simulationType === MACHINE_DESIGN_KEY;
+/**
+ * «ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — a BUILD-THE-NETWORK exercise: `simulation` / `network-build` v1. The
+ * learner starts from an EMPTY network in the book's network lab (the student tool «مختبر الشبكات», in its plain mode: networkTopology@2
+ * devices and ports only), adds the devices, connects the cables and configures them; the SERVER judges the network the learner built
+ * (src/learning/lab/networkBuildJudge.ts, shared with the API). Authored config:
+ *   • task     — PUBLIC: the statement (`intro`), one goal per check (same ids, same order) and the device kinds the builder offers;
+ *   • checks   — the PRIVATE answer key: build checks (`build.device`, `build.link`, `build.count`) and networkTopology@2 checks
+ *                (reachability, addresses, VLANs…), on the device ids the builder gives (pc1, sw1, r1…): never served;
+ *   • feedback — right / wrong messages, hints and the explanation: never served;
+ *   • solution — the authored proof { config, actions }: a network that passes every check (never served; the server also validates
+ *                the checks against its config, so a broken key is «unavailable», never a learner's «wrong»).
+ * The served body keeps `task` only and carries `serverCheck: true` (checkIndex.ts servedBlock).
+ */
+export const NETWORK_BUILD_KEY = "network-build";
+export const NETWORK_BUILD_VERSION = 1;
+export interface NetworkBuildTask { intro: string; goals: NetworkLabGoal[]; kinds: string[] }
+export interface NetworkBuildConfig {
+  task: NetworkBuildTask;
+  checks?: Record<string, unknown>[];
+  feedback?: { correctFeedback?: string; incorrectFeedback?: string; hints?: string[]; explanation?: string };
+  solution?: { config: Record<string, unknown>; actions: Record<string, unknown>[] };
+}
+/** A network-build block (any version). A plain boolean, as isAutomatonDesignBlock. */
+export const isNetworkBuildBlock = (block: { type: string; simulationType?: unknown }): boolean =>
+  block.type === "simulation" && block.simulationType === NETWORK_BUILD_KEY;
 /** A simulation whose answer the SERVER judges (its key never reaches the browser): a network lab or a «صمّم الآلة» exercise. */
 export const isServerJudgedSimulation = (block: { type: string; simulationType?: unknown }): block is SimulationBlock =>
-  isNetworkLabBlock(block) || isAutomatonDesignBlock(block) || isMachineDesignBlock(block);
+  isNetworkLabBlock(block) || isAutomatonDesignBlock(block) || isMachineDesignBlock(block) || isNetworkBuildBlock(block);
 /** A guided, stepped animation of a concept (e.g. a packet traversing a path). Registry key = `animationType`. */
 export interface AnimationBlock extends ActivityBlockBase {
   type: "animation";

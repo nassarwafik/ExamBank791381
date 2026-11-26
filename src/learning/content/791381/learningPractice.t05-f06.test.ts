@@ -74,11 +74,11 @@ const NEW_IDS = [...ids(5, 30), ...ids(1, 6, "F")];
 describe("A. Reader ordinal → page identity (positions are footer numbers «n / 248», NOT PDF numbers)", () => {
   it("98 → m16-l05-p01 → PDF 106 · 110 → m18-l03-p01 → PDF 119 · 145 → m04-l03-p02 → PDF 157 · 178 → m24-l03-p01 → PDF 191 · 214 → m06-l02-p01 → PDF 228 · 215 → m06-l02-p02 → PDF 229; the course has 248 pages and m28 starts at 216", () => {
     const flat = flattenPageRefs(manifest);
-    expect(flat.length).toBe(248);
+    expect(flat.length).toBe(256);   // 248 book pages + the 8 pages of «ابنِ الشبكة» (m29) after them — the positions below are unchanged
     for (const [pos, [pageId, pdf, title, printed, moduleId]] of Object.entries(SIX)) {
       const ref = flat[Number(pos) - 1];
       expect([ref.page.id, ref.page.source!.pdfPageStart, ref.page.title, ref.page.source!.printedPage, ref.module.id], pos).toEqual([pageId, pdf, title, printed, moduleId]);
-      expect(pagePosition(manifest, pageId), pageId).toEqual({ index: Number(pos), total: 248 });
+      expect(pagePosition(manifest, pageId), pageId).toEqual({ index: Number(pos), total: 256 });   // 248 book pages + 8 «ابنِ الشبكة» pages
       const body = pageBy(pageId);
       expect([body.source.pdfPageStart, body.title], pageId).toEqual([pdf, title]);
       expect(findPage(manifest, pageId)?.page.title).toBe(title);

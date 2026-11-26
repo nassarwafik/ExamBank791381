@@ -24,7 +24,10 @@ const studentDeps = ctx => ({ ...BUILDER_NO, requireStudentAuth: () => ({ ok: tr
 const teacherDeps = ctx => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: ctx.container, getContainer: () => ctx.container });
 const attempt = (deps, body) => handler({ method: "POST", url: "https://x", headers: { get: () => null }, params: { courseId: C, action: "attempt" }, json: async () => body }, deps);
 
-const all = Object.entries(CHECKS.pages).flatMap(([pageId, p]) => Object.entries(p.activities).map(([activityId, a]) => ({ pageId, moduleId: p.moduleId, activityId, ...a })));
+const everything = Object.entries(CHECKS.pages).flatMap(([pageId, p]) => Object.entries(p.activities).map(([activityId, a]) => ({ pageId, moduleId: p.moduleId, activityId, ...a })));
+// the book's practice blocks; the seven «ابنِ الشبكة» exercises (m29, network-build) are judged by their own judge — pinned in
+// api/tests/learning-network-build.test.js and src/learning/lab/networkBuild.contract.test.ts
+const all = everything.filter(a => a.key.kind !== "network-build");
 const right = key => {
   switch (key.kind) {
     case "multipleChoice": return { kind: "multipleChoice", optionId: key.correct[0] };
@@ -50,6 +53,7 @@ describe("L.6b — the check index and the pure checker", () => {
     for (const a of all) kinds[a.key.kind] = (kinds[a.key.kind] || 0) + 1;
     expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 64 });
     expect(new Set(all.map(a => a.moduleId)).size).toBe(28);
+    expect(everything.filter(a => a.key.kind === "network-build").map(a => [a.moduleId, a.study])).toEqual(Array(7).fill(["791381-m29", true]));
     expect(all.filter(a => !a.study).map(a => a.key.kind)).toEqual(["practice-table", "practice-table", "practice-table", "practice-table"]);
     expect(findCheckActivity(CHECKS, all[0].pageId, "nope")).toBeNull();
     expect(findCheckActivity(CHECKS, "../x", all[0].activityId)).toBeNull();

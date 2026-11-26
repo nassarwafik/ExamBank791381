@@ -53,7 +53,7 @@ describe("batchFirstPageId — authoritative 791381 overview mapping", () => {
   it("the manifest batches and the catalog overview sections are exactly the same eight ids, in order", () => {
     const catalogIds = LEARNING_COURSES[0].overviewBatches.map(b => b.id);
     const manifestIds = (manifest791381.batches ?? []).map(b => b.id);
-    expect(catalogIds).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary"]);
+    expect(catalogIds).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary", "build"]);   // + «ابنِ الشبكة» (m29)
     expect(manifestIds).toEqual(catalogIds);
   });
 
@@ -67,21 +67,22 @@ describe("batchFirstPageId — authoritative 791381 overview mapping", () => {
       b5: "791381-m20-l01-p01",
       b6: "791381-m25-l01-p01",
       summary: "791381-m28-l01-p01",
+      build: "791381-m29-l00-p01",
     };
     for (const [batchId, pageId] of Object.entries(expected)) {
       expect(batchFirstPageId(manifest791381, batchId), batchId).toBe(pageId);
     }
   });
 
-  it("every resolved destination is a real canonical page, and the seven concrete ones are unique", () => {
+  it("every resolved destination is a real canonical page, and the eight concrete ones are unique", () => {
     const ids = LEARNING_COURSES[0].overviewBatches.map(b => b.id);
     const resolved = ids.map(id => batchFirstPageId(manifest791381, id));
     // Every non-null destination is a real page in the manifest.
     for (const pageId of resolved) if (pageId) expect(findPage(manifest791381, pageId), pageId).toBeTruthy();
-    // The seven concrete destinations (all but intro) are unique.
+    // The eight concrete destinations (all but intro; + «ابنِ الشبكة») are unique.
     const concrete = resolved.filter((p): p is string => p !== null);
-    expect(concrete.length).toBe(7);
-    expect(new Set(concrete).size).toBe(7);
+    expect(concrete.length).toBe(8);
+    expect(new Set(concrete).size).toBe(8);
   });
 
   it("intro (null) and b1 both open the book's very first page in reading order (owner decision)", () => {

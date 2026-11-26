@@ -30,7 +30,8 @@ describe("L.6b — the served module bodies and the check index", () => {
         page.blocks.forEach((block, i) => {
           const sb = sp.blocks[i] as PracticeBlock | PracticeTableBlock;
           expect(sb.id).toBe(block.id);
-          const expected = (block.type === "practice" || block.type === "practice-table") && (studyActivityOf({ ...block, studyEligible: undefined } as ContentBlock) !== null);
+          const expected = ((block.type === "practice" || block.type === "practice-table") && (studyActivityOf({ ...block, studyEligible: undefined } as ContentBlock) !== null))
+            || (block.type === "simulation" && block.simulationType === "network-build");   // «ابنِ الشبكة» (m29): judged on the server
           if (expected) checkable++;
           expect(sb.serverCheck === true, block.id).toBe(expected);
           if (block.type === "practice" || block.type === "practice-table") expect(sb.studyEligible, block.id).toBe(block.studyEligible);   // the opt-out travels
@@ -40,7 +41,7 @@ describe("L.6b — the served module bodies and the check index", () => {
         expect(ids, page.id).toEqual(Object.keys(STUDY_INDEX.pages[page.id]?.activities ?? {}));
       }
     }
-    expect(checkable).toBe(479);
+    expect(checkable).toBe(486);   // 479 + the 7 «ابنِ الشبكة» exercises
   }, 30000);
 
   it("the check index: 479 checkable blocks, the 475 study ones carry exactly the study index's key, 4 self-checks are study: false", () => {
@@ -53,7 +54,7 @@ describe("L.6b — the served module bodies and the check index", () => {
       }
     }
     for (const [pageId, page] of Object.entries(STUDY_INDEX.pages)) for (const id of Object.keys(page.activities)) expect(CHECK_INDEX.pages[pageId].activities[id]?.study, id).toBe(true);
-    expect([study, self]).toEqual([475, 4]);
+    expect([study, self]).toEqual([482, 4]);   // 475 + the 7 «ابنِ الشبكة» exercises (study activities, owner decision 2026-11-26)
   });
 
   it("the check index keeps every authored message, hint ladder and explanation (the server's feedback is the book's)", async () => {

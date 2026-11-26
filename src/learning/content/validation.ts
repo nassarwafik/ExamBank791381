@@ -6,7 +6,7 @@
 
 import {
   BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
-  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind, isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, AUTOMATON_DESIGN_VERSION, isMachineDesignBlock, MACHINE_DESIGN_VERSION,
+  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind, isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, AUTOMATON_DESIGN_VERSION, isMachineDesignBlock, MACHINE_DESIGN_VERSION, isNetworkBuildBlock, NETWORK_BUILD_VERSION,
   type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
@@ -56,6 +56,7 @@ export type ContentIssueCode =
   | "invalid-network-lab"
   | "invalid-automaton-design"
   | "invalid-machine-design"
+  | "invalid-network-build"
   | "exam-item-invalid"
   | "invalid-review-page";
 
@@ -337,6 +338,7 @@ function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: strin
   if (isNetworkLabBlock(block)) checkNetworkLab(block, add, loc);
   if (isAutomatonDesignBlock(block)) checkAutomatonDesign(block, add, loc);
   if (isMachineDesignBlock(block)) checkMachineDesign(block, add, loc);
+  if (isNetworkBuildBlock(block)) checkNetworkBuild(block, add, loc);
 }
 
 const DESIGN_CONFIG_KEYS = new Set(["task", "reference", "feedback"]);
@@ -427,6 +429,48 @@ function checkMachineDesign(block: ActivityBlock, add: (c: ContentIssueCode, m: 
 }
 
 const LAB_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+const BUILD_CONFIG_KEYS = new Set(["task", "checks", "feedback", "solution"]);
+const BUILD_DEVICE_KINDS = new Set(["router", "switch", "pc", "laptop", "ap", "server"]);
+/**
+ * «ابنِ الشبكة» — the STRUCTURE of a build-the-network exercise (`simulation` / `network-build` v1). Whether the checks are a valid key on
+ * the solution's network, the empty network earns nothing and the solution passes every check is proven by the real judge
+ * (src/learning/lab/networkBuild.contract.test.ts, src/learning/lab/networkBuildJudge.ts).
+ */
+function checkNetworkBuild(block: ActivityBlock, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+  const bad = (m: string) => add("invalid-network-build", "network-build: " + m, loc);
+  if (block.version !== NETWORK_BUILD_VERSION) bad("only version " + NETWORK_BUILD_VERSION + " exists");
+  if ("reveal" in (block as object)) bad("a build exercise never reveals (the checks are judged, not shown)");
+  if ("serverCheck" in (block as object)) bad("serverCheck is a served-body marker, never authored");
+  const config = block.config as Record<string, unknown> | undefined;
+  if (!config || typeof config !== "object" || Array.isArray(config)) { bad("config must be an object"); return; }
+  for (const k of Object.keys(config)) if (!BUILD_CONFIG_KEYS.has(k)) bad("unknown config field " + k);
+  const task = config.task as { intro?: unknown; goals?: unknown; kinds?: unknown } | undefined;
+  if (!task || typeof task !== "object" || Array.isArray(task)) { bad("task is required"); return; }
+  for (const k of Object.keys(task)) if (!["intro", "goals", "kinds"].includes(k)) bad("unknown task field " + k);
+  if (!isNonEmptyString(task.intro)) bad("task.intro is required");
+  const kinds = Array.isArray(task.kinds) ? task.kinds : null;
+  if (!kinds || kinds.length === 0 || !kinds.every(k => typeof k === "string" && BUILD_DEVICE_KINDS.has(k)) || new Set(kinds).size !== kinds.length) bad("task.kinds lists the distinct networkTopology@2 device kinds the builder offers");
+  const goals = Array.isArray(task.goals) ? (task.goals as { id?: unknown; label?: unknown }[]) : null;
+  if (!goals || goals.length === 0 || !goals.every(g => g && typeof g.id === "string" && LAB_ID.test(g.id) && isNonEmptyString(g.label))) bad("task.goals must list one { id, label } per check");
+  const checks = config.checks;
+  if (!Array.isArray(checks) || checks.length === 0 || !checks.every(c => c && typeof c === "object" && !Array.isArray(c) && typeof (c as { id?: unknown }).id === "string" && typeof (c as { kind?: unknown }).kind === "string")) bad("checks must be a non-empty list of check objects");
+  else if (goals) {
+    const ids = (checks as { id: string }[]).map(c => c.id);
+    if (new Set(ids).size !== ids.length) bad("check ids must be unique");
+    if (ids.join("|") !== goals.map(g => String(g.id)).join("|")) bad("task.goals must name the checks, same ids in the same order");
+  }
+  const solution = config.solution as { config?: unknown; actions?: unknown } | undefined;
+  if (!solution || typeof solution !== "object" || Array.isArray(solution) || !solution.config || typeof solution.config !== "object" || Array.isArray(solution.config)
+    || !Array.isArray(solution.actions) || Object.keys(solution).some(k => k !== "config" && k !== "actions")) bad("solution is the authored network { config, actions } that passes every check");
+  const feedback = config.feedback;
+  if (feedback !== undefined) {
+    const f = feedback as Record<string, unknown>;
+    const strOk = (v: unknown) => v === undefined || typeof v === "string";
+    if (!f || typeof f !== "object" || Array.isArray(f) || !strOk(f.correctFeedback) || !strOk(f.incorrectFeedback) || !strOk(f.explanation)
+      || (f.hints !== undefined && !(Array.isArray(f.hints) && f.hints.every(h => typeof h === "string")))) bad("feedback holds correctFeedback / incorrectFeedback / explanation strings and a hints list");
+  }
+}
+
 const LAB_CONFIG_KEYS = new Set(["topology", "task", "checks", "feedback", "solution"]);
 /**
  * 791381s Phase 8B — the STRUCTURE of a network lab (`simulation` / `network-lab` v1). The simulator itself (topology, check

@@ -49,7 +49,8 @@ const wrong = (key: StudyActivityKey) => {
   if (key.kind === "ordering") return { kind: key.kind, order: [...key.order].reverse() };
   if (key.kind === "network-lab") return { kind: key.kind, actions: [] };
   if (key.kind === "automaton-design") return { kind: key.kind };
-  if (key.kind === "machine-design") return { kind: key.kind };   // AUTO-A10 — no machine: judged wrong (malformed), never right
+  if (key.kind === "machine-design") return { kind: key.kind };
+  if (key.kind === "network-build") return { kind: key.kind, config: { v: 2, devices: [], links: [] }, actions: [] };   // the empty network: judged wrong   // AUTO-A10 — no machine: judged wrong (malformed), never right
   if (key.kind === "exam-item") return { kind: key.kind };
   const cells = { ...(key.kind === "practice-table" ? key.cells : key.kind === "wordBank" ? key.answers : key.kind === "matching" ? key.pairs : key.assign) }, first = Object.keys(cells)[0];
   cells[first] = cells[first] + "؟";

@@ -101,13 +101,15 @@ describe("registry — exact production catalog", () => {
       { moduleId: "791381-m26", title: "الشبكة الواسعة WAN", order: 25 },
       { moduleId: "791381-m27", title: "بروتوكولات التوجيه", order: 26 },
       { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 },
-      { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 }
+      { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 },
+      { moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 }   // the practice module «ابنِ الشبكة»
     ]);
   });
   it("never exposes any page/lesson body nor an id outside the manifest; m03 / m19 / m04 (Batches 6 / 7), m20 / m21 / m22 (Batch 8), m23 / m24 / m05 (Batch 9), m25 / m26 / m27 / m06 (Batch 10) then m28 (the final summary) ARE listed, in that order at the end", () => {
     const ids = listLearningModules("791381").map(m => m.moduleId);
-    for (const unknown of ["791381-m29"]) expect(ids).not.toContain(unknown);   // the unknown-id sentinel is m29 (m28 became the final summary)
-    expect(ids.slice(-14)).toEqual(["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06", "791381-m28"]);
+    for (const unknown of ["791381-m30"]) expect(ids).not.toContain(unknown);   // the unknown-id sentinel is m30 (m28 became the final summary, m29 «ابنِ الشبكة»)
+    expect(ids.at(-1)).toBe("791381-m29");
+    expect(ids.slice(-15, -1)).toEqual(["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06", "791381-m28"]);
     const text = JSON.stringify(listLearningCourses());
     expect(text).not.toMatch(/pages|lessons|blocks|answer|pdf/i);
   });
@@ -135,7 +137,7 @@ describe("registry — lookups", () => {
     expect(findLearningModule("791381", "791381-m05")).toEqual({ moduleId: "791381-m05", title: "مرجع أوامر Cisco", order: 23 });   // Batch 9 completed the historical id in place
     expect(findLearningModule("791381", "791381-m06")).toEqual({ moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 });   // Batch 10 completed the historical id in place
     expect(findLearningModule("791381", "791381-m28")).toEqual({ moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 });   // the final summary, the last module
-    expect(findLearningModule("791381", "791381-m29")).toBeNull();
+    expect(findLearningModule("791381", "791381-m30")).toBeNull();
     expect(findLearningModule("999999", "791381-m01")).toBeNull();
     expect(listLearningModules("999999")).toEqual([]);
   });
@@ -143,7 +145,7 @@ describe("registry — lookups", () => {
 
 describe("registry — canonicalizeLearningModuleIds (storage-side, never throws)", () => {
   it("re-orders into canonical order, drops duplicates, blanks and unknown ids", () => {
-    expect(canonicalizeLearningModuleIds("791381", ["791381-m10", "791381-m07", " 791381-m01 ", "791381-m01", "", null, "791381-m29", "791381-m999"])).toEqual(["791381-m01", "791381-m07", "791381-m10"]);
+    expect(canonicalizeLearningModuleIds("791381", ["791381-m10", "791381-m07", " 791381-m01 ", "791381-m01", "", null, "791381-m30", "791381-m999"])).toEqual(["791381-m01", "791381-m07", "791381-m10"]);
     expect(canonicalizeLearningModuleIds("791381", ["791381-m28", "791381-m06", "791381-m01"])).toEqual(["791381-m01", "791381-m06", "791381-m28"]);   // final summary: m28 canonicalizes LAST (order 28)
     expect(canonicalizeLearningModuleIds("791381", ["791381-m06", "791381-m25", "791381-m01"])).toEqual(["791381-m01", "791381-m25", "791381-m06"]);   // Batch 10: m06 canonicalizes LAST (order 27), never by its id
     expect(canonicalizeLearningModuleIds("791381", ["791381-m04", "791381-m19", "791381-m03"])).toEqual(["791381-m03", "791381-m19", "791381-m04"]);   // Batch 7: by order 15 → 16 → 17, never by id
@@ -177,7 +179,7 @@ describe("registry — validateLearningModuleIds (request-side, throws httpStatu
   it("unknown course → 400; unknown module → 400; non-manifest id → 400; non-array → 400", () => {
     expect(status(() => validateLearningModuleIds("794589", []))).toBe(400);
     expect(status(() => validateLearningModuleIds("791381", ["791381-m999"]))).toBe(400);
-    expect(status(() => validateLearningModuleIds("791381", ["791381-m29"]))).toBe(400);
+    expect(status(() => validateLearningModuleIds("791381", ["791381-m30"]))).toBe(400);
     expect(status(() => validateLearningModuleIds("791381", ["791381-m28"]))).toBeNull();   // final summary: m28 is publishable
     expect(status(() => validateLearningModuleIds("791381", ["791381-m06"]))).toBeNull();   // Batch 10: m06 is publishable
     expect(status(() => validateLearningModuleIds("791381", ["791381-m05"]))).toBeNull();   // Batch 9: m05 is publishable

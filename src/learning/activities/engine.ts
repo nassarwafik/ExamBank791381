@@ -95,7 +95,8 @@ export type ActivityCheckResult = {
 export type ActivityCheckResponse =
   | { kind: "network-lab"; actions: unknown[] }
   | { kind: "automaton-design"; machine: { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] } }
-  | { kind: "machine-design"; machine: Record<string, unknown> };
+  | { kind: "machine-design"; machine: Record<string, unknown> }
+  | { kind: "network-build"; config: Record<string, unknown>; actions: unknown[] };
 /** Rejects on a transport failure or a retryable server error (a judge that could not run): never a "wrong". */
 export type ActivityCheck = (response: ActivityCheckResponse) => Promise<ActivityCheckResult>;
 
@@ -393,6 +394,15 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "machine-design",
     versions: [1],
     load: () => import("./MachineDesignActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // «ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — the learner BUILDS the network from nothing in the book's network lab
+    // (devices, cables, configuration); the SERVER judges the network built (build checks + the simulator's checks), goal by goal.
+    kind: "simulation",
+    key: "network-build",
+    versions: [1],
+    load: () => import("../lab/NetworkBuildActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
   {

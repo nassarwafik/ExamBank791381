@@ -51,7 +51,7 @@ describe("L.0 — the section details' load is visible and recoverable", () => {
     openOverview();
     expect(screen.getByRole("status").textContent).toBe("جارٍ تحميل تفاصيل الأقسام…");
     await detailsLoaded();
-    expect(within(batchList()).getAllByText(/الصفحات \d+–\d+/)).toHaveLength(7);
+    expect(within(batchList()).getAllByText(/الصفحات \d+–\d+/)).toHaveLength(8);   // + «ابنِ الشبكة»
   });
 
   it("a failed load is an alert with a retry; the rows stay usable; the retry recovers the details", async () => {
@@ -60,11 +60,11 @@ describe("L.0 — the section details' load is visible and recoverable", () => {
     openOverview();
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("تعذّر تحميل تفاصيل أقسام الكتاب");
-    expect(within(batchList()).getAllByRole("button")).toHaveLength(8);          // nothing proven empty → all usable
+    expect(within(batchList()).getAllByRole("button")).toHaveLength(9);          // nothing proven empty → all usable
     fireEvent.click(within(alert).getByRole("button", { name: "إعادة المحاولة" }));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     await detailsLoaded();
-    expect(within(batchList()).getAllByText(/الصفحات \d+–\d+/)).toHaveLength(7);
-    expect(within(batchList()).getAllByRole("button")).toHaveLength(7);
+    expect(within(batchList()).getAllByText(/الصفحات \d+–\d+/)).toHaveLength(8);   // + «ابنِ الشبكة»
+    expect(within(batchList()).getAllByRole("button")).toHaveLength(8);
   });
 });
