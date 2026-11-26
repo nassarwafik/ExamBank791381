@@ -386,6 +386,15 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     check(sq.machineDesign && sq.machineDesign.machine === "TM" && sq.machineDesign.mode === "compute" && sq.machineDesign.leftEnd === true && JSON.stringify(sq.machineDesign.alphabet) === "[\"1\"]"
       && sq.answer && sq.answer.reference && sq.answer.reference.transitions.length === 1 && await page.getByTestId("machine-question-issues").count() === 0,
       name + ": teacher: a computing Turing machine on the book's tape (├); the reference built with the rows is the private key; the question is complete (" + JSON.stringify(sq).slice(0, 160) + ")");
+    // AUTO-A11b — the teacher's review (both Turing machines drawn, the stored verdict in words) and the student's released breakdown
+    const mrv = page.getByTestId("machine-design-review");
+    await mrv.scrollIntoViewIfNeeded();
+    const drawn = async id => (await page.getByTestId(id).locator("g.learning-automaton-state text").allTextContents()).join(",");
+    check(await drawn("machine-review-student") === "p0,p1" && await drawn("machine-review-reference") === "q0,q1,q2"
+      && /على المدخل ε \(الكلمة الفارغة\) الجواب الصحيح «ε»، وآلة الطالب تعطي لا جواب بين علامتي \$/.test(await page.getByTestId("machine-review-verdict").innerText()), name + ": review: both Turing machines drawn and the function's expected / given answers in words");
+    await page.getByTestId("result-breakdown").locator("summary").click();
+    const lines = await page.getByTestId("breakdown-machine").allInnerTexts();
+    check(lines.length === 2 && /على المدخل\s*1\s*الجواب الصحيح\s*«111»، وآلتك تعطي\s*«11»/.test(lines[0]) && /حتى الطول 8 \(511 كلمة\). هذا فحص وليس برهانًا/.test(lines[1]), name + ": the student's released breakdown: one line per machine question («" + lines.join(" | ").slice(0, 120) + "»)");
     if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "machine-question-" + name + ".png"), fullPage: true });
     if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the machine question (" + (await sideways()) + " px)");
   }
