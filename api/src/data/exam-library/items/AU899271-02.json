@@ -1,0 +1,610 @@
+{
+  "libraryItemId": "AU899271-02",
+  "title": "مختبر الآلات — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+  "category": "automata-899271",
+  "description": "تمارين «صمّم الآلة» من الوحدات 5–7 في «الأتمتة»: يبني الطالب الأوتومات، ويقارن الخادم لغته بلغة الآلة النموذجية تمامًا. العلامة كاملة أو صفر.",
+  "tags": [
+    "الأتمتة",
+    "صمّم الآلة",
+    "تصحيح آلي"
+  ],
+  "questionCount": 6,
+  "totalMarks": 60,
+  "pageRange": "",
+  "parserFamily": "automata-lab-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 6,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "90526ea8fad99c818a08fc4c08eb0e3ca84ffe0fa48d473c60ca4a22ee616762",
+  "contentHash": "7070b662d868f3fd875c33ec37159fa8e92885ae0cefee0fd2193d8ec4ebbc5a",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271",
+    "sourceFile": "scripts/automata-course/u05.mjs scripts/automata-course/u06.mjs scripts/automata-course/u07.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-AU899271-02",
+    "title": "مختبر الآلات — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "«صمّم الآلة» — من كتاب «الأتمتة»",
+      "instructions": "ابنِ في كل سؤال الأوتومات المطلوب: الحالات، وحالة البداية، وحالات القبول، والانتقالات — بالصفوف أو بالرسم بالفأرة. يقارن التصحيح لغة أوتوماتك بلغة الآلة النموذجية تمامًا: العلامة كاملة أو صفر.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u05",
+        "title": "الوحدة 5 — الأوتومات المنتهي غير الحتمي",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AU899271-02-Q01",
+            "origin": "imported",
+            "sourceId": "AU899271-02",
+            "sourceQuestionId": "u05-design-1",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "صمّم أوتومات منتهيًا غير حتمي يقبل لغة كل الكلمات فوق {a, b} التي تنتهي بـ ab.",
+            "presentationType": "automatonDesign",
+            "automatonDesign": {
+              "v": 1,
+              "machine": "NFA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 4,
+              "examples": {
+                "accept": [
+                  "ab",
+                  "bab",
+                  "aab"
+                ],
+                "reject": [
+                  "",
+                  "a",
+                  "ba",
+                  "abb"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "examQuestionId": "AU899271-02-Q02",
+            "origin": "imported",
+            "sourceId": "AU899271-02",
+            "sourceQuestionId": "u05-design-2",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "صمّم أوتومات منتهيًا غير حتمي يقبل لغة كل الكلمات فوق {a, b} التي الرمز الثالث من النهاية فيها هو a.",
+            "presentationType": "automatonDesign",
+            "automatonDesign": {
+              "v": 1,
+              "machine": "NFA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 4,
+              "examples": {
+                "accept": [
+                  "abb",
+                  "aaa",
+                  "babb"
+                ],
+                "reject": [
+                  "",
+                  "ab",
+                  "bab",
+                  "abbb"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q3"
+                  ]
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "sec-u06",
+        "title": "الوحدة 6 — اللغات غير المنتظمة",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AU899271-02-Q03",
+            "origin": "imported",
+            "sourceId": "AU899271-02",
+            "sourceQuestionId": "u06-design-1",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "اللغة L فوق {a, b}: كل الكلمات التي عدد مرات ظهور التسلسل ab فيها يساوي عدد مرات ظهور التسلسل ba. تبدو كأنها تحتاج عدًّا — لكنها منتظمة! صمّم لها أوتومات منتهيًا حتميًا كاملًا.",
+            "presentationType": "automatonDesign",
+            "automatonDesign": {
+              "v": 1,
+              "machine": "DFA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 6,
+              "complete": true,
+              "examples": {
+                "accept": [
+                  "",
+                  "a",
+                  "aba",
+                  "abba",
+                  "bab"
+                ],
+                "reject": [
+                  "ab",
+                  "ba",
+                  "aab",
+                  "abb"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "s",
+                  "a1",
+                  "a2",
+                  "b1",
+                  "b2"
+                ],
+                "start": "s",
+                "accept": [
+                  "s",
+                  "a1",
+                  "b1"
+                ],
+                "transitions": [
+                  [
+                    "s",
+                    "a",
+                    "a1"
+                  ],
+                  [
+                    "s",
+                    "b",
+                    "b1"
+                  ],
+                  [
+                    "a1",
+                    "a",
+                    "a1"
+                  ],
+                  [
+                    "a1",
+                    "b",
+                    "a2"
+                  ],
+                  [
+                    "a2",
+                    "b",
+                    "a2"
+                  ],
+                  [
+                    "a2",
+                    "a",
+                    "a1"
+                  ],
+                  [
+                    "b1",
+                    "b",
+                    "b1"
+                  ],
+                  [
+                    "b1",
+                    "a",
+                    "b2"
+                  ],
+                  [
+                    "b2",
+                    "a",
+                    "b2"
+                  ],
+                  [
+                    "b2",
+                    "b",
+                    "b1"
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "examQuestionId": "AU899271-02-Q04",
+            "origin": "imported",
+            "sourceId": "AU899271-02",
+            "sourceQuestionId": "u06-design-2",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "اللغة المنتهية L = {ab, aabb} (أي aⁿbⁿ لـ n = 1 أو 2 فقط) فوق {a, b}. صمّم لها أوتومات منتهيًا حتميًا كاملًا.",
+            "presentationType": "automatonDesign",
+            "automatonDesign": {
+              "v": 1,
+              "machine": "DFA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 8,
+              "complete": true,
+              "examples": {
+                "accept": [
+                  "ab",
+                  "aabb"
+                ],
+                "reject": [
+                  "",
+                  "a",
+                  "aab",
+                  "abab",
+                  "aaabbb"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "p0",
+                  "p1",
+                  "p2",
+                  "p3",
+                  "p4",
+                  "p5",
+                  "T"
+                ],
+                "start": "p0",
+                "accept": [
+                  "p3",
+                  "p5"
+                ],
+                "transitions": [
+                  [
+                    "p0",
+                    "a",
+                    "p1"
+                  ],
+                  [
+                    "p0",
+                    "b",
+                    "T"
+                  ],
+                  [
+                    "p1",
+                    "a",
+                    "p2"
+                  ],
+                  [
+                    "p1",
+                    "b",
+                    "p3"
+                  ],
+                  [
+                    "p2",
+                    "a",
+                    "T"
+                  ],
+                  [
+                    "p2",
+                    "b",
+                    "p4"
+                  ],
+                  [
+                    "p3",
+                    "a",
+                    "T"
+                  ],
+                  [
+                    "p3",
+                    "b",
+                    "T"
+                  ],
+                  [
+                    "p4",
+                    "a",
+                    "T"
+                  ],
+                  [
+                    "p4",
+                    "b",
+                    "p5"
+                  ],
+                  [
+                    "p5",
+                    "a",
+                    "T"
+                  ],
+                  [
+                    "p5",
+                    "b",
+                    "T"
+                  ],
+                  [
+                    "T",
+                    "a",
+                    "T"
+                  ],
+                  [
+                    "T",
+                    "b",
+                    "T"
+                  ]
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "sec-u07",
+        "title": "الوحدة 7 — العمليات على اللغات وخصائص الانغلاق",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "AU899271-02-Q05",
+            "origin": "imported",
+            "sourceId": "AU899271-02",
+            "sourceQuestionId": "u07-design-1",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "اللغة L فوق {a, b} هي كل الكلمات التي لا تحوي التسلسل ab. صمّم لها أوتومات منتهيًا حتميًا كاملًا (فكّر في أوتومات «تحوي ab» ثم في المتمّمة).",
+            "presentationType": "automatonDesign",
+            "automatonDesign": {
+              "v": 1,
+              "machine": "DFA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 4,
+              "complete": true,
+              "examples": {
+                "accept": [
+                  "",
+                  "a",
+                  "ba",
+                  "bbaa"
+                ],
+                "reject": [
+                  "ab",
+                  "aab",
+                  "bab",
+                  "abba"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q1"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "b",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "b",
+                    "q2"
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "examQuestionId": "AU899271-02-Q06",
+            "origin": "imported",
+            "sourceId": "AU899271-02",
+            "sourceQuestionId": "u07-design-2",
+            "questionTypeVersion": 1,
+            "marks": 10,
+            "locked": false,
+            "text": "L هي كل الكلمات فوق {a, b} التي تبدأ بـ aab. صمّم أوتومات منتهيًا غير حتمي يقبل عكس اللغة، أي Lᴿ: كل الكلمات التي تنتهي بـ baa.",
+            "presentationType": "automatonDesign",
+            "automatonDesign": {
+              "v": 1,
+              "machine": "NFA",
+              "alphabet": [
+                "a",
+                "b"
+              ],
+              "maxStates": 5,
+              "examples": {
+                "accept": [
+                  "baa",
+                  "abaa",
+                  "bbaa"
+                ],
+                "reject": [
+                  "",
+                  "aab",
+                  "baab",
+                  "aa"
+                ]
+              }
+            },
+            "answer": {
+              "reference": {
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q3"
+                ],
+                "transitions": [
+                  [
+                    "q0",
+                    "a",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q0"
+                  ],
+                  [
+                    "q0",
+                    "b",
+                    "q1"
+                  ],
+                  [
+                    "q1",
+                    "a",
+                    "q2"
+                  ],
+                  [
+                    "q2",
+                    "a",
+                    "q3"
+                  ]
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

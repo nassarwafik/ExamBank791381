@@ -23,7 +23,8 @@ export const CATEGORY_LABELS: Record<string, string> = {
   comprehensive: "الشامل",
   advanced: "إضافية",
   final: "النهائي",
-  "coding-899371": "مختبر البرمجة · أسس علم الحاسوب"   // 899371 P7: runner-graded C# questions (docs/enterprise-899371-learning-plan.md §20)
+  "coding-899371": "مختبر البرمجة · أسس علم الحاسوب",   // 899371 P7: runner-graded C# questions (docs/enterprise-899371-learning-plan.md §20)
+  "automata-899271": "مختبر الآلات · الأتمتة"            // AUTO-A13: the book's «صمّم الآلة» exercises (docs/enterprise-automata-lab-a4.md §19)
 };
 
 export function categoryLabel(code: string): string {
@@ -32,7 +33,7 @@ export function categoryLabel(code: string): string {
 
 // Distinct categories present in a catalog, in a stable, meaningful order (matching the source
 // index's own ordering), so the filter chips don't jump around between loads.
-const CATEGORY_ORDER = ["foundation", "infra", "comprehensive", "advanced", "final", "coding-899371"];
+const CATEGORY_ORDER = ["foundation", "infra", "comprehensive", "advanced", "final", "coding-899371", "automata-899271"];
 
 export function catalogCategories(catalog: LibraryCatalogItem[]): string[] {
   const present = new Set(catalog.map(item => item.category).filter(Boolean));
