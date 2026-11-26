@@ -143,6 +143,15 @@ describe("AUTO-A13 — the shipped automata lab is exactly the build of the cour
     for (const q of IDS.slice(0, 2).flatMap(id => questionsOf(readItem(id)))) if (q.automatonDesign.machine === "DFA") expect(B.obeysDfa(q.answer.reference, q.automatonDesign.alphabet, true), q.examQuestionId).toBe(true);
   });
 
+  it("«obeys the DFA rules»: one arrow per state and symbol, every one of them when completeness is asked, nothing outside the alphabet", () => {
+    const m = { states: ["p", "q"], start: "p", accept: ["q"], transitions: [["p", "a", "q"], ["q", "a", "q"], ["q", "b", "p"]] };
+    expect(B.obeysDfa(m, ["a", "b"], false)).toBe(true);
+    expect(B.obeysDfa(m, ["a", "b"], true)).toBe(false);   // p has no arrow on b
+    expect(B.obeysDfa({ ...m, transitions: [...m.transitions, ["p", "b", "p"]] }, ["a", "b"], true)).toBe(true);
+    expect(B.obeysDfa({ ...m, transitions: [...m.transitions, ["p", "a", "p"]] }, ["a", "b"], false)).toBe(false);   // two arrows
+    expect(B.obeysDfa({ ...m, transitions: [...m.transitions, ["p", "c", "p"]] }, ["a", "b"], false)).toBe(false);   // outside the alphabet
+  });
+
   it("the minimal DFA is the minimum: a machine with one state fewer cannot be equivalent (the judge refuses the key without a state)", () => {
     // the minimisation on a hand case: (a|b)*ab with 4 states, one redundant → 3
     const m = { states: ["p", "q", "r", "s"], start: "p", accept: ["r"], transitions: [["p", "a", "q"], ["p", "b", "s"], ["s", "a", "q"], ["s", "b", "s"], ["q", "a", "q"], ["q", "b", "r"], ["r", "a", "q"], ["r", "b", "p"]] };
@@ -153,7 +162,8 @@ describe("AUTO-A13 — the shipped automata lab is exactly the build of the cour
     const item = readItem("AU899271-01"), dfa = questionsOf(item)[1], tm = questionsOf(readItem("AU899271-04"))[0];
     const book = exercises[1].activity.config.reference;   // unit 3's non-deterministic reference
     expect(B.judgeNode(dfa, book)).toEqual([]);
-    expect(B.judgeNode({ ...dfa, automatonDesign: { ...dfa.automatonDesign, alphabet: [] } }, book).length).toBeGreaterThan(0);
+    expect(B.judgeNode({ ...dfa, automatonDesign: { ...dfa.automatonDesign, alphabet: [] } }, book)[0]).toMatch(/^AUTOMATON_ALPHABET_INVALID /);   // the shared validator's own word
+    expect(B.judgeNode({ ...tm, machineDesign: { ...tm.machineDesign, maxStates: 99 } })[0]).toMatch(/^MACHINE_/);
     expect(B.judgeNode({ ...dfa, answer: { reference: book } }).join(" ")).toMatch(/the reference does not earn full marks/);   // the NFA itself as the key of a «complete DFA» question
     const other = { ...dfa.answer.reference, accept: [...dfa.answer.reference.accept, "q0"] };
     expect(B.judgeNode({ ...dfa, answer: { reference: other } }, book).join(" ")).toMatch(/not the book reference's language/);
