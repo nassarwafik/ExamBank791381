@@ -22,7 +22,7 @@ const pick = (q: Q) => [q.examQuestionId, q.automatonDesign ?? q.machineDesign, 
 describe("AUTO-A13 — «مختبر الآلات» in the app", () => {
   it("the category «مختبر الآلات · الأتمتة» comes after every other category but «أسئلة نظرية · الأتمتة» (AUTO-A14)", () => {
     const catalog = JSON.parse(fs.readFileSync(path.join(LIB, "catalog.json"), "utf8")) as LibraryCatalogItem[];
-    expect(catalogCategories(catalog)).toEqual(["foundation", "infra", "comprehensive", "advanced", "final", "coding-899371", "automata-899271", "theory-899271"]);
+    expect(catalogCategories(catalog)).toEqual(["foundation", "infra", "comprehensive", "advanced", "final", "coding-899371", "automata-899271", "theory-899271", "trace-899271"]);
     expect(categoryLabel("automata-899271")).toBe("مختبر الآلات · الأتمتة");
   });
 

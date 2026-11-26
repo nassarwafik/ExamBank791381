@@ -169,10 +169,17 @@ export function rowOfConfig(m: Machine, c: TraceConfig): TraceRow {
   if (m.kind === "TM") return { state: c.states[0], tape: tapeText(c.cells ?? [], c.head ?? 0) };
   return { state: c.states[0] };
 }
+/** A row as one line of text (the review, the released breakdown): «q1», «{p, q}» / «∅», «q1 ⏊SA», «q1 ├A[b]»; «—» for an empty row. */
+export function rowLabel(row: unknown): string {
+  if (!isPlain(row)) return "—";
+  if (Array.isArray(row.states)) return row.states.length ? "{" + (row.states as unknown[]).filter(s => typeof s === "string").join(", ") + "}" : "∅";
+  const parts = [row.state, row.stack, row.tape].filter((v): v is string => typeof v === "string" && v !== "");
+  return parts.length ? parts.join(" ").slice(0, 60) : "—";
+}
 const sameConfig = (a: TraceConfig | null, b: TraceConfig | null) => !!a && !!b && JSON.stringify([a.states, a.read, a.stack ?? null, a.cells ?? null, a.head ?? null]) === JSON.stringify([b.states, b.read, b.stack ?? null, b.cells ?? null, b.head ?? null]);
 
 // ── grading: partial, and an error is never counted twice ─────────────────────────────────────────────────────────────────────────────────
-export type TraceGrade = { parts: number; right: number; rows: boolean[]; verdict: boolean; trueRows: number };
+export type TraceGrade = { parts: number; right: number; rows: boolean[]; verdict: boolean; trueRows: number; truth: string[]; trueVerdict: "accept" | "reject" };
 /** Row k (0 … N of the true run) is right when it is the configuration the machine reaches in ONE step from the student's own row k − 1, or
  *  the true row k (row 0: the true start). Rows past the true run's length are not graded. The verdict is one more part. Pure. */
 export function gradeTrace(m: Machine, word: string, answer: MachineTraceAnswer): TraceGrade | null {
@@ -189,7 +196,8 @@ export function gradeTrace(m: Machine, word: string, answer: MachineTraceAnswer)
     return !!prev && sameConfig(got, stepTrace(m, prev, split.symbols));
   });
   const verdict = answer.verdict === run.verdict;
-  return { parts: run.rows.length + 1, right: rows.filter(Boolean).length + (verdict ? 1 : 0), rows, verdict, trueRows: run.rows.length };
+  return { parts: run.rows.length + 1, right: rows.filter(Boolean).length + (verdict ? 1 : 0), rows, verdict, trueRows: run.rows.length,
+    truth: run.rows.map(c => rowLabel(rowOfConfig(m, c))), trueVerdict: run.verdict };
 }
 
 // ── the question: config, key, validation, projection, answer ─────────────────────────────────────────────────────────────────────────────

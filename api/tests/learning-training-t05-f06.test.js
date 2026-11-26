@@ -65,6 +65,7 @@ describe("registry — the complete Learning-Practice catalog", () => {
       ...Array.from({ length: 11 }, (_, i) => ["CL899371-" + String(i + 1).padStart(2, "0"), "899371", "coding-899371"]),
       ...[1, 2, 3, 4].map(n => ["AU899271-0" + n, "899271", "automata-899271"]),
       ...[1, 2, 3, 4, 5, 6].map(n => ["AT899271-0" + n, "899271-theory", "theory-899271"]),   // AUTO-A14
+      ...[1, 2, 3, 4, 5].map(n => ["TR899271-0" + n, "899271-trace", "trace-899271"]),   // AUTO-A15b
     ]);
     for (const t of list) {
       const item = readLibraryItem(t.trainingId);

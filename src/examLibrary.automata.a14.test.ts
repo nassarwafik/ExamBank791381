@@ -22,7 +22,7 @@ const pick = (q: Q) => KEPT.map(k => q[k] ?? null);
 describe("AUTO-A14 — «أسئلة نظرية» in the app", () => {
   it("the category «أسئلة نظرية · الأتمتة» comes last", () => {
     const catalog = JSON.parse(fs.readFileSync(path.join(LIB, "catalog.json"), "utf8")) as LibraryCatalogItem[];
-    expect(catalogCategories(catalog).slice(-2)).toEqual(["automata-899271", "theory-899271"]);
+    expect(catalogCategories(catalog).slice(-3)).toEqual(["automata-899271", "theory-899271", "trace-899271"]);   // AUTO-A15b's trace exams last
     expect(categoryLabel("theory-899271")).toBe("أسئلة نظرية · الأتمتة");
   });
 

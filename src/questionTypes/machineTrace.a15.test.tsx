@@ -131,3 +131,27 @@ describe("A15a — the teacher", () => {
     expect(validateMachineTraceQuestion(node).length).toBeGreaterThan(0);
   });
 });
+
+describe("AUTO-A15b — the review and the released breakdown", () => {
+  it("the teacher's review: the machine, the word, the student's rows beside the true run with each part, rows past the run noted", async () => {
+    const { default: MachineTraceReview } = await import("../automata/MachineTraceReview");
+    const answer = { kind: "machineTrace", rows: [{ state: "q0" }, { state: "q0" }, { state: "q1" }, { state: "q0" }], verdict: "accept" };
+    render(<MachineTraceReview config={{ v: 1, machine: DFA, word: "ab" }} answer={answer} />);
+    const table = screen.getByTestId("trace-review-compare");
+    const rows = within(table).getAllByRole("row").slice(1).map(r => [...r.querySelectorAll("th,td")].map(c => c.textContent));
+    // ab: q0 -a→ q1 -b→ q0 → reject; the student's row 1 (q0) is wrong, row 2 (q1) is the step from it on «b»? q0 -b→ q0 — no: wrong too
+    expect(rows).toEqual([["0", "q0", "q0", "✓ صحيح"], ["1", "q0", "q1", "✗ خطأ"], ["2", "q1", "q0", "✗ خطأ"], ["النتيجة", "مقبولة", "مرفوضة", "✗ خطأ"]]);
+    expect(within(table).getByText(/1 من 4 أجزاء صحيحة/)).toBeTruthy();
+    expect(screen.getByText(/كتب الطالب 1 سطرًا بعد نهاية التشغيل الصحيح/)).toBeTruthy();
+    cleanup();
+    render(<MachineTraceReview config={{ v: 1, machine: { ...DFA, start: "zz" }, word: "ab" }} answer={answer} />);
+    expect(screen.getByTestId("trace-review-unavailable")).toBeTruthy();
+  });
+  it("the student's released breakdown shows the same table from the server's data", async () => {
+    const { default: ResultBreakdown } = await import("../student/exam/ResultBreakdown");
+    const breakdown = { sections: [], questions: [{ number: 1, sectionId: "", status: "partial" as const, maxMarks: 4, score: 2, trace: { rows: [{ mine: "q0", truth: "q0", right: true }, { mine: "q0", truth: "q1", right: false }], verdict: { mine: "reject" as const, truth: "reject" as const, right: true } } }] };
+    render(<ResultBreakdown breakdown={breakdown} />);
+    const t = screen.getByTestId("breakdown-trace");
+    expect(within(t).getAllByRole("row").slice(1).map(r => r.getAttribute("data-right"))).toEqual(["yes", "no", "yes"]);
+  });
+});

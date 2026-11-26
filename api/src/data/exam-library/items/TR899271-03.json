@@ -1,0 +1,950 @@
+{
+  "libraryItemId": "TR899271-03",
+  "title": "تتبّع الآلات — أوتومات المكدّس (الوحدات 8–9)",
+  "category": "trace-899271",
+  "description": "تتبّع تشغيل آلات الوحدات 8–9 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+  "tags": [
+    "الأتمتة",
+    "تتبّع",
+    "تصحيح آلي"
+  ],
+  "questionCount": 7,
+  "totalMarks": 28,
+  "pageRange": "",
+  "parserFamily": "automata-trace-899271-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 7,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "88851355acbfdb34bb1a5c2a2ba56e5ead314b9390c99e17719b002580bd66f6",
+  "contentHash": "18a40c4525adc61e68d607c94c9a1a9e57e7e58b0c018d9d1973b49ec9072ebd",
+  "convertedAt": "2026-11-26T00:00:00.000Z",
+  "source": {
+    "repository": "899271-trace",
+    "sourceFile": "scripts/automata-course/u08.mjs scripts/automata-course/u09.mjs"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 2,
+    "examId": "LIB-TR899271-03",
+    "title": "تتبّع الآلات — أوتومات المكدّس (الوحدات 8–9)",
+    "status": "final",
+    "metadata": {},
+    "coverPage": {
+      "enabled": true,
+      "activityType": "exam",
+      "subtitle": "تتبّع تشغيل الآلات — من كتاب «الأتمتة»",
+      "instructions": "في كل سؤال آلة معطاة بجدول انتقالاتها («→» حالة البداية، «*» حالة قبول) وكلمة: اكتب سطر البداية ثم سطرًا لكل خطوة، ثم النتيجة. كل سطر صحيح يأخذ جزءًا من العلامة، والخطأ لا يُحسب مرتين.",
+      "showStudentName": true,
+      "showClassName": true,
+      "showExamDate": true,
+      "showDuration": true,
+      "showTotalMarks": true,
+      "showMarksDistribution": true
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "preset": "modernAcademic"
+    },
+    "sections": [
+      {
+        "id": "sec-u08",
+        "title": "الوحدة 8 — أوتومات المكدّس",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "TR899271-03-Q01",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m08-l02-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات المكدّس الحتمي لـ aⁿbⁿ — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة aaabbb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q2"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q2"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "A"
+                ]
+              },
+              "word": "aaabbb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-03-Q02",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m08-l03-p02-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "الحل: (ab)ⁿbⁿ — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة ababbb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q4"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q4"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "A"
+                ]
+              },
+              "word": "ababbb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-03-Q03",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m08-l04-p01-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات التمارين 1–3 (aⁿbⁿ) — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة aabb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q2"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q2"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "A"
+                ]
+              },
+              "word": "aabb"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-03-Q04",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m08-l05-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: aⁿb²ⁿ — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة aabbbb: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3"
+                ],
+                "alphabet": [
+                  "a",
+                  "b"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q0",
+                  "q3"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "SA",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "AA",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q3"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "A"
+                ]
+              },
+              "word": "aabbbb"
+            },
+            "answer": {}
+          }
+        ]
+      },
+      {
+        "id": "sec-u09",
+        "title": "الوحدة 9 — اللغات الخالية من السياق وخصائص انغلاقها",
+        "gradingPolicy": "all",
+        "questions": [
+          {
+            "examQuestionId": "TR899271-03-Q05",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m09-l01-p02-b03",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات مكدّس حتمي: a²ⁿbᵐcᵏ، k < n + m — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة aabc: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2",
+                  "q4",
+                  "q5"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "A"
+                ]
+              },
+              "word": "aabc"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-03-Q06",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m09-l03-p02-b01",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "أوتومات التمارين 6–8 (a²ⁿbᵐcᵏ، k < n + m) — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة aab: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2",
+                  "q3",
+                  "q4",
+                  "q5"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2",
+                  "q4",
+                  "q5"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "a",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q3"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q3",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q4"
+                  },
+                  {
+                    "from": "q2",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q4",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  },
+                  {
+                    "from": "q5",
+                    "read": "c",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q5"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "A"
+                ]
+              },
+              "word": "aab"
+            },
+            "answer": {}
+          },
+          {
+            "examQuestionId": "TR899271-03-Q07",
+            "origin": "imported",
+            "sourceId": "TR899271-03",
+            "sourceQuestionId": "m09-l04-p01-b02",
+            "presentationType": "machineTrace",
+            "questionTypeVersion": 1,
+            "marks": 4,
+            "text": "جرّب: wcR(w) — تتبّع تشغيل أوتومات المكدّس المعطى على الكلمة abcba: اكتب سطرًا للبداية ثم سطرًا لكل خطوة (الحالة ومحتوى المكدّس من القاع إلى القمة بعد كل رمز)، ثم النتيجة.",
+            "machineTrace": {
+              "v": 1,
+              "machine": {
+                "kind": "PDA",
+                "states": [
+                  "q0",
+                  "q1",
+                  "q2"
+                ],
+                "alphabet": [
+                  "a",
+                  "b",
+                  "c"
+                ],
+                "start": "q0",
+                "accept": [
+                  "q2"
+                ],
+                "transitions": [
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "⏊",
+                    "op": "none",
+                    "write": "",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "S",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "⏊",
+                    "op": "push",
+                    "write": "T",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "S",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "T",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "A",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "a",
+                    "top": "B",
+                    "op": "push",
+                    "write": "A",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "S",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "T",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "A",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "b",
+                    "top": "B",
+                    "op": "push",
+                    "write": "B",
+                    "to": "q0"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "S",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "T",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "A",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q0",
+                    "read": "c",
+                    "top": "B",
+                    "op": "none",
+                    "write": "",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "A",
+                    "op": "pop",
+                    "write": "A",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "B",
+                    "op": "pop",
+                    "write": "B",
+                    "to": "q1"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "a",
+                    "top": "S",
+                    "op": "pop",
+                    "write": "S",
+                    "to": "q2"
+                  },
+                  {
+                    "from": "q1",
+                    "read": "b",
+                    "top": "T",
+                    "op": "pop",
+                    "write": "T",
+                    "to": "q2"
+                  }
+                ],
+                "stackAlphabet": [
+                  "S",
+                  "T",
+                  "A",
+                  "B"
+                ]
+              },
+              "word": "abcba"
+            },
+            "answer": {}
+          }
+        ]
+      }
+    ]
+  }
+}

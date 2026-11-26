@@ -1537,5 +1537,140 @@
       "repository": "899271-theory",
       "sourceFile": "scripts/automata-course/u11.mjs"
     }
+  },
+  {
+    "libraryItemId": "TR899271-01",
+    "title": "تتبّع الآلات — الأوتومات المنتهي الحتمي (الوحدات 2–4)",
+    "category": "trace-899271",
+    "description": "تتبّع تشغيل آلات الوحدات 2–4 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+    "tags": [
+      "الأتمتة",
+      "تتبّع",
+      "تصحيح آلي"
+    ],
+    "questionCount": 33,
+    "totalMarks": 132,
+    "pageRange": "",
+    "parserFamily": "automata-trace-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 33,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "96410adea15ed4d8fc10e2d1a0216339ed72b115f823f0c32c4e855d40c83477",
+    "contentHash": "44572068050105395e8838fe64e64d623199e906d5e2bdf0502ad41062315b55",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-trace",
+      "sourceFile": "scripts/automata-course/u02.mjs scripts/automata-course/u03.mjs scripts/automata-course/u04.mjs"
+    }
+  },
+  {
+    "libraryItemId": "TR899271-02",
+    "title": "تتبّع الآلات — غير الحتمي واللغات المنتظمة (الوحدات 5–7)",
+    "category": "trace-899271",
+    "description": "تتبّع تشغيل آلات الوحدات 5–7 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+    "tags": [
+      "الأتمتة",
+      "تتبّع",
+      "تصحيح آلي"
+    ],
+    "questionCount": 31,
+    "totalMarks": 124,
+    "pageRange": "",
+    "parserFamily": "automata-trace-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 31,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "9d4a54ad3e9a008d316371ad07ef8fbefff77a1d3c7c45ba8b17906492d414ca",
+    "contentHash": "63600290793d86ea60b2b4778145492c1d5a6660e3c10a4e710dedc647959ebb",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-trace",
+      "sourceFile": "scripts/automata-course/u05.mjs scripts/automata-course/u06.mjs scripts/automata-course/u07.mjs"
+    }
+  },
+  {
+    "libraryItemId": "TR899271-03",
+    "title": "تتبّع الآلات — أوتومات المكدّس (الوحدات 8–9)",
+    "category": "trace-899271",
+    "description": "تتبّع تشغيل آلات الوحدات 8–9 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+    "tags": [
+      "الأتمتة",
+      "تتبّع",
+      "تصحيح آلي"
+    ],
+    "questionCount": 7,
+    "totalMarks": 28,
+    "pageRange": "",
+    "parserFamily": "automata-trace-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 7,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "88851355acbfdb34bb1a5c2a2ba56e5ead314b9390c99e17719b002580bd66f6",
+    "contentHash": "18a40c4525adc61e68d607c94c9a1a9e57e7e58b0c018d9d1973b49ec9072ebd",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-trace",
+      "sourceFile": "scripts/automata-course/u08.mjs scripts/automata-course/u09.mjs"
+    }
+  },
+  {
+    "libraryItemId": "TR899271-04",
+    "title": "تتبّع الآلات — آلة تورنغ (الوحدة 10)",
+    "category": "trace-899271",
+    "description": "تتبّع تشغيل آلات الوحدة 10 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+    "tags": [
+      "الأتمتة",
+      "تتبّع",
+      "تصحيح آلي"
+    ],
+    "questionCount": 10,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "automata-trace-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "af4b4d49ab13e704f77c56fed6060d616456602b28a4be4f7a3d3d7abefda21b",
+    "contentHash": "c8c471118a786aea7ee88e3541903b89d90cf429ff002d3692f528a21f470c18",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-trace",
+      "sourceFile": "scripts/automata-course/u10.mjs"
+    }
+  },
+  {
+    "libraryItemId": "TR899271-05",
+    "title": "تتبّع الآلات — مراجعة وأسئلة بجروت (الوحدة 11)",
+    "category": "trace-899271",
+    "description": "تتبّع تشغيل آلات الوحدة 11 في «الأتمتة» — آلات محاكيات الكتاب نفسها، كل آلة على كلمتها: سطرًا سطرًا ثم النتيجة؛ علامة جزئية والخطأ لا يُحسب مرتين.",
+    "tags": [
+      "الأتمتة",
+      "تتبّع",
+      "تصحيح آلي"
+    ],
+    "questionCount": 5,
+    "totalMarks": 20,
+    "pageRange": "",
+    "parserFamily": "automata-trace-899271-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 5,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "e27b29e0584d75aacb5ff25b66558adae1d27a67659171a5c640e30135fcd7a2",
+    "contentHash": "092572ff831a0092b0da00d41442f1fef6febd578a04c6049dc7a6abb7cba926",
+    "convertedAt": "2026-11-26T00:00:00.000Z",
+    "source": {
+      "repository": "899271-trace",
+      "sourceFile": "scripts/automata-course/u11.mjs"
+    }
   }
 ]
