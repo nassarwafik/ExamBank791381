@@ -88,6 +88,8 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
   if (node.presentationType === "meshPartSelection" && Array.isArray(answer.correct) && answer.correct.length) return true;
   // AUTO-A8 — automaton design: a built reference machine would be lost on a type change.
   if (node.presentationType === "automatonDesign" && isObj(answer.reference) && Array.isArray(answer.reference.transitions) && answer.reference.transitions.length) return true;
+  // AUTO-A11a — the same for a push-down / Turing machine reference.
+  if (node.presentationType === "machineDesign" && isObj(answer.reference) && Array.isArray(answer.reference.transitions) && answer.reference.transitions.length) return true;
   // Phase 19E — open response: authored instructions, rubric criteria or a model answer would be lost on a type change.
   if (isObj(node.openResponse) && text(node.openResponse.instructions)) return true;
   if (node.presentationType === "openResponse" && isObj(node.answer) && ((isObj(node.answer.rubric) && Array.isArray(node.answer.rubric.criteria) && node.answer.rubric.criteria.length) || text(node.answer.modelAnswer))) return true;

@@ -11,6 +11,7 @@ import type { FunctionGraphSelectionConfigV1 } from "./functionGraphSelectionQue
 import type { Scene3DSelectionConfigV1 } from "./scene3DSelectionQuestion";
 import type { MeshPartSelectionConfigV1 } from "./meshPartSelectionQuestion";
 import type { AutomatonDesignConfigV1 } from "./automatonDesignQuestion";
+import type { MachineDesignConfigV1 } from "./machineDesignQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { RichContentV1 } from "./richContent/richContentModel";
@@ -174,6 +175,9 @@ export type BuilderQuestion = {
   // AUTO-A8 — PUBLIC automatonDesign@1 rules (machine type, alphabet, state limit, completeness, example words); the reference machine
   // stays under answer.
   automatonDesign?: AutomatonDesignConfigV1;
+  // AUTO-A11a — PUBLIC machineDesign@1 rules (push-down / Turing machine, mode, alphabet, state limit, ├, longest word tried, examples);
+  // the reference machine stays under answer.
+  machineDesign?: MachineDesignConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
@@ -237,6 +241,9 @@ export type QuestionBody = {
   // AUTO-A8 — PUBLIC automatonDesign@1 rules (machine type, alphabet, state limit, completeness, example words); the reference machine
   // stays under answer.
   automatonDesign?: AutomatonDesignConfigV1;
+  // AUTO-A11a — PUBLIC machineDesign@1 rules (push-down / Turing machine, mode, alphabet, state limit, ├, longest word tried, examples);
+  // the reference machine stays under answer.
+  machineDesign?: MachineDesignConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;

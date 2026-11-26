@@ -25,7 +25,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(process.env.HARNESS_OUT || path.join(os.tmpdir(), "harness-automata-lab"));
 const { chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core");
 
-await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html"), question: path.join(root, "browser-harness/automaton-question.html") } } } });
+await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", build: { outDir: out, emptyOutDir: true, manifest: false, rollupOptions: { input: { lab: path.join(root, "browser-harness/automata-lab.html"), design: path.join(root, "browser-harness/automata-design.html"), question: path.join(root, "browser-harness/automaton-question.html"), machineQuestion: path.join(root, "browser-harness/machine-question.html") } } } });
 
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ttf": "font/ttf", ".png": "image/png" };
 const server = http.createServer((req, res) => {
@@ -342,6 +342,53 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
   check(/الكلمة\s*b\s*كان يجب أن تُرفض، لكن آلتك تقبلها/.test(await page.getByTestId("breakdown-automaton").innerText()), "the student's released breakdown: one line with the word");
   if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automaton-question-" + name + ".png"), fullPage: true });
   if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the teacher's editor (" + (await sideways()) + " px)");
+  // AUTO-A11a — the exam question «تصميم آلة»: a Turing machine that computes, built with the lab's rows ($ typed as a tape symbol); the
+  // saved answer is the machine as written (never a verdict); the teacher switches the question to a computing Turing machine and builds
+  // the private reference — the question is then complete
+  {
+    console.log(name + ": the exam question «تصميم آلة»");
+    await page.goto(origin + "/browser-harness/machine-question.html");
+    const mq = page.getByTestId("machine-design-response");
+    await mq.waitFor({ timeout: 20000 });
+    const saved = async () => JSON.parse((await page.getByTestId("saved-answer").textContent()) || "null");
+    check(!/تحقّق من الآلة|مختبر الآلات/.test(await mq.innerText()) && /111 → \$11111\$/.test(await mq.innerText()), name + ": the exam's machine builder has no «تحقّق»; the task shows its example");
+    await mq.getByRole("button", { name: /إضافة حالة/ }).click();
+    await mq.getByRole("button", { name: /إضافة حالة/ }).click();
+    await mq.getByLabel("قبول").nth(2).check();
+    await mq.getByRole("button", { name: "إضافة انتقال" }).click();
+    await mq.getByLabel("الانتقال 1: يكتب").fill("$");
+    await mq.getByLabel("الانتقال 1: إلى").selectOption("q1");
+    await mq.getByRole("button", { name: "إضافة انتقال" }).click();
+    await mq.getByLabel("الانتقال 2: من").selectOption("q1");
+    await mq.getByLabel("الانتقال 2: يقرأ").fill("∆");
+    await mq.getByLabel("الانتقال 2: يكتب").fill("$");
+    await mq.getByLabel("الانتقال 2: الحركة").selectOption("S");
+    await mq.getByLabel("الانتقال 2: إلى").selectOption("q2");
+    const a = await saved();
+    check(a && a.kind === "machineDesign" && Object.keys(a).every(k => ["kind", "machine", "layout"].includes(k)) && JSON.stringify(a.machine.transitions) === JSON.stringify([{ from: "q0", read: "1", write: "$", move: "R", to: "q1" }, { from: "q1", read: "∆", write: "$", move: "S", to: "q2" }]) && JSON.stringify(a.machine.accept) === "[\"q2\"]",
+      name + ": the saved answer is the machine as written — the two rows, the accepting state, nothing else");
+    const run = mq.locator("section").filter({ has: page.getByRole("heading", { name: /شغّل آلتك خطوة خطوة/ }) });
+    await run.getByLabel("الكلمة", { exact: true }).fill("1");
+    await run.getByRole("button", { name: "شغّل", exact: true }).click();
+    await run.getByRole("button", { name: "النهاية" }).click();
+    check(await run.getByText(/الكلمة 1 مقبولة/).count() === 1, name + ": the student runs the own machine step by step («1» accepted) — never against the reference");
+    check((await mq.getByTestId("alab-canvas").count()) === (name === "desktop" ? 1 : 0), name + ": the drawing editor " + (name === "desktop" ? "on the desktop" : "not on the phone"));
+    const ed = page.getByTestId("qt-editor-machineDesign");
+    await ed.getByRole("radio", { name: /آلة تورنغ/ }).check();
+    await ed.getByRole("radio", { name: /تحسب دالة/ }).check();
+    await ed.getByLabel(/^الأبجدية \(رموز/).fill("1");
+    const ref = ed.getByTestId("machine-reference");
+    await ref.getByRole("button", { name: "إضافة انتقال" }).click();
+    await ref.getByLabel("الانتقال 1: يكتب").fill("$");
+    await ref.getByLabel("الانتقال 1: الحركة").selectOption("S");
+    await ref.getByLabel("قبول").first().check();
+    const sq = JSON.parse((await page.getByTestId("saved-question").textContent()) || "{}");
+    check(sq.machineDesign && sq.machineDesign.machine === "TM" && sq.machineDesign.mode === "compute" && sq.machineDesign.leftEnd === true && JSON.stringify(sq.machineDesign.alphabet) === "[\"1\"]"
+      && sq.answer && sq.answer.reference && sq.answer.reference.transitions.length === 1 && await page.getByTestId("machine-question-issues").count() === 0,
+      name + ": teacher: a computing Turing machine on the book's tape (├); the reference built with the rows is the private key; the question is complete (" + JSON.stringify(sq).slice(0, 160) + ")");
+    if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "machine-question-" + name + ".png"), fullPage: true });
+    if (name === "phone") check(await sideways() <= 1, "phone: no sideways scroll with the machine question (" + (await sideways()) + " px)");
+  }
   check(errors.length === 0, "no page or console error (" + errors.slice(0, 2).join(" | ") + ")");
   check(foreign.length === 0, "nothing fetched from another origin (" + foreign.slice(0, 2).join(" | ") + ")");
   await ctx.close();
