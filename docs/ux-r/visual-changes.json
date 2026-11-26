@@ -1945,6 +1945,16 @@
       "page": "learning-book",
       "viewport": "all",
       "reason": "«ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — the book 791381's overview lists a ninth section «ابنِ الشبكة» (the practice module m29: seven build-the-network exercises, the owner's request) after «التلخيص», and the book's page / lesson totals grow by its 8 pages / 4 lessons; the section list is one row taller, nothing else on the page moves."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — book 791381 has 8 more pages (the practice module m29 after the summary), so the reader's page position reads «… / 256» instead of «… / 248»; only those digits change, nothing on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "«ابنِ الشبكة» (docs/enterprise-network-build-exercises.md) — the search for «الشبكة» also finds the pages of the new practice module m29 «ابنِ الشبكة» in book 791381 (one more module group of results at the end), and the page totals read «من 256»; the result list is taller, nothing else on the page moves."
     }
   ]
 }
