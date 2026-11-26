@@ -11,6 +11,7 @@ import {
 import { listLearningTrainings } from "../src/lib/learning-training-registry.js";
 import { listLearningModules } from "../src/lib/learning-materials-registry.js";
 import m29 from "../../src/learning/content/791381/modules/m29";
+import m30 from "../../src/learning/content/791381/modules/m30";
 
 // Study Practice Strength — the SERVER authority for in-page learning exercises over the REAL generated key index
 // (api/src/data/learning-study/791381.json) and the in-memory container: policy (per MODULE round(completed /
@@ -32,8 +33,8 @@ const ORDER = listLearningModules("791381").map(m => m.moduleId);
 const through = moduleId => ORDER.slice(0, ORDER.indexOf(moduleId) + 1);
 const seed = (visible, extra = {}) => createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", visible), ...extra });
 
-// «ابنِ الشبكة» (m29): the authored solution network of each build exercise, by its reference (the key holds the network, not the actions)
-const BUILD_SOLUTIONS = new Map(m29.lessons.flatMap(l => l.pages).flatMap(p => p.blocks).filter(b => b.simulationType === "network-build").map(b => [JSON.stringify(b.config.solution.config), b.config.solution]));
+// «ابنِ الشبكة» (m29, m30): the authored solution of each build exercise, found by its checks (several exercises share one network)
+const BUILD_SOLUTIONS = new Map([m29, m30].flatMap(m => m.lessons).flatMap(l => l.pages).flatMap(p => p.blocks).filter(b => b.simulationType === "network-build").map(b => [JSON.stringify(b.config.checks), b.config.solution]));
 /** A correct response for an indexed activity (the key is server data — the tests build the learner's answer from it). */
 function correctResponse(key) {
   switch (key.kind) {
@@ -41,7 +42,7 @@ function correctResponse(key) {
     case "trueFalse": return { kind: "trueFalse", value: key.answer };
     case "shortInput": return { kind: "shortInput", text: "  " + key.answer.toUpperCase() + "  " };   // normalization: trim + case
     case "practice-table": return { kind: "practice-table", choices: { ...key.cells } };
-    case "network-build": { const s = BUILD_SOLUTIONS.get(JSON.stringify(key.reference)); return { kind: "network-build", config: s.config, actions: s.actions }; }
+    case "network-build": { const s = BUILD_SOLUTIONS.get(JSON.stringify(key.checks)); return { kind: "network-build", config: s.config, actions: s.actions }; }
   }
 }
 function wrongResponse(key) {
@@ -62,10 +63,10 @@ const P2 = m08pages.find(p => p.pageId !== P1.pageId);
 const act = (page, i) => ({ pageId: page.pageId, activityId: page.activities[i][0], key: page.activities[i][1] });
 
 describe("the generated key index", () => {
-  it("covers the real content: 237 pages / 482 eligible activities of five kinds across ALL 29 modules (the 28 book modules: 230 pages / 475; «ابنِ الشبكة»: 7 / 7), every page mapped to a registered module; unknown ids resolve to null", () => {
+  it("covers the real content: 245 pages / 490 eligible activities of five kinds across ALL 30 modules (the 28 book modules: 230 pages / 475; «ابنِ الشبكة»: m29 7 / 7, m30 8 / 8), every page mapped to a registered module; unknown ids resolve to null", () => {
     expect(INDEX.schemaVersion).toBe(1); expect(INDEX.courseId).toBe("791381");
     const pages = Object.entries(INDEX.pages);
-    expect(pages.length).toBe(237);
+    expect(pages.length).toBe(245);
     const kinds = {};
     let count = 0;
     for (const [pageId, p] of pages) {
@@ -73,8 +74,8 @@ describe("the generated key index", () => {
       expect(pageId.startsWith(p.moduleId + "-")).toBe(true);
       for (const [id, key] of Object.entries(p.activities)) { count++; kinds[key.kind] = (kinds[key.kind] || 0) + 1; expect(id).toMatch(/^m\d\d-l\d\d-p\d\d-/); }
     }
-    expect(count).toBe(482);
-    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60, "network-build": 7 });
+    expect(count).toBe(490);
+    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60, "network-build": 15 });
     expect(findStudyActivity(INDEX, "791381-m99-l01-p01", "x")).toBeNull();
     expect(findStudyActivity(INDEX, P1.pageId, "m08-l01-p01-nope")).toBeNull();
     expect(findStudyActivity(INDEX, P2.pageId, act(P1, 0).activityId)).toBeNull();          // an activity of ANOTHER page
@@ -102,14 +103,15 @@ const m08pts = k => Math.round(k / M08_ELIGIBLE * 20);
 const m28pts = k => Math.round(k / M28_ELIGIBLE * 20);
 
 describe("policy — the authoritative module formula", () => {
-  it("constants: 20 per module, 29 modules, 580 total (owner decision 2026-11-26: «ابنِ الشبكة» is the 29th); m08 has 14 eligible activities, m28 has 57, m29 7, m01 9, m02 13; the index covers ALL 29 modules", () => {
-    expect([STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL]).toEqual([20, 29, 580]);
+  it("constants: 20 per module, 30 modules, 600 total (owner decisions 2026-11-26: «ابنِ الشبكة» m29 and m30); m08 has 14 eligible activities, m28 has 57, m29 7, m30 8, m01 9, m02 13; the index covers ALL 30 modules", () => {
+    expect([STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL]).toEqual([20, 30, 600]);
     expect(M08_ELIGIBLE).toBe(14); expect(M28_ELIGIBLE).toBe(57);
-    expect(Object.values(ELIGIBLE).reduce((s, n) => s + n, 0)).toBe(482);
-    expect(Object.keys(ELIGIBLE).length).toBe(29);
+    expect(Object.values(ELIGIBLE).reduce((s, n) => s + n, 0)).toBe(490);
+    expect(Object.keys(ELIGIBLE).length).toBe(30);
     expect(ELIGIBLE["791381-m01"]).toBe(9); expect(ELIGIBLE["791381-m02"]).toBe(13);
     for (const id of ORDER) expect(ELIGIBLE[id], id).toBeGreaterThan(0);
     expect(ELIGIBLE["791381-m29"]).toBe(7);   // «ابنِ الشبكة»: the seven build exercises
+    expect(ELIGIBLE["791381-m30"]).toBe(8);   // «ابنِ الشبكة: التوجيه والأمان»: the eight lab exercises
     for (const id of Object.keys(ELIGIBLE)) expect(ORDER).toContain(id);
     expect(pageEligibleCount(INDEX, P1.pageId)).toBe(P1.activities.length); expect(pageEligibleCount(INDEX, "791381-m99-l01-p01")).toBe(0);
   });
@@ -119,15 +121,15 @@ describe("policy — the authoritative module formula", () => {
     expect(studyPointsForModule({ completed: 99, eligible: 14 })).toBe(20);
     expect(studyPointsFromModules({ [M08]: { completed: 7, eligible: 14 }, "791381-m28": { completed: 57, eligible: 57 }, "791381-m01": { completed: 0, eligible: 9 } })).toBe(30);
   });
-  it("the whole content fully completed = 29 modules × 20 = 580 — the FULL study capacity is attainable (m01 9/9 → 20, m02 13/13 → 20, m29 7/7 → 20)", () => {
+  it("the whole content fully completed = 30 modules × 20 = 600 — the FULL study capacity is attainable (m01 9/9 → 20, m02 13/13 → 20, m29 7/7 → 20, m30 8/8 → 20)", () => {
     const everything = Object.fromEntries(Object.entries(ELIGIBLE).map(([m, n]) => [m, { completed: n, eligible: n }]));
-    expect(Object.keys(everything).length).toBe(29);
+    expect(Object.keys(everything).length).toBe(30);
     expect(studyPointsForModule(everything["791381-m01"])).toBe(20); expect(studyPointsForModule(everything["791381-m02"])).toBe(20); expect(studyPointsForModule(everything["791381-m29"])).toBe(20);
-    expect(studyPointsFromModules(everything)).toBe(580);
+    expect(studyPointsFromModules(everything)).toBe(600);
     expect(studyPointsFromModules(everything)).toBe(STUDY_MAX_TOTAL);
   });
-  it("the learning-only path reaches EXACTLY 2000: 36 perfect Learning-Practice items (1440) + the 28 book modules complete (560) → stage 25 / 2000 / 80 / 100% / pathComplete, with no exam and no project; «ابنِ الشبكة» adds 20 raw points beyond the capped path", () => {
-    const everything = Object.fromEntries(Object.entries(ELIGIBLE).filter(([m]) => m !== "791381-m29").map(([m, n]) => [m, { completed: n, eligible: n }]));
+  it("the learning-only path reaches EXACTLY 2000: 36 perfect Learning-Practice items (1440) + the 28 book modules complete (560) → stage 25 / 2000 / 80 / 100% / pathComplete, with no exam and no project; «ابنِ الشبكة» m29 + m30 add 40 raw points beyond the capped path", () => {
+    const everything = Object.fromEntries(Object.entries(ELIGIBLE).filter(([m]) => m !== "791381-m29" && m !== "791381-m30").map(([m, n]) => [m, { completed: n, eligible: n }]));
     const trainings = Object.fromEntries(listLearningTrainings().map(t => [t.trainingId, { bestPercentage: 100 }]));
     expect(Object.keys(trainings).length).toBe(36);
     const s = buildStrengthSummary({ finalizedPercentages: [], trainings, study: everything, projects: [] });
@@ -135,8 +137,8 @@ describe("policy — the authoritative module formula", () => {
     // one item or one module short of perfect is NOT complete
     expect(buildStrengthSummary({ finalizedPercentages: [], trainings: { ...trainings, F06: { bestPercentage: 90 } }, study: everything, projects: [] })).toMatchObject({ rawTotalPoints: 1996, stageNumber: 25, pathComplete: false, pointsToMaximum: 4 });
     // the 29th module «ابنِ الشبكة»: +20 raw points; the visible path stays capped at 2000 (nothing is lost, nothing overflows)
-    const withBuild = { ...everything, "791381-m29": { completed: 7, eligible: 7 } };
-    expect(buildStrengthSummary({ finalizedPercentages: [], trainings, study: withBuild, projects: [] })).toMatchObject({ studyPoints: 580, rawTotalPoints: 2020, stagePoints: 2000, stageNumber: 25, pathComplete: true });
+    const withBuild = { ...everything, "791381-m29": { completed: 7, eligible: 7 }, "791381-m30": { completed: 8, eligible: 8 } };
+    expect(buildStrengthSummary({ finalizedPercentages: [], trainings, study: withBuild, projects: [] })).toMatchObject({ studyPoints: 600, rawTotalPoints: 2040, stagePoints: 2000, stageNumber: 25, pathComplete: true });
   });
   it("buildStrengthSummary: study is the fourth raw source; absent study → 0; T05 80% = 32 and F01 100% = 40 both count", () => {
     const base = { finalizedPercentages: [100, 100, 100], trainings: { T05: { bestPercentage: 80 }, F01: { bestPercentage: 100 } }, projects: [{ projectCode: "794589", overallProgress: 25 }] };
@@ -167,7 +169,7 @@ describe("storage — completion state, never a counter", () => {
     expect(state.moduleViews[M08]).toEqual({ completed: 3, eligible: 14, points: m08pts(3), max: 20 }); expect(state.totalPoints).toBe(m08pts(3));
     expect(state.modules[M08]).toEqual({ completed: 3, eligible: 14 });
     // EVERY indexed module is present with its eligible total even when nothing was completed there
-    expect(Object.keys(state.modules).length).toBe(29);
+    expect(Object.keys(state.modules).length).toBe(30);
     expect(state.modules["791381-m28"]).toEqual({ completed: 0, eligible: 57 });
     expect(state.modules["791381-m01"]).toEqual({ completed: 0, eligible: 9 }); expect(state.modules["791381-m02"]).toEqual({ completed: 0, eligible: 13 });
     expect(studyStateOf(null, INDEX).moduleViews["791381-m28"]).toEqual({ completed: 0, eligible: 57, points: 0, max: 20 });
@@ -178,7 +180,7 @@ describe("storage — completion state, never a counter", () => {
     expect(state.pages[P1.pageId].completed).toEqual([act(P1, 0).activityId]);
     expect(state.totalPoints).toBe(m08pts(1));
     expect(studyModulesForStrength(doc, ["791381"])[M08]).toEqual({ completed: 1, eligible: 14 });
-    expect(Object.keys(studyModulesForStrength(doc, ["791381"])).length).toBe(29);
+    expect(Object.keys(studyModulesForStrength(doc, ["791381"])).length).toBe(30);
     expect(studyModulesForStrength(doc, ["000000"])).toEqual({});
     // a page stored under another course id does not count for this course's index
     expect(studyStateOf({ pages: { [P1.pageId]: { courseId: "999999", moduleId: M08, completed: { [act(P1, 0).activityId]: "t" } } } }, INDEX).totalPoints).toBe(0);
@@ -207,9 +209,9 @@ describe("API — attempts through the real handler (student)", () => {
     const a = act(P1, 0), b = act(P1, 1), c = act(P1, 2);
     const before = await get(studentDeps(ctx));
     expect(before.status).toBe(200);
-    expect(before.jsonBody).toMatchObject({ ok: true, actor: "student", courseId: "791381", policy: { modulePointsMax: 20, moduleCount: 29 }, pages: {}, totalPoints: 0 });   // 29 since «ابنِ الشبكة» (owner decision 2026-11-26: the 29th study module)
+    expect(before.jsonBody).toMatchObject({ ok: true, actor: "student", courseId: "791381", policy: { modulePointsMax: 20, moduleCount: 30 }, pages: {}, totalPoints: 0 });   // 30 since «ابنِ الشبكة» m29 / m30 (owner decisions 2026-11-26)
     expect(before.jsonBody.modules[M08]).toEqual({ completed: 0, eligible: 14, points: 0, max: 20 });
-    expect(Object.keys(before.jsonBody.modules).length).toBe(29);
+    expect(Object.keys(before.jsonBody.modules).length).toBe(30);
     const wrong = await attempt(studentDeps(ctx), { pageId: a.pageId, activityId: a.activityId, response: wrongResponse(a.key) });
     expect(wrong.jsonBody).toMatchObject({ ok: true, correct: false, persisted: false, gained: 0, page: { pageId: a.pageId, moduleId: M08, completed: [], eligible: 3 }, module: { completed: 0, eligible: 14, points: 0, max: 20 } });
     expect(ctx.names("platform/learning-study/")).toEqual([]);                                // a wrong answer writes nothing

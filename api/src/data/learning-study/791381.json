@@ -4940,6 +4940,995 @@
           ]
         }
       }
+    },
+    "791381-m30-l01-p01": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l01-p01-build-static": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "pc"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.25,
+                "y": 0.1
+              },
+              {
+                "id": "r2",
+                "kind": "router",
+                "label": "R2",
+                "x": 0.75,
+                "y": 0.1
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "s0/0/0"
+                },
+                "b": {
+                  "deviceId": "r2",
+                  "port": "s0/0/0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "r2",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "wan",
+              "label": "R1 وR2 موصولان (الرابط التسلسلي)",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "r2"
+            },
+            {
+              "id": "r1",
+              "label": "R1 تعلّم الشبكة 192.168.2.0/24 بمسار ثابت (S)",
+              "kind": "lab.route",
+              "deviceId": "r1",
+              "network": "192.168.2.0/24",
+              "code": "S"
+            },
+            {
+              "id": "r2",
+              "label": "R2 تعلّم الشبكة 192.168.1.0/24 بمسار ثابت (S)",
+              "kind": "lab.route",
+              "deviceId": "r2",
+              "network": "192.168.1.0/24",
+              "code": "S"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2 (192.168.2.10) عبر الـ WAN",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.10",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l01-p02": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l01-p02-build-rip": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "pc"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.25,
+                "y": 0.1
+              },
+              {
+                "id": "r2",
+                "kind": "router",
+                "label": "R2",
+                "x": 0.75,
+                "y": 0.1
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "s0/0/0"
+                },
+                "b": {
+                  "deviceId": "r2",
+                  "port": "s0/0/0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "r2",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "wan",
+              "label": "R1 وR2 موصولان (الرابط التسلسلي)",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "r2"
+            },
+            {
+              "id": "r1",
+              "label": "R1 تعلّم الشبكة 192.168.2.0/24 بـ RIP (R)",
+              "kind": "lab.route",
+              "deviceId": "r1",
+              "network": "192.168.2.0/24",
+              "code": "R"
+            },
+            {
+              "id": "r2",
+              "label": "R2 تعلّم الشبكة 192.168.1.0/24 بـ RIP (R)",
+              "kind": "lab.route",
+              "deviceId": "r2",
+              "network": "192.168.1.0/24",
+              "code": "R"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2 (192.168.2.10) عبر الـ WAN",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.10",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l01-p03": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l01-p03-build-ospf": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "pc"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.25,
+                "y": 0.1
+              },
+              {
+                "id": "r2",
+                "kind": "router",
+                "label": "R2",
+                "x": 0.75,
+                "y": 0.1
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "s0/0/0"
+                },
+                "b": {
+                  "deviceId": "r2",
+                  "port": "s0/0/0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "r2",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "wan",
+              "label": "R1 وR2 موصولان (الرابط التسلسلي)",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "r2"
+            },
+            {
+              "id": "r1",
+              "label": "R1 تعلّم الشبكة 192.168.2.0/24 بـ OSPF (O)",
+              "kind": "lab.route",
+              "deviceId": "r1",
+              "network": "192.168.2.0/24",
+              "code": "O"
+            },
+            {
+              "id": "r2",
+              "label": "R2 تعلّم الشبكة 192.168.1.0/24 بـ OSPF (O)",
+              "kind": "lab.route",
+              "deviceId": "r2",
+              "network": "192.168.1.0/24",
+              "code": "O"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2 (192.168.2.10) عبر الـ WAN",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.10",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l01-p04": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l01-p04-build-eigrp": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "pc"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.25,
+                "y": 0.1
+              },
+              {
+                "id": "r2",
+                "kind": "router",
+                "label": "R2",
+                "x": 0.75,
+                "y": 0.1
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "s0/0/0"
+                },
+                "b": {
+                  "deviceId": "r2",
+                  "port": "s0/0/0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "r2",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "wan",
+              "label": "R1 وR2 موصولان (الرابط التسلسلي)",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "r2"
+            },
+            {
+              "id": "r1",
+              "label": "R1 تعلّم الشبكة 192.168.2.0/24 بـ EIGRP (D)",
+              "kind": "lab.route",
+              "deviceId": "r1",
+              "network": "192.168.2.0/24",
+              "code": "D"
+            },
+            {
+              "id": "r2",
+              "label": "R2 تعلّم الشبكة 192.168.1.0/24 بـ EIGRP (D)",
+              "kind": "lab.route",
+              "deviceId": "r2",
+              "network": "192.168.1.0/24",
+              "code": "D"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2 (192.168.2.10) عبر الـ WAN",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.10",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l02-p01": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l02-p01-build-acl-standard": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "switch",
+              "pc",
+              "server"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.1
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.25,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.1,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.4,
+                "y": 0.88
+              },
+              {
+                "id": "srv1",
+                "kind": "server",
+                "label": "SRV1",
+                "x": 0.75,
+                "y": 0.78
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l4",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "srv1",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "srv",
+              "label": "SRV1 موصول بالراوتر R1",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "srv1"
+            },
+            {
+              "id": "pc1",
+              "label": "PC1 يصل إلى الخادم (192.168.2.100)",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.100",
+              "value": true
+            },
+            {
+              "id": "pc2",
+              "label": "PC2 لا يصل إلى الخادم (ممنوع بالـ ACL)",
+              "kind": "lab.reach",
+              "source": "pc2",
+              "destination": "192.168.2.100",
+              "value": false
+            },
+            {
+              "id": "gw2",
+              "label": "PC2 ما زال يصل إلى بوابته 192.168.1.1",
+              "kind": "lab.reach",
+              "source": "pc2",
+              "destination": "192.168.1.1",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l02-p02": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l02-p02-build-acl-extended": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "switch",
+              "pc",
+              "server"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.1
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.25,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.1,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.4,
+                "y": 0.88
+              },
+              {
+                "id": "srv1",
+                "kind": "server",
+                "label": "SRV1",
+                "x": 0.75,
+                "y": 0.78
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l4",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "srv1",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "srv",
+              "label": "SRV1 موصول بالراوتر R1",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "srv1"
+            },
+            {
+              "id": "noping",
+              "label": "ping من PC1 إلى الخادم ممنوع",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.100",
+              "value": false
+            },
+            {
+              "id": "web1",
+              "label": "PC1 يفتح موقع الخادم (HTTP)",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "192.168.2.100",
+              "proto": "http",
+              "value": true
+            },
+            {
+              "id": "web2",
+              "label": "PC2 يفتح موقع الخادم (HTTP)",
+              "kind": "lab.reach",
+              "source": "pc2",
+              "destination": "192.168.2.100",
+              "proto": "http",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l03-p01": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l03-p01-build-pat": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "switch",
+              "pc",
+              "server"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.3,
+                "y": 0.1
+              },
+              {
+                "id": "r2",
+                "kind": "router",
+                "label": "R2",
+                "x": 0.75,
+                "y": 0.1
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.3,
+                "y": 0.42
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.15,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.45,
+                "y": 0.88
+              },
+              {
+                "id": "srv1",
+                "kind": "server",
+                "label": "SRV1",
+                "x": 0.75,
+                "y": 0.78
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "s0/0/0"
+                },
+                "b": {
+                  "deviceId": "r2",
+                  "port": "s0/0/0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "l3",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l4",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l5",
+                "a": {
+                  "deviceId": "r2",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "srv1",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "wan",
+              "label": "R1 موصول بالمزوّد R2",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "r2"
+            },
+            {
+              "id": "default",
+              "label": "R1 فيه مسار افتراضي ثابت 0.0.0.0/0",
+              "kind": "lab.route",
+              "deviceId": "r1",
+              "network": "0.0.0.0/0",
+              "code": "S"
+            },
+            {
+              "id": "pc1",
+              "label": "PC1 يصل إلى خادم الإنترنت 8.8.8.8",
+              "kind": "lab.reach",
+              "source": "pc1",
+              "destination": "8.8.8.8",
+              "value": true
+            },
+            {
+              "id": "pc2",
+              "label": "PC2 يصل إلى خادم الإنترنت 8.8.8.8",
+              "kind": "lab.reach",
+              "source": "pc2",
+              "destination": "8.8.8.8",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    "791381-m30-l03-p02": {
+      "moduleId": "791381-m30",
+      "activities": {
+        "m30-l03-p02-build-ipv6": {
+          "kind": "network-build",
+          "rules": {
+            "kinds": [
+              "router",
+              "pc"
+            ],
+            "lab": true
+          },
+          "reference": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.1
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.88
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.88
+              }
+            ],
+            "links": [
+              {
+                "id": "l1",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "l2",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "l1",
+              "label": "PC1 موصول بالراوتر R1",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "pc1"
+            },
+            {
+              "id": "l2",
+              "label": "PC2 موصول بالراوتر R1",
+              "kind": "build.link",
+              "a": "r1",
+              "b": "pc2"
+            },
+            {
+              "id": "ping6",
+              "label": "PC1 يصل إلى PC2 بـ IPv6 (2001:db8:2::10)",
+              "kind": "lab.reach6",
+              "source": "pc1",
+              "destination": "2001:db8:2::10",
+              "value": true
+            },
+            {
+              "id": "back6",
+              "label": "PC2 يصل إلى بوابته 2001:db8:2::1",
+              "kind": "lab.reach6",
+              "source": "pc2",
+              "destination": "2001:db8:2::1",
+              "value": true
+            }
+          ]
+        }
+      }
     }
   }
 }

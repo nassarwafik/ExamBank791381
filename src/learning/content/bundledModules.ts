@@ -81,6 +81,7 @@ export const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>>
     "791381-m06": () => import("./791381/modules/m06"),
     "791381-m28": () => import("./791381/modules/m28"),
     "791381-m29": () => import("./791381/modules/m29"),
+    "791381-m30": () => import("./791381/modules/m30"),
   },
   // 791381s — the summary booklet «أوراق تلخيص للمراجعة»: module mNN = the booklet's section NN (m00 = its cover / introduction),
   // a verbatim, book-only conversion of booklet PDF pages 1 and 4–112 (the contents pages 2–3 and the blank note pages 113–122 are not

@@ -41,7 +41,7 @@ describe("L.6b — the served module bodies and the check index", () => {
         expect(ids, page.id).toEqual(Object.keys(STUDY_INDEX.pages[page.id]?.activities ?? {}));
       }
     }
-    expect(checkable).toBe(486);   // 479 + the 7 «ابنِ الشبكة» exercises
+    expect(checkable).toBe(494);   // 479 + the 15 «ابنِ الشبكة» exercises
   }, 30000);
 
   it("the check index: 479 checkable blocks, the 475 study ones carry exactly the study index's key, 4 self-checks are study: false", () => {
@@ -54,7 +54,7 @@ describe("L.6b — the served module bodies and the check index", () => {
       }
     }
     for (const [pageId, page] of Object.entries(STUDY_INDEX.pages)) for (const id of Object.keys(page.activities)) expect(CHECK_INDEX.pages[pageId].activities[id]?.study, id).toBe(true);
-    expect([study, self]).toEqual([482, 4]);   // 475 + the 7 «ابنِ الشبكة» exercises (study activities, owner decision 2026-11-26)
+    expect([study, self]).toEqual([490, 4]);   // 475 + the 15 «ابنِ الشبكة» exercises (m29: 7, m30: 8) (study activities, owner decision 2026-11-26)
   });
 
   it("the check index keeps every authored message, hint ladder and explanation (the server's feedback is the book's)", async () => {

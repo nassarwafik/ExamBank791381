@@ -112,6 +112,9 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   // «ابنِ الشبكة» — the judge of a build-the-network exercise (the learner's own networkTopology@2 network, build checks + the simulator's
   // checks): the server (api/src/lib/learning-network-build.js) and the content proof test run the same rules.
   "src/learning/lab/networkBuildJudge.ts",
+  // «ابنِ الشبكة» in LAB mode — the network lab's replay (serial WAN, static / RIP / OSPF / EIGRP routing, ACL, NAT / PAT, IPv6, hubs:
+  // netLabReplay and the lab engine / CLI / model it uses), so the server judges a lab network exactly as the learner's lab ran it.
+  "src/studentTools/netLabReplay.ts",
   // Phase 21I — multi-subject exam request routing (subject detection, bank / composer route decision, composer pre-fill): the
   // interpret-exam-request endpoint and the Builder route with byte-identical rules.
   "src/examRequestRouting.ts",

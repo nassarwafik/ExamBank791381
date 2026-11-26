@@ -49,11 +49,11 @@ describe("student-learning-materials — safe catalog from the class's publicati
     const { r } = await call(ctx);
     expect(r.jsonBody).toEqual({ ok: true, materials: [] });
   });
-  it("Case 4: storage contains m999 (+ the non-manifest id m30): omitted, default-denied; nothing echoed", async () => {
-    const ctx = createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", [{ courseId: "791381", visibleModuleIds: [M01, "791381-m999", "791381-m30"] }, { courseId: "999999", visibleModuleIds: ["999999-m01"] }]) });
+  it("Case 4: storage contains m999 (+ the non-manifest id m31): omitted, default-denied; nothing echoed", async () => {
+    const ctx = createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", [{ courseId: "791381", visibleModuleIds: [M01, "791381-m999", "791381-m31"] }, { courseId: "999999", visibleModuleIds: ["999999-m01"] }]) });
     const { r } = await call(ctx);
     expect(r.jsonBody.materials).toEqual([{ courseId: "791381", title: "شبكات الاتصال", modules: [{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }] }]);
-    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m999|m30|m29|m28|m06|m05|m04|m19|m03|999999/);
+    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m999|m31|m30|m29|m28|m06|m05|m04|m19|m03|999999/);
   });
   it("Case 5: token says class A, persisted student is in class B → class B's publication wins", async () => {
     const ctx = createMemoryContainer({
@@ -170,7 +170,8 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "791381-m27", title: "بروتوكولات التوجيه", order: 26 },
       { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 },
       { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 },
-      { moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 }
+      { moduleId: "791381-m29", title: "ابنِ الشبكة", order: 29 },
+      { moduleId: "791381-m30", title: "ابنِ الشبكة: التوجيه والأمان", order: 30 }
     ] }, { courseId: "791381s", title: "أوراق تلخيص شبكات الاتصال", subject: "أنظمة محوسبة", modules: [
       // The summary booklet: an independent second course — listed = publishable, never auto-visible.
       { moduleId: "791381s-m00", title: "أوراق تلخيص للمراجعة", order: 0 },
@@ -236,7 +237,7 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       // HW-A2: «أنظمة محوسبة», generated with its content (its exact list is pinned by course791283.test.ts)
       ...listLearningModules("791283"),
     ] }] });
-    expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m30|pages|lessons|blocks|answer|pdf/i);
+    expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m31|pages|lessons|blocks|answer|pdf/i);
   });
   it("unauthenticated → 401", async () => {
     const r = await catalog(breq(), { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) });

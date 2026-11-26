@@ -95,3 +95,22 @@ describe("«ابنِ الشبكة» in the Reader", () => {
     expect(ui().textContent).toMatch(/التحقق من الشبكة متاح داخل المنصة/);
   });
 });
+
+describe("«ابنِ الشبكة» in LAB mode (task.lab: the routing / ACL / NAT / IPv6 exercises)", () => {
+  const LAB_BLOCK = { ...BLOCK, id: "nb-lab", config: { task: { intro: "ابنِ WAN.", goals: [{ id: "wan", label: "R1 وR2 موصولان" }], kinds: ["router", "pc", "hub"], lab: true } } } as unknown as LearningActivityProps["block"];
+  it("the builder keeps the whole lab: the offered hub, serial ports, the lab's router commands and IPv6 — still no example and no file", async () => {
+    render(<NetworkBuildActivity {...({ block: LAB_BLOCK, commands: { reset: 0 }, emit: vi.fn(), check: vi.fn() } as unknown as LearningActivityProps)} />);
+    const l = await lab();
+    const add = within(l).getByRole("group", { name: "إضافة جهاز" });
+    expect(within(add).getAllByRole("button").map(b => b.textContent)).toEqual(["+ راوتر", "+ حاسوب", "+ Hub"]);
+    expect(within(l).queryByTestId("network-lab-example")).toBeNull();
+    expect(within(l).queryByRole("button", { name: "افتح ملفًا" })).toBeNull();
+    await click(within(add).getByRole("button", { name: "+ راوتر" }));
+    await click(within(add).getByRole("button", { name: "+ راوتر" }));
+    expect(within(l).getByTestId("network-lab-router-extras")).toBeTruthy();
+    fireEvent.change(within(l).getByRole("combobox", { name: "من الجهاز" }), { target: { value: "r1" } }); await tick();
+    expect([...within(l).getByRole("combobox", { name: "منفذ الجهاز الأول" }).querySelectorAll("option")].map(o => o.textContent)).toContain("s0/0/0");
+    await click(within(add).getByRole("button", { name: "+ حاسوب" }));
+    expect(within(l).getByTestId("network-lab-ipv6")).toBeTruthy();
+  });
+});

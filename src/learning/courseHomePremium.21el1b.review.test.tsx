@@ -23,7 +23,7 @@ const EXPECTED: [string, string | null][] = [
   ["الأمان · Wi-Fi · IPv6 · DHCP", "14 درسًا · الصفحات 146–186"],
   ["ACL · التوجيه · WAN", "7 دروس · الصفحات 187–215"],
   ["التلخيص", "8 دروس · الصفحات 216–248"],
-  ["ابنِ الشبكة", "4 دروس · الصفحات 249–256"],   // the practice module m29
+  ["ابنِ الشبكة", "8 دروس · الصفحات 249–265"],   // the practice modules m29 + m30
 ];
 
 describe("21E L1-B review — section details", () => {

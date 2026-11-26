@@ -147,3 +147,26 @@ describe("POST /api/learning-study/791381s/attempt — «ابنِ الشبكة»
     expect(written(ctx)).toEqual([studyDocName("u1")]);
   });
 });
+
+// 791381 m30 (owner decision 2026-11-26) — a LAB-mode exercise through the real route: the server replays the learner's lab network with
+// the network lab's own engine (shared finalization) — the OSPF routes must really be learned and the ping must really come back.
+import m30 from "../../src/learning/content/791381/modules/m30";
+describe("POST /api/learning-study/791381/attempt — «ابنِ الشبكة: التوجيه والأمان» (m30, lab mode)", () => {
+  const LPAGE = "791381-m30-l01-p03", LACT = "m30-l01-p03-build-ospf";
+  const lentry = CHECKS.pages[LPAGE].activities[LACT];
+  const ospf = m30.lessons.flatMap(l => l.pages).flatMap(p => p.blocks).find(b => b.id === LACT).config.solution;
+  const lSeed = () => createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", ["791381-m30"]) });
+  const lAttempt = (deps, response) => handler({ method: "POST", url: "https://x/api/learning-study", headers: { get: () => null }, params: { courseId: CID, action: "attempt" }, json: async () => ({ pageId: LPAGE, activityId: LACT, response }) }, deps);
+  it("the key is a lab key; a network without OSPF on R2 is wrong goal by goal; the OSPF solution is completed once (m30 1/8 → 3 points)", async () => {
+    expect(lentry.key.rules).toEqual({ kinds: ["router", "pc"], lab: true });
+    expect(lentry.key.checks.map(c => c.kind)).toEqual(["build.link", "lab.route", "lab.route", "lab.reach"]);
+    const ctx = lSeed();
+    const half = ospf.actions.filter(a => !(a.deviceId === "r2" && /^(router ospf|network )/.test(a.command || "")));
+    const w = await lAttempt(studentDeps(ctx), { kind: "network-build", config: ospf.config, actions: half });
+    expect(w.jsonBody).toMatchObject({ correct: false, persisted: false, study: true, parts: { wan: true, r1: false, r2: false, ping: false } });
+    expect(written(ctx)).toEqual([]);
+    const r = await lAttempt(studentDeps(ctx), { kind: "network-build", config: ospf.config, actions: ospf.actions });
+    expect(r.jsonBody).toMatchObject({ correct: true, persisted: true, gained: 3, module: { completed: 1, eligible: 8, points: 3, max: 20 } });
+    expect(written(ctx)).toEqual([studyDocName("u1")]);
+  });
+});
