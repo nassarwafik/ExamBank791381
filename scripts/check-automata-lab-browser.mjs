@@ -367,6 +367,16 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     const a = await saved();
     check(a && a.kind === "machineDesign" && Object.keys(a).every(k => ["kind", "machine", "layout"].includes(k)) && JSON.stringify(a.machine.transitions) === JSON.stringify([{ from: "q0", read: "1", write: "$", move: "R", to: "q1" }, { from: "q1", read: "∆", write: "$", move: "S", to: "q2" }]) && JSON.stringify(a.machine.accept) === "[\"q2\"]",
       name + ": the saved answer is the machine as written — the two rows, the accepting state, nothing else");
+    if (name === "desktop") {
+      // AUTO-A12 — on the drawing: move q1 one cell down; the saved answer is the SAME machine with where q1 was put
+      const canvas = mq.getByTestId("alab-canvas");
+      await canvas.scrollIntoViewIfNeeded();
+      await mq.getByLabel("الحالة", { exact: true }).selectOption("q1");
+      await mq.getByRole("group", { name: "انقل q1 خانة" }).getByRole("button", { name: "أسفل" }).click();
+      const moved = await saved();
+      check(JSON.stringify(moved.machine) === JSON.stringify(a.machine) && Array.isArray(moved.layout && moved.layout.q1),
+        name + ": moving q1 on the drawing saves the same machine with where q1 was put (" + JSON.stringify(moved.layout) + ")");
+    }
     const run = mq.locator("section").filter({ has: page.getByRole("heading", { name: /شغّل آلتك خطوة خطوة/ }) });
     await run.getByLabel("الكلمة", { exact: true }).fill("1");
     await run.getByRole("button", { name: "شغّل", exact: true }).click();

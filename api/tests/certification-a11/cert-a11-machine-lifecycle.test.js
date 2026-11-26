@@ -37,7 +37,7 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const load = () => JSON.parse(fs.readFileSync(path.join(repo, MACHINE_DESIGN_ACCEPTANCE_PATH), "utf8"));
 const qs = e => e.sections.flatMap(s => s.questions);
 const configsOf = e => Object.fromEntries(qs(e).filter(q => q.machineDesign).map(q => [q.examQuestionId, q.machineDesign]));
-const STUDENTS = { "md-perfect": "طالب مثالي", "md-partial": "طالب جزئي", "md-blank": "طالب لم يجب", "md-nohalt": "طالب آلته لا تتوقف", "md-attacker": "طالب مهاجم" };
+const STUDENTS = { "md-perfect": "طالب مثالي", "md-partial": "طالب جزئي", "md-blank": "طالب لم يجب", "md-nohalt": "طالب آلته لا تتوقف", "md-attacker": "طالب مهاجم", "md-layout": "طالب يرتّب رسمه" };
 
 const ans = machine => ({ kind: "machineDesign", machine });
 const rename = (m, prefix) => { const n = q => prefix + q; return { states: m.states.map(n), start: n(m.start), accept: m.accept.map(n), transitions: m.transitions.map(t => ({ ...t, from: n(t.from), to: n(t.to) })) }; };
@@ -286,6 +286,30 @@ describe("A11 full platform lifecycle", () => {
     expect(byId.t2.machineDesign).toEqual(configsOf(load()).t2);
     const saved = await p.teacher.saveReview(aid, "md-partial", {}, 1, "مراجعة أسئلة تصميم الآلات");
     expect([saved.status, saved.jsonBody.result.score, saved.jsonBody.result.finalized]).toEqual([200, 5, true]);
+  });
+  it("AUTO-A12 — a layout is presentation only: saved and restored exactly through the platform, never a different mark", async () => {
+    // (PERFECT.p1 is the reference renamed: states sq0, sq1, … — a layout names the answer's OWN states, others are dropped)
+    expect(PERFECT.p1.machine.states.slice(0, 2)).toEqual(["sq0", "sq1"]);
+    const withLayout = { ...PERFECT, p1: { ...PERFECT.p1, layout: { sq0: [0, 0], sq1: [3, 1] } }, t2: { ...PARTIAL.t2, layout: { q2: [1, 4] } } };
+    const r = await takeExam(p, aid, "md-layout", withLayout);
+    for (const x of r.restores) expect(x.restored).toEqual(x.expected.answers);
+    expect(r.attempt.answers.p1.layout).toEqual({ sq0: [0, 0], sq1: [3, 1] });
+    expect(r.attempt.answers.t2.layout).toEqual({ q2: [1, 4] });
+    const snapshot = p.assignmentOf(aid).examSnapshot;
+    const strip = a => Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v && v.layout ? { kind: v.kind, machine: v.machine } : v]));
+    expect(gradeExam(snapshot, r.attempt.answers)).toEqual(gradeExam(snapshot, strip(r.attempt.answers)));
+    expect(r.attempt.score).toBe(18 - 5);                                             // t2 wrong (x + 1), the rest right
+    const bad = normalizeDraftAnswers({ p1: { ...PERFECT.p1, layout: { sq0: [99, 0] } }, t1: { ...PERFECT.t1, layout: { nowhere: [1, 1] } } }, snapshot);
+    expect([bad.rejected, bad.answers.p1, bad.answers.t1]).toEqual([[], PERFECT.p1, PERFECT.t1]);   // a bad layout is dropped, the machine kept
+  });
+  it("AUTO-A12 — the teacher's reference may carry a layout (a valid key); one that does not read is a finalization blocker", () => {
+    const e = load();
+    const t1 = qs(e).find(q => q.examQuestionId === "t1");
+    t1.answer.layout = { q0: [0, 0], q3: [4, 2] };
+    expect(validateMachineDesignQuestion(t1)).toEqual([]);
+    t1.answer.layout = { q0: [0, 21] };
+    expect(validateMachineDesignQuestion(t1).map(i => i.code)).toEqual(["MACHINE_KEY_LAYOUT"]);
+    expect(evaluateExamFinalization(e).blockers.length).toBeGreaterThan(0);
   });
   // ── AUTO-A11b — the stored feedback, the teacher's review, the released breakdown ─────────────────────────────────────────────────
   it("A11b — the stored grades keep the machine feedback: the agreement length, the separating word (a language / a function), the rule, the word it did not halt on", () => {

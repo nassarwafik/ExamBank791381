@@ -76,6 +76,13 @@ describe("A11a — the private reference", () => {
     expect(codes(validateMachineDesignQuestion(q(TM_CFG, ANBN)))).toEqual(["MACHINE_KEY_INVALID"]);   // a push-down shape for a Turing question
     expect(codes(validateMachineDesignAnswerKey({ reference: PLUS2 }, { v: 2 }).issues)).toEqual(["MACHINE_KEY_CONFIG_INVALID"]);
   });
+  it("AUTO-A12 — the reference's layout: one that reads is a valid part of the key; one that does not is the teacher's to fix", () => {
+    expect(validateMachineDesignQuestion({ ...q(TM_CFG, PLUS2), answer: { reference: PLUS2, layout: { q0: [0, 0], q5: [4, 2] } } })).toEqual([]);
+    expect(machineDesignAuthority(TM_CFG, { reference: PLUS2, layout: { q0: [0, 0], q5: [4, 2] } })?.key.layout).toEqual({ q0: [0, 0], q5: [4, 2] });
+    for (const layout of [{ q0: [0, 21] }, { nowhere: [1, 1] }, { q0: [1.5, 0] }, "x"]) {
+      expect(codes(validateMachineDesignQuestion({ ...q(TM_CFG, PLUS2), answer: { reference: PLUS2, layout } })), JSON.stringify(layout)).toEqual(["MACHINE_KEY_LAYOUT"]);
+    }
+  });
   it("├ is the book's: a reference that steps left of it does not read", () => {
     const leftOfEnd = { ...PLUS2, transitions: [...PLUS2.transitions, tmMove("q5", "├", "├", "L", "q5")] };
     expect(codes(validateMachineDesignQuestion(q(TM_CFG, leftOfEnd)))).toEqual(["MACHINE_KEY_UNREADABLE"]);
