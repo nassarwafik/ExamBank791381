@@ -684,8 +684,12 @@ export function readDiagramScript(src: string, fallback: ScriptKind): ScriptResu
   b.nodes.slice(before).forEach((n, i) => { n.w = Math.max(n.w, Math.min(300, widthOf(n))); n.x = right + 60; n.y = 60 + i * 100; });
   clampOnPage(b.doc());
   b.problems.sort((p, q) => p.line - q.line);
-  return { kind, doc: b.doc(), problems: b.problems };
+  const doc = b.doc();
+  // DG5: «skinparam linetype ortho» (PlantUML's own words) draws every arrow with right angles
+  if (kind !== "sequence" && ORTHO.test(src)) for (const e of doc.edges) e.route = "ortho";
+  return { kind, doc, problems: b.problems };
 }
+const ORTHO = /^[ \t]*skinparam[ \t]+linetype[ \t]+ortho[ \t]*$/im;
 
 /** Keeps where the learner put things: a component of the new diagram that the old one already had (same kind and name) keeps its
  *  place; the rest follow the automatic layout. */
@@ -694,9 +698,15 @@ export function keepPositions(next: DiagramDoc, old: DiagramDoc | undefined): Di
   const key = (n: DNode) => n.type + "|" + (n.text.name ?? "").trim().toLowerCase();
   const was = new Map<string, DNode>();
   for (const n of old.nodes) if ((n.text.name ?? "").trim() && !was.has(key(n))) was.set(key(n), n);
+  // DG5: an arrow the old diagram had (same type, between components of the same names) keeps its line's shape. A diagram drawn all with
+  // right angles is written with «skinparam linetype ortho», so there the text decides (taking the line out makes them straight)
+  const nameOf = (d: DiagramDoc, id: string) => { const n = d.nodes.find(v => v.id === id); return n ? key(n) : ""; };
+  const ekey = (d: DiagramDoc, e: DEdge) => e.type + "|" + nameOf(d, e.from) + "|" + nameOf(d, e.to);
+  const allOrtho = old.edges.length > 0 && old.edges.every(e => e.route === "ortho");
+  const ortho = new Set(allOrtho ? [] : old.edges.filter(e => e.route === "ortho").map(e => ekey(old, e)));
   return { ...next, nodes: next.nodes.map(n => {
     const o = was.get(key(n));
     if (!o || nodeSpec(next.kind, n.type)?.resizable) return n;
     return { ...n, x: Math.min(o.x, DIAGRAM_LIMITS.canvasW - n.w), y: next.kind === "sequence" ? n.y : Math.min(o.y, DIAGRAM_LIMITS.canvasH - n.h) };
-  }) };
+  }), edges: !ortho.size ? next.edges : next.edges.map(e => (e.route !== "ortho" && ortho.has(ekey(next, e)) ? { ...e, route: "ortho" as const } : e)) };
 }

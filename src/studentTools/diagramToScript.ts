@@ -135,5 +135,7 @@ export function diagramToScript(doc: DiagramDoc): string | null {
   const kind = doc.kind as ScriptKind;
   const body = kind === "class" ? classScript(doc) : kind === "useCase" ? ucScript(doc) : kind === "sequence" ? sequenceScript(doc) : kind === "state" ? stateScript(doc) : null;
   if (!body) return null;
-  return ["@startuml", ...body, ...notesOf(doc), "@enduml"].join("\n");
+  // DG5: a diagram drawn all with right angles says so in PlantUML's own words
+  const ortho = kind !== "sequence" && doc.edges.length > 0 && doc.edges.every(e => e.route === "ortho");
+  return ["@startuml", ...(ortho ? ["skinparam linetype ortho"] : []), ...body, ...notesOf(doc), "@enduml"].join("\n");
 }

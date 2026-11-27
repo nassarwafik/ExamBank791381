@@ -110,3 +110,12 @@ textarea.dgm-input { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13
 .dgm-script-problem { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border: 1px solid var(--eb-border); border-inline-start: 4px solid var(--eb-warn);
   border-radius: 8px; background: var(--eb-bg); color: var(--eb-text); font-size: var(--eb-fs-13); overflow-wrap: anywhere; }
 .dgm-script-line { flex: 0 0 auto; padding: 0 6px; border-radius: 6px; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+
+/* DG5 — the line's shape (straight / right angles), and the tools for several chosen at once */
+.dgm-route { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.dgm-route .dgm-arrow-btn { justify-content: center; }
+.dgm-route .dgm-arrow-btn svg { flex: 0 0 auto; }
+.dgm-align { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.dgm-align legend { font-size: var(--eb-fs-13); padding: 0; margin-bottom: 4px; }
+.dgm-align .dgm-sq { min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; }
+.dgm-canvas:focus-visible { outline: none; box-shadow: var(--eb-focus-ring); }

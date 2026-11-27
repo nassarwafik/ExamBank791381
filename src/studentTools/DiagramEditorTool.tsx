@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, type DiagramKind, type EdgeSpec, type NodeSpec } from "./diagramCatalog";
 import {
-  DIAGRAM_LIMITS, addNode, commit, connect, diagramFileName, duplicateNode, emptyDoc, moveMessage, moveNodesBy, parseDiagram, parseDraft, preview, redo,
-  removeEdge, removeNode, reverseEdge, serializeDiagram, serializeDraft, setColor, setEdge, setText, startHistory, undo, type DiagramDoc, type History,
+  DIAGRAM_LIMITS, addNode, alignNodes, commit, connect, diagramFileName, duplicateMany, duplicateNode, emptyDoc, moveMessage, moveNodesBy, parseDiagram,
+  parseDraft, preview, redo, removeEdge, removeMany, removeNode, reverseEdge, routeApplies, routeOf, serializeDiagram, serializeDraft, setColor, setEdge,
+  setRoute, setText, startHistory, undo, type AlignHow, type DiagramDoc, type EdgeRoute, type History,
 } from "./diagramDoc";
 import { contentBounds, edgePath, layoutNode, type EdgePath, type NodeBox } from "./diagramLayout";
 import { exampleDoc } from "./diagramExamples";
 import { EdgeShape, Lifeline, Markers, NodeShape } from "./diagramShapes";
 import { canCopyImage, copyPngToClipboard, diagramPng, diagramSvgMarkup, downloadBlob, embeddedFontCss } from "./diagramExport";
-import DiagramCanvas, { type Selection } from "./DiagramCanvas";
+import DiagramCanvas, { makeSelection, selectedEdges, type Selection } from "./DiagramCanvas";
 import { checkDiagram, type Finding, type FindingLevel } from "./diagramChecks";
 import { readSqlTables, sqlToDsd, SQL_LIMITS } from "./sqlToDsd";
 import { readCSharpTypes, csharpToClass, CS_LIMITS } from "./csharpToClass";
@@ -247,6 +248,31 @@ function ScriptPanel({ kind, doc, onApply, onClose }: { kind: ScriptKind; doc: D
   );
 }
 
+/** DG5 — the straight / right-angled choice: one pair of buttons, in the palette and in the inspector. */
+function RouteChoice({ value, onPick, testid }: { value: EdgeRoute | "mixed"; onPick: (r: EdgeRoute) => void; testid: string }) {
+  return (
+    <div className="dgm-route" role="radiogroup" aria-label="شكل الخط" data-testid={testid}>
+      {([["straight", "مستقيم", "M3,17 L21,5"], ["ortho", "بزوايا قائمة", "M3,17 H12 V5 H21"]] as const).map(([r, label, d]) => (
+        <button key={r} type="button" role="radio" aria-checked={value === r} className={"dgm-arrow-btn" + (value === r ? " is-on" : "")}
+          onClick={() => onPick(r)} data-testid={testid + "-" + r}>
+          <svg viewBox="0 0 24 22" width="24" height="22" aria-hidden="true"><path d={d} fill="none" stroke="currentColor" strokeWidth="2" /></svg>
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+const ALIGN: { how: AlignHow; label: string; d: string }[] = [
+  { how: "right", label: "محاذاة إلى اليمين", d: "M21,3 V21 M8,7 H19 M12,15 H19" },
+  { how: "centerX", label: "توسيط أفقي", d: "M12,3 V21 M6,7 H18 M8,15 H16" },
+  { how: "left", label: "محاذاة إلى اليسار", d: "M3,3 V21 M5,7 H16 M5,15 H12" },
+  { how: "top", label: "محاذاة إلى الأعلى", d: "M3,3 H21 M7,5 V16 M15,5 V12" },
+  { how: "middle", label: "توسيط عمودي", d: "M3,12 H21 M7,6 V18 M15,8 V16" },
+  { how: "bottom", label: "محاذاة إلى الأسفل", d: "M3,21 H21 M7,8 V19 M15,12 V19" },
+  { how: "spreadX", label: "مسافات أفقية متساوية", d: "M3,4 V20 M21,4 V20 M9,8 V16 M15,8 V16" },
+  { how: "spreadY", label: "مسافات عمودية متساوية", d: "M4,3 H20 M4,21 H20 M8,9 H16 M8,15 H16" },
+];
+
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.closest("input, textarea, select, [contenteditable='true']") !== null);
 const nodeName = (doc: DiagramDoc, id: string) => {
   const n = doc.nodes.find(v => v.id === id);
@@ -266,6 +292,9 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   const [zoom, setZoom] = useState(() => (typeof window !== "undefined" && window.innerWidth < 600 ? 0.6 : 1));
   const [said, setSaid] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
+  /** DG5 — «تحديد عدّة»: every press on the sheet adds or removes (for a finger); and the line chosen for new arrows, per kind. */
+  const [multi, setMulti] = useState(false);
+  const [activeRoute, setActiveRoute] = useState<Partial<Record<DiagramKind, EdgeRoute>>>({});
   const [genOpen, setGenOpen] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   /** DG4 — the diagram as it was when a stretch of typing began: the positions the learner set come from it. */
@@ -322,6 +351,25 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   }, [findings]);
   const selNode = selection?.kind === "node" ? doc.nodes.find(n => n.id === selection.id) : undefined;
   const selEdge = selection?.kind === "edge" ? doc.edges.find(e => e.id === selection.id) : undefined;
+  // DG5 — many chosen: only those still in the diagram count
+  const manyNodes = selection?.kind === "many" ? selection.nodes.filter(id => boxes.has(id)) : [];
+  const manyEdges = selection?.kind === "many" ? selection.edges.filter(id => doc.edges.some(e => e.id === id)) : [];
+  const many = selection?.kind === "many" && manyNodes.length + manyEdges.length > 0;
+  const chosenEdges = selectedEdges(selection).map(id => doc.edges.find(e => e.id === id)).filter((e): e is NonNullable<typeof e> => !!e);
+  // new arrows follow the learner's last choice; before one, a diagram drawn all with right angles goes on with them
+  const newRoute: EdgeRoute = activeRoute[kind] ?? (doc.edges.length && doc.edges.every(e => routeOf(e) === "ortho") ? "ortho" : "straight");
+  const shownRoute: EdgeRoute | "mixed" = chosenEdges.length
+    ? (chosenEdges.every(e => routeOf(e) === "ortho") ? "ortho" : chosenEdges.every(e => routeOf(e) === "straight") ? "straight" : "mixed")
+    : newRoute;
+  /** The route for the chosen arrows; with none chosen, for every arrow of the diagram. New arrows follow it. */
+  const pickRoute = (r: EdgeRoute) => {
+    setActiveRoute(a => ({ ...a, [kind]: r }));
+    const ids = chosenEdges.length ? chosenEdges.map(e => e.id) : doc.edges.map(e => e.id);
+    const next = setRoute(doc, ids, r);
+    if (next !== doc) change(next);
+    setSaid(chosenEdges.length ? (r === "ortho" ? "صار السهم المحدَّد بزوايا قائمة." : "صار السهم المحدَّد مستقيمًا.")
+      : r === "ortho" ? "كل الأسهم بزوايا قائمة، والأسهم الجديدة كذلك." : "كل الأسهم مستقيمة، والأسهم الجديدة كذلك.");
+  };
 
   const visibleCenter = () => {
     const w = wrapRef.current;
@@ -336,7 +384,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
     setSaid("");
   };
   const doConnect = (from: string, to: string, type = edgeType) => {
-    const r = connect(doc, from, to, type);
+    const r = connect(doc, from, to, type, newRoute);
     if (!r.ok) { setSaid(r.error); return; }
     change(r.doc);
     setSelection({ kind: "edge", id: r.id! });
@@ -345,8 +393,30 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   const remove = () => {
     if (selNode) change(removeNode(doc, selNode.id));
     else if (selEdge) change(removeEdge(doc, selEdge.id));
+    else if (many) { change(removeMany(doc, manyNodes, manyEdges)); setSaid("حُذف المحدَّد. للعودة إليه اضغط «تراجع»."); }
     setSelection(null);
+    // the «حذف» button goes with what it deleted: the keys (Ctrl+Z) stay with the sheet
+    wrapRef.current?.focus({ preventScroll: true });
   };
+  /** DG5 — a copy of the chosen components and the arrows between them; the copy is chosen, ready to be dragged. */
+  const duplicateChosen = () => {
+    const ids = selNode ? [selNode.id] : manyNodes;
+    if (!ids.length) return;
+    if (ids.length === 1) {
+      const r = duplicateNode(doc, ids[0]);
+      if (r.ok) { change(r.doc); setSelection({ kind: "node", id: r.id! }); } else setSaid(r.error);
+      return;
+    }
+    const r = duplicateMany(doc, ids);
+    if (!r.ok) { setSaid(r.error); return; }
+    change(r.doc);
+    setSelection(makeSelection(r.nodes!, r.edges!));
+  };
+  const align = (how: AlignHow) => {
+    const next = alignNodes(doc, manyNodes, how, boxes);
+    if (next !== doc) change(next);
+  };
+  const selectAll = () => { editKey.current = ""; setSelection(makeSelection(doc.nodes.map(n => n.id), doc.edges.map(e => e.id))); };
   /** DG4 — what the learner typed, drawn: one history step per stretch of typing (another change in between starts a new one); the
    *  script may name another kind (a «start» → activity), and the editor follows it. */
   const applyScript = (r: ScriptResult) => {
@@ -437,12 +507,8 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return; }
     if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); doRedo(); return; }
-    if (mod && e.key.toLowerCase() === "d" && selNode) {
-      e.preventDefault();
-      const r = duplicateNode(doc, selNode.id);
-      if (r.ok) { change(r.doc); setSelection({ kind: "node", id: r.id! }); } else setSaid(r.error);
-      return;
-    }
+    if (mod && e.key.toLowerCase() === "d" && (selNode || manyNodes.length)) { e.preventDefault(); duplicateChosen(); return; }
+    if (mod && e.key.toLowerCase() === "a" && doc.nodes.length) { e.preventDefault(); selectAll(); return; }
     if ((e.key === "Delete" || e.key === "Backspace") && selection) { e.preventDefault(); remove(); return; }
     // Escape first lets go of the selection, and only that: the key stops here, so the tool bar's Escape (leave full screen, close the
     // panel) waits for the next press
@@ -450,6 +516,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
     const step = e.shiftKey ? 50 : 10;
     const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
     if (moves[e.key] && selNode) { e.preventDefault(); change(moveNodesBy(doc, [selNode.id], ...moves[e.key]), "move:" + selNode.id); }
+    else if (moves[e.key] && manyNodes.length) { e.preventDefault(); change(moveNodesBy(doc, manyNodes, ...moves[e.key]), "move:many:" + manyNodes.join(",")); }
   };
 
   const selSpec = selNode ? nodeSpec(kind, selNode.type) : undefined;
@@ -488,6 +555,8 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
           <button type="button" className="stt-btn" onClick={clear} disabled={!doc.nodes.length}>مسح</button>
           <button type="button" className={"stt-btn" + (checkOpen ? " is-primary" : "")} aria-pressed={checkOpen} onClick={() => setCheckOpen(v => !v)} data-testid="diagram-check">افحص المخطط</button>
           {FROM_CODE[kind] && <button type="button" className={"stt-btn" + (genOpen ? " is-primary" : "")} aria-pressed={genOpen} onClick={() => setGenOpen(v => !v)} data-testid="diagram-generate">ولّد من الكود</button>}
+          <button type="button" className={"stt-btn" + (multi ? " is-primary" : "")} aria-pressed={multi} onClick={() => setMulti(v => !v)} disabled={!doc.nodes.length}
+            title="كل نقرة على الورقة تضيف عنصرًا إلى التحديد أو تزيله (بالفأرة: Shift + نقرة)" data-testid="diagram-multi">تحديد عدّة</button>
           {isScriptKind(kind) && <button type="button" className={"stt-btn" + (scriptOpen ? " is-primary" : "")} aria-pressed={scriptOpen} onClick={() => setScriptOpen(v => !v)} data-testid="diagram-script">اكتب كنص</button>}
         </span>
         <span className="dgm-group dgm-save">
@@ -527,21 +596,34 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
             {kspec.edges.map(e => (
               <button key={e.type} type="button" role="radio" aria-checked={(selEdge ? selEdge.type : edgeType) === e.type}
                 className={"dgm-arrow-btn" + ((selEdge ? selEdge.type : edgeType) === e.type ? " is-on" : "")}
-                onClick={() => { setActiveEdge(a => ({ ...a, [kind]: e.type })); if (selEdge) change(setEdge(doc, selEdge.id, { type: e.type })); }}
+                onClick={() => {
+                  setActiveEdge(a => ({ ...a, [kind]: e.type }));
+                  // the chosen arrows (one or many) take the new type
+                  let next = doc;
+                  for (const x of chosenEdges) next = setEdge(next, x.id, { type: e.type });
+                  if (next !== doc) change(next);
+                }}
                 data-testid={"diagram-arrow-" + e.type}>
                 <ArrowIcon spec={e} prefix={prefix + "pal-"} /><span>{e.label}</span>
               </button>
             ))}
           </div>
+          {routeApplies(kind) && <>
+            <p className="dgm-pal-title">شكل الخط</p>
+            <RouteChoice value={shownRoute} onPick={pickRoute} testid="diagram-route" />
+          </>}
         </aside>
 
-        <div className="dgm-canvas eb-light-island" ref={wrapRef} dir="ltr">
+        {/* DG5: the sheet takes the keyboard when pressed (a press on a component does not move the focus by itself), so Ctrl+A, Delete,
+            the arrow keys and Ctrl+Z reach the editor */}
+        <div className="dgm-canvas eb-light-island" ref={wrapRef} dir="ltr" tabIndex={0} aria-label="ورقة الرسم"
+          onPointerDown={() => { if (document.activeElement !== wrapRef.current) wrapRef.current?.focus({ preventScroll: true }); }}>
           <DiagramCanvas doc={doc} boxes={boxes} paths={paths} zoom={zoom} selection={selection} prefix={prefix} svgRef={svgRef} marks={marks}
             label={kspec.label + ": " + doc.nodes.length + " مكوّن، " + doc.edges.length + " سهم"}
             onSelect={s => { editKey.current = ""; setSelection(s); }}
             onPreview={d => setHist(h => preview(h, d))}
             onCommit={start => { editKey.current = ""; setHist(h => (h.present === start ? h : commit({ ...h, present: start }, h.present))); }}
-            onConnect={(a, b) => doConnect(a, b)} onEdit={focusField} />
+            onConnect={(a, b) => doConnect(a, b)} onEdit={focusField} multi={multi} />
           {!doc.nodes.length && (
             <div className="dgm-empty" dir="rtl">
               <p><b>{kspec.label}</b>: {kspec.hint}</p>
@@ -598,7 +680,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
                 </button>
               </div>
               <div className="dgm-actions">
-                <button type="button" className="stt-btn" onClick={() => { const r = duplicateNode(doc, selNode.id); if (r.ok) { change(r.doc); setSelection({ kind: "node", id: r.id! }); } else setSaid(r.error); }}>نسخة</button>
+                <button type="button" className="stt-btn" onClick={duplicateChosen}>نسخة</button>
                 <button type="button" className="stt-btn dgm-danger" onClick={remove} data-testid="diagram-delete">حذف</button>
               </div>
               <p className="stt-hint">حرّكه بالسحب أو بأسهم لوحة المفاتيح (مع Shift أسرع).</p>
@@ -625,6 +707,8 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
                     <input className="dgm-input" dir="auto" value={selEdge.toLabel} onChange={e => change(setEdge(doc, selEdge.id, { toLabel: e.target.value }), "to:" + selEdge.id)} /></label>
                 </div>
               )}
+              {routeApplies(kind) && <div className="dgm-field"><span>شكل الخط</span>
+                <RouteChoice value={routeOf(selEdge)} onPick={pickRoute} testid="diagram-edge-route" /></div>}
               {selEdgeSpec.hint && <p className="stt-hint">{selEdgeSpec.hint}</p>}
               <div className="dgm-actions">
                 {kind === "sequence" && <>
@@ -636,9 +720,41 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
               </div>
             </div>
           )}
+          {many && (
+            <div className="dgm-props" data-testid="diagram-many-props">
+              <p className="dgm-props-kind" role="status">المحدَّد: {manyNodes.length} مكوّن{manyEdges.length ? "، " + manyEdges.length + " سهم" : ""}</p>
+              {manyNodes.length >= 2 && (
+                <fieldset className="dgm-align">
+                  <legend>المحاذاة</legend>
+                  {ALIGN.filter(a => manyNodes.length >= 3 || !a.how.startsWith("spread")).map(a => (
+                    <button key={a.how} type="button" className="stt-btn dgm-sq" onClick={() => align(a.how)} aria-label={a.label} title={a.label} data-testid={"diagram-align-" + a.how}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d={a.d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                    </button>
+                  ))}
+                </fieldset>
+              )}
+              {manyNodes.length > 0 && (
+                <fieldset className="dgm-colors">
+                  <legend>اللون</legend>
+                  {DIAGRAM_COLOR_IDS.map(c => (
+                    <button key={c} type="button" className="dgm-swatch" style={{ background: DIAGRAM_COLORS[c].fill }} aria-label={DIAGRAM_COLORS[c].label}
+                      onClick={() => { let next = doc; for (const id of manyNodes) next = setColor(next, id, c); change(next); }} />
+                  ))}
+                </fieldset>
+              )}
+              {manyEdges.length > 0 && routeApplies(kind) && <div className="dgm-field"><span>شكل الخط</span>
+                <RouteChoice value={shownRoute} onPick={pickRoute} testid="diagram-many-route" /></div>}
+              <div className="dgm-actions">
+                {manyNodes.length > 0 && <button type="button" className="stt-btn" onClick={duplicateChosen} data-testid="diagram-many-copy">نسخة</button>}
+                <button type="button" className="stt-btn dgm-danger" onClick={remove} data-testid="diagram-delete">حذف المحدَّد</button>
+              </div>
+              <p className="stt-hint">اسحب أيّ مكوّن محدَّد فتتحرّك كلها معًا، أو حرّكها بأسهم لوحة المفاتيح. Shift + نقرة يضيف عنصرًا أو يزيله.</p>
+            </div>
+          )}
           {!selection && (
             <div className="dgm-props">
               <p className="stt-hint">{kspec.hint}</p>
+              <p className="stt-hint">لتحديد عدّة عناصر: Shift + نقرة، أو اسحب مستطيلًا على الورقة الفارغة، أو Ctrl+A للكل (على شاشة اللمس: «تحديد عدّة»).</p>
               <p className="stt-hint">اختر مكوّنًا أو سهمًا على الورقة لتعديله، أو اختره من هنا:</p>
               <label className="dgm-field">
                 <span>عناصر المخطط</span>
