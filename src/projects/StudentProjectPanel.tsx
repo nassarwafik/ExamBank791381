@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { stagesByGroup, statusLabel } from "./helpers";
 import { STAGE_STATUS_CLASS, STAGE_STATUS_TONE, normalizeStageStatus, toneForTrack } from "./teacherPresentation";
 import { fmtContribution, fmtGrade, fmtStageScore, normalizeProjectPerformance, projectRankVisual, stageValueOf } from "./projectPerformance";
@@ -19,6 +19,14 @@ import { postSelfReport } from "./studentSelfReport";
 import StudentExamFormCard from "./examForm/StudentExamFormCard";
 import StudentExamForm from "./examForm/StudentExamForm";
 import type { ExamFormSummary } from "./examForm/types";
+import { lazyWithRetry } from "../lazyWithRetry";
+import ToolDockBoundary from "../studentTools/ToolDockBoundary";
+
+// DG1 (docs/enterprise-diagram-editor-design.md) — «محرّر المخططات» on the project page: the student draws the project book's diagrams
+// (UML, ERD, DSD, DFD, the network topology) and saves them as pictures. Its own chunk, loaded when the student opens it; nothing is sent.
+const DiagramEditorTool = lazy(lazyWithRetry(() => import("../studentTools/DiagramEditorTool"), "student-diagram-editor"));
+/** The same draft as the books' tool bar: one learner, one set of diagrams on this browser. */
+const DIAGRAM_DRAFT_KEY = "eb.diagramEditor.draft.v1";
 
 type StudentProject = {
   projectCode: string;
@@ -96,6 +104,7 @@ function openingFilter(project: StudentProject, trackId: string): StageFilter {
 function OneProject({ project, contribution, onBack, token, onChanged, readOnly = false }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null; token: string; onChanged: () => void; readOnly?: boolean }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const [formOpen, setFormOpen] = useState(false);                               // Phase F2-UI: the exam form replaces the project view while open
+  const [diagramsOpen, setDiagramsOpen] = useState(false);                       // DG1: the diagram editor replaces the project view while open
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
   const perf = normalizeProjectPerformance(project.performance);
@@ -157,6 +166,15 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
 
   // Phase F2-UI — the project's exam form, opened from its card below. Closing it reloads the project (the card's counts).
   if (formOpen && project.examForm) return <StudentExamForm token={token} projectCode={project.projectCode} onClose={() => { setFormOpen(false); onChanged(); }} />;
+  if (diagramsOpen) return (
+    <div className="eb-sp-project eb-sp-diagrams" data-testid="project-diagrams">
+      <button type="button" className="eb-button is-quiet is-small eb-sp-project-back" onClick={() => setDiagramsOpen(false)}><IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى المشروع</button>
+      <h2 className="eb-sp-diagrams-title">مخططات المشروع</h2>
+      <ToolDockBoundary>
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={DIAGRAM_DRAFT_KEY} /></Suspense>
+      </ToolDockBoundary>
+    </div>
+  );
 
   return (
     <div className="eb-sp-project" data-project-code={project.projectCode}>
@@ -179,6 +197,10 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
       {/* Phase 9B — the EVALUATION axis (graded / ungraded stages, average of graded scores), read-only, server-derived. */}
       {evaluation && <ProjectEvaluationCard id={"eb-sp-eval-" + project.projectCode} variant="student" evaluation={evaluation} />}
       {project.examForm && <StudentExamFormCard summary={project.examForm} readOnly={readOnly} onOpen={() => setFormOpen(true)} />}
+      <div className="eb-sp-diagrams-card">
+        <p><strong>مخططات المشروع</strong>: ارسم مخططات كتابك (UML و ERD و DSD و DFD وطوبولوجيا الشبكة) واحفظها صورًا تدرجها فيه.</p>
+        <button type="button" className="eb-button is-small" onClick={() => setDiagramsOpen(true)} data-testid="open-diagram-editor">افتح محرّر المخططات</button>
+      </div>
       {/* UX-S4 — one control per track: several tracks are buttons that carry their own progress; one track is one bar. */}
       {project.tracks.length > 1 ? (
         <div className="eb-sp-filters eb-sp-track-chips" role="group" aria-label="مسارات المشروع">

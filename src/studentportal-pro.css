@@ -198,6 +198,10 @@
 .eb-sp-stage.is-self-reported{ background:var(--eb-warn-bg); }
 .eb-sp-next-card{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-primary-050); }
 .eb-sp-next-card p{ margin:0; }
+/* DG1 — «مخططات المشروع»: the diagram editor's card on the project page, and its page */
+.eb-sp-diagrams-card{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border); border-radius:var(--eb-r); background:var(--eb-surface); }
+.eb-sp-diagrams-card p{ margin:0; }
+.eb-sp-diagrams-title{ margin:var(--eb-space-2) 0; font-size:var(--eb-fs-18, 1.15rem); }
 .eb-sp-stage-filters .eb-chip-button{ min-height:40px; }
 .eb-sp-stage-empty{ margin:0; }
 .eb-sp-group-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }

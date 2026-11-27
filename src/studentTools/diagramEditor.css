@@ -1,0 +1,73 @@
+/* «محرّر المخططات» — the tool's own sheet, tokens only. The drawing is paper: white with dark ink in both themes (the saved picture is
+   what the learner sees), so the sheet, its hint and the palette's small drawings carry .eb-light-island and their tokens stay light.
+   The chrome around them follows the app's theme. */
+.dgm { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--eb-space-2); min-width: 0; container-type: inline-size; }
+.dgm-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.dgm-bar { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); align-items: center; }
+.dgm-group { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.dgm-save { margin-inline-start: auto; }
+.dgm-kind { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; max-width: 100%; font-weight: var(--eb-fw-semibold); }
+.dgm-kind select { flex: 1 1 14rem; min-width: 0; min-height: 44px; max-width: 100%; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-bg); color: var(--eb-text); font: inherit; padding: 0 8px; }
+.dgm-sq { min-width: 44px; padding: 0; font-size: 1.2rem; }
+.dgm-zoom { min-width: 3.4em; text-align: center; font-variant-numeric: tabular-nums; }
+.dgm-more { position: relative; }
+.dgm-more > summary { list-style: none; display: inline-flex; align-items: center; }
+.dgm-more > summary::-webkit-details-marker { display: none; }
+.dgm-more > summary::after { content: "▾"; margin-inline-start: 6px; }
+.dgm-menu { position: absolute; inset-inline-end: 0; top: calc(100% + 4px); z-index: 5; display: grid; gap: 4px; padding: 6px; min-width: 14rem;
+  background: var(--eb-surface); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); box-shadow: var(--eb-sh-md); }
+.dgm-menu .stt-btn { text-align: start; }
+
+.dgm-main { display: grid; gap: var(--eb-space-2); grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.dgm-palette, .dgm-inspector { min-width: 0; border: 1px solid var(--eb-border); border-radius: var(--eb-r); padding: 8px; background: var(--eb-surface); }
+.dgm-pal-title { margin: 0 0 6px; font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); font-size: var(--eb-fs-13); }
+.dgm-pal-title:not(:first-child) { margin-top: 10px; }
+.dgm-pal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; }
+.dgm-pal-btn { display: grid; justify-items: center; gap: 2px; min-height: 64px; padding: 6px 4px; border: 1px solid var(--eb-border); border-radius: 8px;
+  background: var(--eb-bg); color: var(--eb-text); font: inherit; font-size: var(--eb-fs-12); line-height: 1.25; cursor: pointer; text-align: center; }
+.dgm-pal-btn:hover { border-color: var(--eb-primary); }
+.dgm-pal-btn:focus-visible, .dgm-arrow-btn:focus-visible, .dgm-swatch:focus-visible { outline: none; box-shadow: var(--eb-focus-ring); }
+.dgm-pal-icon { width: 46px; height: 30px; background: var(--eb-surface); border-radius: 4px; }
+.dgm-arrows { display: grid; gap: 4px; }
+.dgm-arrow-btn { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 2px 8px; border: 1px solid var(--eb-border); border-radius: 8px;
+  background: var(--eb-bg); color: var(--eb-text); font: inherit; font-size: var(--eb-fs-12); cursor: pointer; text-align: start; }
+.dgm-arrow-btn.is-on { border-color: var(--eb-primary); box-shadow: inset 0 0 0 1px var(--eb-primary); font-weight: var(--eb-fw-semibold); }
+.dgm-arrow-icon { flex: 0 0 auto; width: 60px; height: 20px; background: var(--eb-surface); border-radius: 4px; transform: scaleX(-1); }
+
+.dgm-canvas { position: relative; overflow: auto; min-height: 360px; max-height: 70vh; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-border-strong); }
+.dgm-svg { display: block; user-select: none; -webkit-user-select: none; }
+.dgm-empty { position: absolute; top: 16px; inset-inline: 16px; max-width: 34rem; margin-inline: auto; padding: 14px 16px; border-radius: 12px; background: var(--eb-surface);
+  color: var(--eb-text); border: 1px dashed var(--eb-border-strong); font-size: var(--eb-fs-13); pointer-events: auto; }
+.dgm-empty p { margin: 0 0 6px; }
+.dgm-empty ol { margin: 0 0 10px; padding-inline-start: 1.3em; display: grid; gap: 3px; }
+
+.dgm-props { display: grid; gap: 8px; }
+.dgm-props-kind { margin: 0; font-weight: var(--eb-fw-semibold); overflow-wrap: anywhere; }
+.dgm-field { display: grid; gap: 3px; min-width: 0; font-size: var(--eb-fs-13); }
+.dgm-field select { min-height: 40px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-bg); color: var(--eb-text); font: inherit; padding: 0 6px; min-width: 0; }
+.dgm-input { width: 100%; min-height: 40px; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-bg);
+  color: var(--eb-text); font: inherit; font-size: var(--eb-fs-14, 14px); resize: vertical; }
+textarea.dgm-input { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); line-height: 1.5; }
+.dgm-input:focus { outline: none; box-shadow: var(--eb-focus-ring); border-color: var(--eb-primary); }
+.dgm-colors { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dgm-colors legend { font-size: var(--eb-fs-13); padding: 0; margin-bottom: 4px; }
+.dgm-swatch { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--eb-border-strong); cursor: pointer; padding: 0; }
+.dgm-swatch.is-on { box-shadow: 0 0 0 2px var(--eb-surface), 0 0 0 4px var(--eb-primary); }
+.dgm-link { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--eb-border); }
+.dgm-ends { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dgm-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.dgm-danger { color: var(--eb-danger-tx); }
+.dgm-said { min-height: 1.4em; margin: 0; }
+
+/* wide: the palette beside the sheet, the properties on the other side */
+@container (min-width: 760px) {
+  .dgm-main { grid-template-columns: 190px minmax(0, 1fr); }
+  .dgm-inspector { grid-column: 1 / -1; }
+  .dgm-pal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (min-width: 1080px) {
+  .dgm-main { grid-template-columns: 200px minmax(0, 1fr) 250px; }
+  .dgm-inspector { grid-column: auto; }
+  .dgm-canvas { max-height: none; height: min(72vh, 900px); }
+}
+.stt-panel.is-fullscreen .dgm-canvas { height: calc(100vh - 210px); max-height: none; }

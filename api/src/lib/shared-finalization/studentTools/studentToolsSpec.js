@@ -15,7 +15,7 @@ const richContentModel_1 = require("../richContent/richContentModel");
 exports.STUDENT_TOOLS_VERSION = 1;
 exports.STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
     "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor",
-    "automataLab", "networkLab"];
+    "automataLab", "networkLab", "diagramEditor"];
 exports.NUMBER_BASES = [2, 8, 10, 16];
 exports.GRAPH_MAX_FUNCTIONS_LIMIT = 3;
 exports.BIT_WIDTH_OPTIONS = [8, 16, 32];
@@ -66,6 +66,7 @@ function defaultStudentToolConfig(id) {
         case "csharpEditor": return { id, allowRun: false };
         case "automataLab": return { id, kinds: [...exports.AUTOMATA_LAB_KINDS] };
         case "networkLab": return { id };
+        case "diagramEditor": return { id };
     }
 }
 const TOOL_KEYS = {
@@ -84,7 +85,8 @@ const TOOL_KEYS = {
     hexBinaryTable: ["id", "showDecimal"],
     csharpEditor: ["id", "allowRun", "allowVisual"],
     automataLab: ["id", "kinds", "level"],
-    networkLab: ["id"]
+    networkLab: ["id"],
+    diagramEditor: ["id"]
 };
 const hasControlOrBidi = (s) => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
 function utf8Length(s) {
@@ -332,6 +334,7 @@ function readTool(raw, path, add, issues) {
             break;
         }
         case "networkLab":
+        case "diagramEditor":
             value = { id };
             break;
     }

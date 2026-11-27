@@ -24,9 +24,10 @@ export const STUDENT_TOOLS_VERSION = 1 as const;
 // Phase T14 — the C# editor (docs/enterprise-student-tools-csharp-editor-design.md), added additively in the same way.
 // AUTO-A4 — the automata lab «مختبر الآلات» (docs/enterprise-automata-lab-a4.md), added additively in the same way.
 // N1 — the network lab «مختبر الشبكات» (docs/enterprise-network-lab-tool-design.md), added additively in the same way.
+// DG1 — the diagram editor «محرّر المخططات» (docs/enterprise-diagram-editor-design.md), added additively in the same way.
 export const STUDENT_TOOL_IDS = ["calculator", "baseConverter", "graphPlotter", "ipv4Calculator", "formulaSheet", "scratchPad",
   "asciiTable", "bitwiseCalculator", "truthTable", "unitConverter", "periodicTable", "placeValueBoxes", "hexBinaryTable", "csharpEditor",
-  "automataLab", "networkLab"] as const;
+  "automataLab", "networkLab", "diagramEditor"] as const;
 export type StudentToolId = (typeof STUDENT_TOOL_IDS)[number];
 
 export const NUMBER_BASES = [2, 8, 10, 16] as const;
@@ -96,9 +97,13 @@ export type AutomataLabToolV1 = { id: "automataLab"; kinds: AutomataLabKind[]; l
  *  tests it with the platform's network simulator (networkTopology@2's engines, unchanged). Data only: nothing executed, nothing sent,
  *  nothing graded. The network is kept only in the learner's browser (a draft) or in a file the learner saves. No options in v1. */
 export type NetworkLabToolV1 = { id: "networkLab" };
+/** DG1 — the diagram editor: the learner draws a UML (use case, class, sequence, activity, state, object, component / deployment), ERD,
+ *  DSD, DFD or network-topology diagram from the kind's components and arrows, and saves it as a picture for the project book (PNG / SVG,
+ *  or copied) and as a file. Data only: nothing executed, sent, stored on the server or graded. No options in v1. */
+export type DiagramEditorToolV1 = { id: "diagramEditor" };
 export type StudentToolConfigV1 = CalculatorToolV1 | BaseConverterToolV1 | GraphPlotterToolV1 | Ipv4CalculatorToolV1 | FormulaSheetToolV1 | ScratchPadToolV1
   | AsciiTableToolV1 | BitwiseCalculatorToolV1 | TruthTableToolV1 | UnitConverterToolV1 | PeriodicTableToolV1 | PlaceValueBoxesToolV1 | HexBinaryTableToolV1
-  | CSharpEditorToolV1 | AutomataLabToolV1 | NetworkLabToolV1;
+  | CSharpEditorToolV1 | AutomataLabToolV1 | NetworkLabToolV1 | DiagramEditorToolV1;
 
 export type StudentToolsSectionOverrideV1 = { disabled: StudentToolId[] };
 export type StudentToolsSpecV1 = {
@@ -141,6 +146,7 @@ export function defaultStudentToolConfig(id: StudentToolId): StudentToolConfigV1
     case "csharpEditor": return { id, allowRun: false };   // exams: always write only; a book's teacher may switch running on
     case "automataLab": return { id, kinds: [...AUTOMATA_LAB_KINDS] };
     case "networkLab": return { id };
+    case "diagramEditor": return { id };
   }
 }
 
@@ -161,7 +167,8 @@ const TOOL_KEYS: Record<StudentToolId, readonly string[]> = {
   hexBinaryTable: ["id", "showDecimal"],
   csharpEditor: ["id", "allowRun", "allowVisual"],
   automataLab: ["id", "kinds", "level"],
-  networkLab: ["id"]
+  networkLab: ["id"],
+  diagramEditor: ["id"]
 };
 
 const hasControlOrBidi = (s: string): boolean => hasControlChar(s) || /[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/.test(s);
@@ -335,6 +342,7 @@ function readTool(raw: unknown, path: string, add: Add, issues: readonly Student
       break;
     }
     case "networkLab":
+    case "diagramEditor":
       value = { id };
       break;
   }
