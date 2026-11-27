@@ -9,6 +9,7 @@ import { exampleDoc } from "./diagramExamples";
 import { EdgeShape, Lifeline, Markers, NodeShape } from "./diagramShapes";
 import { canCopyImage, copyPngToClipboard, diagramPng, diagramSvgMarkup, downloadBlob, embeddedFontCss } from "./diagramExport";
 import DiagramCanvas, { type Selection } from "./DiagramCanvas";
+import { checkDiagram, type Finding, type FindingLevel } from "./diagramChecks";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -71,6 +72,40 @@ function Hint({ text }: { text: string }) {
   return <>{text.slice(0, at + 5)}<bdi>{text.slice(at + 5)}</bdi></>;
 }
 
+/** «خطأ واحد»، «خطآن»، «3 أخطاء»، «11 خطأً». */
+function counted(n: number, one: string, two: string, few: string, many: string): string {
+  return n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + " " + few : n + " " + many;
+}
+
+/** DG2 — «افحص المخطط»: the findings, each a button that selects what it is about. Notes for the learner: no mark, nothing sent. */
+function CheckPanel({ findings, onPick, onClose }: { findings: readonly Finding[]; onPick: (f: Finding) => void; onClose: () => void }) {
+  const errors = findings.filter(f => f.level === "error").length, warnings = findings.length - errors;
+  return (
+    <section className="dgm-check" aria-label="نتيجة فحص المخطط" data-testid="diagram-check-panel">
+      <div className="dgm-check-head">
+        <p className="dgm-check-sum" role="status">
+          {findings.length
+            ? <>نتيجة الفحص: {[errors && counted(errors, "خطأ واحد", "خطآن", "أخطاء", "خطأً"), warnings && counted(warnings, "تنبيه واحد", "تنبيهان", "تنبيهات", "تنبيهًا")].filter(Boolean).join(" و")}.</>
+            : <>✓ لا ملاحظات: المخطط يتبع قواعد نوعه.</>}
+        </p>
+        <button type="button" className="stt-btn" onClick={onClose}>إغلاق الفحص</button>
+      </div>
+      {!!findings.length && (
+        <ul className="dgm-check-list">
+          {findings.map((f, i) => (
+            <li key={i}>
+              <button type="button" className={"dgm-finding is-" + f.level} onClick={() => onPick(f)} disabled={!f.nodes.length && !f.edges.length} data-testid="diagram-finding">
+                <span className="dgm-finding-tag">{f.level === "error" ? "خطأ" : "تنبيه"}</span><span>{f.message}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="stt-hint">الفحص يساعدك ولا يعطي علامة. اضغط ملاحظة لتختار ما تتحدّث عنه، ويتحدّث الفحص كلما عدّلت.</p>
+    </section>
+  );
+}
+
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.closest("input, textarea, select, [contenteditable='true']") !== null);
 const nodeName = (doc: DiagramDoc, id: string) => {
   const n = doc.nodes.find(v => v.id === id);
@@ -89,6 +124,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   // a phone starts zoomed out
   const [zoom, setZoom] = useState(() => (typeof window !== "undefined" && window.innerWidth < 600 ? 0.6 : 1));
   const [said, setSaid] = useState("");
+  const [checkOpen, setCheckOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -132,6 +168,13 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
     for (const e of doc.edges) { const p = edgePath(doc, e, boxes); if (p) m.set(e.id, p); }
     return m;
   }, [doc, boxes]);
+  // DG2 — the findings follow every change while the check is open; the drawing marks what they are about
+  const findings = useMemo(() => (checkOpen ? checkDiagram(doc) : []), [checkOpen, doc]);
+  const marks = useMemo(() => {
+    const m = new Map<string, FindingLevel>();
+    for (const f of findings) for (const id of [...f.nodes, ...f.edges]) if (m.get(id) !== "error") m.set(id, f.level);
+    return m;
+  }, [findings]);
   const selNode = selection?.kind === "node" ? doc.nodes.find(n => n.id === selection.id) : undefined;
   const selEdge = selection?.kind === "edge" ? doc.edges.find(e => e.id === selection.id) : undefined;
 
@@ -242,7 +285,9 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && selection) { e.preventDefault(); remove(); return; }
-    if (e.key === "Escape" && selection) { e.preventDefault(); setSelection(null); return; }
+    // Escape first lets go of the selection, and only that: the key stops here, so the tool bar's Escape (leave full screen, close the
+    // panel) waits for the next press
+    if (e.key === "Escape" && selection) { e.preventDefault(); e.stopPropagation(); setSelection(null); return; }
     const step = e.shiftKey ? 50 : 10;
     const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
     if (moves[e.key] && selNode) { e.preventDefault(); change(moveNodesBy(doc, [selNode.id], ...moves[e.key]), "move:" + selNode.id); }
@@ -282,6 +327,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
         <span className="dgm-group">
           <button type="button" className="stt-btn" onClick={loadExample} data-testid="diagram-example">مثال</button>
           <button type="button" className="stt-btn" onClick={clear} disabled={!doc.nodes.length}>مسح</button>
+          <button type="button" className={"stt-btn" + (checkOpen ? " is-primary" : "")} aria-pressed={checkOpen} onClick={() => setCheckOpen(v => !v)} data-testid="diagram-check">افحص المخطط</button>
         </span>
         <span className="dgm-group dgm-save">
           <button type="button" className="stt-btn is-primary" onClick={() => savePng(2)} disabled={busy} data-testid="diagram-png">حفظ صورة PNG</button>
@@ -298,6 +344,9 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
           <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={openFile} data-testid="diagram-open-file" />
         </span>
       </div>
+
+      {checkOpen && <CheckPanel findings={findings} onClose={() => setCheckOpen(false)}
+        onPick={f => setSelection(f.nodes.length ? { kind: "node", id: f.nodes[0] } : f.edges.length ? { kind: "edge", id: f.edges[0] } : null)} />}
 
       <div className="dgm-main">
         <aside className="dgm-palette" aria-label="المكوّنات والأسهم">
@@ -323,7 +372,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
         </aside>
 
         <div className="dgm-canvas eb-light-island" ref={wrapRef} dir="ltr">
-          <DiagramCanvas doc={doc} boxes={boxes} paths={paths} zoom={zoom} selection={selection} prefix={prefix} svgRef={svgRef}
+          <DiagramCanvas doc={doc} boxes={boxes} paths={paths} zoom={zoom} selection={selection} prefix={prefix} svgRef={svgRef} marks={marks}
             label={kspec.label + ": " + doc.nodes.length + " مكوّن، " + doc.edges.length + " سهم"}
             onSelect={s => { editKey.current = ""; setSelection(s); }}
             onPreview={d => setHist(h => preview(h, d))}
