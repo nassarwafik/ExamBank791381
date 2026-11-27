@@ -8,11 +8,12 @@
 //   • a BOOK keeps a draft that a new editor reads back; an EXAM page keeps none;
 //   • the student's project page offers the editor and returns to the project.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, screen, act, within } from "@testing-library/react";
+import { render, cleanup, fireEvent, screen, act, within, waitFor } from "@testing-library/react";
 import DiagramEditorTool from "./DiagramEditorTool";
 import StudentToolDock from "./StudentToolDock";
 import { courseStudentTools } from "./courseTools";
 import { parseDiagram } from "./diagramDoc";
+import { serializeLab } from "./networkLab";
 
 const KEY = "eb.diagramEditor.draft.v1";
 const tick = (ms = 10) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
@@ -571,5 +572,73 @@ describe("DG6 — «مخطط التدفّق»", () => {
     await tick();
     await click(screen.getByTestId("diagram-delete"));
     expect(screen.getByTestId("diagram-check-panel").textContent).toMatch(/يخرج من قرار «avg >= 50 ؟» سهمان: «نعم» و«لا»/);
+  });
+});
+
+describe("DG7 — «من مختبر الشبكات»", () => {
+  const LAB_KEY = "eb.networkLab.draft.v1";
+  const labFile = () => {
+    // R1 — SW1 — PC1, with the router's address set
+    const devices = [{ id: "r1", kind: "router", label: "R1", x: 0.5, y: 0.1 }, { id: "sw1", kind: "switch", label: "SW1", x: 0.5, y: 0.45 }, { id: "pc1", kind: "pc", label: "PC1", x: 0.3, y: 0.8 }];
+    const links = [{ id: "l1", a: { deviceId: "r1", port: "g0/0" }, b: { deviceId: "sw1", port: "g0/1" } }, { id: "l2", a: { deviceId: "sw1", port: "f0/1" }, b: { deviceId: "pc1", port: "eth0" } }];
+    const actions = ["enable", "configure terminal", "interface g0/0", "ip address 192.168.1.1 255.255.255.0", "no shutdown", "end"].map(command => ({ type: "router.command", deviceId: "r1", command }));
+    return serializeLab({ config: { v: 2, devices, links } as Parameters<typeof serializeLab>[0]["config"], actions });
+  };
+
+  it("only a topology offers it; the lab's draft on this device is drawn — one «تراجع» brings the old drawing back", async () => {
+    localStorage.setItem(LAB_KEY, labFile());
+    render(<DiagramEditorTool labDraftKey={LAB_KEY} />);
+    expect(screen.queryByTestId("diagram-from-lab")).toBeNull();
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "topology" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    const before = drawnNodes().length;
+    await click(screen.getByTestId("diagram-from-lab"));
+    expect(screen.getByTestId("diagram-lab-draft-info").textContent).toMatch(/3 أجهزة و2 كوابل/);
+    await click(screen.getByTestId("diagram-lab-draft"));
+    await waitFor(() => expect(drawnNodes()).toHaveLength(3), { timeout: 4000 });
+    expect(canvas().textContent).toContain("G0/0: 192.168.1.1/24");
+    expect(screen.getByTestId("diagram-lab-result").textContent).toMatch(/رُسمت الشبكة: 3 أجهزة و2 كوابل/);
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect(drawnNodes()).toHaveLength(before);
+  });
+
+  it("with no draft, a saved lab file is opened; a broken file is refused and nothing is drawn", async () => {
+    render(<DiagramEditorTool labDraftKey={LAB_KEY} />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "topology" } });
+    await tick();
+    await click(screen.getByTestId("diagram-from-lab"));
+    expect(screen.queryByTestId("diagram-lab-draft")).toBeNull();
+    const input = screen.getByTestId("diagram-lab-file") as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(["{\"broken\": true}"], "x.json", { type: "application/json" })] } });
+    await waitFor(() => expect(screen.getByTestId("diagram-lab-result").textContent).toBeTruthy(), { timeout: 4000 });
+    expect(drawnNodes()).toHaveLength(0);
+    fireEvent.change(input, { target: { files: [new File([labFile()], "network-lab.json", { type: "application/json" })] } });
+    await waitFor(() => expect(drawnNodes()).toHaveLength(3), { timeout: 4000 });
+  });
+
+  it("in a book whose tool bar offers both, the lab's «ارسمها في محرّر المخططات» opens the editor with the network drawn", async () => {
+    render(<StudentToolDock studentTools={{ version: 1, tools: [{ id: "networkLab" }, { id: "diagramEditor" }] }} labHandoff />);
+    await click(screen.getByTestId("student-tools-button"));
+    await click(screen.getByRole("button", { name: "مختبر الشبكات" }));
+    await screen.findByTestId("network-lab", {}, { timeout: 4000 });
+    fireEvent.change(screen.getByTestId("network-lab-example"), { target: { value: "dhcp" } });
+    await tick();
+    await click(screen.getByTestId("network-lab-to-diagram"));
+    await screen.findByTestId("diagram-editor", {}, { timeout: 4000 });
+    await waitFor(() => expect(drawnNodes()).toHaveLength(4), { timeout: 4000 });
+    expect((screen.getByTestId("diagram-kind") as HTMLSelectElement).value).toBe("topology");
+    expect(screen.getByTestId("diagram-status").textContent).toMatch(/رُسمت الشبكة: 4 أجهزة و3 كوابل/);
+    expect(screen.getByTestId("tool-panel-diagramEditor").hidden).toBe(false);
+  });
+
+  it("a tool bar without the diagram editor offers no such button", async () => {
+    render(<StudentToolDock studentTools={{ version: 1, tools: [{ id: "networkLab" }] }} labHandoff />);
+    await click(screen.getByTestId("student-tools-button"));
+    await click(screen.getByRole("button", { name: "مختبر الشبكات" }));
+    await screen.findByTestId("network-lab", {}, { timeout: 4000 });
+    fireEvent.change(screen.getByTestId("network-lab-example"), { target: { value: "dhcp" } });
+    await tick();
+    expect(screen.queryByTestId("network-lab-to-diagram")).toBeNull();
   });
 });

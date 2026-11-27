@@ -74,7 +74,11 @@ const isHostCommand = (a: unknown): a is { type: "host.command"; deviceId: strin
   !!a && typeof a === "object" && (a as { type?: unknown }).type === "host.command" && typeof (a as { deviceId?: unknown }).deviceId === "string";
 
 export type NetworkLabExercise = { kinds: readonly LabDeviceKind[]; lab?: boolean };
-export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh }: { draftKey?: string; exercise?: NetworkLabExercise; onLabChange?: (lab: NetLab) => void; fresh?: boolean }) {
+export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh, onDiagram }: {
+  draftKey?: string; exercise?: NetworkLabExercise; onLabChange?: (lab: NetLab) => void; fresh?: boolean;
+  /** DG7 — the tool bar also offers «محرّر المخططات»: «ارسمها في محرّر المخططات» hands this network over, drawn as a topology. */
+  onDiagram?: (lab: NetLab) => void;
+}) {
   const inExercise = !!exercise;
   const plain = inExercise && !exercise.lab;
   const kinds: readonly LabDeviceKind[] = exercise ? LAB_DEVICE_KINDS.filter(k => exercise.kinds.includes(k) && (exercise.lab || k !== "hub")) : LAB_DEVICE_KINDS;
@@ -194,6 +198,8 @@ export default function NetworkLabTool({ draftKey, exercise, onLabChange, fresh 
         <button type="button" className="is-secondary" onClick={save} disabled={!cfg.devices.length}>احفظ في ملف</button>
         <button type="button" className="is-secondary" onClick={() => fileRef.current?.click()}>افتح ملفًا</button>
         <input ref={fileRef} type="file" accept=".json,application/json" hidden data-testid="network-lab-file" onChange={e => { void open(e.target.files?.[0]); e.target.value = ""; }} />
+        {onDiagram && <button type="button" onClick={() => onDiagram(lab)} disabled={!cfg.devices.length} data-testid="network-lab-to-diagram"
+          title="يفتح «محرّر المخططات» وفيه هذه الشبكة مرسومة: الأجهزة والكوابل والمنافذ والعناوين، لتحفظها صورة لكتابك">ارسمها في محرّر المخططات</button>}
         </>}
       </div>
       {draftKey && <p className="net2-note" data-testid="network-lab-draft">{draftFailed ? (inExercise ? "تعذّر حفظ المسودة في هذا المتصفح." : "تعذّر حفظ المسودة في هذا المتصفح؛ احفظ الشبكة في ملف.") : inExercise ? "شبكتك تُحفظ تلقائيًا مسودةً في هذا المتصفح." : "الشبكة تُحفظ تلقائيًا مسودةً في هذا المتصفح. لنقلها إلى جهاز آخر: «احفظ في ملف»."}</p>}

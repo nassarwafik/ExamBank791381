@@ -27,6 +27,8 @@ import ToolDockBoundary from "../studentTools/ToolDockBoundary";
 const DiagramEditorTool = lazy(lazyWithRetry(() => import("../studentTools/DiagramEditorTool"), "student-diagram-editor"));
 /** The same draft as the books' tool bar: one learner, one set of diagrams on this browser. */
 const DIAGRAM_DRAFT_KEY = "eb.diagramEditor.draft.v1";
+/** DG7 — «مختبر الشبكات»'s draft on this device (kept by a book's tool bar): «من مختبر الشبكات» draws it. */
+const NETWORK_LAB_DRAFT_KEY = "eb.networkLab.draft.v1";
 
 type StudentProject = {
   projectCode: string;
@@ -171,7 +173,7 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
       <button type="button" className="eb-button is-quiet is-small eb-sp-project-back" onClick={() => setDiagramsOpen(false)}><IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى المشروع</button>
       <h2 className="eb-sp-diagrams-title">مخططات المشروع</h2>
       <ToolDockBoundary>
-        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={DIAGRAM_DRAFT_KEY} /></Suspense>
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={DIAGRAM_DRAFT_KEY} labDraftKey={NETWORK_LAB_DRAFT_KEY} /></Suspense>
       </ToolDockBoundary>
     </div>
   );
