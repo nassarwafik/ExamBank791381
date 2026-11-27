@@ -164,7 +164,8 @@ function classes(c: Ctx) {
     const lines = (["attrs", "ops"] as const).flatMap(k => (n.text[k] ?? "").split("\n").map(l => l.trim()).filter(Boolean).map(l => [k, l] as const));
     const noVis = lines.filter(([, l]) => !/^[+\-#~]/.test(l)).length;
     if (noVis) c.add("warning", "cls.visibility", label(doc, n) + ": " + noVis + " سطر بلا رمز الرؤية في أوّله (+ عام، - خاص، # محمي).", [n.id]);
-    const badOps = lines.filter(([k, l]) => k === "ops" && !/\(.*\)/.test(l)).length;
+    // an interface has one compartment for its properties and its methods: only a class's operations must all carry brackets
+    const badOps = n.type === "interface" ? 0 : lines.filter(([k, l]) => k === "ops" && !/\(.*\)/.test(l)).length;
     if (badOps) c.add("warning", "cls.opParens", label(doc, n) + ": اكتب الدالة بقوسين، مثل: + GetName() : string", [n.id]);
   }
 }
@@ -316,7 +317,8 @@ function dsd(c: Ctx) {
     if (a.type !== "table" || b.type !== "table" || a.id === b.id) continue;
     // the «one» side holds the primary key; the «many» side the foreign key (1 — ∞ from PK to FK; crow's foot at the many side)
     const one = a, many = b;
-    const pks = tableFields(one).filter(f => f.key === "PK"), fks = tableFields(many).filter(f => f.key === "FK");
+    // a junction table's key is primary and foreign at once (PK StudentID in Marks): a PK of the «many» side may be the foreign key
+    const pks = tableFields(one).filter(f => f.key === "PK"), fks = tableFields(many).filter(f => f.key === "FK" || f.key === "PK");
     if (!pks.length) continue;   // reported above
     const match = fks.filter(f => pks.some(p => p.name.toLowerCase() === f.name.toLowerCase()));
     if (!match.length) {

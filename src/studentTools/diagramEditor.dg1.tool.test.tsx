@@ -297,3 +297,48 @@ describe("DG2 — Escape", () => {
     expect(outer).toHaveBeenCalledWith("Escape");
   });
 });
+
+describe("DG3 — «ولّد من الكود»", () => {
+  it("DSD: pasted CREATE TABLE draws the tables and their relationship; one «تراجع» brings the old diagram back", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "dsd" } });
+    await tick();
+    await click(screen.getByRole("button", { name: "أضف: جدول" }));
+    await click(screen.getByTestId("diagram-generate"));
+    fireEvent.change(screen.getByTestId("diagram-generate-code"), { target: { value:
+      "CREATE TABLE Classes (ClassID INT PRIMARY KEY, Name NVARCHAR(30));\nCREATE TABLE Students (StudentID INT PRIMARY KEY, ClassID INT REFERENCES Classes(ClassID));" } });
+    await click(screen.getByTestId("diagram-generate-draw"));
+    expect(screen.getByTestId("diagram-generate-result").textContent).toMatch(/رُسم المخطط: 2 جدول و1 علاقة/);
+    expect(drawnNodes()).toHaveLength(2);
+    expect(drawnEdges()).toHaveLength(1);
+    expect(canvas().textContent).toContain("Classes");
+    expect(canvas().textContent).toContain("FK");
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect(drawnNodes()).toHaveLength(1);   // the one table that was there before
+  });
+  it("C#: classes become a class diagram; broken code is named with its line and draws nothing", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "class" } });
+    await tick();
+    await click(screen.getByTestId("diagram-generate"));
+    fireEvent.change(screen.getByTestId("diagram-generate-code"), { target: { value: "public class A {\n  public void F() {\n" } });
+    await click(screen.getByTestId("diagram-generate-draw"));
+    expect(screen.getByTestId("diagram-generate-result").textContent).toMatch(/لم يُرسم شيء/);
+    expect(screen.getByTestId("diagram-generate-result").textContent).toMatch(/الصنف «A» لم يُغلق/);
+    expect(drawnNodes()).toHaveLength(0);
+    const input = screen.getByTestId("diagram-generate-file") as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(["class Person { public string Name { get; set; } }\nclass Student : Person { private int id; }"], "school.cs")] } });
+    await tick(30);
+    expect(drawnNodes()).toHaveLength(2);
+    expect(drawnEdges()[0].querySelector("path")!.getAttribute("marker-end")).toMatch(/triangle\)$/);
+    expect(canvas().textContent).toContain("- id : int");
+  });
+  it("only DSD and class diagrams offer it", async () => {
+    render(<DiagramEditorTool />);
+    for (const k of ["useCase", "erd", "dfd", "topology", "sequence"]) {
+      fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: k } });
+      await tick();
+      expect(screen.queryByTestId("diagram-generate"), k).toBeNull();
+    }
+  });
+});

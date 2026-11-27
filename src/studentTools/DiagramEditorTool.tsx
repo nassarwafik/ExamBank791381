@@ -10,6 +10,8 @@ import { EdgeShape, Lifeline, Markers, NodeShape } from "./diagramShapes";
 import { canCopyImage, copyPngToClipboard, diagramPng, diagramSvgMarkup, downloadBlob, embeddedFontCss } from "./diagramExport";
 import DiagramCanvas, { type Selection } from "./DiagramCanvas";
 import { checkDiagram, type Finding, type FindingLevel } from "./diagramChecks";
+import { readSqlTables, sqlToDsd, SQL_LIMITS } from "./sqlToDsd";
+import { readCSharpTypes, csharpToClass, CS_LIMITS } from "./csharpToClass";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -106,6 +108,81 @@ function CheckPanel({ findings, onPick, onClose }: { findings: readonly Finding[
   );
 }
 
+/** DG3 — «ولّد من الكود»: which kinds can be drawn from code, and how. */
+const FROM_CODE: Partial<Record<DiagramKind, { what: string; placeholder: string; accept: string; max: number; draw: (code: string) => { doc: DiagramDoc | null; summary: string; problems: { line: number; message: string }[] } }>> = {
+  dsd: {
+    what: "كود CREATE TABLE", accept: ".sql,.txt", max: SQL_LIMITS.chars,
+    placeholder: "CREATE TABLE Students (\n  StudentID INT PRIMARY KEY,\n  Name NVARCHAR(50),\n  ClassID INT REFERENCES Classes(ClassID)\n);",
+    draw: code => {
+      const r = readSqlTables(code);
+      const doc = r.tables.length ? sqlToDsd(r) : null;
+      return { doc, problems: r.problems, summary: doc ? "رُسم المخطط: " + r.tables.length + " جدول و" + doc.edges.length + " علاقة." : "" };
+    },
+  },
+  class: {
+    what: "أصناف C#", accept: ".cs,.txt", max: CS_LIMITS.chars,
+    placeholder: "public class Student : Person\n{\n    private int id;\n    public string Name { get; set; }\n    public double GetAverage() { ... }\n}",
+    draw: code => {
+      const r = readCSharpTypes(code);
+      const doc = r.types.length ? csharpToClass(r) : null;
+      return { doc, problems: r.problems, summary: doc ? "رُسم المخطط: " + r.types.length + " صنف و" + doc.edges.length + " علاقة." : "" };
+    },
+  },
+};
+
+/** DG3 — «ولّد من الكود»: the learner pastes the code (or opens its file) and the diagram is drawn from it, replacing the one on the
+ *  sheet (one «تراجع» brings it back). The code is read on this device only; nothing runs and nothing is sent. */
+function GeneratePanel({ kind, onDraw, onClose }: { kind: DiagramKind; onDraw: (doc: DiagramDoc, summary: string) => void; onClose: () => void }) {
+  const spec = FROM_CODE[kind]!;
+  const [code, setCode] = useState("");
+  const [result, setResult] = useState<{ summary: string; problems: { line: number; message: string }[] } | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const draw = (text: string) => {
+    const r = spec.draw(text);
+    setResult({ summary: r.summary, problems: r.problems });
+    if (r.doc) onDraw(r.doc, r.summary);
+  };
+  const open = async (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (f.size > spec.max) { setResult({ summary: "", problems: [{ line: 1, message: "الملف أكبر من الحد المسموح." }] }); return; }
+    const text = await f.text();
+    setCode(text);
+    draw(text);
+  };
+  return (
+    <section className="dgm-gen" aria-label="ولّد المخطط من الكود" data-testid="diagram-generate-panel">
+      <div className="dgm-check-head">
+        <p className="dgm-check-sum">ولّد المخطط من {spec.what}</p>
+        <button type="button" className="stt-btn" onClick={onClose}>إغلاق</button>
+      </div>
+      <label className="dgm-field">
+        <span>الصق {spec.what} هنا (من كتابك أو من مشروعك)</span>
+        <textarea className="dgm-input dgm-code" dir="ltr" rows={8} spellCheck={false} maxLength={spec.max} placeholder={spec.placeholder}
+          value={code} onChange={e => setCode(e.target.value)} data-testid="diagram-generate-code" />
+      </label>
+      <div className="dgm-actions">
+        <button type="button" className="stt-btn is-primary" onClick={() => draw(code)} disabled={!code.trim()} data-testid="diagram-generate-draw">ارسم المخطط</button>
+        <button type="button" className="stt-btn" onClick={() => fileRef.current?.click()}>افتح ملف الكود</button>
+        <input ref={fileRef} type="file" accept={spec.accept} hidden onChange={open} data-testid="diagram-generate-file" />
+      </div>
+      {result && (
+        <div className="dgm-gen-result" role="status" data-testid="diagram-generate-result">
+          {result.summary && <p className="dgm-gen-ok">{result.summary} المخطط السابق يعود بـ «تراجع».</p>}
+          {!!result.problems.length && <>
+            <p className="dgm-gen-warn">{result.summary ? "وفي الكود ما لم أستطع قراءته:" : "لم يُرسم شيء:"}</p>
+            <ul className="dgm-check-list">
+              {result.problems.map((p, i) => <li key={i} className="dgm-finding is-warning"><span className="dgm-finding-tag" dir="ltr">سطر {p.line}</span><span>{p.message}</span></li>)}
+            </ul>
+          </>}
+        </div>
+      )}
+      <p className="stt-hint">يقرأ المحرّر التعريفات فقط ولا يشغّل الكود، ولا يرسله إلى أي مكان. رتّب المخطط بعدها كما تشاء.</p>
+    </section>
+  );
+}
+
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.closest("input, textarea, select, [contenteditable='true']") !== null);
 const nodeName = (doc: DiagramDoc, id: string) => {
   const n = doc.nodes.find(v => v.id === id);
@@ -125,6 +202,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   const [zoom, setZoom] = useState(() => (typeof window !== "undefined" && window.innerWidth < 600 ? 0.6 : 1));
   const [said, setSaid] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -328,6 +406,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
           <button type="button" className="stt-btn" onClick={loadExample} data-testid="diagram-example">مثال</button>
           <button type="button" className="stt-btn" onClick={clear} disabled={!doc.nodes.length}>مسح</button>
           <button type="button" className={"stt-btn" + (checkOpen ? " is-primary" : "")} aria-pressed={checkOpen} onClick={() => setCheckOpen(v => !v)} data-testid="diagram-check">افحص المخطط</button>
+          {FROM_CODE[kind] && <button type="button" className={"stt-btn" + (genOpen ? " is-primary" : "")} aria-pressed={genOpen} onClick={() => setGenOpen(v => !v)} data-testid="diagram-generate">ولّد من الكود</button>}
         </span>
         <span className="dgm-group dgm-save">
           <button type="button" className="stt-btn is-primary" onClick={() => savePng(2)} disabled={busy} data-testid="diagram-png">حفظ صورة PNG</button>
@@ -347,6 +426,8 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
 
       {checkOpen && <CheckPanel findings={findings} onClose={() => setCheckOpen(false)}
         onPick={f => setSelection(f.nodes.length ? { kind: "node", id: f.nodes[0] } : f.edges.length ? { kind: "edge", id: f.edges[0] } : null)} />}
+      {genOpen && FROM_CODE[kind] && <GeneratePanel key={kind} kind={kind} onClose={() => setGenOpen(false)}
+        onDraw={(d, summary) => { editKey.current = ""; change(d); setSelection(null); setSaid(summary); }} />}
 
       <div className="dgm-main">
         <aside className="dgm-palette" aria-label="المكوّنات والأسهم">
