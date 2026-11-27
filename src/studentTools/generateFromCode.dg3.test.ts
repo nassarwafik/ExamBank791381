@@ -203,3 +203,11 @@ describe("DG3 — a table with keys is wide enough for its fields", () => {
     expect(b.w).toBeGreaterThanOrEqual(measureText(long, SMALL) + 34 + 12);
   });
 });
+
+describe("DG3 × DG2 — a generated diagram passes «افحص المخطط»", () => {
+  it("the school's SQL and C# give diagrams with no finding (a junction table's PK+FK, an interface's property)", async () => {
+    const { checkDiagram } = await import("./diagramChecks");
+    expect(checkDiagram(sqlToDsd(readSqlTables(SCHOOL)))).toEqual([]);
+    expect(checkDiagram(csharpToClass(readCSharpTypes(SCHOOL_CS)))).toEqual([]);
+  });
+});
