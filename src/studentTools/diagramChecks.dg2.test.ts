@@ -92,6 +92,8 @@ describe("class", () => {
   it("members start with their visibility; operations have brackets", () => {
     pair("cls.visibility", mk("class", [cls("A", "id : int")]), mk("class", [cls("A", "- id : int")]));
     pair("cls.opParens", mk("class", [cls("A", "- id : int", "+ Get : int")]), mk("class", [cls("A", "- id : int", "+ Get() : int")]));
+    // an interface's one compartment holds its properties too
+    expect(rules(mk("class", [["interface", { name: "IPrintable", ops: "+ Title : string\n+ Print() : void" }]]))).not.toContain("cls.opParens");
   });
 });
 
@@ -174,6 +176,11 @@ describe("DSD", () => {
   it("a field name does not repeat", () => pair("dsd.dupField", mk("dsd", [cls(PK + "\nname : TEXT")]), mk("dsd", [cls(PK)])));
   it("the «many» table has the foreign key named after the «one» table's key", () => pair("dsd.noFk",
     mk("dsd", [cls(PK), stu("PK StudentID : INT\nFK Class : INT")], [[1, 2, "oneMany"]]), mk("dsd", [cls(PK), stu(FK)], [[1, 2, "oneMany"]])));
+  it("a junction table's key may be primary and foreign at once (PK StudentID), so it is not reported as missing", () => {
+    const junction = mk("dsd", [stu("PK StudentID : INT"), ["table", { name: "Marks", fields: "PK StudentID : INT\nPK CourseID : INT" }]], [[1, 2, "oneMany"]]);
+    expect(rules(junction)).not.toContain("dsd.noFk");
+    expect(rules(mk("dsd", [stu("PK StudentID : INT"), ["table", { name: "Marks", fields: "PK MarkID : INT" }]], [[1, 2, "oneMany"]]))).toContain("dsd.noFk");
+  });
   it("a relationship drawn backwards is named so", () => pair("dsd.direction", mk("dsd", [cls(PK), stu(FK)], [[2, 1, "oneMany"]]), mk("dsd", [cls(PK), stu(FK)], [[1, 2, "oneMany"]])));
   it("both ends have one type", () => pair("dsd.type", mk("dsd", [cls(PK), stu("PK StudentID : INT\nFK ClassID : VARCHAR(5)")], [[1, 2, "oneMany"]]), mk("dsd", [cls(PK), stu(FK)], [[1, 2, "oneMany"]])));
   it("a foreign key is reached by a relationship", () => pair("dsd.fkUnlinked", mk("dsd", [cls(PK), stu(FK)]), mk("dsd", [cls(PK), stu(FK)], [[1, 2, "oneMany"]])));
