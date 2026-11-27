@@ -33,3 +33,29 @@ describe("DG1 — the project page offers the diagram editor", () => {
     expect(fetchMock.mock.calls.length).toBe(reads);
   });
 });
+
+describe("DG8 — «أرفق بالاستمارة» in the project's editor", () => {
+  const FORM = { title: "استمارة المشروع", state: "open", status: "draft", started: true, answered: 0, total: 5 };
+  const openEditor = async (project: object, readOnly = false) => {
+    globalThis.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, enrolled: true, className: "الصف", projects: [project], ...(readOnly ? { readOnly: true } : {}) }) })) as unknown as typeof fetch;
+    render(<StudentProjectPanel token="t" contributions={[]} />);
+    fireEvent.click(await screen.findByTestId("open-diagram-editor"));
+    await screen.findByTestId("diagram-editor", {}, { timeout: 4000 });
+  };
+  it("offered when the project has a form; the button waits for a drawing", async () => {
+    await openEditor({ ...PROJECT, examForm: FORM });
+    const attach = screen.getByTestId("diagram-attach") as HTMLButtonElement;
+    expect(attach.textContent).toBe("أرفق بالاستمارة");
+    expect(attach.disabled).toBe(true);
+    fireEvent.click(screen.getByTestId("diagram-example"));
+    expect((screen.getByTestId("diagram-attach") as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId("diagram-attach-panel")).toBeNull();
+  });
+  it("not offered for a project without a form, nor on a read-only (archived) page", async () => {
+    await openEditor(PROJECT);
+    expect(screen.queryByTestId("diagram-attach")).toBeNull();
+    cleanup();
+    await openEditor({ ...PROJECT, examForm: FORM }, true);
+    expect(screen.queryByTestId("diagram-attach")).toBeNull();
+  });
+});
