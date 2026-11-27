@@ -9,6 +9,7 @@ import { diagramToScript } from "./diagramToScript";
 import { DIAGRAM_LIMITS, parseDiagram, serializeDiagram, type DiagramDoc } from "./diagramDoc";
 import { exampleDoc } from "./diagramExamples";
 import { checkDiagram } from "./diagramChecks";
+import { readCSharpTypes, csharpToClass } from "./csharpToClass";
 
 const valid = (d: DiagramDoc) => {
   const r = parseDiagram(serializeDiagram(d));
@@ -262,5 +263,26 @@ describe("positions the learner set", () => {
     const next = keepPositions(readDiagramScript("class A\nclass B\nclass C\nA --> B\nB --> C", "class").doc, first);
     expect(next.nodes.find(n => n.text.name === "A")).toMatchObject({ x: 900, y: 700 });
     expect(next.nodes.find(n => n.text.name === "C")!.x).toBeLessThan(900);
+  });
+});
+
+describe("DG3 × DG4 — a class diagram drawn from C# code, written as a script, reads back the same", () => {
+  it("the same classes, members and arrows; «افحص المخطط» finds nothing in either", () => {
+    const cs = `public interface IShape { double Area(); }
+public abstract class Shape : IShape { protected string name; public abstract double Area(); }
+public class Circle : Shape { private double r; public override double Area() { return 3.14 * r * r; } }
+public class Drawing { private List<Shape> shapes; public void Add(Shape s) {} }`;
+    const fromCode = csharpToClass(readCSharpTypes(cs));
+    expect(checkDiagram(fromCode)).toEqual([]);
+    const script = diagramToScript(fromCode)!;
+    expect(script).toContain("IShape <|.. Shape");
+    const back = read(script);
+    expect(back.problems).toEqual([]);
+    expect(checkDiagram(back.doc)).toEqual([]);
+    const shape = (d: DiagramDoc) => ({
+      nodes: d.nodes.map(n => ({ type: n.type, text: n.text })),
+      edges: d.edges.map(e => [e.type, d.nodes.find(n => n.id === e.from)!.text.name, d.nodes.find(n => n.id === e.to)!.text.name]),
+    });
+    expect(shape(back.doc)).toEqual(shape(fromCode));
   });
 });
