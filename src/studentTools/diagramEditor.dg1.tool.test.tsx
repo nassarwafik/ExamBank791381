@@ -388,3 +388,164 @@ describe("DG4 — «اكتب كنص»", () => {
     }
   });
 });
+
+describe("DG5 — right angles and several at once", () => {
+  const svgAt = () => {
+    const svg = canvas();
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 2400, height: 1600, right: 2400, bottom: 1600, x: 0, y: 0, toJSON() {} } as DOMRect);
+    return svg;
+  };
+  const press = (svg: SVGSVGElement, id: number, x: number, y: number, o: Record<string, unknown> = {}) => {
+    fireEvent.pointerDown(svg, { pointerId: id, button: 0, clientX: x, clientY: y, pointerType: "mouse", ...o });
+    fireEvent.pointerUp(svg, { pointerId: id, clientX: x, clientY: y, pointerType: "mouse", ...o });
+  };
+  /** The drawn arrows' points, from their `d`. */
+  const runs = () => [...drawnEdges()].map(g => [...g.querySelector("path")!.getAttribute("d")!.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(m => [Number(m[1]), Number(m[2])]));
+  const squared = (pts: number[][]) => pts.every((p, k) => k === 0 || p[0] === pts[k - 1][0] || p[1] === pts[k - 1][1]);
+  const topLeft = (i: number) => { const r = drawnNodes()[i].querySelector("rect")!; return [Number(r.getAttribute("x")), Number(r.getAttribute("y"))]; };
+
+  it("«بزوايا قائمة» with nothing chosen: every arrow and the new ones; with one chosen: that one; «تراجع» undoes it", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "dsd" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    expect(runs().every(r => r.length === 2)).toBe(true);
+    expect(screen.getByTestId("diagram-route-straight").getAttribute("aria-checked")).toBe("true");
+    await click(screen.getByTestId("diagram-route-ortho"));
+    expect(runs().every(squared)).toBe(true);
+    expect(screen.getByTestId("diagram-status").textContent).toMatch(/كل الأسهم بزوايا قائمة/);
+    // the file says so; a new arrow follows
+    await click(screen.getByTestId("diagram-save-file"));
+    const saved = parseDiagram(await downloads.at(-1)!.blob.text());
+    expect(saved.ok && saved.doc.edges.every(e => e.route === "ortho")).toBe(true);
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect(runs().every(r => r.length === 2)).toBe(true);
+    // one arrow, from its own properties
+    fireEvent.change(screen.getByTestId("diagram-pick"), { target: { value: "edge:" + drawnEdges()[0].getAttribute("data-edge") } });
+    await tick();
+    await click(screen.getByTestId("diagram-edge-route-ortho"));
+    // (these tables face each other: a right-angled arrow between them is one straight run, so the file tells)
+    await click(screen.getByTestId("diagram-save-file"));
+    const one = parseDiagram(await downloads.at(-1)!.blob.text());
+    expect(one.ok && one.doc.edges.map(e => e.route ?? "")).toEqual(["ortho", "", ""]);
+    expect(screen.getByTestId("diagram-route-ortho").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("a sequence diagram offers no line shape", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "sequence" } });
+    await tick();
+    expect(screen.queryByTestId("diagram-route")).toBeNull();
+  });
+
+  it("Shift + press chooses several; dragging one moves them all; one «حذف المحدَّد»; «تراجع» brings them back", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "dsd" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    const svg = svgAt();
+    const [a, b] = [topLeft(0), topLeft(1)];
+    press(svg, 1, a[0] + 20, a[1] + 15);
+    press(svg, 2, b[0] + 20, b[1] + 15, { shiftKey: true });
+    await tick();
+    expect(screen.getByTestId("diagram-many-props").textContent).toMatch(/المحدَّد: 2 مكوّن/);
+    expect(canvas().querySelectorAll("[data-testid='diagram-many'] [data-selected]")).toHaveLength(2);
+    fireEvent.pointerDown(svg, { pointerId: 3, button: 0, clientX: a[0] + 20, clientY: a[1] + 15, pointerType: "mouse" });
+    fireEvent.pointerMove(svg, { pointerId: 3, clientX: a[0] + 120, clientY: a[1] + 65, pointerType: "mouse" });
+    fireEvent.pointerUp(svg, { pointerId: 3, clientX: a[0] + 120, clientY: a[1] + 65, pointerType: "mouse" });
+    await tick();
+    expect([topLeft(0), topLeft(1)]).toEqual([[a[0] + 100, a[1] + 50], [b[0] + 100, b[1] + 50]]);
+    expect(topLeft(2)).not.toEqual([a[0] + 100, a[1] + 50]);
+    // Shift + press on a chosen one takes it out
+    press(svg, 4, a[0] + 120, a[1] + 65, { shiftKey: true });
+    await tick();
+    expect(screen.getByTestId("diagram-node-props")).toBeTruthy();
+    press(svg, 5, a[0] + 120, a[1] + 65, { shiftKey: true });
+    await tick();
+    await click(screen.getByTestId("diagram-delete"));
+    expect(drawnNodes()).toHaveLength(2);
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect(drawnNodes()).toHaveLength(4);
+  });
+
+  it("a rectangle on the empty paper takes what lies inside it, with the arrows between; Ctrl+A everything; arrows move them; Delete", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "dsd" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    const svg = svgAt();
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, clientX: 5, clientY: 5, pointerType: "mouse" });
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 900, clientY: 300, pointerType: "mouse" });
+    expect(canvas().querySelector("[data-testid='diagram-box']")).toBeTruthy();
+    fireEvent.pointerUp(svg, { pointerId: 1, clientX: 900, clientY: 300, pointerType: "mouse" });
+    await tick();
+    expect(canvas().querySelector("[data-testid='diagram-box']")).toBeNull();
+    expect(screen.getByTestId("diagram-many-props").textContent).toMatch(/المحدَّد: 2 مكوّن، 1 سهم/);
+    fireEvent.keyDown(svg, { key: "a", ctrlKey: true });
+    await tick();
+    expect(screen.getByTestId("diagram-many-props").textContent).toMatch(/المحدَّد: 4 مكوّن، 3 سهم/);
+    const before = [0, 1, 2, 3].map(topLeft);
+    fireEvent.keyDown(svg, { key: "ArrowRight" });
+    fireEvent.keyDown(svg, { key: "ArrowDown", shiftKey: true });
+    await tick();
+    expect([0, 1, 2, 3].map(topLeft)).toEqual(before.map(([x, y]) => [x + 10, y + 50]));
+    // the two key presses are one «تراجع»
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect([0, 1, 2, 3].map(topLeft)).toEqual(before);
+    fireEvent.keyDown(svg, { key: "a", ctrlKey: true });
+    await tick();
+    fireEvent.keyDown(svg, { key: "Delete" });
+    await tick();
+    expect(drawnNodes()).toHaveLength(0);
+  });
+
+  it("«تحديد عدّة» (a finger): each press adds or takes out; the chosen are lined up and copied with their arrow", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "dsd" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    await click(screen.getByTestId("diagram-multi"));
+    expect(screen.getByTestId("diagram-multi").getAttribute("aria-pressed")).toBe("true");
+    const svg = svgAt();
+    const [a, b] = [topLeft(0), topLeft(1)];
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, clientX: a[0] + 20, clientY: a[1] + 15, pointerType: "touch" });
+    fireEvent.pointerUp(svg, { pointerId: 1, clientX: a[0] + 20, clientY: a[1] + 15, pointerType: "touch" });
+    fireEvent.pointerDown(svg, { pointerId: 2, button: 0, clientX: b[0] + 20, clientY: b[1] + 15, pointerType: "touch" });
+    fireEvent.pointerUp(svg, { pointerId: 2, clientX: b[0] + 20, clientY: b[1] + 15, pointerType: "touch" });
+    await tick();
+    expect(screen.getByTestId("diagram-many-props").textContent).toMatch(/المحدَّد: 2 مكوّن/);
+    await click(screen.getByTestId("diagram-align-top"));
+    expect(topLeft(0)[1]).toBe(topLeft(1)[1]);
+    const edges = drawnEdges().length;
+    await click(screen.getByTestId("diagram-many-copy"));
+    expect(drawnNodes()).toHaveLength(6);
+    expect(drawnEdges().length).toBe(edges + 1);   // Classes → Students is between them
+    expect(screen.getByTestId("diagram-many-props").textContent).toMatch(/المحدَّد: 2 مكوّن، 1 سهم/);
+  });
+});
+
+describe("DG5 — the sheet keeps the keyboard", () => {
+  it("a press on a component gives the sheet the keys; after «حذف» they stay with it (so Ctrl+Z still undoes)", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "erd" } });
+    await tick();
+    await click(screen.getByRole("button", { name: "أضف: كيان" }));
+    const svg = canvas();
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 2400, height: 1600, right: 2400, bottom: 1600, x: 0, y: 0, toJSON() {} } as DOMRect);
+    const sheet = svg.parentElement!;
+    const r = drawnNodes()[0].querySelector("rect")!;
+    const [x, y] = [Number(r.getAttribute("x")) + 10, Number(r.getAttribute("y")) + 10];
+    fireEvent.pointerDown(svg, { pointerId: 1, button: 0, clientX: x, clientY: y, pointerType: "mouse" });
+    fireEvent.pointerUp(svg, { pointerId: 1, clientX: x, clientY: y, pointerType: "mouse" });
+    await tick();
+    expect(document.activeElement).toBe(sheet);
+    const del = screen.getByTestId("diagram-delete");
+    del.focus();
+    await click(del);
+    expect(drawnNodes()).toHaveLength(0);
+    expect(document.activeElement).toBe(sheet);
+    fireEvent.keyDown(document.activeElement!, { key: "z", ctrlKey: true });
+    await tick();
+    expect(drawnNodes()).toHaveLength(1);
+  });
+});

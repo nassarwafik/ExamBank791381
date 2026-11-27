@@ -7,8 +7,13 @@
 import { DIAGRAM_COLOR_IDS, edgeSpec, isDiagramKind, kindSpec, nodeSpec, type DiagramColor, type DiagramKind } from "./diagramCatalog";
 
 export type DNode = { id: string; type: string; x: number; y: number; w: number; h: number; text: Record<string, string>; color: DiagramColor };
-/** `y`: a sequence diagram's message height on the page (its order, top to bottom); 0 in every other kind. */
-export type DEdge = { id: string; type: string; from: string; to: string; label: string; fromLabel: string; toLabel: string; y: number };
+/** `y`: a sequence diagram's message height on the page (its order, top to bottom); 0 in every other kind.
+ *  `route` (DG5): "ortho" draws the arrow in straight runs that turn at right angles; absent, a straight line (the file stays as it was). */
+export type DEdge = { id: string; type: string; from: string; to: string; label: string; fromLabel: string; toLabel: string; y: number; route?: "ortho" };
+export type EdgeRoute = "straight" | "ortho";
+/** A sequence diagram's messages are always level lines: the route does not apply there. */
+export const routeApplies = (kind: DiagramKind): boolean => kind !== "sequence";
+export const routeOf = (e: DEdge): EdgeRoute => (e.route === "ortho" ? "ortho" : "straight");
 export type DiagramDoc = { kind: DiagramKind; nodes: DNode[]; edges: DEdge[] };
 export type DocResult = { ok: true; doc: DiagramDoc } | { ok: false; error: string };
 
@@ -148,8 +153,8 @@ export function duplicateNode(doc: DiagramDoc, id: string): DocResult & { id?: s
 /** The height of the next message in a sequence diagram: under the lowest one. */
 export const nextMessageY = (doc: DiagramDoc): number => doc.edges.reduce((m, e) => Math.max(m, e.y + SEQ_STEP), SEQ_FIRST);
 
-/** Draws an arrow of `type` from one component to another (or to itself). */
-export function connect(doc: DiagramDoc, from: string, to: string, type: string): DocResult & { id?: string } {
+/** Draws an arrow of `type` from one component to another (or to itself); `route` "ortho": with right angles (DG5). */
+export function connect(doc: DiagramDoc, from: string, to: string, type: string, route: EdgeRoute = "straight"): DocResult & { id?: string } {
   const spec = edgeSpec(doc.kind, type);
   if (!spec) return { ok: false, error: "هذا السهم ليس من أسهم هذا المخطط." };
   const a = doc.nodes.find(n => n.id === from), b = doc.nodes.find(n => n.id === to);
@@ -164,7 +169,23 @@ export function connect(doc: DiagramDoc, from: string, to: string, type: string)
   const y = doc.kind === "sequence" ? nextMessageY(doc) : 0;
   if (y > DIAGRAM_LIMITS.canvasH - 40) return { ok: false, error: "لا مكان لرسالة أخرى في أسفل الصفحة." };
   const edge: DEdge = { id, type, from, to, label: spec.defaultLabel ?? "", fromLabel: spec.defaultFromLabel ?? "", toLabel: spec.defaultToLabel ?? "", y };
+  if (route === "ortho" && routeApplies(doc.kind)) edge.route = "ortho";
   return { ok: true, doc: { ...doc, edges: [...doc.edges, edge] }, id };
+}
+
+/** DG5 — the arrows' route: straight or with right angles. Nothing changes in a sequence diagram (its messages are level lines). */
+export function setRoute(doc: DiagramDoc, ids: readonly string[], route: EdgeRoute): DiagramDoc {
+  if (!routeApplies(doc.kind)) return doc;
+  const set = new Set(ids);
+  let changed = false;
+  const edges = doc.edges.map(e => {
+    if (!set.has(e.id) || routeOf(e) === route) return e;
+    changed = true;
+    if (route === "ortho") return { ...e, route: "ortho" as const };
+    const { route: _gone, ...rest } = e;
+    return rest;
+  });
+  return changed ? { ...doc, edges } : doc;
 }
 
 export function setEdge(doc: DiagramDoc, id: string, patch: Partial<Pick<DEdge, "type" | "label" | "fromLabel" | "toLabel">>): DiagramDoc {
@@ -195,6 +216,88 @@ export function removeEdge(doc: DiagramDoc, id: string): DiagramDoc {
   // a sequence closes the gap: the messages under it move up one step
   const gone = doc.edges.find(e => e.id === id)!;
   return { ...doc, edges: doc.edges.filter(e => e.id !== id).map(e => (e.y > gone.y ? { ...e, y: e.y - SEQ_STEP } : e)) };
+}
+
+/** DG5 — removes several components (with every arrow touching them) and several arrows at once. */
+export function removeMany(doc: DiagramDoc, nodeIds: readonly string[], edgeIds: readonly string[]): DiagramDoc {
+  let d = doc;
+  // a sequence closes each gap from the lowest message up, so the heights left above stay right
+  const gone = new Set(edgeIds);
+  for (const e of [...doc.edges].filter(e => gone.has(e.id)).sort((a, b) => b.y - a.y)) d = removeEdge(d, e.id);
+  for (const id of nodeIds) d = removeNode(d, id);
+  return d;
+}
+
+/** DG5 — copies several components, and the arrows between them, a little down and to the side. A sequence diagram copies the
+ *  lifelines only (a message's place is its height among all the messages). */
+export function duplicateMany(doc: DiagramDoc, ids: readonly string[]): DocResult & { nodes?: string[]; edges?: string[] } {
+  const set = new Set(ids);
+  const src = doc.nodes.filter(n => set.has(n.id));
+  if (!src.length) return { ok: false, error: "اختر مكوّنًا أولًا." };
+  if (doc.nodes.length + src.length > DIAGRAM_LIMITS.nodes) return { ok: false, error: `وصلت إلى الحد: ${DIAGRAM_LIMITS.nodes} مكوّنًا في المخطط.` };
+  const sequence = doc.kind === "sequence";
+  const inner = sequence ? [] : doc.edges.filter(e => set.has(e.from) && set.has(e.to));
+  if (doc.edges.length + inner.length > DIAGRAM_LIMITS.edges) return { ok: false, error: `وصلت إلى الحد: ${DIAGRAM_LIMITS.edges} سهمًا في المخطط.` };
+  // one step for the whole group, so it keeps its shape (and stays on the page)
+  let dx = sequence ? Math.max(...src.map(n => n.x + n.w)) - Math.min(...src.map(n => n.x)) + 40 : 30, dy = sequence ? 0 : 30;
+  for (const n of src) { dx = Math.min(dx, DIAGRAM_LIMITS.canvasW - n.w - n.x); if (!sequence) dy = Math.min(dy, DIAGRAM_LIMITS.canvasH - n.h - n.y); }
+  dx = Math.max(dx, 0); dy = Math.max(dy, 0);
+  let nid = Number(nextId(doc, "n").slice(1)), eid = Number(nextId(doc, "e").slice(1));
+  const map = new Map<string, string>();
+  const copies: DNode[] = src.map(n => { const id = "n" + nid++; map.set(n.id, id); return { ...n, id, text: { ...n.text }, x: n.x + dx, y: n.y + dy }; });
+  const links: DEdge[] = inner.map(e => ({ ...e, id: "e" + eid++, from: map.get(e.from)!, to: map.get(e.to)! }));
+  // a container's copy goes under everything, like the container itself
+  const under = copies.filter(n => isContainer(doc, n)), over = copies.filter(n => !isContainer(doc, n));
+  return { ok: true, doc: { ...doc, nodes: [...under, ...doc.nodes, ...over], edges: [...doc.edges, ...links] }, nodes: copies.map(n => n.id), edges: links.map(e => e.id) };
+}
+
+export type AlignHow = "right" | "centerX" | "left" | "top" | "middle" | "bottom" | "spreadX" | "spreadY";
+/** DG5 — lines several components up by their drawn boxes (`sizes`: each component's size as drawn, which grows with its text), or
+ *  spaces three or more evenly between the first and the last. A lifeline keeps its height (it stands on the top line). */
+export function alignNodes(doc: DiagramDoc, ids: readonly string[], how: AlignHow, sizes: ReadonlyMap<string, { w: number; h: number }>): DiagramDoc {
+  const set = new Set(ids);
+  const items = doc.nodes.filter(n => set.has(n.id)).map(n => ({ n, w: sizes.get(n.id)?.w ?? n.w, h: sizes.get(n.id)?.h ?? n.h }));
+  if (items.length < (how.startsWith("spread") ? 3 : 2)) return doc;
+  const pos = new Map<string, { x: number; y: number }>();
+  const minX = Math.min(...items.map(i => i.n.x)), maxR = Math.max(...items.map(i => i.n.x + i.w));
+  const minY = Math.min(...items.map(i => i.n.y)), maxB = Math.max(...items.map(i => i.n.y + i.h));
+  for (const i of items) {
+    const p = { x: i.n.x, y: i.n.y };
+    if (how === "left") p.x = minX;
+    else if (how === "right") p.x = maxR - i.w;
+    else if (how === "centerX") p.x = (minX + maxR) / 2 - i.w / 2;
+    else if (how === "top") p.y = minY;
+    else if (how === "bottom") p.y = maxB - i.h;
+    else if (how === "middle") p.y = (minY + maxB) / 2 - i.h / 2;
+    pos.set(i.n.id, p);
+  }
+  if (how === "spreadX" || how === "spreadY") {
+    const x = how === "spreadX";
+    const sorted = [...items].sort((a, b) => (x ? a.n.x + a.w / 2 - (b.n.x + b.w / 2) : a.n.y + a.h / 2 - (b.n.y + b.h / 2)));
+    const first = sorted[0], last = sorted[sorted.length - 1];
+    const start = x ? first.n.x : first.n.y, end = x ? last.n.x + last.w : last.n.y + last.h;
+    const total = sorted.reduce((s, i) => s + (x ? i.w : i.h), 0);
+    const gap = (end - start - total) / (sorted.length - 1);
+    if (gap >= 0) {
+      let at = start;
+      for (const i of sorted) { pos.get(i.n.id)![x ? "x" : "y"] = at; at += (x ? i.w : i.h) + gap; }
+    } else {
+      // they overlap: their centres evenly apart instead
+      const c0 = x ? first.n.x + first.w / 2 : first.n.y + first.h / 2, c1 = x ? last.n.x + last.w / 2 : last.n.y + last.h / 2;
+      sorted.forEach((i, k) => { pos.get(i.n.id)![x ? "x" : "y"] = c0 + (c1 - c0) * k / (sorted.length - 1) - (x ? i.w : i.h) / 2; });
+    }
+  }
+  let changed = false;
+  const nodes = doc.nodes.map(n => {
+    const p = pos.get(n.id);
+    if (!p) return n;
+    const lifeline = nodeSpec(doc.kind, n.type)?.form === "lifeline";
+    const nx = clamp(Math.round(p.x), 0, DIAGRAM_LIMITS.canvasW - n.w), ny = lifeline ? n.y : clamp(Math.round(p.y), 0, DIAGRAM_LIMITS.canvasH - n.h);
+    if (nx === n.x && ny === n.y) return n;
+    changed = true;
+    return { ...n, x: nx, y: ny };
+  });
+  return changed ? { ...doc, nodes } : doc;
 }
 
 /** A sequence diagram: swaps a message with the one above (-1) or below (+1). */
@@ -267,14 +370,18 @@ export function readDiagramBody(kind: DiagramKind, nodesRaw: unknown, edgesRaw: 
   }
   const edges: DEdge[] = [], eids = new Set<string>();
   for (const raw of edgesRaw) {
-    if (!isPlain(raw) || !closed(raw, ["id", "type", "from", "to", "label", "fromLabel", "toLabel", "y"])) return { ok: false, error: BAD_FILE };
+    // DG5: `route` is the one optional key, and only "ortho" is written (a straight arrow has none)
+    const { route, ...rest } = isPlain(raw) ? raw : { route: undefined };
+    if (!isPlain(raw) || !closed(rest, ["id", "type", "from", "to", "label", "fromLabel", "toLabel", "y"]) || ("route" in raw && route !== "ortho")) return { ok: false, error: BAD_FILE };
     const spec = k.edges.find(e => e.type === raw.type);
     if (!spec || typeof raw.id !== "string" || !ID.test(raw.id) || eids.has(raw.id)) return { ok: false, error: BAD_FILE };
     if (typeof raw.from !== "string" || typeof raw.to !== "string" || !ids.has(raw.from) || !ids.has(raw.to)) return { ok: false, error: BAD_FILE };
     if (![raw.label, raw.fromLabel, raw.toLabel].every(v => cleanString(v, DIAGRAM_LIMITS.text, false))) return { ok: false, error: BAD_FILE };
     if (!isInt(raw.y, 0, DIAGRAM_LIMITS.canvasH)) return { ok: false, error: BAD_FILE };
     eids.add(raw.id);
-    edges.push({ id: raw.id, type: spec.type, from: raw.from, to: raw.to, label: raw.label as string, fromLabel: raw.fromLabel as string, toLabel: raw.toLabel as string, y: raw.y });
+    const edge: DEdge = { id: raw.id, type: spec.type, from: raw.from, to: raw.to, label: raw.label as string, fromLabel: raw.fromLabel as string, toLabel: raw.toLabel as string, y: raw.y };
+    if (route === "ortho") edge.route = "ortho";
+    edges.push(edge);
   }
   return { ok: true, doc: { kind, nodes, edges } };
 }
