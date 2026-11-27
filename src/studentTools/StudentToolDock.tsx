@@ -1,6 +1,7 @@
 import { Component, Suspense, lazy, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { projectStudentToolsForStudent, enabledToolsForSection, csharpRunAllowedInBook, type StudentToolConfigV1, type StudentToolId } from "./studentToolsSpec";
 import type { LabDraft } from "./automataLab";
+import type { NetLab } from "./networkLab";
 import { provideLabOpener } from "./automataLabHandoff";
 import type { CSharpToolRunner } from "./csharpToolRun";
 import { studentToolCatalogEntry, studentToolHasUi } from "./studentToolsCatalog";
@@ -68,7 +69,12 @@ class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 
-function ToolBody({ tool, csharp, full = false, incoming, book = false }: { tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean; incoming?: Incoming | null; book?: boolean }) {
+/** DG7 — a network «مختبر الشبكات» hands to «محرّر المخططات» (a new number each time). */
+type LabToDiagram = { lab: NetLab; seq: number };
+function ToolBody({ tool, csharp, full = false, incoming, book = false, toDiagram, labDiagram }: {
+  tool: StudentToolConfigV1; csharp: CSharpRun; full?: boolean; incoming?: Incoming | null; book?: boolean;
+  toDiagram?: (lab: NetLab) => void; labDiagram?: LabToDiagram | null;
+}) {
   switch (tool.id) {
     case "calculator": return <CalculatorTool config={tool} />;
     case "ipv4Calculator": return <Ipv4CalculatorTool config={tool} />;
@@ -85,8 +91,8 @@ function ToolBody({ tool, csharp, full = false, incoming, book = false }: { tool
     case "graphPlotter": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل راسم الدوال…</p>}><GraphPlotterTool config={tool} /></Suspense>;
     case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} full={full} /></Suspense>;
     case "automataLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الآلات…</p>}><AutomataLabTool config={tool} incoming={incoming ?? undefined} /></Suspense>;
-    case "networkLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الشبكات…</p>}><NetworkLabTool draftKey={book ? NETWORK_LAB_DRAFT_KEY : undefined} /></Suspense>;
-    case "diagramEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={book ? DIAGRAM_DRAFT_KEY : undefined} /></Suspense>;
+    case "networkLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الشبكات…</p>}><NetworkLabTool draftKey={book ? NETWORK_LAB_DRAFT_KEY : undefined} onDiagram={toDiagram} /></Suspense>;
+    case "diagramEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={book ? DIAGRAM_DRAFT_KEY : undefined} labDraftKey={book ? NETWORK_LAB_DRAFT_KEY : undefined} incomingLab={labDiagram} /></Suspense>;
     default: return null;
   }
 }
@@ -105,6 +111,7 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
   const [openTool, setOpenTool] = useState<StudentToolId | null>(null);
   const [mounted, setMounted] = useState<ReadonlySet<StudentToolId>>(() => new Set());
   const [incoming, setIncoming] = useState<Incoming | null>(null);
+  const [labDiagram, setLabDiagram] = useState<LabToDiagram | null>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
   // Phase T3 — the open panel can be dragged by its header on wide screens (on a phone it is a bottom sheet). One offset for the dock:
   // only one panel is visible at a time. «إعادة الموضع» is the non-drag alternative (WCAG 2.5.7).
@@ -187,6 +194,11 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
     });
   }, [labKinds]);
 
+  // DG7 — the network lab hands its network to the diagram editor, when this bar offers both
+  const toDiagram = enabled.some(t => t.id === "diagramEditor")
+    ? (lab: NetLab) => { setLabDiagram(prev => ({ lab, seq: (prev?.seq ?? 0) + 1 })); openRef.current("diagramEditor"); }
+    : undefined;
+
   if (!all.length) return null;
   const close = () => { setOpenTool(null); fabRef.current?.focus(); };   // a full-screen panel that closes leaves full screen (the effect above)
   const toggleFull = (id: StudentToolId) => { fullRef.current = panelRefs.current[id] ?? null; full.toggle(); };
@@ -219,7 +231,8 @@ export default function StudentToolDock({ studentTools, sectionId, onToolOpen, c
                 <button type="button" className="stt-close" onClick={close} aria-label={"إغلاق " + toolTitle(t)}>✕</button>
               </span>
             </header>
-            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} incoming={t.id === "automataLab" ? incoming : null} book={labHandoff} /></ToolBoundary></div>
+            <div className="stt-panel-body"><ToolBoundary><ToolBody tool={t} csharp={csharp} full={isFull} incoming={t.id === "automataLab" ? incoming : null} book={labHandoff}
+              toDiagram={toDiagram} labDiagram={t.id === "diagramEditor" ? labDiagram : null} /></ToolBoundary></div>
           </section>
         );
       })}

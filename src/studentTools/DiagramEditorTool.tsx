@@ -15,6 +15,7 @@ import { readSqlTables, sqlToDsd, SQL_LIMITS } from "./sqlToDsd";
 import { readCSharpTypes, csharpToClass, CS_LIMITS } from "./csharpToClass";
 import { isScriptKind, keepPositions, readDiagramScript, SCRIPT_MAX_CHARS, type ScriptKind, type ScriptProblem, type ScriptResult } from "./diagramScript";
 import { diagramToScript } from "./diagramToScript";
+import type { NetLab } from "./networkLab";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -186,6 +187,72 @@ function GeneratePanel({ kind, onDraw, onClose }: { kind: DiagramKind; onDraw: (
   );
 }
 
+/** DG7 — «من مختبر الشبكات»: the network built in «مختبر الشبكات» (this device's lab, or a file the lab saved) drawn as the topology:
+ *  the devices where they stood, the cables with their ports, the addresses the devices really have. The converter (with the network
+ *  engine) loads only when it is used. Nothing is sent. */
+type LabDraw = (doc: DiagramDoc, summary: string) => void;
+const loadLabConverter = () => import("./labToTopology");
+function LabPanel({ labDraftKey, onDraw, onClose }: { labDraftKey?: string; onDraw: LabDraw; onClose: () => void }) {
+  const [result, setResult] = useState<{ summary: string; problems: string[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  // the lab's own draft on this device (a book keeps one), read when the panel opens
+  const [draft] = useState<{ text: string; devices: number; cables: number } | null>(() => {
+    if (!labDraftKey) return null;
+    try {
+      const text = localStorage.getItem(labDraftKey);
+      if (!text || text.length > 2_000_000) return null;
+      const raw = JSON.parse(text) as { config?: { devices?: unknown[]; links?: unknown[] } };
+      const devices = Array.isArray(raw?.config?.devices) ? raw.config.devices.length : 0;
+      return devices ? { text, devices, cables: Array.isArray(raw.config!.links) ? raw.config!.links.length : 0 } : null;
+    } catch { return null; }
+  });
+  const draw = async (text: string) => {
+    setBusy(true);
+    try {
+      const m = await loadLabConverter();
+      const r = m.labTextToTopology(text);
+      if ("error" in r) { setResult({ summary: "", problems: [r.error] }); return; }
+      setResult({ summary: r.summary, problems: r.problems });
+      onDraw(r.doc, r.summary);
+    } catch {
+      setResult({ summary: "", problems: ["تعذّر تحميل هذه الميزة الآن. حدّث الصفحة وجرّب مرة أخرى."] });
+    } finally { setBusy(false); }
+  };
+  const open = async (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (f.size > 2_000_000) { setResult({ summary: "", problems: ["الملف أكبر من الحد المسموح."] }); return; }
+    await draw(await f.text());
+  };
+  return (
+    <section className="dgm-gen" aria-label="ارسم الشبكة من مختبر الشبكات" data-testid="diagram-lab-panel">
+      <div className="dgm-check-head">
+        <p className="dgm-check-sum">ارسم الشبكة التي بنيتها في «مختبر الشبكات»</p>
+        <button type="button" className="stt-btn" onClick={onClose}>إغلاق</button>
+      </div>
+      {draft
+        ? <p className="dgm-gen-ok" data-testid="diagram-lab-draft-info">في المختبر على هذا الجهاز شبكة فيها {draft.devices} أجهزة و{draft.cables} كوابل.</p>
+        : <p className="stt-hint">لا شبكة محفوظة في المختبر على هذا الجهاز. افتح الملف الذي حفظته منه («احفظ في ملف»).</p>}
+      <div className="dgm-actions">
+        {draft && <button type="button" className="stt-btn is-primary" onClick={() => void draw(draft.text)} disabled={busy} data-testid="diagram-lab-draft">ارسم شبكتي من المختبر</button>}
+        <button type="button" className={"stt-btn" + (draft ? "" : " is-primary")} onClick={() => fileRef.current?.click()} disabled={busy}>افتح ملف الشبكة</button>
+        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={open} data-testid="diagram-lab-file" />
+      </div>
+      {result && (
+        <div className="dgm-gen-result" role="status" data-testid="diagram-lab-result">
+          {result.summary && <p className="dgm-gen-ok">{result.summary} المخطط السابق يعود بـ «تراجع».</p>}
+          {!!result.problems.length && <ul className="dgm-check-list">
+            {result.problems.map((p, i) => <li key={i} className="dgm-finding is-warning"><span>{p}</span></li>)}
+          </ul>}
+        </div>
+      )}
+      <p className="stt-hint">يُرسم ما في المختبر كما هو: الأجهزة في أماكنها، والكوابل بمنافذها، والعناوين التي أعطيتها للأجهزة. لا يُرسل شيء.</p>
+    </section>
+  );
+}
+
 /** DG4 — an example script per kind (the activity's is written by hand: a free-form flow is not written back). */
 const SCRIPT_EXAMPLE: Record<ScriptKind, () => string> = {
   class: () => "@startuml\nclass Car\n\nDriver - Car : drives >\nCar *- Wheel : have 4 >\nCar -- Person : < owns\n@enduml",
@@ -282,7 +349,13 @@ const nodeName = (doc: DiagramDoc, id: string) => {
   return (spec?.label ?? "") + (t ? ": " + t : "");
 };
 
-export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
+export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab }: {
+  draftKey?: string;
+  /** DG7 — where «مختبر الشبكات» keeps its draft on this device (a book), so «من مختبر الشبكات» can draw it. */
+  labDraftKey?: string;
+  /** DG7 — a network the lab handed over («ارسمها في محرّر المخططات»): drawn as the topology, one «تراجع» back. */
+  incomingLab?: { lab: NetLab; seq: number } | null;
+}) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const prefix = "dgm" + uid + "-";
   const [store, setStore] = useState<Store>(() => readStore(draftKey));
@@ -296,6 +369,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   const [multi, setMulti] = useState(false);
   const [activeRoute, setActiveRoute] = useState<Partial<Record<DiagramKind, EdgeRoute>>>({});
   const [genOpen, setGenOpen] = useState(false);
+  const [labOpen, setLabOpen] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   /** DG4 — the diagram as it was when a stretch of typing began: the positions the learner set come from it. */
   const scriptBase = useRef<DiagramDoc | undefined>(undefined);
@@ -431,6 +505,23 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
     });
     setSelection(null);
   };
+  /** DG7 — a drawing that replaces the topology (from the lab): one history step, and the editor shows the topology. */
+  const drawTopology = useCallback((d: DiagramDoc, summary: string) => {
+    editKey.current = "";
+    setStore(s => ({ kind: "topology", hist: { ...s.hist, topology: commit(s.hist.topology ?? startHistory(emptyDoc("topology")), d) } }));
+    setSelection(null);
+    setSaid(summary + " المخطط السابق يعود بـ «تراجع».");
+  }, []);
+  // the lab's hand-over arrives with a new number each time
+  const lastLab = useRef(0);
+  useEffect(() => {
+    if (!incomingLab || incomingLab.seq === lastLab.current) return;
+    lastLab.current = incomingLab.seq;
+    let live = true;
+    loadLabConverter().then(m => { if (!live) return; const r = m.labToTopology(incomingLab.lab); drawTopology(r.doc, r.summary); })
+      .catch(() => { if (live) setSaid("تعذّر رسم الشبكة الآن. حدّث الصفحة وجرّب مرة أخرى."); });
+    return () => { live = false; };
+  }, [incomingLab, drawTopology]);
   const switchKind = (k: DiagramKind) => { editKey.current = ""; setStore(s => ({ ...s, kind: k })); setSelection(null); setSaid(""); };
   const loadExample = () => { change(exampleDoc(kind)); setSelection(null); setSaid("فُتح المثال. عدّل عليه أو امسحه وابدأ مخططك (للعودة: «تراجع»)."); };
   const clear = () => { if (!doc.nodes.length) return; change(emptyDoc(kind)); setSelection(null); setSaid("مُسح المخطط. للعودة إليه اضغط «تراجع»."); };
@@ -557,6 +648,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
           {FROM_CODE[kind] && <button type="button" className={"stt-btn" + (genOpen ? " is-primary" : "")} aria-pressed={genOpen} onClick={() => setGenOpen(v => !v)} data-testid="diagram-generate">ولّد من الكود</button>}
           <button type="button" className={"stt-btn" + (multi ? " is-primary" : "")} aria-pressed={multi} onClick={() => setMulti(v => !v)} disabled={!doc.nodes.length}
             title="كل نقرة على الورقة تضيف عنصرًا إلى التحديد أو تزيله (بالفأرة: Shift + نقرة)" data-testid="diagram-multi">تحديد عدّة</button>
+          {kind === "topology" && <button type="button" className={"stt-btn" + (labOpen ? " is-primary" : "")} aria-pressed={labOpen} onClick={() => setLabOpen(v => !v)} data-testid="diagram-from-lab">من مختبر الشبكات</button>}
           {isScriptKind(kind) && <button type="button" className={"stt-btn" + (scriptOpen ? " is-primary" : "")} aria-pressed={scriptOpen} onClick={() => setScriptOpen(v => !v)} data-testid="diagram-script">اكتب كنص</button>}
         </span>
         <span className="dgm-group dgm-save">
@@ -578,6 +670,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
       {scriptOpen && isScriptKind(kind) && <ScriptPanel kind={kind} doc={doc} onClose={() => setScriptOpen(false)} onApply={applyScript} />}
       {checkOpen && <CheckPanel findings={findings} onClose={() => setCheckOpen(false)}
         onPick={f => setSelection(f.nodes.length ? { kind: "node", id: f.nodes[0] } : f.edges.length ? { kind: "edge", id: f.edges[0] } : null)} />}
+      {labOpen && kind === "topology" && <LabPanel labDraftKey={labDraftKey} onClose={() => setLabOpen(false)} onDraw={drawTopology} />}
       {genOpen && FROM_CODE[kind] && <GeneratePanel key={kind} kind={kind} onClose={() => setGenOpen(false)}
         onDraw={(d, summary) => { editKey.current = ""; change(d); setSelection(null); setSaid(summary); }} />}
 
