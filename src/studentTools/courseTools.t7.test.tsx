@@ -45,7 +45,7 @@ describe("T7 — the tool bar in the book reader", () => {
     fireEvent.click(await screen.findByTestId("student-tools-button"));
     const menu = screen.getByRole("group", { name: "الأدوات المسموحة" });
     expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(
-      ["حاسبة الشبكات IPv4", "محوّل أنظمة العدّ", "حاسبة العمليات على البتات", "محوّل الوحدات", "آلة حاسبة علمية", "ورقة مسودة", "مختبر الشبكات"]);   // N1 — the network lab (owner decision 2026-11-26)
+      ["حاسبة الشبكات IPv4", "محوّل أنظمة العدّ", "حاسبة العمليات على البتات", "محوّل الوحدات", "آلة حاسبة علمية", "ورقة مسودة", "مختبر الشبكات", "محرّر المخططات"]);   // N1 — the network lab (owner decision 2026-11-26); DG1 — the diagram editor
     fireEvent.click(within(menu).getByRole("button", { name: "حاسبة الشبكات IPv4" }));
     const panel = screen.getByRole("dialog", { name: "حاسبة الشبكات IPv4" });
     fireEvent.change(within(panel).getByLabelText("العنوان مع البادئة أو القناع"), { target: { value: "10.1.2.3/8" } });

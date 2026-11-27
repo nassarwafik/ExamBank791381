@@ -22,7 +22,7 @@ describe("T13 contract (additive within version 1)", () => {
   it("both ids join the contract after every earlier tool, with their defaults", () => {
     // their exact place: after the eleven earlier ids (T14's csharpEditor and AUTO-A4's automataLab were added after them, additively)
     expect(STUDENT_TOOL_IDS.slice(11, 13)).toEqual(["placeValueBoxes", "hexBinaryTable"]);
-    expect(STUDENT_TOOL_IDS.slice(13)).toEqual(["csharpEditor", "automataLab", "networkLab"]);   // N1 — the network lab, additively
+    expect(STUDENT_TOOL_IDS.slice(13)).toEqual(["csharpEditor", "automataLab", "networkLab", "diagramEditor"]);   // N1 — the network lab, DG1 — the diagram editor, additively
     expect(defaultStudentToolConfig("placeValueBoxes")).toEqual({ id: "placeValueBoxes", width: 8 });
     expect(defaultStudentToolConfig("hexBinaryTable")).toEqual({ id: "hexBinaryTable", showDecimal: true });
   });

@@ -12,6 +12,8 @@ const scratchPad = { id: "scratchPad", drawing: true } as const;
 const allBases = { id: "baseConverter", bases: [2, 8, 10, 16], showSteps: true } as const;
 // Phase T14 — the C# editor, with running on, in the books that teach C# programming (owner decision: a book is practice).
 const csharpEditor = { id: "csharpEditor", allowRun: true } as const;
+// DG1 — the diagram editor, in the books whose projects draw diagrams (UML, ERD, DSD, DFD, topology)
+const diagramEditor = { id: "diagramEditor" } as const;
 
 const NETWORKS: StudentToolsSpecV1 = {
   version: 1,
@@ -23,7 +25,9 @@ const NETWORKS: StudentToolsSpecV1 = {
     { ...calculator },
     { ...scratchPad },
     // N1 (owner decision 2026-11-26) — «مختبر الشبكات»: the learner builds and tests a network with the course's simulator
-    { id: "networkLab" }
+    { id: "networkLab" },
+    // DG1 (owner request 2026-11-27) — «محرّر المخططات»: the project book's diagrams (here above all the network topology)
+    diagramEditor
   ]
 };
 
@@ -43,7 +47,8 @@ export const COURSE_STUDENT_TOOLS: Readonly<Record<string, StudentToolsSpecV1>> 
       { id: "unitConverter", categories: ["data", "dataRate"] },
       { ...calculator },
       { ...scratchPad },
-      { ...csharpEditor }
+      { ...csharpEditor },
+      { ...diagramEditor }
     ]
   },
   // الأتمتة — AUTO-A4: the automata lab first, with the course's four machines
@@ -54,12 +59,12 @@ export const COURSE_STUDENT_TOOLS: Readonly<Record<string, StudentToolsSpecV1>> 
   // مبنى المعطيات
   "899271d": {
     version: 1,
-    tools: [{ ...calculator }, { ...allBases, bases: [...allBases.bases] }, { id: "bitwiseCalculator", width: 32 }, { ...scratchPad }, { ...csharpEditor }]
+    tools: [{ ...calculator }, { ...allBases, bases: [...allBases.bases] }, { id: "bitwiseCalculator", width: 32 }, { ...scratchPad }, { ...csharpEditor }, { ...diagramEditor }]
   },
   // أنظمة محوسبة (HW-A2) — units of data (Bit / Byte / KB / MB) and the hexadecimal of a MAC address
   "791283": {
     version: 1,
-    tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }, { id: "networkLab" }]
+    tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }, { id: "networkLab" }, { ...diagramEditor }]
   }
 });
 

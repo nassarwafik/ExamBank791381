@@ -47,6 +47,8 @@ const HEX_TERMS = /الست\s*عشري|السادس\s*عشر|السداسي\s*ع
 const AUTOMATA_TERMS = /أوتومات|اوتومات|آلة\s*تورنغ|آلة\s*تورينغ|حالة\s*(?:ال)?قبول|دالة\s*(?:ال)?انتقالات?|مكدّس|مكدس|\b(?:DFA|NFA|PDA)\b|automat|turing\s*machine/i;
 // N1 — the network lab simulates a whole network: any question about a command's result, reachability, VLANs, DHCP or a device's configuration.
 const NETWORK_TERMS = /\b(?:ping|tracert|traceroute|ipconfig|nslookup|arp\s+-a|vlan|trunk|dhcp|vtp|show\s+\w+|switchport|router|switch|gateway|ssid)\b|راوتر|سويتش|موجّه|موجه|مبدّل|البوابة|نقطة\s*(?:ال)?وصول|نتيجة\s*(?:ال)?أمر/i;
+// DG1 — a question that asks for a diagram the editor draws (UML, ERD, DSD, DFD, a topology).
+const DIAGRAM_TERMS = /\b(?:uml|erd|dfd|dsd|use\s*case|class\s+diagram|sequence\s+diagram|activity\s+diagram|state\s+(?:machine|diagram)|topology)\b|مخطط|ارسم|طوبولوجيا/i;
 const PERIODIC_TERMS = /العدد\s*الذري|الكتلة\s*الذرية|التوزيع\s*الإلكتروني|الجدول\s*الدوري|atomic\s*(?:number|mass)|electron\s*configuration/i;
 
 function questionType(q: Record<string, unknown>): string {
@@ -73,6 +75,7 @@ export function questionRiskFor(tool: StudentToolId, q: unknown): boolean {
     case "csharpEditor": return false;    // T14: in an exam it never runs code — a writing aid answers nothing
     case "automataLab": return AUTOMATA_TERMS.test(text);
     case "networkLab": return NETWORK_TERMS.test(text) || IPV4_LITERAL.test(text);
+    case "diagramEditor": return DIAGRAM_TERMS.test(text);
   }
 }
 

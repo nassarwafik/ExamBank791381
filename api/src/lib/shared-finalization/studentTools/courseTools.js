@@ -7,6 +7,7 @@ const calculator = { id: "calculator", variant: "scientific", angleUnit: "deg" }
 const scratchPad = { id: "scratchPad", drawing: true };
 const allBases = { id: "baseConverter", bases: [2, 8, 10, 16], showSteps: true };
 const csharpEditor = { id: "csharpEditor", allowRun: true };
+const diagramEditor = { id: "diagramEditor" };
 const NETWORKS = {
     version: 1,
     tools: [
@@ -16,7 +17,8 @@ const NETWORKS = {
         { id: "unitConverter", categories: ["data", "dataRate"] },
         { ...calculator },
         { ...scratchPad },
-        { id: "networkLab" }
+        { id: "networkLab" },
+        diagramEditor
     ]
 };
 exports.COURSE_STUDENT_TOOLS = Object.freeze({
@@ -32,7 +34,8 @@ exports.COURSE_STUDENT_TOOLS = Object.freeze({
             { id: "unitConverter", categories: ["data", "dataRate"] },
             { ...calculator },
             { ...scratchPad },
-            { ...csharpEditor }
+            { ...csharpEditor },
+            { ...diagramEditor }
         ]
     },
     "899271": {
@@ -41,11 +44,11 @@ exports.COURSE_STUDENT_TOOLS = Object.freeze({
     },
     "899271d": {
         version: 1,
-        tools: [{ ...calculator }, { ...allBases, bases: [...allBases.bases] }, { id: "bitwiseCalculator", width: 32 }, { ...scratchPad }, { ...csharpEditor }]
+        tools: [{ ...calculator }, { ...allBases, bases: [...allBases.bases] }, { id: "bitwiseCalculator", width: 32 }, { ...scratchPad }, { ...csharpEditor }, { ...diagramEditor }]
     },
     "791283": {
         version: 1,
-        tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }, { id: "networkLab" }]
+        tools: [{ id: "unitConverter", categories: ["data"] }, { ...allBases, bases: [...allBases.bases] }, { ...calculator }, { ...scratchPad }, { id: "networkLab" }, { ...diagramEditor }]
     }
 });
 function courseStudentTools(courseId) {

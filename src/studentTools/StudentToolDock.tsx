@@ -29,6 +29,10 @@ const CSharpEditorTool = lazy(() => import("./CSharpEditorTool"));
 const AutomataLabTool = lazy(() => import("./AutomataLabTool"));
 // N1 — the network lab carries the network simulator's engines and device surfaces: its own chunk.
 const NetworkLabTool = lazy(() => import("./NetworkLabTool"));
+// DG1 — the diagram editor carries its shapes and its picture export: its own chunk.
+const DiagramEditorTool = lazy(() => import("./DiagramEditorTool"));
+/** DG1 — the diagram editor keeps a draft (the last diagram of each kind) in a BOOK only. */
+const DIAGRAM_DRAFT_KEY = "eb.diagramEditor.draft.v1";
 /** N1 — the network lab keeps a draft in the browser only in a BOOK (an exam page never keeps one). */
 const NETWORK_LAB_DRAFT_KEY = "eb.networkLab.draft.v1";
 
@@ -50,10 +54,10 @@ const NETWORK_LAB_DRAFT_KEY = "eb.networkLab.draft.v1";
 type Props = { studentTools: unknown; sectionId?: string; onToolOpen?: (id: StudentToolId) => void; csharpRunner?: CSharpToolRunner; labHandoff?: boolean };
 type Incoming = { draft: LabDraft; seq: number };
 type CSharpRun = { runner?: CSharpToolRunner };
-const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab", "networkLab"]);
+const XWIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab", "networkLab", "diagramEditor"]);
 /** Phase E1 (owner request) — the tools whose panel can fill the screen («ملء الشاشة»), as the course's «وضع العرض» does. */
-const FULLSCREEN_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab", "networkLab"]);
-const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor", "automataLab", "networkLab"]);
+const FULLSCREEN_TOOLS: ReadonlySet<StudentToolId> = new Set(["csharpEditor", "automataLab", "networkLab", "diagramEditor"]);
+const WIDE_TOOLS: ReadonlySet<StudentToolId> = new Set(["graphPlotter", "scratchPad", "formulaSheet", "asciiTable", "truthTable", "periodicTable", "csharpEditor", "automataLab", "networkLab", "diagramEditor"]);
 
 class ToolBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -82,6 +86,7 @@ function ToolBody({ tool, csharp, full = false, incoming, book = false }: { tool
     case "csharpEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرر C#…</p>}><CSharpEditorTool runner={csharp.runner} full={full} /></Suspense>;
     case "automataLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الآلات…</p>}><AutomataLabTool config={tool} incoming={incoming ?? undefined} /></Suspense>;
     case "networkLab": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل مختبر الشبكات…</p>}><NetworkLabTool draftKey={book ? NETWORK_LAB_DRAFT_KEY : undefined} /></Suspense>;
+    case "diagramEditor": return <Suspense fallback={<p className="stt-hint" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={book ? DIAGRAM_DRAFT_KEY : undefined} /></Suspense>;
     default: return null;
   }
 }

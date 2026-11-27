@@ -5,7 +5,7 @@
 // changing its key, or reusing a key fails here by name.
 import { describe, it, expect } from "vitest";
 
-const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./gradebook/LazyClassGradebook.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./owner/OwnerApp.tsx", "./owner/OwnerLibrary.tsx", "./owner/OwnerLibrarySubmissions.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx", "./pwa/DeferredInstallGuidanceDialog.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./gradebook/LazyClassGradebook.tsx", "./StudentPortal.tsx", "./projects/StudentProjectPanel.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./owner/OwnerApp.tsx", "./owner/OwnerLibrary.tsx", "./owner/OwnerLibrarySubmissions.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx", "./pwa/DeferredInstallGuidanceDialog.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const ALL = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 /** [file, component, module path, stable key] — the protected lazy views. */
@@ -61,6 +61,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],
   ["./reports/ReportsCenter.tsx", "ReportsOverview", "./ReportsOverview", "teacher-reports-overview"],   // Reports R-5a — the hub overview (its own lazy chunk)
   ["./StudentPortal.tsx", "StudentReader", "./student/StudentReader", "student-reader"],
+  // DG1 — «محرّر المخططات» on the student's project page loads on demand (its own chunk)
+  ["./projects/StudentProjectPanel.tsx", "DiagramEditorTool", "../studentTools/DiagramEditorTool", "student-diagram-editor"],
   ["./learning/LearningMaterialsPage.tsx", "LearningReaderWithTraining", "./training/LearningReaderWithTraining", "learning-reader-with-training"],
   ["./learning/training/LearningReaderWithTraining.tsx", "LearningTrainingRunner", "./LearningTrainingRunner", "learning-training-runner"],
   // 21E.1 — the dialog layer stays out of the startup bundle: App.tsx's marks-distribution Dialog and the shared confirmation
