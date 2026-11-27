@@ -2,6 +2,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent, type RefObjec
 import { DIAGRAM_LIMITS, insideOf, moveNodesBy, resizeNode, type DiagramDoc } from "./diagramDoc";
 import { centerOf, edgeAt, lifelineBottom, nodeAt, type EdgePath, type NodeBox } from "./diagramLayout";
 import { DiagramDrawing, Markers, PAPER } from "./diagramShapes";
+import type { FindingLevel } from "./diagramChecks";
 
 // «محرّر المخططات» — the drawing sheet. One SVG on white paper; the pointer is read against the diagram itself (not the DOM):
 //   • press a component and drag: it moves (a container moves with what it holds), snapped to a 10 px grid;
@@ -37,7 +38,10 @@ type Props = {
   onCommit: (startDoc: DiagramDoc) => void;
   onConnect: (from: string, to: string) => void;
   onEdit: (id: string) => void;
+  /** DG2 — what «افحص المخطط» found, by component / arrow id: drawn as a red (error) or amber (warning) mark. */
+  marks?: ReadonlyMap<string, FindingLevel>;
 };
+const MARK = { error: "#dc2626", warning: "#d97706" } as const;
 
 /** The sides' dots of a selected component (a lifeline: beside its head). */
 function linkDots(b: NodeBox): Pt[] {
@@ -48,7 +52,7 @@ function linkDots(b: NodeBox): Pt[] {
   return [{ x: c.x, y: b.y - gap }, { x: b.x + b.w + gap, y: c.y }, { x: c.x, y: b.y + b.h + gap }, { x: b.x - gap, y: c.y }];
 }
 
-export default function DiagramCanvas({ doc, boxes, paths, zoom, selection, prefix, label, svgRef, onSelect, onPreview, onCommit, onConnect, onEdit }: Props) {
+export default function DiagramCanvas({ doc, boxes, paths, zoom, selection, prefix, label, svgRef, onSelect, onPreview, onCommit, onConnect, onEdit, marks }: Props) {
   const drag = useRef<Drag | null>(null);
   const [link, setLink] = useState<{ from: Pt; to: Pt; target: string | null } | null>(null);
 
@@ -138,6 +142,15 @@ export default function DiagramCanvas({ doc, boxes, paths, zoom, selection, pref
       <rect data-ui="" x={0} y={0} width={W} height={H} fill={PAPER} />
       <rect data-ui="" x={0} y={0} width={W} height={H} fill={`url(#${prefix}grid)`} />
       <DiagramDrawing doc={doc} boxes={boxes} paths={paths} prefix={prefix} />
+      {marks && marks.size > 0 && <g data-ui="" pointerEvents="none" data-testid="diagram-marks">
+        {[...marks].map(([id, level]) => {
+          const b = boxes.get(id), p = paths.get(id);
+          if (b) return <rect key={id} data-mark={level} x={b.x - 7} y={b.y - 7} width={b.w + 14} height={(b.form === "lifeline" ? 60 : b.h) + 14} rx={8}
+            fill={MARK[level]} fillOpacity={0.07} stroke={MARK[level]} strokeWidth={2} strokeDasharray="6 4" />;
+          if (p) return <path key={id} data-mark={level} d={p.d} fill="none" stroke={MARK[level]} strokeOpacity={0.4} strokeWidth={8} strokeLinecap="round" />;
+          return null;
+        })}
+      </g>}
       {selPath && <path data-ui="" d={selPath.d} fill="none" stroke="#2563eb" strokeOpacity={0.35} strokeWidth={9} strokeLinecap="round" pointerEvents="none" />}
       {targetBox && <rect data-ui="" x={targetBox.x - 5} y={targetBox.y - 5} width={targetBox.w + 10} height={(targetBox.form === "lifeline" ? bottom - targetBox.y : targetBox.h) + 10}
         rx={8} fill="#2563eb" fillOpacity={0.08} stroke="#2563eb" strokeWidth={2} pointerEvents="none" />}

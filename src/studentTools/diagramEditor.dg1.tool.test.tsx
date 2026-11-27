@@ -244,3 +244,56 @@ describe("files and the draft", () => {
     expect(svg).not.toMatch(/viewBox="0 0 2400 1600"/);
   });
 });
+
+describe("DG2 — «افحص المخطط»", () => {
+  it("the example passes; a broken table is named at once, its finding selects it, the sheet marks it; the picture leaves the marks out", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "dsd" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    await click(screen.getByTestId("diagram-check"));
+    const panel = () => screen.getByTestId("diagram-check-panel");
+    expect(panel().textContent).toMatch(/لا ملاحظات/);
+    expect(screen.queryByTestId("diagram-marks")).toBeNull();
+    // take the primary key off «Students»: the check follows the change
+    fireEvent.change(screen.getByTestId("diagram-pick"), { target: { value: "node:n2" } });
+    await tick();
+    fireEvent.change(field("الحقول"), { target: { value: "StudentID : INT\nName : VARCHAR(50)\nFK ClassID : INT" } });
+    await tick();
+    expect(panel().textContent).toMatch(/نتيجة الفحص: خطأ واحد/);
+    expect(panel().textContent).toMatch(/جدول «Students» بلا مفتاح أساسي/);
+    expect(canvas().querySelector("[data-mark='error']")).toBeTruthy();
+    // a finding selects what it is about
+    fireEvent.keyDown(canvas(), { key: "Escape" });
+    await tick();
+    expect(screen.queryByTestId("diagram-node-props")).toBeNull();
+    await click(within(panel()).getAllByTestId("diagram-finding")[0]);
+    expect((field("اسم الجدول") as HTMLInputElement).value).toBe("Students");
+    // the saved picture has no mark
+    globalThis.fetch = vi.fn(async () => ({ ok: false })) as unknown as typeof fetch;
+    await click(screen.getByTestId("diagram-svg"));
+    await tick(30);
+    expect(await downloads[0].blob.text()).not.toContain("data-mark");
+    // closing the check removes its marks
+    await click(within(panel()).getByRole("button", { name: "إغلاق الفحص" }));
+    expect(screen.queryByTestId("diagram-check-panel")).toBeNull();
+    expect(screen.queryByTestId("diagram-marks")).toBeNull();
+  });
+});
+
+describe("DG2 — Escape", () => {
+  it("the first Escape only lets go of the selection; the next reaches the tool bar (full screen, close)", async () => {
+    const outer = vi.fn();
+    render(<div onKeyDown={e => outer(e.key)}><DiagramEditorTool /></div>);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "erd" } });
+    await tick();
+    await click(screen.getByRole("button", { name: "أضف: كيان" }));
+    expect(screen.getByTestId("diagram-node-props")).toBeTruthy();
+    fireEvent.keyDown(canvas(), { key: "Escape" });
+    await tick();
+    expect(screen.queryByTestId("diagram-node-props")).toBeNull();
+    expect(outer).not.toHaveBeenCalled();
+    fireEvent.keyDown(canvas(), { key: "Escape" });
+    expect(outer).toHaveBeenCalledWith("Escape");
+  });
+});
