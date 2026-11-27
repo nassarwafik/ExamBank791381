@@ -56,6 +56,7 @@ export function wrapText(text: string, max = WRAP_AT, size = FONT_SIZE, bold = f
   return out;
 }
 const widest = (lines: readonly string[], size = FONT_SIZE, bold = false) => lines.reduce((m, l) => Math.max(m, measureText(l, size, bold)), 0);
+const KEY = /^(PK|FK)\s+/i;
 const linesOf = (s: string | undefined) => (s ?? "").split("\n").map(l => l.trimEnd()).filter((l, i, all) => l !== "" || (i > 0 && i < all.length - 1));
 
 export type NodeBox = {
@@ -87,7 +88,12 @@ export function layoutNode(doc: DiagramDoc, node: DNode): NodeBox | null {
       const stereo = spec.stereotype ? 1 : 0;
       const head = 12 + stereo * SMALL_LINE + LINE;
       const body = sections.reduce((s, lines) => s + 10 + Math.max(1, lines.length) * SMALL_LINE, 0);
-      w = Math.max(w, measureText(title[0], FONT_SIZE, true) + 28, spec.stereotype ? measureText(spec.stereotype, SMALL) + 28 : 0, widest(sections.flat(), SMALL) + 28);
+      // a section with keys draws its names after a PK / FK column (diagramShapes SideLine: 34 px in, the key word itself not measured)
+      const lineW = (lines: string[]) => {
+        const keyed = lines.some(l => KEY.test(l));
+        return Math.max(0, ...lines.map(l => measureText(l.replace(KEY, ""), SMALL))) + (keyed ? 34 : 12) + 14;
+      };
+      w = Math.max(w, measureText(title[0], FONT_SIZE, true) + 28, spec.stereotype ? measureText(spec.stereotype, SMALL) + 28 : 0, ...sections.map(lineW));
       h = Math.max(h, head + body);
       break;
     }
