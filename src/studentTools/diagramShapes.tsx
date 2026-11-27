@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from "react";
 import { DIAGRAM_COLORS, edgeSpec, type DeviceIcon, type EdgeSpec, type MarkerKind } from "./diagramCatalog";
 import type { DEdge, DiagramDoc } from "./diagramDoc";
-import { FONT_FAMILY, FONT_SIZE, LINE, SMALL, SMALL_LINE, lifelineBottom, measureText, textDir, type EdgePath, type NodeBox } from "./diagramLayout";
+import { FONT_FAMILY, FONT_SIZE, LINE, SLANT, SMALL, SMALL_LINE, lifelineBottom, measureText, textDir, type EdgePath, type NodeBox } from "./diagramLayout";
 
 // «محرّر المخططات» — how each component and arrow is drawn: plain SVG with its paint written on each element (no CSS), on white paper, so
 // the drawing looks the same in a light or a dark app and the saved picture is exactly what the learner sees. Original artwork only.
@@ -130,6 +130,19 @@ const MemoNode = memo(function NodeShape({ b }: { b: NodeBox }) {
           <Lines lines={body} cx={cx} cy={b.y + 22 + b.title.length * LINE + ((body.length - 1) * SMALL_LINE) / 2 + 4} bold={false} size={SMALL} step={SMALL_LINE} /></>}
       </>;
     }
+    case "terminal": return <>
+      <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={b.h / 2} fill={fill} {...s} />
+      <Lines lines={b.title} cx={cx} cy={cy} />
+    </>;
+    case "parallelogram": return <>
+      <polygon points={`${b.x + SLANT},${b.y} ${b.x + b.w},${b.y} ${b.x + b.w - SLANT},${b.y + b.h} ${b.x},${b.y + b.h}`} fill={fill} {...s} strokeLinejoin="round" />
+      <Lines lines={b.title} cx={cx} cy={cy} />
+    </>;
+    case "subroutine": return <>
+      <rect x={b.x} y={b.y} width={b.w} height={b.h} fill={fill} {...s} />
+      <path d={`M${b.x + 10},${b.y} V${b.y + b.h} M${b.x + b.w - 10},${b.y} V${b.y + b.h}`} {...s} />
+      <Lines lines={b.title} cx={cx} cy={cy} />
+    </>;
     case "doubleRect": return <>
       <rect x={b.x} y={b.y} width={b.w} height={b.h} fill={fill} {...s} /><rect x={b.x + 4} y={b.y + 4} width={b.w - 8} height={b.h - 8} fill="none" {...s} />
       <Lines lines={b.title} cx={cx} cy={cy} />

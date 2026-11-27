@@ -62,6 +62,7 @@ const NAMED: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
   erd: ["entity", "weakEntity", "attribute", "keyAttribute", "multiAttribute", "derivedAttribute", "relationship", "identifyingRel"],
   dsd: ["table"], dfd: ["process", "processGS", "external", "store"],
   topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
+  flowchart: ["io", "process", "decision", "subroutine", "connector"],
 };
 /** Components whose names must not repeat (two classes «Student», two tables «Students»). */
 const UNIQUE: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
@@ -74,6 +75,7 @@ const CONNECTED: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
   useCase: ["actor", "usecase"], sequence: ["actorLifeline", "lifeline"], activity: ["action", "decision", "fork"],
   state: ["state", "choice"], erd: ["entity", "weakEntity", "attribute", "keyAttribute", "multiAttribute", "derivedAttribute", "relationship", "identifyingRel"],
   dfd: ["process", "processGS", "external", "store"], topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
+  flowchart: ["io", "process", "decision", "subroutine", "connector"],
 };
 
 function common(c: Ctx) {
@@ -189,14 +191,14 @@ function sequence(c: Ctx) {
 }
 
 // ── UML: activity and state ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string; end: string }) {
+function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string; end: string; startHow?: string; endHow?: string }) {
   const { doc } = c;
   const starts = doc.nodes.filter(n => n.type === start), ends = doc.nodes.filter(n => n.type === end);
   const working = doc.nodes.filter(n => !isNote(doc, n) && !isContainer(doc, n));
   if (!working.length) return;
-  if (!starts.length) c.add("error", "flow.noStart", "لا " + kindWord.start + ": يبدأ المخطط بدائرة ممتلئة.");
+  if (!starts.length) c.add("error", "flow.noStart", "لا " + kindWord.start + ": " + (kindWord.startHow ?? "يبدأ المخطط بدائرة ممتلئة."));
   if (starts.length > 1) c.add("warning", "flow.manyStarts", "في المخطط " + starts.length + " " + kindWord.start + ": المعتاد واحدة.", starts.map(n => n.id));
-  if (!ends.length) c.add("error", "flow.noEnd", "لا " + kindWord.end + ": ينتهي المخطط بالدائرة المزدوجة.");
+  if (!ends.length) c.add("error", "flow.noEnd", "لا " + kindWord.end + ": " + (kindWord.endHow ?? "ينتهي المخطط بالدائرة المزدوجة."));
   for (const s of starts) if (c.inOf(s.id).length) c.add("error", "flow.intoStart", "لا يدخل سهم إلى " + kindWord.start + ".", [s.id], c.inOf(s.id).map(e => e.id));
   for (const s of starts) if (c.outOf(s.id).length > 1) c.add("warning", "flow.startMany", "يخرج من " + kindWord.start + " سهم واحد.", [s.id], c.outOf(s.id).map(e => e.id));
   for (const s of ends) if (c.outOf(s.id).length) c.add("error", "flow.fromEnd", "لا يخرج سهم من " + kindWord.end + ".", [s.id], c.outOf(s.id).map(e => e.id));
@@ -243,6 +245,27 @@ function state(c: Ctx) {
       if (outs.length >= 2 && bare.length) c.add("warning", "st.event", "يخرج من " + label(doc, n) + " أكثر من انتقال: اكتب على كل انتقال الحدث الذي يسبّبه.", [n.id], bare.map(e => e.id));
     }
     if (n.type === "choice" && c.outOf(n.id).length < 2) c.add("warning", "st.choice", "الاختيار يخرج منه انتقالان على الأقل، بشرط على كل منهما.", [n.id]);
+  }
+}
+
+// ── DG6: flowchart ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+function flowchart(c: Ctx) {
+  const { doc } = c;
+  flowGraph(c, "start", "end", { start: "البداية", end: "النهاية", startHow: "يبدأ المخطط بالشكل البيضاوي «ابدأ».", endHow: "ينتهي المخطط بالشكل البيضاوي «انتهِ»." });
+  for (const n of doc.nodes) {
+    const outs = c.outOf(n.id);
+    if (n.type === "decision") {
+      if (outs.length < 2) c.add("error", "fc.decision", "يخرج من " + label(doc, n) + " سهمان: «نعم» و«لا».", [n.id], outs.map(e => e.id));
+      else {
+        if (outs.length > 2) c.add("warning", "fc.decisionMany", "للقرار مخرجان فقط، «نعم» و«لا». لأكثر من حالتين استعمل قرارًا بعد قرار.", [n.id], outs.map(e => e.id));
+        const bare = outs.filter(e => !e.label.trim());
+        if (bare.length) c.add("warning", "fc.answer", "اكتب «نعم» أو «لا» على كل سهم يخرج من " + label(doc, n) + ".", [n.id], bare.map(e => e.id));
+      }
+    }
+    // one way on: a branch is a decision's job
+    if ((n.type === "process" || n.type === "io" || n.type === "subroutine") && outs.length > 1) {
+      c.add("error", "fc.oneOut", "يخرج من " + label(doc, n) + " سهم واحد فقط. التفرّع يكون بشكل «قرار».", [n.id], outs.map(e => e.id));
+    }
   }
 }
 
@@ -437,7 +460,7 @@ function topology(c: Ctx) {
 }
 
 const BY_KIND: Readonly<Record<DiagramKind, (c: Ctx) => void>> = {
-  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, topology,
+  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, topology, flowchart,
 };
 
 /** Every finding of the diagram: errors first, then warnings, each in the diagram's order. */

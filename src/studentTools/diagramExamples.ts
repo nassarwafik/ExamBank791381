@@ -82,7 +82,16 @@ const EXAMPLES: Record<DiagramKind, () => DiagramDoc> = {
     ["cloud", 400, 20, { name: "Internet" }], ["router", 400, 180, { name: "R1", details: "G0/0: 192.168.1.1" }], ["switch", 400, 390, { name: "SW1" }],
     ["pc", 170, 540, { name: "PC1", details: "192.168.1.10" }], ["laptop", 400, 540, { name: "Laptop1", details: "192.168.1.11" }],
     ["server", 630, 540, { name: "Server1", details: "192.168.1.100" }]
-  ], [[2, 3, "serial"], [3, 4, "copper", "", "G0/0", "G0/1"], [4, 5, "copper", "", "Fa0/1", ""], [4, 6, "copper", "", "Fa0/2", ""], [4, 7, "fiber", "", "G0/2", ""]])
+  ], [[2, 3, "serial"], [3, 4, "copper", "", "G0/0", "G0/1"], [4, 5, "copper", "", "Fa0/1", ""], [4, 6, "copper", "", "Fa0/2", ""], [4, 7, "fiber", "", "G0/2", ""]]),
+  // DG6 — a program that reads two marks, finds their average and prints the result; drawn with right angles, as flowcharts are
+  flowchart: () => {
+    const d = build("flowchart", [
+      ["start", 330, 30], ["io", 290, 110, { name: "أدخل a, b" }, 180], ["process", 290, 200, { name: "avg = (a + b) / 2" }, 180],
+      ["decision", 310, 290, { name: "avg >= 50 ؟" }, 140, 76], ["io", 90, 420, { name: "اطبع «ناجح»" }, 170], ["io", 500, 420, { name: "اطبع «راسب»" }, 170],
+      ["end", 330, 530]
+    ], [[1, 2, "flow"], [2, 3, "flow"], [3, 4, "flow"], [4, 5, "flow", "نعم"], [4, 6, "flow", "لا"], [5, 7, "flow"], [6, 7, "flow"]]);
+    return { ...d, edges: d.edges.map(e => ({ ...e, route: "ortho" as const })) };
+  }
 };
 
 export const exampleDoc = (kind: DiagramKind): DiagramDoc => EXAMPLES[kind]();

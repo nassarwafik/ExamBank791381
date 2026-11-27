@@ -549,3 +549,27 @@ describe("DG5 — the sheet keeps the keyboard", () => {
     expect(drawnNodes()).toHaveLength(1);
   });
 });
+
+describe("DG6 — «مخطط التدفّق»", () => {
+  it("listed under «البرمجة»; its example draws with right angles and «افحص المخطط» finds nothing; a decision with one way out is named", async () => {
+    render(<DiagramEditorTool />);
+    const kind = screen.getByTestId("diagram-kind") as HTMLSelectElement;
+    const group = [...kind.querySelectorAll("optgroup")].find(g => g.label === "البرمجة")!;
+    expect([...group.querySelectorAll("option")].map(o => o.value)).toEqual(["flowchart"]);
+    fireEvent.change(kind, { target: { value: "flowchart" } });
+    await tick();
+    expect([...screen.getByRole("complementary", { name: "المكوّنات والأسهم" }).querySelectorAll(".dgm-pal-btn")].map(b => b.getAttribute("aria-label")))
+      .toEqual(["أضف: بداية", "أضف: إدخال / إخراج", "أضف: معالجة", "أضف: قرار", "أضف: دالة جاهزة", "أضف: موصل", "أضف: نهاية", "أضف: ملاحظة"]);
+    await click(screen.getByTestId("diagram-example"));
+    expect(drawnNodes()).toHaveLength(7);
+    expect(screen.getByTestId("diagram-route-ortho").getAttribute("aria-checked")).toBe("true");
+    await click(screen.getByTestId("diagram-check"));
+    expect(screen.getByTestId("diagram-check-panel").textContent).toMatch(/لا ملاحظات/);
+    // take away «لا»: the decision is left with one way out
+    const no = [...drawnEdges()].find(g => g.textContent?.includes("لا"))!.getAttribute("data-edge")!;
+    fireEvent.change(screen.getByTestId("diagram-pick"), { target: { value: "edge:" + no } });
+    await tick();
+    await click(screen.getByTestId("diagram-delete"));
+    expect(screen.getByTestId("diagram-check-panel").textContent).toMatch(/يخرج من قرار «avg >= 50 ؟» سهمان: «نعم» و«لا»/);
+  });
+});

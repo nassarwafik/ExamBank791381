@@ -97,9 +97,10 @@ export function layoutNode(doc: DiagramDoc, node: DNode): NodeBox | null {
       h = Math.max(h, head + body);
       break;
     }
-    case "rect": case "round": case "doubleRect": case "component": case "cylinder": case "note": {
+    case "rect": case "round": case "doubleRect": case "component": case "cylinder": case "note": case "terminal": case "parallelogram": case "subroutine": {
       if (form === "note") { title = linesOf(t.name); sections = []; }
-      const extra = form === "component" ? 34 : form === "doubleRect" ? 12 : 0;
+      // DG6: the oval's round ends, the parallelogram's slant on both sides, the predefined process's two inner bars
+      const extra = form === "component" ? 34 : form === "doubleRect" ? 12 : form === "terminal" ? 24 : form === "parallelogram" ? 2 * SLANT : form === "subroutine" ? 24 : 0;
       w = Math.max(w, widest(title, FONT_SIZE, form !== "note") + 28 + extra);
       if (form === "round" && lineFields.length) {   // a state's body under its name
         sections = [linesOf(t.body)].filter(s => s.length);
@@ -173,6 +174,8 @@ export function layoutNode(doc: DiagramDoc, node: DNode): NodeBox | null {
 }
 
 export const centerOf = (b: { x: number; y: number; w: number; h: number }) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+/** DG6 — how far a flowchart's input / output parallelogram leans: its top edge starts this far in from the left. */
+export const SLANT = 16;
 
 /** The point where a line from the component's centre toward (px, py) leaves its border. */
 export function anchorToward(b: NodeBox, px: number, py: number): { x: number; y: number } {
@@ -267,7 +270,8 @@ export function edgePath(doc: DiagramDoc, edge: DEdge, boxes: ReadonlyMap<string
   const flip = edge.from < edge.to ? 1 : -1;
   const off = (i - (same.length - 1) / 2) * 16 * flip;
   if (ortho) {
-    const o = orthoPath(a, b, edge.from < edge.to ? off : -off, port(doc, boxes, edge, a), port(doc, boxes, edge, b), obstacles(boxes, a, b));
+    const o = orthoPath(a, b, edge.from < edge.to ? off : -off, port(doc, boxes, edge, a), port(doc, boxes, edge, b), obstacles(boxes, a, b),
+      preferOf(doc, a), routeSides(doc, boxes, edge));
     if (o) return o;
   }
   const pa = anchorToward(a, cb.x + nx * off * 2, cb.y + ny * off * 2);
@@ -293,6 +297,14 @@ export function sidePoint(b: NodeBox, side: Side, at: number): Pt {
   if (b.form === "actor") {   // the figure, not its name: its arms reach 22 px out
     return level ? { x: c.x + sign * Math.min(hw, 22), y: at } : { x: at, y: side === "top" ? b.y : b.y + b.h };
   }
+  if (level && b.form === "terminal") {   // the round ends: half circles of the box's height
+    const r = Math.min(hh, hw), dy = Math.min(1, Math.abs(at - c.y) / (r || 1));
+    return { x: c.x + sign * (hw - r + r * Math.sqrt(1 - dy * dy)), y: at };
+  }
+  if (level && b.form === "parallelogram") {   // the slanted sides: the left one leans in at the top, the right one at the bottom
+    const t = Math.max(0, Math.min(1, (at - b.y) / (b.h || 1)));
+    return { x: side === "left" ? b.x + SLANT * (1 - t) : b.x + b.w - SLANT * t, y: at };
+  }
   const u = level ? (at - c.y) / (hh || 1) : (at - c.x) / (hw || 1);
   const k = ROUND.includes(b.form) ? Math.sqrt(Math.max(0, 1 - u * u)) : POINTED.includes(b.form) ? Math.max(0, 1 - Math.abs(u)) : 1;
   return level ? { x: c.x + sign * hw * k, y: at } : { x: at, y: c.y + sign * hh * k };
@@ -311,7 +323,8 @@ const clampTo = (v: number, [lo, hi]: [number, number]) => Math.max(lo, Math.min
 /** A polyline path, with its middle text on the middle run and the ends' texts beside the first and last runs. */
 function polyline(points: [number, number][], midAt?: Pt): EdgePath {
   const pts = points.filter((p, k) => k === 0 || p[0] !== points[k - 1][0] || p[1] !== points[k - 1][1]);
-  const seg = Math.floor((pts.length - 1) / 2);
+  // the middle run; with one turn, the first run (a decision's «نعم» / «لا» stays beside the decision)
+  const seg = pts.length === 3 ? 0 : Math.floor((pts.length - 1) / 2);
   const p0 = pts[seg], p1 = pts[Math.min(seg + 1, pts.length - 1)];
   const dir = (a: [number, number], b: [number, number]) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return { ux: (b[0] - a[0]) / l, uy: (b[1] - a[1]) / l }; };
   // as on a straight arrow: 22 px along the run from its end, 12 px to its side
@@ -337,20 +350,32 @@ function plan(a: NodeBox, b: NodeBox): Plan {
   const level = hgap >= vgap;
   return { level, ...(level ? (cb.x >= ca.x ? { sa: "right", sb: "left" } : { sa: "left", sb: "right" }) : (cb.y >= ca.y ? { sa: "bottom", sb: "top" } : { sa: "top", sb: "bottom" })) } as Plan;
 }
-const plans = new WeakMap<ReadonlyMap<string, NodeBox>, Map<string, Plan>>();
-function planOf(boxes: ReadonlyMap<string, NodeBox>, e: DEdge): Plan {
-  let m = plans.get(boxes);
-  if (!m) { m = new Map(); plans.set(boxes, m); }
+/** DG6: a flowchart reads top to bottom with one turn: out of a decision's side corner and down, otherwise down and into the side. */
+const preferOf = (doc: DiagramDoc, a: NodeBox): "sideFirst" | "downFirst" | undefined =>
+  doc.kind === "flowchart" ? (POINTED.includes(a.form) ? "sideFirst" : "downFirst") : undefined;
+/** The sides a right-angled arrow really leaves and enters by (its route drawn without spreading: the shape chosen is the same). */
+const sides = new WeakMap<ReadonlyMap<string, NodeBox>, Map<string, [Side, Side] | null>>();
+function routeSides(doc: DiagramDoc, boxes: ReadonlyMap<string, NodeBox>, e: DEdge): [Side, Side] | null {
+  let m = sides.get(boxes);
+  if (!m) { m = new Map(); sides.set(boxes, m); }
   const key = e.from + ">" + e.to;
-  if (!m.has(key)) { const a = boxes.get(e.from), b = boxes.get(e.to); m.set(key, a && b && e.from !== e.to ? plan(a, b) : null); }
+  if (!m.has(key)) {
+    const a = boxes.get(e.from), b = boxes.get(e.to);
+    const o = a && b && e.from !== e.to ? orthoPath(a, b, 0, 0, 0, obstacles(boxes, a, b), preferOf(doc, a)) : null;
+    const way = (p: [number, number], q: [number, number]): Side => (p[1] === q[1] ? (q[0] > p[0] ? "right" : "left") : (q[1] > p[1] ? "bottom" : "top"));
+    const flip: Record<Side, Side> = { left: "right", right: "left", top: "bottom", bottom: "top" };
+    m.set(key, o && o.pts.length > 1 ? [way(o.pts[0], o.pts[1]), flip[way(o.pts[o.pts.length - 2], o.pts[o.pts.length - 1])]] : null);
+  }
   return m.get(key)!;
 }
 /** Where on its side the arrow meets `box` (px from the side's middle): the right-angled arrows meeting the same side are spread along
  *  it in the order of where they come from, so they never run on top of each other. Arrows of the same generalisation (an open triangle)
  *  into one parent share a place: UML draws them as one trunk. */
 function port(doc: DiagramDoc, boxes: ReadonlyMap<string, NodeBox>, edge: DEdge, box: NodeBox): number {
+  // DG6: a flowchart's decision is met at its corners (one way out of each), never beside them
+  if (doc.kind === "flowchart" && POINTED.includes(box.form)) return 0;
   const id = box.node.id;
-  const sideOf = (e: DEdge) => { const p = planOf(boxes, e); return p ? (e.from === id ? p.sa : p.sb) : null; };
+  const sideOf = (e: DEdge) => { const r = routeSides(doc, boxes, e); return r ? (e.from === id ? r[0] : r[1]) : null; };
   const side = sideOf(edge);
   if (!side) return 0;
   const level = side === "left" || side === "right";
@@ -395,11 +420,14 @@ function crossings(pts: [number, number][], obs: readonly NodeBox[]): number {
  *  else out of the facing sides and across in the middle (a Z). Should that pass through another component, the other shapes are tried
  *  (an L either way, the Z the other way) and the one crossing fewest is drawn. Boxes that overlap have no such route (null: a straight
  *  line). `pa` / `pb`: the arrow's place along each side (see `port`). */
-function orthoPath(a: NodeBox, b: NodeBox, off: number, pa = 0, pb = 0, obs: readonly NodeBox[] = []): EdgePath | null {
+function orthoPath(a: NodeBox, b: NodeBox, off: number, pa = 0, pb = 0, obs: readonly NodeBox[] = [], prefer?: "sideFirst" | "downFirst",
+  real?: [Side, Side] | null): EdgePath | null {
   const p = plan(a, b);
   if (!p) return null;
   const ca = centerOf(a), cb = centerOf(b);
-  const portA = (side: Side) => (side === p.sa ? pa : 0), portB = (side: Side) => (side === p.sb ? pb : 0);
+  // the spreading was worked out for the sides the arrow really uses
+  const [ra0, rb0] = real ?? [p.sa, p.sb];
+  const portA = (side: Side) => (side === ra0 ? pa : 0), portB = (side: Side) => (side === rb0 ? pb : 0);
   const zRoute = (level: boolean): [number, number][] | null => {
     if ((level ? Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w)) : Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h))) <= 0) return null;
     const sa: Side = level ? (cb.x >= ca.x ? "right" : "left") : (cb.y >= ca.y ? "bottom" : "top");
@@ -424,11 +452,25 @@ function orthoPath(a: NodeBox, b: NodeBox, off: number, pa = 0, pb = 0, obs: rea
     const t = sidePoint(b, sb, clampTo((levelFirst ? cb.x : cb.y) + portB(sb), span(b, !levelFirst)));
     return levelFirst ? [[s.x, s.y], [t.x, s.y], [t.x, t.y]] : [[s.x, s.y], [s.x, t.y], [t.x, t.y]];
   };
+  // a preferred one-turn shape, when it can be drawn and crosses nothing
+  const liked = prefer ? lRoute(prefer === "sideFirst") : null;
+  if (liked && !crossings(liked, obs)) return polyline(liked);
   const first = zRoute(p.level);
   if (!first) return null;
   if (!obs.length || !crossings(first, obs)) return polyline(first);
+  /** Around the outside (a loop back): out of the same side of both, past the further one, and in (a C). */
+  const cRoute = (side: Side): [number, number][] => {
+    if (side === "left" || side === "right") {
+      const x = side === "left" ? Math.min(a.x, b.x) - 30 : Math.max(a.x + a.w, b.x + b.w) + 30;
+      const s = sidePoint(a, side, clampTo(ca.y, span(a, true))), t = sidePoint(b, side, clampTo(cb.y, span(b, true)));
+      return [[s.x, s.y], [x, s.y], [x, t.y], [t.x, t.y]];
+    }
+    const y = side === "top" ? Math.min(a.y, b.y) - 30 : Math.max(a.y + a.h, b.y + b.h) + 30;
+    const s = sidePoint(a, side, clampTo(ca.x, span(a, false))), t = sidePoint(b, side, clampTo(cb.x, span(b, false)));
+    return [[s.x, s.y], [s.x, y], [t.x, y], [t.x, t.y]];
+  };
   let best = first, fewest = crossings(first, obs);
-  for (const r of [lRoute(p.level), lRoute(!p.level), zRoute(!p.level)]) {
+  for (const r of [lRoute(p.level), lRoute(!p.level), zRoute(!p.level), ...(["left", "right", "top", "bottom"] as const).map(cRoute)]) {
     if (!r) continue;
     const c = crossings(r, obs);
     if (c < fewest) { best = r; fewest = c; }
@@ -462,6 +504,10 @@ export function contentBounds(doc: DiagramDoc, boxes: ReadonlyMap<string, NodeBo
   if (doc.kind === "sequence") y1 = Math.max(y1, lifelineBottom(doc));
   for (const e of doc.edges) {
     if (e.from === e.to) { const a = boxes.get(e.from); if (a) { x1 = Math.max(x1, a.x + a.w + 80); y0 = Math.min(y0, a.y - 50); } }
+    // DG6: a right-angled arrow can go round the outside (a loop back): the picture holds its whole route
+    else if (routeOf(e) === "ortho" && doc.kind !== "sequence") {
+      for (const [x, y] of edgePath(doc, e, boxes)?.pts ?? []) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    }
   }
   // the texts beside the lines can reach a little past the components
   x0 -= margin; y0 -= margin; x1 += margin; y1 += margin;
