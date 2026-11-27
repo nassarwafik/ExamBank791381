@@ -1,5 +1,6 @@
 // DG1 — «محرّر المخططات», the pure core (docs/enterprise-diagram-editor-design.md):
-//   • the catalog: eleven kinds (the seven UML diagrams, ERD, DSD, DFD, topology), each with components and arrows, fields that exist;
+//   • the catalog: twelve kinds (the seven UML diagrams, ERD, DSD, DFD, topology and — DG6 — the flowchart), each with components and
+//     arrows, fields that exist;
 //   • every worked example is a valid diagram, and a file of it reads back to the same diagram;
 //   • the operations: a new component on a free spot (a container under everything), moving on the grid and inside the page, a sequence
 //     diagram's lifelines on one line and its messages in order, removing a component removes its arrows, undo / redo;
@@ -20,9 +21,10 @@ const added = (doc: DiagramDoc, type: string, x = 300, y = 300) => { const r = o
 const boxesOf = (doc: DiagramDoc) => new Map(doc.nodes.map(n => [n.id, layoutNode(doc, n)!] as [string, NodeBox]));
 
 describe("the catalog", () => {
-  it("eleven kinds: the seven UML diagrams, ERD, DSD, DFD and the topology, each with components and arrows", () => {
-    expect([...DIAGRAM_KINDS]).toEqual(["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "topology"]);
+  it("twelve kinds: the seven UML diagrams, ERD, DSD, DFD, the topology and the flowchart, each with components and arrows", () => {
+    expect([...DIAGRAM_KINDS]).toEqual(["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "topology", "flowchart"]);
     expect(DIAGRAM_CATALOG.filter(k => k.group === "UML").map(k => k.kind)).toEqual(["useCase", "class", "sequence", "activity", "state", "object", "deployment"]);
+    expect(DIAGRAM_CATALOG.filter(k => k.group === "البرمجة").map(k => k.kind)).toEqual(["flowchart"]);
     for (const k of DIAGRAM_CATALOG) {
       expect(k.nodes.length, k.kind).toBeGreaterThan(0);
       expect(k.edges.length, k.kind).toBeGreaterThan(0);

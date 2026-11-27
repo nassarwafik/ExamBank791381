@@ -198,7 +198,7 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
       {evaluation && <ProjectEvaluationCard id={"eb-sp-eval-" + project.projectCode} variant="student" evaluation={evaluation} />}
       {project.examForm && <StudentExamFormCard summary={project.examForm} readOnly={readOnly} onOpen={() => setFormOpen(true)} />}
       <div className="eb-sp-diagrams-card">
-        <p><strong>مخططات المشروع</strong>: ارسم مخططات كتابك (UML و ERD و DSD و DFD وطوبولوجيا الشبكة) واحفظها صورًا تدرجها فيه.</p>
+        <p><strong>مخططات المشروع</strong>: ارسم مخططات كتابك (UML و ERD و DSD و DFD وطوبولوجيا الشبكة ومخطط التدفّق) واحفظها صورًا تدرجها فيه.</p>
         <button type="button" className="eb-button is-small" onClick={() => setDiagramsOpen(true)} data-testid="open-diagram-editor">افتح محرّر المخططات</button>
       </div>
       {/* UX-S4 — one control per track: several tracks are buttons that carry their own progress; one track is one bar. */}

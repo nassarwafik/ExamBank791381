@@ -5,14 +5,16 @@
 // arrows its palette shows, so one canvas, one inspector and one file format serve every kind. A file names its kind, and the strict
 // reader (diagramDoc.ts) accepts only the components and arrows of that kind.
 
-export const DIAGRAM_KINDS = ["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "topology"] as const;
+export const DIAGRAM_KINDS = ["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "topology", "flowchart"] as const;
 export type DiagramKind = (typeof DIAGRAM_KINDS)[number];
 
 /** How a component is drawn (diagramShapes.tsx). */
 export type ShapeForm =
   | "rect" | "round" | "ellipse" | "diamond" | "circle" | "actor" | "compartments" | "container" | "note" | "lifeline" | "start" | "end"
   | "bar" | "store" | "cylinder" | "doubleRect" | "doubleEllipse" | "dashedEllipse" | "doubleDiamond" | "component" | "node3d" | "device"
-  | "frame" | "processGS";
+  | "frame" | "processGS"
+  // DG6 — the flowchart's own symbols: the start / end oval (a stadium), input / output (a parallelogram), a predefined process
+  | "terminal" | "parallelogram" | "subroutine";
 
 /** A field the learner fills in. `lines`: one item per line (a class's attributes, a table's fields). */
 export type FieldSpec = { key: string; label: string; lines?: true; hint?: string; dir?: "ltr" };
@@ -66,7 +68,7 @@ export type EdgeSpec = {
 export type KindSpec = {
   kind: DiagramKind;
   label: string;
-  group: "UML" | "قواعد البيانات" | "تحليل النظم" | "الشبكات";
+  group: "UML" | "قواعد البيانات" | "تحليل النظم" | "الشبكات" | "البرمجة";
   hint: string;
   nodes: readonly NodeSpec[];
   edges: readonly EdgeSpec[];
@@ -267,6 +269,24 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "fiber", label: "ألياف ضوئية", start: "none", end: "none", endLabels: true, color: "#d97706" },
       { type: "serial", label: "تسلسلي (WAN)", start: "none", end: "none", endLabels: true, color: "#dc2626", zigzag: true },
       { type: "wireless", label: "لاسلكي", dash: "dotted", start: "none", end: "none", color: "#2563eb" }
+    ]
+  },
+  {
+    // DG6 — the flowchart of a program (the symbols taught with algorithms): start, input, process, decision, output, end
+    kind: "flowchart", label: "مخطط التدفّق (Flowchart)", group: "البرمجة",
+    hint: "خطوات الخوارزمية بالترتيب: ابدأ، أدخل، عالج، قرّر، أخرج، انتهِ.",
+    nodes: [
+      { type: "start", label: "بداية", form: "terminal", fields: [NAME], defaults: { name: "ابدأ" }, minW: 100, minH: 44 },
+      { type: "io", label: "إدخال / إخراج", form: "parallelogram", fields: [{ ...NAME, label: "النص", hint: "مثل: أدخل a, b — أو: اطبع المعدل" }], defaults: { name: "أدخل a, b" }, minW: 130, minH: 46 },
+      { type: "process", label: "معالجة", form: "rect", fields: [{ ...NAME, label: "العملية", hint: "مثل: avg = (a + b) / 2" }], defaults: { name: "avg = (a + b) / 2" }, minW: 130, minH: 46 },
+      { type: "decision", label: "قرار", form: "diamond", fields: [{ ...NAME, label: "السؤال", hint: "سؤال جوابه نعم أو لا، مثل: avg >= 50 ؟" }], defaults: { name: "avg >= 50 ؟" }, minW: 120, minH: 70 },
+      { type: "subroutine", label: "دالة جاهزة", form: "subroutine", fields: [{ ...NAME, label: "الدالة", hint: "عملية مشروحة في مخطط آخر، مثل: Sort(list)" }], defaults: { name: "Sort(list)" }, minW: 130, minH: 46 },
+      { type: "connector", label: "موصل", form: "ellipse", fields: [{ ...NAME, label: "الرمز", hint: "حرف أو رقم يصل جزأين من المخطط، مثل: A" }], defaults: { name: "A" }, minW: 40, minH: 40 },
+      { type: "end", label: "نهاية", form: "terminal", fields: [NAME], defaults: { name: "انتهِ" }, minW: 100, minH: 44 },
+      note
+    ],
+    edges: [
+      { type: "flow", label: "خط اتجاه", start: "none", end: "arrow", hint: "بعد القرار اكتب على كل سهم: نعم أو لا" }
     ]
   }
 ] satisfies KindSpec[]);

@@ -535,7 +535,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
         <label className="dgm-kind">
           <span>نوع المخطط</span>
           <select value={kind} onChange={e => switchKind(e.target.value as DiagramKind)} data-testid="diagram-kind">
-            {(["UML", "قواعد البيانات", "تحليل النظم", "الشبكات"] as const).map(g => (
+            {(["UML", "قواعد البيانات", "تحليل النظم", "الشبكات", "البرمجة"] as const).map(g => (
               <optgroup key={g} label={g}>{DIAGRAM_CATALOG.filter(c => c.group === g).map(c => <option key={c.kind} value={c.kind}>{c.label}</option>)}</optgroup>
             ))}
           </select>
