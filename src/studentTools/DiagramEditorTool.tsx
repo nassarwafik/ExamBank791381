@@ -12,6 +12,8 @@ import DiagramCanvas, { type Selection } from "./DiagramCanvas";
 import { checkDiagram, type Finding, type FindingLevel } from "./diagramChecks";
 import { readSqlTables, sqlToDsd, SQL_LIMITS } from "./sqlToDsd";
 import { readCSharpTypes, csharpToClass, CS_LIMITS } from "./csharpToClass";
+import { isScriptKind, keepPositions, readDiagramScript, SCRIPT_MAX_CHARS, type ScriptKind, type ScriptProblem, type ScriptResult } from "./diagramScript";
+import { diagramToScript } from "./diagramToScript";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -183,6 +185,68 @@ function GeneratePanel({ kind, onDraw, onClose }: { kind: DiagramKind; onDraw: (
   );
 }
 
+/** DG4 — an example script per kind (the activity's is written by hand: a free-form flow is not written back). */
+const SCRIPT_EXAMPLE: Record<ScriptKind, () => string> = {
+  class: () => "@startuml\nclass Car\n\nDriver - Car : drives >\nCar *- Wheel : have 4 >\nCar -- Person : < owns\n@enduml",
+  useCase: () => diagramToScript(exampleDoc("useCase"))!,
+  sequence: () => diagramToScript(exampleDoc("sequence"))!,
+  state: () => diagramToScript(exampleDoc("state"))!,
+  activity: () => "@startuml\nstart\n:إدخال البيانات;\nif (البيانات صحيحة؟) then (نعم)\n  :حفظ البيانات;\nelse (لا)\n  :عرض رسالة خطأ;\nendif\nstop\n@enduml",
+};
+
+/** DG4 — «اكتب كنص»: the diagram as a script (PlantUML's everyday core). It opens with the drawing written as text (when the kind is
+ *  written back) and draws what the learner types a moment after they stop; a whole stretch of typing is one «تراجع». */
+function ScriptPanel({ kind, doc, onApply, onClose }: { kind: ScriptKind; doc: DiagramDoc; onApply: (r: ScriptResult) => void; onClose: () => void }) {
+  const [text, setText] = useState(() => (doc.nodes.length ? diagramToScript(doc) ?? "" : ""));
+  const [state, setState] = useState<{ summary: string; problems: ScriptProblem[] } | null>(null);
+  const [copied, setCopied] = useState("");
+  const typed = useRef(false);
+  const apply = useRef(onApply);
+  useEffect(() => { apply.current = onApply; });
+  useEffect(() => {
+    if (!typed.current) return;
+    const t = setTimeout(() => {
+      const r = readDiagramScript(text, kind);
+      setState({ problems: r.problems, summary: r.doc.nodes.length ? "✓ رُسم: " + r.doc.nodes.length + " مكوّن و" + r.doc.edges.length + " سهم." : "" });
+      if (r.doc.nodes.length) apply.current(r);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [text, kind]);
+  const write = (v: string) => { typed.current = true; setText(v.slice(0, SCRIPT_MAX_CHARS)); };
+  const fromDrawing = diagramToScript(doc);
+  return (
+    <section className="dgm-script" aria-label="اكتب المخطط نصًّا" data-testid="diagram-script-panel">
+      <div className="dgm-check-head">
+        <p className="dgm-check-sum">اكتب المخطط نصًّا (بصيغة PlantUML)</p>
+        <button type="button" className="stt-btn" onClick={onClose}>إغلاق</button>
+      </div>
+      <textarea className="dgm-input dgm-script-code" dir="ltr" rows={10} spellCheck={false} maxLength={SCRIPT_MAX_CHARS} aria-label="نص المخطط"
+        placeholder={SCRIPT_EXAMPLE[kind]()} value={text} onChange={e => write(e.target.value)} data-testid="diagram-script-text" />
+      <div className="dgm-actions">
+        <button type="button" className="stt-btn" onClick={() => write(SCRIPT_EXAMPLE[kind]())} data-testid="diagram-script-example">مثال</button>
+        <button type="button" className="stt-btn" disabled={!fromDrawing || !doc.nodes.length} onClick={() => { typed.current = false; setText(fromDrawing ?? ""); setState(null); }}
+          title={fromDrawing ? "اكتب الرسم الحالي نصًّا" : "مخطط النشاط لا يُكتب نصًّا من الرسم"}>من الرسم</button>
+        <button type="button" className="stt-btn" disabled={!text.trim()} onClick={async () => {
+          try { await navigator.clipboard.writeText(text); setCopied("نُسخ النص."); } catch { setCopied("تعذّر النسخ: حدّد النص وانسخه بـ Ctrl+C."); }
+        }}>نسخ النص</button>
+        <button type="button" className="stt-btn" disabled={!text.trim()} onClick={() => downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), "مخطط.puml")}>حفظ .puml</button>
+        <span className="stt-hint" role="status">{copied}</span>
+      </div>
+      {state && (
+        <div className="dgm-script-result" role="status" data-testid="diagram-script-result">
+          {state.summary && <p className="dgm-script-ok">{state.summary} للعودة إلى ما قبل الكتابة: «تراجع».</p>}
+          {!!state.problems.length && (
+            <ul className="dgm-script-list">
+              {state.problems.map((p, i) => <li key={i} className="dgm-script-problem"><span className="dgm-script-line" dir="ltr">سطر {p.line}</span><span>{p.message}</span></li>)}
+            </ul>
+          )}
+        </div>
+      )}
+      <p className="stt-hint">يُرسم المخطط وأنت تكتب. ما حرّكته بيدك يبقى في مكانه. الأمثلة: «class A»، «A --&gt; B : نص»، «A &lt;|-- B»، «actor X»، «(حالة)»، «[*] --&gt; S»، «:نشاط;».</p>
+    </section>
+  );
+}
+
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.closest("input, textarea, select, [contenteditable='true']") !== null);
 const nodeName = (doc: DiagramDoc, id: string) => {
   const n = doc.nodes.find(v => v.id === id);
@@ -203,6 +267,9 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   const [said, setSaid] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
   const [genOpen, setGenOpen] = useState(false);
+  const [scriptOpen, setScriptOpen] = useState(false);
+  /** DG4 — the diagram as it was when a stretch of typing began: the positions the learner set come from it. */
+  const scriptBase = useRef<DiagramDoc | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -278,6 +345,20 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
   const remove = () => {
     if (selNode) change(removeNode(doc, selNode.id));
     else if (selEdge) change(removeEdge(doc, selEdge.id));
+    setSelection(null);
+  };
+  /** DG4 — what the learner typed, drawn: one history step per stretch of typing (another change in between starts a new one); the
+   *  script may name another kind (a «start» → activity), and the editor follows it. */
+  const applyScript = (r: ScriptResult) => {
+    const key = "script:" + r.kind;
+    const same = editKey.current === key;
+    if (!same) scriptBase.current = store.hist[r.kind]?.present;
+    editKey.current = key;
+    const next = keepPositions(r.doc, scriptBase.current);
+    setStore(s => {
+      const h = s.hist[r.kind] ?? startHistory(emptyDoc(r.kind));
+      return { kind: r.kind, hist: { ...s.hist, [r.kind]: same ? preview(h, next) : commit(h, next) } };
+    });
     setSelection(null);
   };
   const switchKind = (k: DiagramKind) => { editKey.current = ""; setStore(s => ({ ...s, kind: k })); setSelection(null); setSaid(""); };
@@ -407,6 +488,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
           <button type="button" className="stt-btn" onClick={clear} disabled={!doc.nodes.length}>مسح</button>
           <button type="button" className={"stt-btn" + (checkOpen ? " is-primary" : "")} aria-pressed={checkOpen} onClick={() => setCheckOpen(v => !v)} data-testid="diagram-check">افحص المخطط</button>
           {FROM_CODE[kind] && <button type="button" className={"stt-btn" + (genOpen ? " is-primary" : "")} aria-pressed={genOpen} onClick={() => setGenOpen(v => !v)} data-testid="diagram-generate">ولّد من الكود</button>}
+          {isScriptKind(kind) && <button type="button" className={"stt-btn" + (scriptOpen ? " is-primary" : "")} aria-pressed={scriptOpen} onClick={() => setScriptOpen(v => !v)} data-testid="diagram-script">اكتب كنص</button>}
         </span>
         <span className="dgm-group dgm-save">
           <button type="button" className="stt-btn is-primary" onClick={() => savePng(2)} disabled={busy} data-testid="diagram-png">حفظ صورة PNG</button>
@@ -424,6 +506,7 @@ export default function DiagramEditorTool({ draftKey }: { draftKey?: string }) {
         </span>
       </div>
 
+      {scriptOpen && isScriptKind(kind) && <ScriptPanel kind={kind} doc={doc} onClose={() => setScriptOpen(false)} onApply={applyScript} />}
       {checkOpen && <CheckPanel findings={findings} onClose={() => setCheckOpen(false)}
         onPick={f => setSelection(f.nodes.length ? { kind: "node", id: f.nodes[0] } : f.edges.length ? { kind: "edge", id: f.edges[0] } : null)} />}
       {genOpen && FROM_CODE[kind] && <GeneratePanel key={kind} kind={kind} onClose={() => setGenOpen(false)}

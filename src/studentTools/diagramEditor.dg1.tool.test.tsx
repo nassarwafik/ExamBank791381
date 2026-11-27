@@ -342,3 +342,49 @@ describe("DG3 — «ولّد من الكود»", () => {
     }
   });
 });
+
+describe("DG4 — «اكتب كنص»", () => {
+  const typeScript = async (text: string) => { fireEvent.change(screen.getByTestId("diagram-script-text"), { target: { value: text } }); await tick(450); };
+  it("the owner's example typed into an empty class diagram is drawn; one «تراجع» takes the whole stretch of typing back", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "class" } });
+    await tick();
+    await click(screen.getByTestId("diagram-script"));
+    expect((screen.getByTestId("diagram-script-text") as HTMLTextAreaElement).value).toBe("");
+    await typeScript("class Car");
+    await typeScript("@startuml\nclass Car\nDriver - Car : drives >\nCar *- Wheel : have 4 >\nCar -- Person : < owns\n@enduml");
+    expect(drawnNodes()).toHaveLength(4);
+    expect(drawnEdges()).toHaveLength(3);
+    expect(canvas().textContent).toContain("drives ▸");
+    expect(screen.getByTestId("diagram-script-result").textContent).toMatch(/رُسم: 4 مكوّن و3 سهم/);
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect(drawnNodes()).toHaveLength(0);
+  });
+  it("opens with the drawing written as text; editing the text edits the drawing; what cannot be read is named with its line", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "sequence" } });
+    await tick();
+    await click(screen.getByTestId("diagram-example"));
+    const before = drawnEdges().length;
+    await click(screen.getByTestId("diagram-script"));
+    const area = screen.getByTestId("diagram-script-text") as HTMLTextAreaElement;
+    expect(area.value).toMatch(/^@startuml\nactor المستخدم\nparticipant ":LoginPage" as P2/);
+    await typeScript(area.value.replace("@enduml", "المستخدم -> P2 : logout()\nهذا سطر غريب\n@enduml"));
+    expect(drawnEdges()).toHaveLength(before + 1);
+    expect(screen.getByTestId("diagram-script-result").textContent).toMatch(/سطر \d+لم أفهم السطر: «هذا سطر غريب»/);
+  });
+  it("a script of another kind takes the editor to that kind; the button is only in the five UML kinds it reads", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "class" } });
+    await tick();
+    await click(screen.getByTestId("diagram-script"));
+    await typeScript("start\n:إدخال;\nstop");
+    expect((screen.getByTestId("diagram-kind") as HTMLSelectElement).value).toBe("activity");
+    expect(drawnNodes()).toHaveLength(3);
+    for (const k of ["dsd", "erd", "dfd", "topology", "deployment", "object"]) {
+      fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: k } });
+      await tick();
+      expect(screen.queryByTestId("diagram-script"), k).toBeNull();
+    }
+  });
+});

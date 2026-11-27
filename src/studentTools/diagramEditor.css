@@ -98,3 +98,15 @@ textarea.dgm-input { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13
 .dgm-gen .dgm-finding { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border: 1px solid var(--eb-border); border-inline-start: 4px solid var(--eb-warn);
   border-radius: 8px; background: var(--eb-bg); color: var(--eb-text); font-size: var(--eb-fs-13); overflow-wrap: anywhere; }
 .dgm-gen .dgm-finding-tag { flex: 0 0 auto; padding: 0 6px; border-radius: 6px; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+
+/* DG4 — «اكتب كنص»: the script and what was drawn from it */
+.dgm-script { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface); }
+.dgm-script .dgm-check-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.dgm-script .dgm-check-sum { margin: 0; font-weight: var(--eb-fw-semibold); }
+.dgm-script-code { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); line-height: 1.5; white-space: pre; overflow: auto; }
+.dgm-script-result { display: grid; gap: 4px; }
+.dgm-script-ok { margin: 0; color: var(--eb-success-tx); font-weight: var(--eb-fw-semibold); }
+.dgm-script-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 200px; overflow: auto; }
+.dgm-script-problem { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border: 1px solid var(--eb-border); border-inline-start: 4px solid var(--eb-warn);
+  border-radius: 8px; background: var(--eb-bg); color: var(--eb-text); font-size: var(--eb-fs-13); overflow-wrap: anywhere; }
+.dgm-script-line { flex: 0 0 auto; padding: 0 6px; border-radius: 6px; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
