@@ -1,11 +1,9 @@
 import type { PdaOp, TmMove } from "../learning/activities/automaton";
-import { BLANK, BOTTOM, LEFT_END, type LabDraft, type PdaRow, type TmRow } from "./automataLab";
+import { BLANK, BOTTOM, LEFT_END, MOVE_TEXT, OP_TEXT, type LabDraft, type PdaRow, type TmRow } from "./automataLab";
 import "./automataLab.css";
 
 // AUTO-A10 — the push-down automaton's and the Turing machine's transition rows (the course's notation), moved out of the lab tool
 // (AutomataLabTool.tsx) unchanged so the book's «صمّم الآلة» exercises for these machines use the very same editor.
-const MOVE_TEXT: Record<TmMove, string> = { R: "يمينًا R", L: "يسارًا L", S: "بلا حركة S" };
-const OP_TEXT: Record<PdaOp, string> = { push: "ادفع", pop: "اسحب", none: "بلا تغيير" };
 
 /** The symbols a row editor suggests: the alphabet, the stack's bottom (PDA) or the blank and the left end (TM), and those already used. */
 export function rowSymbols(draft: LabDraft, kind: "pda" | "tm"): string[] {

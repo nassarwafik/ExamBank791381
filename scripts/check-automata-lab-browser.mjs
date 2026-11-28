@@ -89,11 +89,29 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     await page.mouse.dblclick(q1b.x + cellX, q0.y);                                  // an empty spot to the right
     await lab.getByText(/^أُضيفت الحالة q2\.$/).waitFor({ timeout: 5000 });
     check(true, "double-click on an empty spot: a new state q2 there");
-    await lab.getByRole("radio", { name: "رسم الأسهم" }).check();
-    await dragFrom(await center("q2"), await center("q0"));
-    await lab.getByRole("group", { name: "رمز السهم من q2 إلى q0" }).getByRole("button", { name: "a", exact: true }).click();
-    check(await lab.getByLabel("من q2 بالرمز a إلى").inputValue() === "q0", "«رسم الأسهم»: a drag from q2 to q0, symbol a, is the table's arrow (q2, a) → q0");
-    await lab.getByRole("radio", { name: "تحريك الحالات" }).check();
+    // A16a: no mode — the chosen state's link handle is dragged to another state, and the arrow's window opens on the drawing
+    check(await lab.getByRole("radio", { name: "رسم الأسهم" }).count() === 0 && await canvas.locator("circle[data-handle=link]").count() === 4, "no drawing mode; the chosen state (q2) shows four link handles");
+    const handle = async i => { const b = await canvas.locator("circle[data-handle=link]").nth(i).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+    const win = (from, to) => lab.getByRole("group", { name: "رمز السهم من " + from + " إلى " + to });
+    await dragFrom(await handle(3), await center("q0"));                             // q2's left handle → q0
+    await win("q2", "q0").getByRole("button", { name: "a", exact: true }).click();
+    check(await lab.getByLabel("من q2 بالرمز a إلى").inputValue() === "q0" && await win("q2", "q0").count() === 0, "a link handle dragged from q2 to q0, symbol a: the table's arrow (q2, a) → q0, and the window closes");
+    await dragFrom(await handle(0), await center("q2"));                             // a handle dropped on its own state: a loop
+    await win("q2", "q2").getByRole("button", { name: "b", exact: true }).click();
+    check(await lab.getByLabel("من q2 بالرمز b إلى").inputValue() === "q2", "a handle dropped on its own state: the loop (q2, b) → q2");
+    const label = await canvas.locator("g[data-edge='q2 q0'] text").boundingBox();
+    await page.mouse.click(label.x + label.width / 2, label.y + label.height / 2);   // the arrow itself is pressed
+    check(await win("q2", "q0").getByRole("button", { name: "a", exact: true }).getAttribute("aria-pressed") === "true", "a pressed arrow opens its window, its symbol on");
+    const pop = await win("q2", "q0").boundingBox(), stage = await canvas.boundingBox();
+    check(pop.x >= stage.x - 1 && pop.x + pop.width <= stage.x + stage.width + 1 && pop.y > label.y, "the window sits on the drawing, under the arrow's label (" + JSON.stringify({ pop: Math.round(pop.x), label: Math.round(label.x) }) + ")");
+    if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, "automata-lab-arrow-window.png") });
+    await win("q2", "q0").getByRole("button", { name: "b", exact: true }).click();    // (q2, b) leaves the loop for q0: a DFA has one arrow per symbol
+    check(await lab.getByLabel("من q2 بالرمز b إلى").inputValue() === "q0" && await win("q2", "q0").count() === 1, "a second symbol put on the pressed arrow; its window stays");
+    await page.keyboard.press("Escape");
+    await page.keyboard.down("Shift"); await dragFrom(await center("q1"), await center("q2"), { shift: true });
+    await win("q1", "q2").getByRole("button", { name: "تم" }).click();
+    check(await win("q1", "q2").count() === 0, "Shift + drag from a state draws an arrow too; «تم» closes its window with nothing added");
+    await page.mouse.click((await center("q2")).x, (await center("q2")).y);
     // positions relative to q1, which does not move: the drawing's edge follows the start arrow, so the whole picture can shift on screen
     const before0 = await center("q0"), before2 = await center("q2"), before1 = await center("q1");
     await dragFrom(before2, before0);                                               // q2 dropped onto q0: they swap
@@ -186,9 +204,11 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     await page.mouse.dblclick(b2.x + b2.width - 12, b2.y + b2.height - 12);
     await act.getByText(/^بلغت الحد: 3 حالة\.$/).waitFor({ timeout: 5000 });
     check(await act.locator(".learning-autodesign-staterow").count() === 3, "the exercise's limit holds in the drawing: a fourth state is refused («بلغت الحد: 3»)");
-    await act.getByRole("radio", { name: "رسم الأسهم" }).check();
     await centre();
-    const from = await center("q0"), to = await center("q1");
+    const pick = await center("q0");
+    await page.mouse.click(pick.x, pick.y);                                           // q0 chosen: its four link handles (A16a)
+    const hb = await canvas.locator("circle[data-handle=link]").nth(1).boundingBox();
+    const from = { x: hb.x + hb.width / 2, y: hb.y + hb.height / 2 }, to = await center("q1");
     await page.mouse.move(from.x, from.y); await page.mouse.down();
     for (let k = 1; k <= 8; k++) await page.mouse.move(from.x + (to.x - from.x) * k / 8, from.y + (to.y - from.y) * k / 8);
     await page.mouse.up();
@@ -303,9 +323,11 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     await page.mouse.dblclick(b.x + b.width - 12, b.y + b.height - 12);
     await stu.getByText(/^بلغت الحد: 3 حالة\.$/).waitFor({ timeout: 5000 });
     check(true, "student, desktop: the drawing adds q1, q2 and refuses a fourth state (the question's limit, 3)");
-    await stu.getByRole("radio", { name: "رسم الأسهم" }).check();
     await centre();
-    const from = await center("q0"), to = await center("q1");
+    const pick = await center("q0");
+    await page.mouse.click(pick.x, pick.y);                                           // q0 chosen: its four link handles (A16a)
+    const hb = await canvas.locator("circle[data-handle=link]").nth(1).boundingBox();
+    const from = { x: hb.x + hb.width / 2, y: hb.y + hb.height / 2 }, to = await center("q1");
     await page.mouse.move(from.x, from.y); await page.mouse.down();
     for (let k = 1; k <= 8; k++) await page.mouse.move(from.x + (to.x - from.x) * k / 8, from.y + (to.y - from.y) * k / 8);
     await page.mouse.up();
