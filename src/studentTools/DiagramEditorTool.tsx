@@ -356,8 +356,10 @@ const nodeName = (doc: DiagramDoc, id: string) => {
   return (spec?.label ?? "") + (t ? ": " + t : "");
 };
 
-export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab }: {
+export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, onAttachPicture }: {
   draftKey?: string;
+  /** DG8 — the project page offers «أرفق بالاستمارة»: the editor makes the picture and hands it over with what was drawn. */
+  onAttachPicture?: (picture: Blob, title: string) => void;
   /** DG7 — where «مختبر الشبكات» keeps its draft on this device (a book), so «من مختبر الشبكات» can draw it. */
   labDraftKey?: string;
   /** DG7 — a network the lab handed over («ارسمها في محرّر المخططات»): drawn as the topology, one «تراجع» back. */
@@ -582,6 +584,20 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab }
       setSaid(SAID.copied);
     } catch { setSaid(SAID.copyFailed); }
   };
+  /** DG8 — the picture for the form: as sharp as the form keeps it (the server's 1600 px box), never larger than «حفظ صورة PNG». */
+  const attachPicture = async () => {
+    if (!onAttachPicture) return;
+    if (!doc.nodes.length) { setSaid(SAID.empty); return; }
+    const a = area(), svg = svgRef.current;
+    if (!a || !svg) return;
+    setBusy(true);
+    try {
+      const scale = Math.max(0.5, Math.min(2, 1600 / Math.max(a.w, a.h)));
+      const name = kspec.label.replace(/\s*\(.*\)\s*/g, "");
+      onAttachPicture(await diagramPng(svg, a, scale), name.startsWith("مخطط") ? name : "مخطط " + name);
+      setSaid("");
+    } catch { setSaid(SAID.failed); } finally { setBusy(false); }
+  };
   const saveFile = () => {
     if (!doc.nodes.length) { setSaid(SAID.empty); return; }
     downloadBlob(new Blob([serializeDiagram(doc)], { type: "application/json" }), diagramFileName(kind) + ".diagram.json");
@@ -661,6 +677,8 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab }
         <span className="dgm-group dgm-save">
           <button type="button" className="stt-btn is-primary" onClick={() => savePng(2)} disabled={busy} data-testid="diagram-png">حفظ صورة PNG</button>
           {canCopyImage() && <button type="button" className="stt-btn" onClick={copyImage} data-testid="diagram-copy">نسخ كصورة</button>}
+          {onAttachPicture && <button type="button" className="stt-btn" onClick={() => void attachPicture()} disabled={busy || !doc.nodes.length} data-testid="diagram-attach"
+            title="يرسل صورة هذا المخطط إلى سؤال صورة في استمارة المشروع">أرفق بالاستمارة</button>}
           <details className="dgm-more">
             <summary className="stt-btn">المزيد</summary>
             <div className="dgm-menu">
