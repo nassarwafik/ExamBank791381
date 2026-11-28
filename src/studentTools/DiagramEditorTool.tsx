@@ -19,6 +19,7 @@ import { diagramToScript } from "./diagramToScript";
 import type { NetLab } from "./networkLab";
 import { findIcons, iconOf, ICON_GROUPS } from "./diagramIconSet";
 import { IconGlyph } from "./diagramIcons";
+import { addReport, MEMBERS, treeLayout } from "./orgChart";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -478,7 +479,8 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
   const many = selection?.kind === "many" && manyNodes.length + manyEdges.length > 0;
   const chosenEdges = selectedEdges(selection).map(id => doc.edges.find(e => e.id === id)).filter((e): e is NonNullable<typeof e> => !!e);
   // new arrows follow the learner's last choice; before one, a diagram drawn all with right angles goes on with them
-  const newRoute: EdgeRoute = activeRoute[kind] ?? (doc.edges.length && doc.edges.every(e => routeOf(e) === "ortho") ? "ortho" : "straight");
+  // DG11: an organisation chart's lines have right angles from the first one
+  const newRoute: EdgeRoute = activeRoute[kind] ?? (kind === "orgChart" || (doc.edges.length && doc.edges.every(e => routeOf(e) === "ortho")) ? "ortho" : "straight");
   const shownRoute: EdgeRoute | "mixed" = chosenEdges.length
     ? (chosenEdges.every(e => routeOf(e) === "ortho") ? "ortho" : chosenEdges.every(e => routeOf(e) === "straight") ? "straight" : "mixed")
     : newRoute;
@@ -571,6 +573,22 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
     return () => { live = false; };
   }, [incomingLab, drawTopology]);
   const switchKind = (k: DiagramKind) => { editKey.current = ""; setStore(s => ({ ...s, kind: k })); setSelection(null); setSaid(""); };
+  /** DG11 — each component's size as drawn (the tree is arranged by what the learner sees). */
+  const drawnSizes = (d: DiagramDoc) => new Map(d.nodes.map(n => { const b = layoutNode(d, n); return [n.id, { w: b?.w ?? n.w, h: b?.h ?? n.h }]; }));
+  const arrangeTree = () => {
+    const r = treeLayout(doc, drawnSizes(doc));
+    editKey.current = "";
+    if (r.doc !== doc) change(r.doc);
+    setSaid(r.fits ? "رُتّب الهيكل: كل مدير فوق من يتبعون له. للعودة: «تراجع»." : "رُتّب الهيكل، لكنه أعرض من الورقة: قسّمه إلى هيكلين أو ضع الأقسام بدل الأشخاص.");
+  };
+  const addUnder = (bossId: string) => {
+    const r = addReport(doc, bossId, drawnSizes);
+    if (!r.ok) { setSaid(r.error); return; }
+    editKey.current = "";
+    change(r.doc);
+    setSelection({ kind: "node", id: r.id });
+    setSaid(r.fits ? "أُضيف تابع تحت المختار ورُتّب الهيكل. اكتب اسمه ومنصبه في «الخصائص»." : "أُضيف التابع، لكن الهيكل صار أعرض من الورقة.");
+  };
   const loadExample = () => { change(exampleDoc(kind)); setSelection(null); setSaid("فُتح المثال. عدّل عليه أو امسحه وابدأ مخططك (للعودة: «تراجع»)."); };
   const clear = () => { if (!doc.nodes.length) return; change(emptyDoc(kind)); setSelection(null); setSaid("مُسح المخطط. للعودة إليه اضغط «تراجع»."); };
   const doUndo = () => { editKey.current = ""; setHist(undo); setSelection(null); };
@@ -710,6 +728,8 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
           {FROM_CODE[kind] && <button type="button" className={"stt-btn" + (genOpen ? " is-primary" : "")} aria-pressed={genOpen} onClick={() => setGenOpen(v => !v)} data-testid="diagram-generate">ولّد من الكود</button>}
           <button type="button" className={"stt-btn" + (multi ? " is-primary" : "")} aria-pressed={multi} onClick={() => setMulti(v => !v)} disabled={!doc.nodes.length}
             title="كل نقرة على الورقة تضيف عنصرًا إلى التحديد أو تزيله (بالفأرة: Shift + نقرة)" data-testid="diagram-multi">تحديد عدّة</button>
+          {kind === "orgChart" && <button type="button" className="stt-btn" onClick={arrangeTree} disabled={!doc.nodes.some(n => MEMBERS.includes(n.type))}
+            title="كل مدير فوق من يتبعون له، في وسطهم، مستوى تحت مستوى" data-testid="diagram-tree">رتّب الشجرة</button>}
           {kind === "topology" && <button type="button" className={"stt-btn" + (labOpen ? " is-primary" : "")} aria-pressed={labOpen} onClick={() => setLabOpen(v => !v)} data-testid="diagram-from-lab">من مختبر الشبكات</button>}
           {isScriptKind(kind) && <button type="button" className={"stt-btn" + (scriptOpen ? " is-primary" : "")} aria-pressed={scriptOpen} onClick={() => setScriptOpen(v => !v)} data-testid="diagram-script">اكتب كنص</button>}
         </span>
@@ -852,6 +872,9 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
                       aria-label={selSpec.form === "text" && c === "none" ? "أسود" : DIAGRAM_COLORS[c].label} aria-pressed={selNode.color === c} onClick={() => change(setColor(doc, selNode.id, c))} />
                   ))}
                 </fieldset>
+              )}
+              {kind === "orgChart" && MEMBERS.includes(selNode.type) && (
+                <button type="button" className="stt-btn" onClick={() => addUnder(selNode.id)} data-testid="diagram-add-report">أضف تابعًا تحته</button>
               )}
               <div className="dgm-link">
                 <label className="dgm-field">

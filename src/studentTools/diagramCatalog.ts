@@ -5,7 +5,7 @@
 // arrows its palette shows, so one canvas, one inspector and one file format serve every kind. A file names its kind, and the strict
 // reader (diagramDoc.ts) accepts only the components and arrows of that kind.
 
-export const DIAGRAM_KINDS = ["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "topology", "flowchart"] as const;
+export const DIAGRAM_KINDS = ["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "orgChart", "topology", "flowchart"] as const;
 export type DiagramKind = (typeof DIAGRAM_KINDS)[number];
 
 /** How a component is drawn (diagramShapes.tsx). */
@@ -298,6 +298,22 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
     ],
     edges: [
       { type: "flow", label: "تدفّق بيانات", start: "none", end: "arrow", defaultLabel: "بيانات", hint: "اكتب اسم البيانات على السهم" }
+    ]
+  },
+  {
+    // DG11 — who reports to whom in a company: people (a picture, a name, a position) and departments, joined by «يتبع لـ»
+    kind: "orgChart", label: "الهيكل التنظيمي", group: "تحليل النظم",
+    hint: "من يتبع لمن في الشركة: المدير في الأعلى ومن يتبعون له تحته. «أضف تابعًا» يرسم شخصًا تحت المختار، و«رتّب الشجرة» يرتّب الهيكل.",
+    nodes: [
+      { type: "person", label: "شخص", form: "icon", fields: [NAME, { key: "details", label: "المنصب", hint: "مثل: مدير المبيعات" }, { key: "icon", label: "الصورة", choose: "icon" }],
+        defaults: { icon: "employee", name: "اسم الموظف" }, minW: 72, minH: 90 },
+      { type: "unit", label: "قسم / إدارة", form: "round", fields: [{ ...NAME, label: "اسم القسم" }], defaults: { name: "قسم المبيعات" }, minW: 130, minH: 46 },
+      note,
+      icon,
+      text
+    ],
+    edges: [
+      { type: "reports", label: "يتبع لـ", start: "none", end: "none", hint: "اسحب من المدير إلى من يتبع له مباشرة." }
     ]
   },
   {
