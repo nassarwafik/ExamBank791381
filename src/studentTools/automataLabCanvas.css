@@ -14,7 +14,7 @@
 .alab-canvas-target { fill: var(--eb-primary); fill-opacity: .1; stroke: var(--eb-primary); stroke-width: 2; pointer-events: none; }
 .alab-canvas-handle { fill: var(--eb-primary); stroke: var(--eb-surface); stroke-width: 2; cursor: crosshair; }
 .alab-pop { position: absolute; z-index: 2; inline-size: 264px; max-inline-size: calc(100% - 8px); display: flex; flex-direction: column; gap: var(--eb-space-2); padding: var(--eb-space-3);
-  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface); box-shadow: 0 6px 24px rgb(0 0 0 / .16); }
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface); box-shadow: var(--eb-sh-md); }
 .alab-pop-title { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
 .alab-pop-symbols { display: flex; flex-wrap: wrap; gap: var(--eb-space-1); }
 .alab-pop-actions { display: flex; justify-content: space-between; gap: var(--eb-space-2); }
@@ -28,6 +28,6 @@
 .alab-pop-sym { inline-size: 3.2rem; min-block-size: 44px; text-align: center; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-bg); color: var(--eb-text); font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: var(--eb-fs-16); }
 .alab-pop-sym.is-wide { inline-size: 5.5rem; }
 .alab-pop-x:focus-visible, .alab-pop-sym:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
-.alab-pop-error { margin: 0; font-size: var(--eb-fs-12); color: var(--eb-danger, #b42318); }
+.alab-pop-error { margin: 0; font-size: var(--eb-fs-12); color: var(--eb-danger-tx); }
 .alab-canvas .stt-hint { margin: var(--eb-space-1) 0; font-size: var(--eb-fs-12); color: var(--eb-muted); }
 .alab-canvas .stt-label { font-size: var(--eb-fs-13); color: var(--eb-text-secondary); }
