@@ -62,7 +62,7 @@ const NAMED: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
   useCase: ["actor", "usecase", "system"], class: ["class", "abstract", "interface", "enum"], sequence: ["actorLifeline", "lifeline"],
   activity: ["action", "lane"], state: ["state", "composite"], object: ["object"], deployment: ["node", "component", "artifact", "database"],
   erd: ["entity", "weakEntity", "attribute", "keyAttribute", "multiAttribute", "derivedAttribute", "relationship", "identifyingRel"],
-  dsd: ["table"], dfd: ["process", "processGS", "external", "store"], orgChart: ["person", "unit"],
+  dsd: ["table"], dfd: ["process", "processGS", "external", "store"], orgChart: ["person", "unit"], floorPlan: ["room"],
   topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
   flowchart: ["io", "process", "decision", "subroutine", "connector"],
 };
@@ -289,6 +289,40 @@ function orgChart(c: Ctx) {
   }
 }
 
+// ── DG12: the plan of an administrative building ────────────────────────────────────────────────────────────────────────────────────
+/** The furniture that stands inside a room or the building (not the plants and bushes outside, the doors or the windows). */
+const INDOOR = ["desk", "chair", "reception", "meeting", "waiting", "coffee", "cabinet", "shelves"];
+type Rect = { x: number; y: number; w: number; h: number };
+/** How far two boxes cover each other, across and down (0 when they do not meet). */
+const cover = (a: Rect, b: Rect) => ({
+  x: Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), y: Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y))
+});
+/** A door stands in the room's wall: it meets the room's box (or touches it), and is not wholly inside its floor. */
+function inWall(door: Rect, room: Rect): boolean {
+  const near = cover(door, { x: room.x - 4, y: room.y - 4, w: room.w + 8, h: room.h + 8 });
+  if (!near.x || !near.y) return false;
+  const m = 14, floor = { x: room.x + m, y: room.y + m, w: room.w - 2 * m, h: room.h - 2 * m };
+  return !(door.x >= floor.x && door.y >= floor.y && door.x + door.w <= floor.x + floor.w && door.y + door.h <= floor.y + floor.h);
+}
+function floorPlan(c: Ctx) {
+  const { doc } = c;
+  const rooms = doc.nodes.filter(n => n.type === "room"), buildings = doc.nodes.filter(n => n.type === "building");
+  const doors = doc.nodes.filter(n => n.type === "door" || n.type === "entrance");
+  for (const r of rooms) {
+    if (!doors.some(d => inWall(d, r))) c.add("warning", "plan.door", label(doc, r) + " بلا باب: ضع «باب» على أحد جدرانها.", [r.id]);
+  }
+  rooms.forEach((a, i) => rooms.slice(i + 1).forEach(b => {
+    const o = cover(a, b);
+    if (o.x > 12 && o.y > 12) c.add("warning", "plan.overlap", label(doc, a) + " و" + label(doc, b) + " متداخلتان: الغرفتان المتجاورتان تشتركان في جدار واحد فقط.", [a.id, b.id]);
+  }));
+  for (const n of doc.nodes) {
+    if (INDOOR.includes(n.type) && ![...rooms, ...buildings].some(r => inside(n, r)))
+      c.add("warning", "plan.outside", nodeSpec(doc.kind, n.type)!.label + " خارج المبنى: ضعه داخل غرفة أو داخل «المبنى».", [n.id]);
+  }
+  if ((buildings.length || rooms.length > 1) && !doc.nodes.some(n => n.type === "entrance"))
+    c.add("warning", "plan.entrance", "ليس في المخطط «المدخل الرئيسي»: ضعه على جدار المبنى ليُعرف من أين يدخل الزائر.", buildings.map(n => n.id));
+}
+
 // ── DG6: flowchart ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function flowchart(c: Ctx) {
   const { doc } = c;
@@ -506,7 +540,7 @@ function topology(c: Ctx) {
 }
 
 const BY_KIND: Readonly<Record<DiagramKind, (c: Ctx) => void>> = {
-  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, orgChart, topology, flowchart,
+  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, orgChart, floorPlan, topology, flowchart,
 };
 
 /** Every finding of the diagram: errors first, then warnings, each in the diagram's order. */

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
-import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, TEXT_INK, TEXT_SIZES, type DiagramKind, type EdgeSpec, type NodeSpec, type TextSize } from "./diagramCatalog";
+import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, TEXT_INK, TEXT_SIZES, TURNS, type DiagramKind, type Turn, type EdgeSpec, type NodeSpec, type TextSize } from "./diagramCatalog";
 import {
   DIAGRAM_LIMITS, addNode, alignNodes, commit, connect, diagramFileName, duplicateMany, duplicateNode, emptyDoc, moveMessage, moveNodesBy, parseDiagram,
   parseDraft, preview, redo, removeEdge, removeMany, removeNode, reverseEdge, routeApplies, routeOf, serializeDiagram, serializeDraft, setColor, setEdge,
@@ -847,6 +847,20 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
                           onClick={() => { editKey.current = ""; change(setText(doc, selNode.id, f.key, z)); }} data-testid={"diagram-text-size-" + z}>
                           <span style={{ fontSize: Math.min(22, TEXT_SIZES[z].px) + "px", fontWeight: TEXT_SIZES[z].bold ? 700 : 400 }}>أ</span>
                           <span>{TEXT_SIZES[z].label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+                // DG12: the way a door (or a chair) faces, chosen from four
+                if (f.choose === "turn") return (
+                  <div key={f.key} className="dgm-field">
+                    <span>{f.label}</span>
+                    <div className="dgm-sizes" role="radiogroup" aria-label={f.label} data-testid="diagram-turn">
+                      {(Object.keys(TURNS) as Turn[]).map(t => (
+                        <button key={t} type="button" role="radio" aria-checked={(value || "0") === t} className={"dgm-arrow-btn" + ((value || "0") === t ? " is-on" : "")}
+                          onClick={() => { editKey.current = ""; change(setText(doc, selNode.id, f.key, t)); }} data-testid={"diagram-turn-" + t}>
+                          <span>{TURNS[t]}</span>
                         </button>
                       ))}
                     </div>

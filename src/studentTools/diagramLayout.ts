@@ -176,6 +176,17 @@ export function layoutNode(doc: DiagramDoc, node: DNode): NodeBox | null {
       w = Math.max(w, measureText(title[0], FONT_SIZE, true) + measureText(t.guard ?? "", SMALL) + 60);
       break;
     }
+    case "room": {   // DG12: a room or the building: its name on a label at its top (none without a name)
+      title = (t.name ?? "").trim() ? [t.name!.trim()] : [];
+      w = Math.max(w, title.length ? measureText(title[0], SMALL, true) + 40 : 0);
+      break;
+    }
+    case "furniture": {   // DG12: the piece's own drawing, and its label (if any) under it
+      title = (t.name ?? "").trim() ? wrapText(t.name!.trim(), WRAP_AT, SMALL, true) : [];
+      w = Math.max(w, spec.minW, widest(title, SMALL, true) + 26);
+      h = Math.max(h, spec.minH + (title.length ? PLAN_LABEL_GAP + title.length * SMALL_LINE + 8 : 0));
+      break;
+    }
     case "container": case "node3d": {
       title = [t.name ?? ""];
       w = Math.max(w, measureText(title[0], FONT_SIZE, true) + 40);
@@ -193,6 +204,8 @@ export const centerOf = (b: { x: number; y: number; w: number; h: number }) => (
 export const textStyle = (size: string | undefined) => TEXT_SIZES[isTextSize(size) ? size : "m"];
 /** DG10 — an icon component: the picture's size, and how far under the component's top it starts. */
 export const ICON_SIZE = 56, ICON_TOP = 4;
+/** DG12 — the space between a piece of a plan and the label under it. */
+export const PLAN_LABEL_GAP = 4;
 /** DG6 — how far a flowchart's input / output parallelogram leans: its top edge starts this far in from the left. */
 export const SLANT = 16;
 
