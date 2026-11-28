@@ -270,6 +270,9 @@ export function edgePath(doc: DiagramDoc, edge: DEdge, boxes: ReadonlyMap<string
   const flip = edge.from < edge.to ? 1 : -1;
   const off = (i - (same.length - 1) / 2) * 16 * flip;
   if (ortho) {
+    // DG9: a flowchart's loop back goes round the left of the steps it returns over
+    const back = loopBack(doc, boxes, edge, a, b);
+    if (back) return polyline(back, undefined, doc.kind === "flowchart" && POINTED.includes(a.form));
     const o = orthoPath(a, b, edge.from < edge.to ? off : -off, port(doc, boxes, edge, a), port(doc, boxes, edge, b), obstacles(boxes, a, b),
       preferOf(doc, a), routeSides(doc, boxes, edge));
     if (o) return o;
@@ -321,10 +324,11 @@ function span(b: NodeBox, level: boolean): [number, number] {
 const clampTo = (v: number, [lo, hi]: [number, number]) => Math.max(lo, Math.min(hi, v));
 
 /** A polyline path, with its middle text on the middle run and the ends' texts beside the first and last runs. */
-function polyline(points: [number, number][], midAt?: Pt): EdgePath {
+function polyline(points: [number, number][], midAt?: Pt, firstRun = false): EdgePath {
   const pts = points.filter((p, k) => k === 0 || p[0] !== points[k - 1][0] || p[1] !== points[k - 1][1]);
-  // the middle run; with one turn, the first run (a decision's «نعم» / «لا» stays beside the decision)
-  const seg = pts.length === 3 ? 0 : Math.floor((pts.length - 1) / 2);
+  // the middle run; with one turn, the first run (a decision's «نعم» / «لا» stays beside the decision); DG9: out of a flowchart's
+  // decision, always the first run, however the route goes on
+  const seg = firstRun || pts.length === 3 ? 0 : Math.floor((pts.length - 1) / 2);
   const p0 = pts[seg], p1 = pts[Math.min(seg + 1, pts.length - 1)];
   const dir = (a: [number, number], b: [number, number]) => { const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return { ux: (b[0] - a[0]) / l, uy: (b[1] - a[1]) / l }; };
   // as on a straight arrow: 22 px along the run from its end, 12 px to its side
@@ -361,7 +365,8 @@ function routeSides(doc: DiagramDoc, boxes: ReadonlyMap<string, NodeBox>, e: DEd
   const key = e.from + ">" + e.to;
   if (!m.has(key)) {
     const a = boxes.get(e.from), b = boxes.get(e.to);
-    const o = a && b && e.from !== e.to ? orthoPath(a, b, 0, 0, 0, obstacles(boxes, a, b), preferOf(doc, a)) : null;
+    const back = a && b ? loopBack(doc, boxes, e, a, b) : null;
+    const o = back ? { pts: back } : a && b && e.from !== e.to ? orthoPath(a, b, 0, 0, 0, obstacles(boxes, a, b), preferOf(doc, a)) : null;
     const way = (p: [number, number], q: [number, number]): Side => (p[1] === q[1] ? (q[0] > p[0] ? "right" : "left") : (q[1] > p[1] ? "bottom" : "top"));
     const flip: Record<Side, Side> = { left: "right", right: "left", top: "bottom", bottom: "top" };
     m.set(key, o && o.pts.length > 1 ? [way(o.pts[0], o.pts[1]), flip[way(o.pts[o.pts.length - 2], o.pts[o.pts.length - 1])]] : null);
@@ -416,6 +421,66 @@ function crossings(pts: [number, number][], obs: readonly NodeBox[]): number {
   return n;
 }
 
+/** DG9 — is `b` wholly above `a` (an arrow between them goes back up)? */
+const above = (a: NodeBox, b: NodeBox) => b.y + b.h <= a.y;
+/** A vertical lane at `x` moved outward (to the left or the right) past every component it would run through between `y0` and `y1`. */
+function laneX(obs: readonly NodeBox[], x: number, y0: number, y1: number, side: "left" | "right"): number {
+  for (let pass = 0; pass <= obs.length; pass++) {
+    const hit = obs.find(o => o.y - 4 < y1 && o.y + o.h + 4 > y0 && x > o.x - 4 && x < o.x + o.w + 4);
+    if (!hit) break;
+    x = side === "left" ? hit.x - 30 : hit.x + hit.w + 30;
+  }
+  return x;
+}
+/** The same, for a level run at `y` between `x0` and `x1`, moved down (or up). */
+function laneY(obs: readonly NodeBox[], y: number, x0: number, x1: number, side: "top" | "bottom"): number {
+  for (let pass = 0; pass <= obs.length; pass++) {
+    const hit = obs.find(o => o.x - 4 < x1 && o.x + o.w + 4 > x0 && y > o.y - 4 && y < o.y + o.h + 4);
+    if (!hit) break;
+    y = side === "top" ? hit.y - 30 : hit.y + hit.h + 30;
+  }
+  return y;
+}
+/** The sides of `box` its other right-angled arrows already use (those that do not go back up: their routes never ask this). An arrow
+ *  coming back up into it takes its left side. */
+function usedSides(doc: DiagramDoc, boxes: ReadonlyMap<string, NodeBox>, box: NodeBox, except: DEdge): Set<Side> {
+  const used = new Set<Side>();
+  const id = box.node.id;
+  for (const o of doc.edges) {
+    if (o === except || o.from === o.to || routeOf(o) !== "ortho" || (o.from !== id && o.to !== id)) continue;
+    const other = boxes.get(o.from === id ? o.to : o.from);
+    if (!other) continue;
+    if (o.from === id ? above(box, other) : above(other, box)) { if (o.to === id) used.add("left"); continue; }
+    const r = routeSides(doc, boxes, o);
+    if (r) used.add(o.from === id ? r[0] : r[1]);
+  }
+  return used;
+}
+/** DG9 — a flowchart's arrow back up (a loop's return to its question): round the left of everything between, into the left side (a
+ *  decision: its left corner) of the step it goes back to. It leaves by the left side; when that side is taken (an «if» that leaves
+ *  by it with «نعم»), by the bottom, under the steps below first. Only a route crossing nothing is drawn (otherwise: null, and the
+ *  arrow is routed as any other). */
+function loopBack(doc: DiagramDoc, boxes: ReadonlyMap<string, NodeBox>, e: DEdge, a: NodeBox, b: NodeBox): [number, number][] | null {
+  if (doc.kind !== "flowchart" || e.from === e.to || routeOf(e) !== "ortho" || !above(a, b)) return null;
+  const obs = obstacles(boxes, a, b);
+  const used = usedSides(doc, boxes, a, e);
+  const ca = centerOf(a), cb = centerOf(b);
+  const t = sidePoint(b, "left", clampTo(cb.y, span(b, true)));
+  const tries: [number, number][][] = [];
+  if (!used.has("left")) {
+    const s = sidePoint(a, "left", clampTo(ca.y, span(a, true)));
+    const x = laneX(obs, Math.min(a.x, b.x) - 30, t.y, s.y, "left");
+    tries.push([[s.x, s.y], [x, s.y], [x, t.y], [t.x, t.y]]);
+  }
+  if (!used.has("bottom")) {
+    const s = sidePoint(a, "bottom", clampTo(ca.x, span(a, false)));
+    let x = Math.min(a.x, b.x) - 30, y = a.y + a.h + 18;
+    for (let k = 0; k < 3; k++) { y = laneY(obs, y, x, s.x, "bottom"); x = laneX(obs, x, t.y, y, "left"); }
+    tries.push([[s.x, s.y], [s.x, y], [x, y], [x, t.y], [t.x, t.y]]);
+  }
+  return tries.find(r => !crossings(r, obs)) ?? null;
+}
+
 /** From `a` to `b` in level and upright runs: one straight run when the two face each other (side by side, or one over the other),
  *  else out of the facing sides and across in the middle (a Z). Should that pass through another component, the other shapes are tried
  *  (an L either way, the Z the other way) and the one crossing fewest is drawn. Boxes that overlap have no such route (null: a straight
@@ -452,30 +517,42 @@ function orthoPath(a: NodeBox, b: NodeBox, off: number, pa = 0, pb = 0, obs: rea
     const t = sidePoint(b, sb, clampTo((levelFirst ? cb.x : cb.y) + portB(sb), span(b, !levelFirst)));
     return levelFirst ? [[s.x, s.y], [t.x, s.y], [t.x, t.y]] : [[s.x, s.y], [s.x, t.y], [t.x, t.y]];
   };
+  // DG9: in a flowchart, a step's arrow down into a question comes in by its top corner (its side corners are its «نعم» / «لا»):
+  // branches that join again before a question meet over it
+  if (prefer === "downFirst" && POINTED.includes(b.form) && b.y >= a.y + a.h) {
+    // down from the step's bottom and across a bar just over the question (every branch joins it on the same bar)
+    const s = sidePoint(a, "bottom", clampTo(ca.x, span(a, false))), t = { x: cb.x, y: b.y };
+    const bar = t.y - 18 > s.y + 4 ? t.y - 18 : (s.y + t.y) / 2;
+    const z: [number, number][] = Math.abs(s.x - t.x) < 1 ? [[t.x, s.y], [t.x, t.y]] : [[s.x, s.y], [s.x, bar], [t.x, bar], [t.x, t.y]];
+    if (!crossings(z, obs)) return polyline(z);
+  }
   // a preferred one-turn shape, when it can be drawn and crosses nothing
   const liked = prefer ? lRoute(prefer === "sideFirst") : null;
   if (liked && !crossings(liked, obs)) return polyline(liked);
   const first = zRoute(p.level);
   if (!first) return null;
-  if (!obs.length || !crossings(first, obs)) return polyline(first);
-  /** Around the outside (a loop back): out of the same side of both, past the further one, and in (a C). */
+  if (!obs.length || !crossings(first, obs)) return polyline(first, undefined, prefer === "sideFirst");
+  /** Around the outside (a loop back): out of the same side of both, past the further one — DG9: and past whatever stands in the way
+   *  of the run along the outside — and in (a C). */
   const cRoute = (side: Side): [number, number][] => {
     if (side === "left" || side === "right") {
-      const x = side === "left" ? Math.min(a.x, b.x) - 30 : Math.max(a.x + a.w, b.x + b.w) + 30;
       const s = sidePoint(a, side, clampTo(ca.y, span(a, true))), t = sidePoint(b, side, clampTo(cb.y, span(b, true)));
+      const x = laneX(obs, side === "left" ? Math.min(a.x, b.x) - 30 : Math.max(a.x + a.w, b.x + b.w) + 30, Math.min(s.y, t.y), Math.max(s.y, t.y), side);
       return [[s.x, s.y], [x, s.y], [x, t.y], [t.x, t.y]];
     }
-    const y = side === "top" ? Math.min(a.y, b.y) - 30 : Math.max(a.y + a.h, b.y + b.h) + 30;
     const s = sidePoint(a, side, clampTo(ca.x, span(a, false))), t = sidePoint(b, side, clampTo(cb.x, span(b, false)));
+    const y = laneY(obs, side === "top" ? Math.min(a.y, b.y) - 30 : Math.max(a.y + a.h, b.y + b.h) + 30, Math.min(s.x, t.x), Math.max(s.x, t.x), side);
     return [[s.x, s.y], [s.x, y], [t.x, y], [t.x, t.y]];
   };
   let best = first, fewest = crossings(first, obs);
-  for (const r of [lRoute(p.level), lRoute(!p.level), zRoute(!p.level), ...(["left", "right", "top", "bottom"] as const).map(cRoute)]) {
+  // DG9: a flowchart goes round the right first (a loop's «لا» leaves its right corner; the left is the way back up)
+  const around: readonly Side[] = prefer ? ["right", "left", "bottom", "top"] : ["left", "right", "top", "bottom"];
+  for (const r of [lRoute(p.level), lRoute(!p.level), zRoute(!p.level), ...around.map(cRoute)]) {
     if (!r) continue;
     const c = crossings(r, obs);
     if (c < fewest) { best = r; fewest = c; }
   }
-  return polyline(best);
+  return polyline(best, undefined, prefer === "sideFirst");
 }
 
 /** The arrow under a point (within `tol` px of its line), the last drawn first. */

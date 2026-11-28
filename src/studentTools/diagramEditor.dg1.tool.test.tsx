@@ -344,6 +344,46 @@ describe("DG3 — «ولّد من الكود»", () => {
   });
 });
 
+describe("DG9 — «ولّد من الكود» for a flowchart", () => {
+  it("a pasted C# Main is drawn as its flowchart; the other functions are named; one «تراجع» brings the old diagram back", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "flowchart" } });
+    await tick();
+    await click(screen.getByRole("button", { name: "أضف: معالجة" }));
+    await click(screen.getByTestId("diagram-generate"));
+    expect(screen.getByTestId("diagram-generate-panel").textContent).toContain("ولّد المخطط من دالة C# أو Python");
+    expect(screen.getByTestId("diagram-generate-panel").textContent).toContain("يقرأ المحرّر خطوات الدالة فقط ولا يشغّل الكود");
+    fireEvent.change(screen.getByTestId("diagram-generate-code"), { target: { value:
+      "static void Main()\n{\n    int n = int.Parse(Console.ReadLine());\n    if (n % 2 == 0) Console.WriteLine(\"زوجي\");\n    else Show(n);\n}\nstatic void Show(int n) { }" } });
+    await click(screen.getByTestId("diagram-generate-draw"));
+    const result = screen.getByTestId("diagram-generate-result").textContent!;
+    expect(result).toContain("رُسم مخطط التدفّق للدالة «Main» (C#): الأشكال 6، والقرارات 1.");
+    expect(result).toContain("وملاحظات على الكود:");
+    expect(result).toContain("في الكود دالة أخرى: Show");
+    expect(drawnNodes()).toHaveLength(6);
+    expect(drawnEdges()).toHaveLength(6);
+    expect(canvas().textContent).toContain("اطبع «زوجي»");
+    await click(within(editor()).getByRole("button", { name: /تراجع/ }));
+    expect(drawnNodes()).toHaveLength(1);   // the one step that was there before
+  });
+  it("Python from a file; code with nothing to draw draws nothing and says why", async () => {
+    render(<DiagramEditorTool />);
+    fireEvent.change(screen.getByTestId("diagram-kind"), { target: { value: "flowchart" } });
+    await tick();
+    await click(screen.getByTestId("diagram-generate"));
+    fireEvent.change(screen.getByTestId("diagram-generate-code"), { target: { value: "import math" } });
+    await click(screen.getByTestId("diagram-generate-draw"));
+    expect(screen.getByTestId("diagram-generate-result").textContent).toMatch(/لم يُرسم شيء:.*لم أجد دالة ولا خطوات أرسمها/);
+    expect(drawnNodes()).toHaveLength(0);
+    const input = screen.getByTestId("diagram-generate-file") as HTMLInputElement;
+    expect(input.accept).toBe(".cs,.py,.txt");
+    fireEvent.change(input, { target: { files: [new File(["for i in range(3):\n    print(i)\n"], "loop.py")] } });
+    await tick(30);
+    expect(drawnNodes()).toHaveLength(6);   // start, i = 0, i < 3 ?, print, i = i + 1, end
+    expect(canvas().textContent).toContain("i < 3 ؟");
+  });
+});
+
 describe("DG4 — «اكتب كنص»", () => {
   const typeScript = async (text: string) => { fireEvent.change(screen.getByTestId("diagram-script-text"), { target: { value: text } }); await tick(450); };
   it("the owner's example typed into an empty class diagram is drawn; one «تراجع» takes the whole stretch of typing back", async () => {

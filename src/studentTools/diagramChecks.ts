@@ -191,8 +191,11 @@ function sequence(c: Ctx) {
 }
 
 // ── UML: activity and state ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string; end: string; startHow?: string; endHow?: string }) {
+function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string; end: string; startHow?: string; endHow?: string },
+  jumps: readonly { from: string; to: string }[] = []) {
   const { doc } = c;
+  // DG9: a jump (a flowchart's connector to its twin) carries the flow on as an arrow would
+  const ways = [...doc.edges, ...jumps];
   const starts = doc.nodes.filter(n => n.type === start), ends = doc.nodes.filter(n => n.type === end);
   const working = doc.nodes.filter(n => !isNote(doc, n) && !isContainer(doc, n));
   if (!working.length) return;
@@ -206,14 +209,14 @@ function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string
   const reached = new Set(starts.map(s => s.id));
   for (let grew = true; grew;) {
     grew = false;
-    for (const e of doc.edges) if (reached.has(e.from) && !reached.has(e.to)) { reached.add(e.to); grew = true; }
+    for (const e of ways) if (reached.has(e.from) && !reached.has(e.to)) { reached.add(e.to); grew = true; }
   }
   if (starts.length) for (const n of working) {
     if (n.type !== start && !reached.has(n.id) && c.edgesOf(n.id).length) c.add("warning", "flow.unreached", "لا يُوصَل إلى " + label(doc, n) + " من " + kindWord.start + ".", [n.id]);
   }
   for (const n of working) {
     if (n.type === end || n.type === start || isContainer(doc, n)) continue;
-    if (c.inOf(n.id).length && !c.outOf(n.id).length) c.add("warning", "flow.deadEnd", "لا يخرج أي سهم من " + label(doc, n) + ": إلى أين يذهب بعده؟", [n.id]);
+    if (c.inOf(n.id).length && !c.outOf(n.id).length && !jumps.some(j => j.from === n.id)) c.add("warning", "flow.deadEnd", "لا يخرج أي سهم من " + label(doc, n) + ": إلى أين يذهب بعده؟", [n.id]);
   }
 }
 
@@ -251,7 +254,12 @@ function state(c: Ctx) {
 // ── DG6: flowchart ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function flowchart(c: Ctx) {
   const { doc } = c;
-  flowGraph(c, "start", "end", { start: "البداية", end: "النهاية", startHow: "يبدأ المخطط بالشكل البيضاوي «ابدأ».", endHow: "ينتهي المخطط بالشكل البيضاوي «انتهِ»." });
+  // DG9: a connector an arrow goes into (and none out of) continues at the connector with the same mark an arrow leaves (and none
+  // comes into): the flowchart's jump to another column or page
+  const connectors = doc.nodes.filter(n => n.type === "connector" && name(n));
+  const jumps = connectors.filter(a => c.inOf(a.id).length && !c.outOf(a.id).length)
+    .flatMap(a => connectors.filter(b => b !== a && name(b) === name(a) && c.outOf(b.id).length && !c.inOf(b.id).length).map(b => ({ from: a.id, to: b.id })));
+  flowGraph(c, "start", "end", { start: "البداية", end: "النهاية", startHow: "يبدأ المخطط بالشكل البيضاوي «ابدأ».", endHow: "ينتهي المخطط بالشكل البيضاوي «انتهِ»." }, jumps);
   for (const n of doc.nodes) {
     const outs = c.outOf(n.id);
     if (n.type === "decision") {
