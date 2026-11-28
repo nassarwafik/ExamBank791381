@@ -1,7 +1,8 @@
 import { memo, type ReactNode } from "react";
-import { DIAGRAM_COLORS, edgeSpec, type DeviceIcon, type EdgeSpec, type MarkerKind } from "./diagramCatalog";
+import { DIAGRAM_COLORS, edgeSpec, TEXT_INK, type DeviceIcon, type EdgeSpec, type MarkerKind } from "./diagramCatalog";
 import type { DEdge, DiagramDoc } from "./diagramDoc";
-import { FONT_FAMILY, FONT_SIZE, LINE, SLANT, SMALL, SMALL_LINE, lifelineBottom, measureText, textDir, type EdgePath, type NodeBox } from "./diagramLayout";
+import { FONT_FAMILY, FONT_SIZE, ICON_SIZE, ICON_TOP, LINE, SLANT, SMALL, SMALL_LINE, lifelineBottom, measureText, textDir, textStyle, type EdgePath, type NodeBox } from "./diagramLayout";
+import { IconGlyph } from "./diagramIcons";
 
 // «محرّر المخططات» — how each component and arrow is drawn: plain SVG with its paint written on each element (no CSS), on white paper, so
 // the drawing looks the same in a light or a dark app and the saved picture is exactly what the learner sees. Original artwork only.
@@ -200,6 +201,19 @@ const MemoNode = memo(function NodeShape({ b }: { b: NodeBox }) {
         <rect x={0} y={4} width={8} height={4} fill={PAPER} {...s} strokeWidth={1.2} /><rect x={0} y={12} width={8} height={4} fill={PAPER} {...s} strokeWidth={1.2} /></g>
       <Lines lines={b.title} cx={b.x + (b.w - 24) / 2} cy={cy} />
     </>;
+    case "text": {   // DG10: a free text, no frame: its lines in its size, in its colour's deep shade
+      const z = textStyle(b.node.text.size), step = Math.round(z.px * 1.4);
+      const top = cy - (b.title.length * step) / 2 + step / 2;
+      return <>{b.title.map((l, i) => <T key={i} x={cx} y={top + i * step} size={z.px} bold={z.bold} fill={TEXT_INK[b.node.color] ?? INK}>{l}</T>)}</>;
+    }
+    case "icon": {   // DG10: the picture (its circle in the component's colour, if it has one), its name, its short description
+      const under = b.y + ICON_TOP + ICON_SIZE + 6;
+      return <>
+        <IconGlyph id={b.node.text.icon} x={cx - ICON_SIZE / 2} y={b.y + ICON_TOP} size={ICON_SIZE} backdrop={b.node.color !== "none" ? fill : undefined} />
+        <Lines lines={b.title} cx={cx} cy={under + (b.title.length * LINE) / 2} />
+        {(b.sections[0] ?? []).map((l, i) => <T key={i} x={cx} y={under + b.title.length * LINE + SMALL_LINE / 2 + i * SMALL_LINE} size={SMALL - 1} fill="#334155">{l}</T>)}
+      </>;
+    }
     case "device": return <>
       {b.node.color !== "none" && <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={8} fill={fill} />}
       <DeviceGlyph icon={b.spec.icon!} x={cx - 24} y={b.y + 2} />

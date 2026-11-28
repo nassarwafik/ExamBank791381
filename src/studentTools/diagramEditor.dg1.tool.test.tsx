@@ -600,7 +600,7 @@ describe("DG6 — «مخطط التدفّق»", () => {
     fireEvent.change(kind, { target: { value: "flowchart" } });
     await tick();
     expect([...screen.getByRole("complementary", { name: "المكوّنات والأسهم" }).querySelectorAll(".dgm-pal-btn")].map(b => b.getAttribute("aria-label")))
-      .toEqual(["أضف: بداية", "أضف: إدخال / إخراج", "أضف: معالجة", "أضف: قرار", "أضف: دالة جاهزة", "أضف: موصل", "أضف: نهاية", "أضف: ملاحظة"]);
+      .toEqual(["أضف: بداية", "أضف: إدخال / إخراج", "أضف: معالجة", "أضف: قرار", "أضف: دالة جاهزة", "أضف: موصل", "أضف: نهاية", "أضف: ملاحظة", "أضف: أيقونة", "أضف: نص"]);   // DG10
     await click(screen.getByTestId("diagram-example"));
     expect(drawnNodes()).toHaveLength(7);
     expect(screen.getByTestId("diagram-route-ortho").getAttribute("aria-checked")).toBe("true");

@@ -14,10 +14,14 @@ export type ShapeForm =
   | "bar" | "store" | "cylinder" | "doubleRect" | "doubleEllipse" | "dashedEllipse" | "doubleDiamond" | "component" | "node3d" | "device"
   | "frame" | "processGS"
   // DG6 — the flowchart's own symbols: the start / end oval (a stadium), input / output (a parallelogram), a predefined process
-  | "terminal" | "parallelogram" | "subroutine";
+  | "terminal" | "parallelogram" | "subroutine"
+  // DG10 — a picture from the icon library with its name under it; a free text (a title, a word anywhere on the sheet)
+  | "icon" | "text";
 
 /** A field the learner fills in. `lines`: one item per line (a class's attributes, a table's fields). */
-export type FieldSpec = { key: string; label: string; lines?: true; hint?: string; dir?: "ltr" };
+export type FieldSpec = { key: string; label: string; lines?: true; hint?: string; dir?: "ltr";
+  /** DG10: chosen, not typed: an icon of the library (its id), or a text's size (TEXT_SIZES). */
+  choose?: "icon" | "size" };
 
 export type DeviceIcon = "router" | "switch" | "hub" | "pc" | "laptop" | "server" | "ap" | "printer" | "firewall" | "cloud" | "phone";
 
@@ -76,6 +80,29 @@ export type KindSpec = {
 
 const NAME: FieldSpec = { key: "name", label: "الاسم" };
 const note: NodeSpec = { type: "note", label: "ملاحظة", form: "note", fields: [{ key: "name", label: "النص", lines: true }], defaults: { name: "ملاحظة" }, minW: 110, minH: 50 };
+/** DG10 — a picture from the icon library (a manager, a customer, a product, an invoice, a database…) with a name and a short
+ *  description under it, in every kind of diagram. Like a note, it is not one of the diagram's own symbols: «افحص المخطط» leaves it be. */
+const icon: NodeSpec = {
+  type: "icon", label: "أيقونة", form: "icon",
+  fields: [NAME, { key: "details", label: "وصف قصير", hint: "مثل: قسم المبيعات" }, { key: "icon", label: "الأيقونة", choose: "icon" }],
+  defaults: { icon: "employee", name: "موظف" }, minW: 72, minH: 90
+};
+/** DG10 — the free text's sizes: the two large ones bold (a title). */
+export const TEXT_SIZES = Object.freeze({
+  s: { label: "صغير", px: 13, bold: false }, m: { label: "عادي", px: 16, bold: false }, l: { label: "كبير", px: 22, bold: true }, xl: { label: "عنوان", px: 30, bold: true }
+} as const);
+export type TextSize = keyof typeof TEXT_SIZES;
+export const isTextSize = (v: unknown): v is TextSize => typeof v === "string" && Object.prototype.hasOwnProperty.call(TEXT_SIZES, v);
+/** DG10 — a free text written in a component's colour: the deep shade of each colour (the light ones fill shapes). */
+export const TEXT_INK: Readonly<Record<string, string>> = Object.freeze({
+  none: "#1f2937", blue: "#1d4ed8", green: "#15803d", yellow: "#a16207", orange: "#c2410c", rose: "#be123c", violet: "#6d28d9", gray: "#475569"
+});
+/** DG10 — a free text: a title for the diagram, or words anywhere on the sheet; no frame, its size and colour chosen. */
+const text: NodeSpec = {
+  type: "text", label: "نص", form: "text",
+  fields: [{ key: "name", label: "النص", lines: true }, { key: "size", label: "حجم الخط", choose: "size" }],
+  defaults: { name: "عنوان المخطط", size: "l" }, minW: 40, minH: 24
+};
 
 const device = (icon: DeviceIcon, label: string, name: string): NodeSpec => ({
   type: icon, label, form: "device", icon, minW: 70, minH: 70,
@@ -91,7 +118,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "actor", label: "فاعل", form: "actor", fields: [NAME], defaults: { name: "المستخدم" }, minW: 60, minH: 90 },
       { type: "usecase", label: "حالة استخدام", form: "ellipse", fields: [NAME], defaults: { name: "تسجيل الدخول" }, minW: 140, minH: 56 },
       { type: "system", label: "حدود النظام", form: "container", fields: [NAME], defaults: { name: "النظام" }, minW: 280, minH: 320, resizable: true },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "assoc", label: "ارتباط", start: "none", end: "none", hint: "بين الفاعل وحالة الاستخدام" },
@@ -115,7 +144,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
         fields: [NAME, { key: "ops", label: "الدوال", lines: true, dir: "ltr" }], defaults: { name: "IPrintable", ops: "+ Print() : void" } },
       { type: "enum", label: "تعداد (enum)", form: "compartments", stereotype: "«enumeration»", minW: 120, minH: 60,
         fields: [NAME, { key: "values", label: "القيم", lines: true, dir: "ltr" }], defaults: { name: "Grade", values: "Excellent\nGood\nPass" } },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "assoc", label: "ارتباط", start: "none", end: "none", endLabels: true, defaultFromLabel: "1", defaultToLabel: "*", hint: "اكتب التعدّدية على الطرفين: 1، *، 0..1، 1..*" },
@@ -136,7 +167,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "fragment", label: "إطار (alt / loop / opt)", form: "frame", resizable: true, minW: 260, minH: 120,
         fields: [{ key: "name", label: "النوع", hint: "alt أو opt أو loop", dir: "ltr" }, { key: "guard", label: "الشرط", hint: "مثل: [كلمة السر صحيحة]" }],
         defaults: { name: "alt", guard: "[البيانات صحيحة]" } },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "sync", label: "رسالة", start: "none", end: "arrow", defaultLabel: "login()", hint: "تُرتَّب الرسائل وحدها من أعلى إلى أسفل" },
@@ -154,7 +187,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "fork", label: "تفرّع / تجميع", form: "bar", fields: [], defaults: {}, minW: 140, minH: 8, resizable: true },
       { type: "end", label: "نهاية", form: "end", fields: [], defaults: {}, minW: 32, minH: 32 },
       { type: "lane", label: "مسار (Swimlane)", form: "container", fields: [NAME], defaults: { name: "الموظف" }, minW: 240, minH: 420, resizable: true, vertical: true },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "flow", label: "انتقال", start: "none", end: "arrow", hint: "اكتب الشرط بعد القرار، مثل: [نعم]" }
@@ -169,7 +204,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "composite", label: "حالة مركّبة", form: "container", fields: [NAME], defaults: { name: "نشط" }, minW: 300, minH: 200, resizable: true },
       { type: "choice", label: "اختيار", form: "diamond", fields: [], defaults: {}, minW: 36, minH: 36 },
       { type: "final", label: "حالة نهائية", form: "end", fields: [], defaults: {}, minW: 32, minH: 32 },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "transition", label: "انتقال", start: "none", end: "arrow", defaultLabel: "حدث", hint: "الصيغة: حدث [شرط] / فعل" }
@@ -182,7 +219,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "object", label: "كائن", form: "compartments", underline: true, minW: 140, minH: 60,
         fields: [{ ...NAME, label: "الاسم : الصنف", dir: "ltr", hint: "مثل: s1 : Student" }, { key: "values", label: "القيم", lines: true, dir: "ltr", hint: "سطر لكل قيمة، مثل: name = \"Ahmad\"" }],
         defaults: { name: "s1 : Student", values: "id = 1\nname = \"Ahmad\"" } },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "link", label: "رابط", start: "none", end: "none" },
@@ -197,7 +236,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "component", label: "مكوّن", form: "component", fields: [NAME], defaults: { name: "WebSite" }, minW: 130, minH: 50 },
       { type: "artifact", label: "ملف نشر (Artifact)", form: "compartments", stereotype: "«artifact»", fields: [NAME], defaults: { name: "app.dll" }, minW: 120, minH: 50 },
       { type: "database", label: "قاعدة بيانات", form: "cylinder", fields: [NAME], defaults: { name: "SchoolDB" }, minW: 100, minH: 70 },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "path", label: "اتصال", start: "none", end: "none", defaultLabel: "", hint: "اكتب البروتوكول عليه، مثل: HTTPS" },
@@ -216,7 +257,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "derivedAttribute", label: "صفة مشتقّة", form: "dashedEllipse", fields: [NAME], defaults: { name: "العمر" }, minW: 90, minH: 40 },
       { type: "relationship", label: "علاقة", form: "diamond", fields: [NAME], defaults: { name: "يسجّل" }, minW: 110, minH: 60 },
       { type: "identifyingRel", label: "علاقة معرِّفة", form: "doubleDiamond", fields: [NAME], defaults: { name: "يملك" }, minW: 110, minH: 60 },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "line", label: "خط", start: "none", end: "none", endLabels: true, hint: "اكتب التعدّدية على طرف الكيان: 1 أو N أو M" },
@@ -231,7 +274,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
         fields: [{ ...NAME, label: "اسم الجدول" }, { key: "fields", label: "الحقول", lines: true, dir: "ltr",
           hint: "سطر لكل حقل. ابدأ بـ PK للمفتاح الأساسي و FK للمفتاح الأجنبي، مثل: PK StudentID : INT" }],
         defaults: { name: "Students", fields: "PK StudentID : INT\nName : VARCHAR(50)\nFK ClassID : INT" } },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "oneMany", label: "واحد ← متعدّد (1 — ∞)", start: "none", end: "none", endLabels: true, defaultFromLabel: "1", defaultToLabel: "∞", hint: "من المفتاح الأساسي إلى المفتاح الأجنبي" },
@@ -247,7 +292,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "processGS", label: "عملية (مستطيل)", form: "processGS", fields: [{ key: "number", label: "الرقم", dir: "ltr" }, NAME], defaults: { number: "1.0", name: "تسجيل طالب" }, minW: 120, minH: 80 },
       { type: "external", label: "كيان خارجي", form: "rect", fields: [NAME], defaults: { name: "الطالب" }, minW: 110, minH: 50 },
       { type: "store", label: "مخزن بيانات", form: "store", fields: [{ key: "number", label: "الرمز", dir: "ltr" }, NAME], defaults: { number: "D1", name: "ملف الطلاب" }, minW: 150, minH: 40 },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "flow", label: "تدفّق بيانات", start: "none", end: "arrow", defaultLabel: "بيانات", hint: "اكتب اسم البيانات على السهم" }
@@ -261,7 +308,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       device("laptop", "لابتوب", "Laptop1"), device("server", "سيرفر", "Server1"), device("ap", "نقطة وصول", "AP1"), device("printer", "طابعة", "Printer1"),
       device("phone", "هاتف", "Phone1"), device("firewall", "جدار ناري", "FW1"), device("cloud", "الإنترنت", "Internet"),
       { type: "zone", label: "منطقة (LAN / VLAN)", form: "container", fields: [NAME], defaults: { name: "VLAN 10" }, minW: 280, minH: 200, resizable: true },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "copper", label: "كابل نحاسي", start: "none", end: "none", endLabels: true, hint: "اكتب المنفذ على كل طرف، مثل: Fa0/1" },
@@ -283,7 +332,9 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       { type: "subroutine", label: "دالة جاهزة", form: "subroutine", fields: [{ ...NAME, label: "الدالة", hint: "عملية مشروحة في مخطط آخر، مثل: Sort(list)" }], defaults: { name: "Sort(list)" }, minW: 130, minH: 46 },
       { type: "connector", label: "موصل", form: "ellipse", fields: [{ ...NAME, label: "الرمز", hint: "حرف أو رقم يصل جزأين من المخطط، مثل: A" }], defaults: { name: "A" }, minW: 40, minH: 40 },
       { type: "end", label: "نهاية", form: "terminal", fields: [NAME], defaults: { name: "انتهِ" }, minW: 100, minH: 44 },
-      note
+      note,
+      icon,
+      text
     ],
     edges: [
       { type: "flow", label: "خط اتجاه", start: "none", end: "arrow", hint: "بعد القرار اكتب على كل سهم: نعم أو لا" }
