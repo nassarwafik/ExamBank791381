@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
-import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, TEXT_INK, TEXT_SIZES, type DiagramKind, type EdgeSpec, type NodeSpec, type TextSize } from "./diagramCatalog";
+import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, TEXT_INK, TEXT_SIZES, TURNS, type DiagramKind, type Turn, type EdgeSpec, type NodeSpec, type TextSize } from "./diagramCatalog";
 import {
   DIAGRAM_LIMITS, addNode, alignNodes, commit, connect, diagramFileName, duplicateMany, duplicateNode, emptyDoc, moveMessage, moveNodesBy, parseDiagram,
   parseDraft, preview, redo, removeEdge, removeMany, removeNode, reverseEdge, routeApplies, routeOf, serializeDiagram, serializeDraft, setColor, setEdge,
@@ -19,7 +19,7 @@ import { diagramToScript } from "./diagramToScript";
 import type { NetLab } from "./networkLab";
 import { findIcons, iconOf, ICON_GROUPS } from "./diagramIconSet";
 import { IconGlyph } from "./diagramIcons";
-import { addReport, MEMBERS, treeLayout } from "./orgChart";
+import { addAssistant, addReport, MEMBERS, REPORT_TYPES, REPORTS, REPORTS_DOTTED, reportStyle, treeLayout } from "./orgChart";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -581,6 +581,26 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
     if (r.doc !== doc) change(r.doc);
     setSaid(r.fits ? "رُتّب الهيكل: كل مدير فوق من يتبعون له. للعودة: «تراجع»." : "رُتّب الهيكل، لكنه أعرض من الورقة: قسّمه إلى هيكلين أو ضع الأقسام بدل الأشخاص.");
   };
+  /** DG12 «أضف مساعدًا بجانبه»: an assistant beside the chosen manager, on his level. */
+  const addAside = (bossId: string) => {
+    const r = addAssistant(doc, bossId, drawnSizes);
+    if (!r.ok) { setSaid(r.error); return; }
+    editKey.current = "";
+    change(r.doc);
+    setSelection({ kind: "node", id: r.id });
+    setSaid(r.fits ? "أُضيف مساعد بجانب المختار ورُتّب الهيكل. اكتب اسمه ومنصبه في «الخصائص»." : "أُضيف المساعد، لكن الهيكل صار أعرض من الورقة.");
+  };
+  /** DG12 «خطوط منقّطة»: every reporting line of the chart drawn dotted with an arrowhead, or solid again (one «تراجع»). */
+  const dotted = kind === "orgChart" && reportStyle(doc) === REPORTS_DOTTED;
+  const toggleDotted = () => {
+    const to = dotted ? REPORTS : REPORTS_DOTTED;
+    let next = doc;
+    for (const e of doc.edges) if (REPORT_TYPES.includes(e.type)) next = setEdge(next, e.id, { type: to });
+    setActiveEdge(a => ({ ...a, orgChart: to }));
+    editKey.current = "";
+    if (next !== doc) change(next);
+    setSaid(dotted ? "صارت خطوط الهيكل متّصلة." : "صارت خطوط الهيكل منقّطة برؤوس أسهم.");
+  };
   const addUnder = (bossId: string) => {
     const r = addReport(doc, bossId, drawnSizes);
     if (!r.ok) { setSaid(r.error); return; }
@@ -730,6 +750,8 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
             title="كل نقرة على الورقة تضيف عنصرًا إلى التحديد أو تزيله (بالفأرة: Shift + نقرة)" data-testid="diagram-multi">تحديد عدّة</button>
           {kind === "orgChart" && <button type="button" className="stt-btn" onClick={arrangeTree} disabled={!doc.nodes.some(n => MEMBERS.includes(n.type))}
             title="كل مدير فوق من يتبعون له، في وسطهم، مستوى تحت مستوى" data-testid="diagram-tree">رتّب الشجرة</button>}
+          {kind === "orgChart" && <button type="button" className={"stt-btn" + (dotted ? " is-primary" : "")} aria-pressed={dotted} onClick={toggleDotted}
+            disabled={!doc.edges.some(e => REPORT_TYPES.includes(e.type))} title="خطوط الهيكل كلها منقّطة برؤوس أسهم، أو متّصلة" data-testid="diagram-dotted">خطوط منقّطة</button>}
           {kind === "topology" && <button type="button" className={"stt-btn" + (labOpen ? " is-primary" : "")} aria-pressed={labOpen} onClick={() => setLabOpen(v => !v)} data-testid="diagram-from-lab">من مختبر الشبكات</button>}
           {isScriptKind(kind) && <button type="button" className={"stt-btn" + (scriptOpen ? " is-primary" : "")} aria-pressed={scriptOpen} onClick={() => setScriptOpen(v => !v)} data-testid="diagram-script">اكتب كنص</button>}
         </span>
@@ -852,6 +874,20 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
                     </div>
                   </div>
                 );
+                // DG12: the way a door (or a chair) faces, chosen from four
+                if (f.choose === "turn") return (
+                  <div key={f.key} className="dgm-field">
+                    <span>{f.label}</span>
+                    <div className="dgm-sizes" role="radiogroup" aria-label={f.label} data-testid="diagram-turn">
+                      {(Object.keys(TURNS) as Turn[]).map(t => (
+                        <button key={t} type="button" role="radio" aria-checked={(value || "0") === t} className={"dgm-arrow-btn" + ((value || "0") === t ? " is-on" : "")}
+                          onClick={() => { editKey.current = ""; change(setText(doc, selNode.id, f.key, t)); }} data-testid={"diagram-turn-" + t}>
+                          <span>{TURNS[t]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
                 return (
                   <label key={f.key} className="dgm-field" htmlFor={id}>
                     <span>{f.label}</span>
@@ -874,7 +910,10 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
                 </fieldset>
               )}
               {kind === "orgChart" && MEMBERS.includes(selNode.type) && (
-                <button type="button" className="stt-btn" onClick={() => addUnder(selNode.id)} data-testid="diagram-add-report">أضف تابعًا تحته</button>
+                <span className="dgm-actions">
+                  <button type="button" className="stt-btn" onClick={() => addUnder(selNode.id)} data-testid="diagram-add-report">أضف تابعًا تحته</button>
+                  <button type="button" className="stt-btn" onClick={() => addAside(selNode.id)} data-testid="diagram-add-assistant">أضف مساعدًا بجانبه</button>
+                </span>
               )}
               <div className="dgm-link">
                 <label className="dgm-field">

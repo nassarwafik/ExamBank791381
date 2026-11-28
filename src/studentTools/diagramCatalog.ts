@@ -5,7 +5,7 @@
 // arrows its palette shows, so one canvas, one inspector and one file format serve every kind. A file names its kind, and the strict
 // reader (diagramDoc.ts) accepts only the components and arrows of that kind.
 
-export const DIAGRAM_KINDS = ["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "orgChart", "topology", "flowchart"] as const;
+export const DIAGRAM_KINDS = ["useCase", "class", "sequence", "activity", "state", "object", "deployment", "erd", "dsd", "dfd", "orgChart", "floorPlan", "topology", "flowchart"] as const;
 export type DiagramKind = (typeof DIAGRAM_KINDS)[number];
 
 /** How a component is drawn (diagramShapes.tsx). */
@@ -16,12 +16,19 @@ export type ShapeForm =
   // DG6 — the flowchart's own symbols: the start / end oval (a stadium), input / output (a parallelogram), a predefined process
   | "terminal" | "parallelogram" | "subroutine"
   // DG10 — a picture from the icon library with its name under it; a free text (a title, a word anywhere on the sheet)
-  | "icon" | "text";
+  | "icon" | "text"
+  // DG12 — a building's plan: a room (thick walls, a floor), and a piece of furniture, a door or a window drawn from above
+  | "room" | "furniture";
 
 /** A field the learner fills in. `lines`: one item per line (a class's attributes, a table's fields). */
 export type FieldSpec = { key: string; label: string; lines?: true; hint?: string; dir?: "ltr";
   /** DG10: chosen, not typed: an icon of the library (its id), or a text's size (TEXT_SIZES). */
-  choose?: "icon" | "size" };
+  choose?: "icon" | "size" | "turn" };
+
+/** DG12 — the pieces of a building's plan (diagramPlan.tsx draws them). */
+export type FurniturePiece =
+  | "desk" | "chair" | "reception" | "meeting" | "waiting" | "coffee" | "cabinet" | "shelves" | "plant" | "hedge" | "door" | "entrance"
+  | "windowH" | "windowV";
 
 export type DeviceIcon = "router" | "switch" | "hub" | "pc" | "laptop" | "server" | "ap" | "printer" | "firewall" | "cloud" | "phone";
 
@@ -40,6 +47,8 @@ export type NodeSpec = {
   /** Underline the name (an object, a key attribute). */
   underline?: true;
   icon?: DeviceIcon;
+  /** DG12: the piece of a building's plan this component draws. */
+  piece?: FurniturePiece;
   /** Can be resized by the learner (containers, frames, lanes). */
   resizable?: true;
   /** A lane is tall and narrow by default. */
@@ -92,6 +101,10 @@ export const TEXT_SIZES = Object.freeze({
   s: { label: "صغير", px: 13, bold: false }, m: { label: "عادي", px: 16, bold: false }, l: { label: "كبير", px: 22, bold: true }, xl: { label: "عنوان", px: 30, bold: true }
 } as const);
 export type TextSize = keyof typeof TEXT_SIZES;
+/** DG12 — the four ways a door (or a chair) can face: the quarter turns, clockwise. */
+export const TURNS = Object.freeze({ "0": "↓ إلى الأسفل", "90": "← إلى اليسار", "180": "↑ إلى الأعلى", "270": "→ إلى اليمين" } as const);
+export type Turn = keyof typeof TURNS;
+export const isTurn = (v: unknown): v is Turn => typeof v === "string" && Object.prototype.hasOwnProperty.call(TURNS, v);
 export const isTextSize = (v: unknown): v is TextSize => typeof v === "string" && Object.prototype.hasOwnProperty.call(TEXT_SIZES, v);
 /** DG10 — a free text written in a component's colour: the deep shade of each colour (the light ones fill shapes). */
 export const TEXT_INK: Readonly<Record<string, string>> = Object.freeze({
@@ -108,6 +121,14 @@ const device = (icon: DeviceIcon, label: string, name: string): NodeSpec => ({
   type: icon, label, form: "device", icon, minW: 70, minH: 70,
   fields: [NAME, { key: "details", label: "تفاصيل تظهر تحته (IP، المنفذ …)", lines: true, dir: "ltr", hint: "سطر لكل معلومة، مثل: 192.168.1.10/24" }],
   defaults: { name, details: "" }
+});
+
+/** DG12 — a piece of a building's plan: its own drawing, and an optional label under it («الاستقبال», «المدخل الرئيسي»). */
+const LABEL: FieldSpec = { key: "name", label: "تسمية تظهر تحته (اختيارية)" };
+const TURN: FieldSpec = { key: "turn", label: "الاتجاه", choose: "turn" };
+const piece = (p: FurniturePiece, label: string, w: number, h: number, name = "", turn = false): NodeSpec => ({
+  type: p, label, form: "furniture", piece: p, minW: w, minH: h,
+  fields: turn ? [LABEL, TURN] : [LABEL], defaults: { ...(name ? { name } : {}), ...(turn ? { turn: "0" } : {}) }
 });
 
 export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
@@ -303,7 +324,7 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
   {
     // DG11 — who reports to whom in a company: people (a picture, a name, a position) and departments, joined by «يتبع لـ»
     kind: "orgChart", label: "الهيكل التنظيمي", group: "تحليل النظم",
-    hint: "من يتبع لمن في الشركة: المدير في الأعلى ومن يتبعون له تحته. «أضف تابعًا» يرسم شخصًا تحت المختار، و«رتّب الشجرة» يرتّب الهيكل.",
+    hint: "من يتبع لمن في الشركة: المدير في الأعلى ومن يتبعون له تحته، ومساعده بجانبه. «أضف تابعًا» يرسم شخصًا تحت المختار، و«أضف مساعدًا» بجانبه، و«رتّب الشجرة» يرتّب الهيكل.",
     nodes: [
       { type: "person", label: "شخص", form: "icon", fields: [NAME, { key: "details", label: "المنصب", hint: "مثل: مدير المبيعات" }, { key: "icon", label: "الصورة", choose: "icon" }],
         defaults: { icon: "employee", name: "اسم الموظف" }, minW: 72, minH: 90 },
@@ -313,7 +334,31 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       text
     ],
     edges: [
-      { type: "reports", label: "يتبع لـ", start: "none", end: "none", hint: "اسحب من المدير إلى من يتبع له مباشرة." }
+      { type: "reports", label: "يتبع لـ", start: "none", end: "none", hint: "اسحب من المدير إلى من يتبع له مباشرة." },
+      // DG12: the same line drawn dotted with an arrowhead; an assistant or adviser beside his manager
+      { type: "reportsDotted", label: "يتبع لـ (منقّط بسهم)", dash: "dotted", start: "none", end: "arrow", hint: "الخط نفسه منقّطًا برأس سهم. اختر خطوط الهيكل كلها ثم هذا النوع لتصير منقّطة." },
+      { type: "assists", label: "مساعد / مستشار", dash: "dotted", start: "none", end: "arrow", hint: "من المدير إلى مساعده أو مستشاره، يقف بجانبه لا تحته." }
+    ]
+  },
+  {
+    // DG12 — the plan of an administrative building, seen from above: the building, its rooms and corridor, doors and windows, furniture
+    kind: "floorPlan", label: "مخطط مبنى إداري", group: "تحليل النظم",
+    hint: "توزيع المكاتب في المبنى: ارسم «المبنى» ثم الغرف داخله، وضع الأبواب والنوافذ والأثاث، وارسم «مسار الحركة» من المدخل.",
+    nodes: [
+      { type: "building", label: "المبنى", form: "room", fields: [{ ...NAME, label: "اسم المبنى (اختياري)" }], defaults: {}, minW: 300, minH: 220, resizable: true },
+      { type: "room", label: "غرفة / مكتب", form: "room", fields: [{ ...NAME, label: "اسم الغرفة", hint: "مثل: مكتب المدير، المحاسبة، الأرشيف" }],
+        defaults: { name: "مكتب" }, minW: 120, minH: 100, resizable: true },
+      piece("door", "باب", 50, 50, "", true), piece("entrance", "المدخل الرئيسي", 100, 56, "المدخل الرئيسي"),
+      piece("windowH", "نافذة أفقية", 80, 10), piece("windowV", "نافذة عمودية", 10, 80),
+      piece("desk", "مكتب وحاسوب", 110, 80), piece("chair", "كرسي", 30, 30, "", true), piece("reception", "مكتب استقبال", 140, 70, "الاستقبال"),
+      piece("meeting", "طاولة اجتماعات", 150, 90), piece("waiting", "مقاعد انتظار", 110, 44), piece("coffee", "طاولة صغيرة", 60, 34),
+      piece("cabinet", "خزانة ملفات", 44, 80), piece("shelves", "رفوف الأرشيف", 120, 80), piece("plant", "نبتة", 36, 44), piece("hedge", "شجيرات", 120, 34),
+      note,
+      icon,
+      text
+    ],
+    edges: [
+      { type: "walk", label: "مسار الحركة", dash: "dashed", start: "none", end: "arrow", color: "#2563eb", hint: "كيف يتحرّك الزائر: من المدخل إلى الاستقبال ثم إلى المكتب" }
     ]
   },
   {

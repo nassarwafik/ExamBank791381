@@ -62,7 +62,7 @@ const NAMED: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
   useCase: ["actor", "usecase", "system"], class: ["class", "abstract", "interface", "enum"], sequence: ["actorLifeline", "lifeline"],
   activity: ["action", "lane"], state: ["state", "composite"], object: ["object"], deployment: ["node", "component", "artifact", "database"],
   erd: ["entity", "weakEntity", "attribute", "keyAttribute", "multiAttribute", "derivedAttribute", "relationship", "identifyingRel"],
-  dsd: ["table"], dfd: ["process", "processGS", "external", "store"], orgChart: ["person", "unit"],
+  dsd: ["table"], dfd: ["process", "processGS", "external", "store"], orgChart: ["person", "unit"], floorPlan: ["room"],
   topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
   flowchart: ["io", "process", "decision", "subroutine", "connector"],
 };
@@ -260,7 +260,8 @@ function state(c: Ctx) {
 function orgChart(c: Ctx) {
   const { doc } = c;
   const member = (id: string) => c.is(id, "person") || c.is(id, "unit");
-  const lines = doc.edges.filter(e => e.type === "reports" && e.from !== e.to && member(e.from) && member(e.to));
+  // DG12: the reporting line, solid or dotted
+  const lines = doc.edges.filter(e => (e.type === "reports" || e.type === "reportsDotted") && e.from !== e.to && member(e.from) && member(e.to));
   const bosses = (id: string) => lines.filter(e => e.to === id);
   for (const n of doc.nodes) {
     if (!member(n.id)) continue;
@@ -283,10 +284,51 @@ function orgChart(c: Ctx) {
   }
   const tops = doc.nodes.filter(n => member(n.id) && !bosses(n.id).length && lines.some(e => e.from === n.id));
   if (tops.length > 1) c.add("warning", "org.tops", "في الهيكل أكثر من رأس (" + tops.map(n => label(doc, n)).join("، ") + "): المعتاد رأس واحد يتبع له الجميع.", tops.map(n => n.id));
+  // DG12: an assistant stands beside his manager, and is not also one of his team
+  for (const e of doc.edges) {
+    if (e.type !== "assists" || e.from === e.to || !member(e.from) || !member(e.to)) continue;
+    const a = c.byId.get(e.from)!, b = c.byId.get(e.to)!;
+    if (lines.some(l => l.to === b.id)) c.add("warning", "org.assist", label(doc, b) + " مساعد لـ" + label(doc, a) + " ويتبع لمدير أيضًا: المساعد يقف بجانب مديره بخط «مساعد / مستشار» وحده.", [a.id, b.id], [e.id]);
+    else if (b.y >= a.y + a.h || b.y + b.h <= a.y) c.add("warning", "org.assistSide", label(doc, b) + " مساعد لـ" + label(doc, a) + " لكنه مرسوم فوقه أو تحته: ضعه بجانبه (أو اضغط «رتّب الشجرة»).", [a.id, b.id], [e.id]);
+  }
   for (const e of lines) {
     const a = c.byId.get(e.from)!, b = c.byId.get(e.to)!;
     if (a.y > b.y + b.h / 2) c.add("warning", "org.upside", "المدير " + label(doc, a) + " مرسوم تحت " + label(doc, b) + " الذي يتبع له: ضع المدير فوق (أو اضغط «رتّب الشجرة»).", [a.id, b.id], [e.id]);
   }
+}
+
+// ── DG12: the plan of an administrative building ────────────────────────────────────────────────────────────────────────────────────
+/** The furniture that stands inside a room or the building (not the plants and bushes outside, the doors or the windows). */
+const INDOOR = ["desk", "chair", "reception", "meeting", "waiting", "coffee", "cabinet", "shelves"];
+type Rect = { x: number; y: number; w: number; h: number };
+/** How far two boxes cover each other, across and down (0 when they do not meet). */
+const cover = (a: Rect, b: Rect) => ({
+  x: Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), y: Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y))
+});
+/** A door stands in the room's wall: it meets the room's box (or touches it), and is not wholly inside its floor. */
+function inWall(door: Rect, room: Rect): boolean {
+  const near = cover(door, { x: room.x - 4, y: room.y - 4, w: room.w + 8, h: room.h + 8 });
+  if (!near.x || !near.y) return false;
+  const m = 14, floor = { x: room.x + m, y: room.y + m, w: room.w - 2 * m, h: room.h - 2 * m };
+  return !(door.x >= floor.x && door.y >= floor.y && door.x + door.w <= floor.x + floor.w && door.y + door.h <= floor.y + floor.h);
+}
+function floorPlan(c: Ctx) {
+  const { doc } = c;
+  const rooms = doc.nodes.filter(n => n.type === "room"), buildings = doc.nodes.filter(n => n.type === "building");
+  const doors = doc.nodes.filter(n => n.type === "door" || n.type === "entrance");
+  for (const r of rooms) {
+    if (!doors.some(d => inWall(d, r))) c.add("warning", "plan.door", label(doc, r) + " بلا باب: ضع «باب» على أحد جدرانها.", [r.id]);
+  }
+  rooms.forEach((a, i) => rooms.slice(i + 1).forEach(b => {
+    const o = cover(a, b);
+    if (o.x > 12 && o.y > 12) c.add("warning", "plan.overlap", label(doc, a) + " و" + label(doc, b) + " متداخلتان: الغرفتان المتجاورتان تشتركان في جدار واحد فقط.", [a.id, b.id]);
+  }));
+  for (const n of doc.nodes) {
+    if (INDOOR.includes(n.type) && ![...rooms, ...buildings].some(r => inside(n, r)))
+      c.add("warning", "plan.outside", nodeSpec(doc.kind, n.type)!.label + " خارج المبنى: ضعه داخل غرفة أو داخل «المبنى».", [n.id]);
+  }
+  if ((buildings.length || rooms.length > 1) && !doc.nodes.some(n => n.type === "entrance"))
+    c.add("warning", "plan.entrance", "ليس في المخطط «المدخل الرئيسي»: ضعه على جدار المبنى ليُعرف من أين يدخل الزائر.", buildings.map(n => n.id));
 }
 
 // ── DG6: flowchart ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -506,7 +548,7 @@ function topology(c: Ctx) {
 }
 
 const BY_KIND: Readonly<Record<DiagramKind, (c: Ctx) => void>> = {
-  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, orgChart, topology, flowchart,
+  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, orgChart, floorPlan, topology, flowchart,
 };
 
 /** Every finding of the diagram: errors first, then warnings, each in the diagram's order. */

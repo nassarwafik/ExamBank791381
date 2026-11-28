@@ -33,10 +33,13 @@ describe("the kind and its example", () => {
   it("under «تحليل النظم», after DFD: a person, a department, and the shared note / icon / text; one line, «يتبع لـ», with no arrowheads", () => {
     const k = kindSpec("orgChart");
     expect(k.group).toBe("تحليل النظم");
-    expect(DIAGRAM_CATALOG.filter(c => c.group === "تحليل النظم").map(c => c.kind)).toEqual(["dfd", "orgChart"]);
+    // DG12 added the building plan after it, at the owner's request
+    expect(DIAGRAM_CATALOG.filter(c => c.group === "تحليل النظم").map(c => c.kind)).toEqual(["dfd", "orgChart", "floorPlan"]);
     expect(k.nodes.map(n => n.type + ":" + n.form)).toEqual(["person:icon", "unit:round", "note:note", "icon:icon", "text:text"]);
     expect(k.nodes[0].fields.map(f => f.label)).toEqual(["الاسم", "المنصب", "الصورة"]);
-    expect(k.edges.map(e => [e.type, e.label, e.start, e.end])).toEqual([["reports", "يتبع لـ", "none", "none"]]);
+    // DG12 added the dotted reporting line and the assistant's line, at the owner's request
+    expect(k.edges.map(e => [e.type, e.label, e.start, e.end])).toEqual([["reports", "يتبع لـ", "none", "none"], ["reportsDotted", "يتبع لـ (منقّط بسهم)", "none", "arrow"],
+      ["assists", "مساعد / مستشار", "none", "arrow"]]);
   });
   it("the example: valid, read back the same, no finding, all lines at right angles, each manager centred over his team, first on the right", () => {
     const d = exampleDoc("orgChart");

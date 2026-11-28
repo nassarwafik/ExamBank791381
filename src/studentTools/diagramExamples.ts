@@ -85,7 +85,9 @@ const EXAMPLES: Record<DiagramKind, () => DiagramDoc> = {
       ["person", 700, 360, { icon: "sales", name: "يوسف علي", details: "مندوب مبيعات" }],
       ["person", 500, 360, { icon: "employeeF", name: "منى سعيد", details: "مندوبة مبيعات" }],
       ["person", 200, 360, { icon: "employee", name: "خالد عمر", details: "شؤون الموظفين" }],
-    ], [[1, 2, "reports"], [1, 3, "reports"], [2, 4, "reports"], [2, 5, "reports"], [3, 6, "reports"]]);
+      // DG12: the general manager's secretary, beside him («رتّب الشجرة» puts her on his left, on his level)
+      ["person", 200, 40, { icon: "employeeF", name: "هدى سالم", details: "سكرتيرة المدير العام" }],
+    ], [[1, 2, "reports"], [1, 3, "reports"], [2, 4, "reports"], [2, 5, "reports"], [3, 6, "reports"], [1, 7, "assists"]]);
     const ortho = { ...d, edges: d.edges.map(e => ({ ...e, route: "ortho" as const })) };
     const sizes = new Map(ortho.nodes.map(n => { const b = layoutNode(ortho, n)!; return [n.id, { w: b.w, h: b.h }]; }));
     return treeLayout(ortho, sizes).doc;
@@ -94,6 +96,31 @@ const EXAMPLES: Record<DiagramKind, () => DiagramDoc> = {
     ["external", 40, 160, { name: "الطالب" }], ["process", 280, 130, { number: "1.0", name: "تسجيل طالب" }], ["store", 520, 60, { number: "D1", name: "ملف الطلاب" }],
     ["process", 520, 220, { number: "2.0", name: "إصدار كشف العلامات" }], ["external", 780, 250, { name: "المعلّم" }]
   ], [[1, 2, "flow", "بيانات الطالب"], [2, 3, "flow", "سجل جديد"], [3, 4, "flow", "العلامات"], [4, 5, "flow", "كشف العلامات"], [4, 1, "flow", "الشهادة"]]),
+  // DG12 — an administrative building in the shape of the owner's sample: six rooms round a corridor, the reception opposite the main
+  // entrance, waiting seats in the corridor, bushes outside; the building first and its rooms next (drawn under the furniture)
+  floorPlan: () => {
+    const rooms: [string, number, number, number, number, string][] = [
+      // name, x, y, w, h, the wall its door is in (the door opens into the room)
+      ["المحاسبة", 60, 90, 300, 230, "right"], ["صالة الاستقبال", 430, 90, 260, 220, "bottom"], ["مكتب المدير", 760, 90, 300, 230, "left"],
+      ["شؤون الموظفين", 60, 320, 320, 200, "right"], ["قاعة الاجتماعات", 740, 320, 320, 200, "left"],
+      ["الأرشيف", 60, 520, 380, 170, "right"], ["تقنية المعلومات", 680, 520, 380, 170, "left"]
+    ];
+    const door = ([, x, y, w, h, side]: (typeof rooms)[number]): N => side === "right" ? ["door", x + w - 50, y + 20, { turn: "90" }]
+      : side === "left" ? ["door", x, y + 20, { turn: "270" }] : ["door", x + w / 2 - 25, y + h - 50, { turn: "180" }];
+    return build("floorPlan", [
+      ["building", 60, 90, {}, 1000, 600],
+      ...rooms.map(([name, x, y, w, h]): N => ["room", x, y, { name }, w, h]),
+      ...rooms.map(door),
+      ["entrance", 510, 640], ["plant", 460, 630], ["plant", 620, 630],
+      ["reception", 490, 130], ["plant", 640, 110], ["waiting", 600, 400], ["coffee", 625, 460],
+      ["desk", 150, 150], ["cabinet", 80, 120], ["desk", 860, 150], ["cabinet", 1000, 120], ["plant", 790, 260],
+      ["desk", 170, 380], ["plant", 90, 460], ["meeting", 840, 380], ["plant", 1010, 450],
+      ["shelves", 80, 580], ["shelves", 220, 580], ["desk", 820, 580], ["cabinet", 990, 590],
+      ["windowH", 150, 89], ["windowH", 520, 89], ["windowH", 870, 89], ["windowV", 59, 180], ["windowV", 59, 380], ["windowV", 1051, 180], ["windowV", 1051, 380],
+      ["hedge", 70, 702], ["hedge", 190, 702], ["hedge", 310, 702], ["hedge", 690, 702], ["hedge", 810, 702], ["hedge", 930, 702],
+      ["text", 450, 30, { name: "مخطط مبنى إداري", size: "xl" }]
+    ], [[16, 19, "walk"]]);
+  },
   topology: () => build("topology", [
     ["zone", 120, 330, { name: "LAN 192.168.1.0/24" }, 640, 330],
     ["cloud", 400, 20, { name: "Internet" }], ["router", 400, 180, { name: "R1", details: "G0/0: 192.168.1.1" }], ["switch", 400, 390, { name: "SW1" }],

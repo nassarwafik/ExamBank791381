@@ -3,6 +3,7 @@ import { DIAGRAM_COLORS, edgeSpec, TEXT_INK, type DeviceIcon, type EdgeSpec, typ
 import type { DEdge, DiagramDoc } from "./diagramDoc";
 import { FONT_FAMILY, FONT_SIZE, ICON_SIZE, ICON_TOP, LINE, SLANT, SMALL, SMALL_LINE, lifelineBottom, measureText, textDir, textStyle, type EdgePath, type NodeBox } from "./diagramLayout";
 import { IconGlyph } from "./diagramIcons";
+import { FurnitureShape, RoomShape } from "./diagramPlan";
 
 // «محرّر المخططات» — how each component and arrow is drawn: plain SVG with its paint written on each element (no CSS), on white paper, so
 // the drawing looks the same in a light or a dark app and the saved picture is exactly what the learner sees. Original artwork only.
@@ -214,6 +215,8 @@ const MemoNode = memo(function NodeShape({ b }: { b: NodeBox }) {
         {(b.sections[0] ?? []).map((l, i) => <T key={i} x={cx} y={under + b.title.length * LINE + SMALL_LINE / 2 + i * SMALL_LINE} size={SMALL - 1} fill="#334155">{l}</T>)}
       </>;
     }
+    case "room": return <RoomShape b={b} />;   // DG12
+    case "furniture": return <FurnitureShape b={b} />;
     case "device": return <>
       {b.node.color !== "none" && <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={8} fill={fill} />}
       <DeviceGlyph icon={b.spec.icon!} x={cx - 24} y={b.y + 2} />
