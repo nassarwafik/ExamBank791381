@@ -13,6 +13,7 @@ import DiagramCanvas, { makeSelection, selectedEdges, type Selection } from "./D
 import { checkDiagram, type Finding, type FindingLevel } from "./diagramChecks";
 import { readSqlTables, sqlToDsd, SQL_LIMITS } from "./sqlToDsd";
 import { readCSharpTypes, csharpToClass, CS_LIMITS } from "./csharpToClass";
+import { codeToFlowchart, FLOW_LIMITS } from "./codeToFlowchart";
 import { isScriptKind, keepPositions, readDiagramScript, SCRIPT_MAX_CHARS, type ScriptKind, type ScriptProblem, type ScriptResult } from "./diagramScript";
 import { diagramToScript } from "./diagramToScript";
 import type { NetLab } from "./networkLab";
@@ -113,7 +114,7 @@ function CheckPanel({ findings, onPick, onClose }: { findings: readonly Finding[
 }
 
 /** DG3 — «ولّد من الكود»: which kinds can be drawn from code, and how. */
-const FROM_CODE: Partial<Record<DiagramKind, { what: string; placeholder: string; accept: string; max: number; draw: (code: string) => { doc: DiagramDoc | null; summary: string; problems: { line: number; message: string }[] } }>> = {
+const FROM_CODE: Partial<Record<DiagramKind, { what: string; placeholder: string; accept: string; max: number; reads?: string; draw: (code: string) => { doc: DiagramDoc | null; summary: string; problems: { line: number; message: string }[] } }>> = {
   dsd: {
     what: "كود CREATE TABLE", accept: ".sql,.txt", max: SQL_LIMITS.chars,
     placeholder: "CREATE TABLE Students (\n  StudentID INT PRIMARY KEY,\n  Name NVARCHAR(50),\n  ClassID INT REFERENCES Classes(ClassID)\n);",
@@ -131,6 +132,12 @@ const FROM_CODE: Partial<Record<DiagramKind, { what: string; placeholder: string
       const doc = r.types.length ? csharpToClass(r) : null;
       return { doc, problems: r.problems, summary: doc ? "رُسم المخطط: " + r.types.length + " صنف و" + doc.edges.length + " علاقة." : "" };
     },
+  },
+  // DG9 — one function's steps: its inputs, questions, loops and outputs (Main / main, else the program's statements, else the first)
+  flowchart: {
+    what: "دالة C# أو Python", accept: ".cs,.py,.txt", max: FLOW_LIMITS.chars, reads: "خطوات الدالة",
+    placeholder: "static void Main()\n{\n    int n = int.Parse(Console.ReadLine());\n    int sum = 0;\n    for (int i = 1; i <= n; i++) sum += i;\n    Console.WriteLine(sum);\n}\n\n— أو —\n\ndef main():\n    n = int(input())\n    print(\"زوجي\" if n % 2 == 0 else \"فردي\")",
+    draw: codeToFlowchart,
   },
 };
 
@@ -175,14 +182,14 @@ function GeneratePanel({ kind, onDraw, onClose }: { kind: DiagramKind; onDraw: (
         <div className="dgm-gen-result" role="status" data-testid="diagram-generate-result">
           {result.summary && <p className="dgm-gen-ok">{result.summary} المخطط السابق يعود بـ «تراجع».</p>}
           {!!result.problems.length && <>
-            <p className="dgm-gen-warn">{result.summary ? "وفي الكود ما لم أستطع قراءته:" : "لم يُرسم شيء:"}</p>
+            <p className="dgm-gen-warn">{result.summary ? "وملاحظات على الكود:" : "لم يُرسم شيء:"}</p>
             <ul className="dgm-check-list">
               {result.problems.map((p, i) => <li key={i} className="dgm-finding is-warning"><span className="dgm-finding-tag" dir="ltr">سطر {p.line}</span><span>{p.message}</span></li>)}
             </ul>
           </>}
         </div>
       )}
-      <p className="stt-hint">يقرأ المحرّر التعريفات فقط ولا يشغّل الكود، ولا يرسله إلى أي مكان. رتّب المخطط بعدها كما تشاء.</p>
+      <p className="stt-hint">يقرأ المحرّر {spec.reads ?? "التعريفات"} فقط ولا يشغّل الكود، ولا يرسله إلى أي مكان. رتّب المخطط بعدها كما تشاء.</p>
     </section>
   );
 }
