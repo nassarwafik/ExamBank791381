@@ -85,7 +85,9 @@ const EXAMPLES: Record<DiagramKind, () => DiagramDoc> = {
       ["person", 700, 360, { icon: "sales", name: "يوسف علي", details: "مندوب مبيعات" }],
       ["person", 500, 360, { icon: "employeeF", name: "منى سعيد", details: "مندوبة مبيعات" }],
       ["person", 200, 360, { icon: "employee", name: "خالد عمر", details: "شؤون الموظفين" }],
-    ], [[1, 2, "reports"], [1, 3, "reports"], [2, 4, "reports"], [2, 5, "reports"], [3, 6, "reports"]]);
+      // DG12: the general manager's secretary, beside him («رتّب الشجرة» puts her on his left, on his level)
+      ["person", 200, 40, { icon: "employeeF", name: "هدى سالم", details: "سكرتيرة المدير العام" }],
+    ], [[1, 2, "reports"], [1, 3, "reports"], [2, 4, "reports"], [2, 5, "reports"], [3, 6, "reports"], [1, 7, "assists"]]);
     const ortho = { ...d, edges: d.edges.map(e => ({ ...e, route: "ortho" as const })) };
     const sizes = new Map(ortho.nodes.map(n => { const b = layoutNode(ortho, n)!; return [n.id, { w: b.w, h: b.h }]; }));
     return treeLayout(ortho, sizes).doc;

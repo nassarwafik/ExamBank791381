@@ -324,7 +324,7 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
   {
     // DG11 — who reports to whom in a company: people (a picture, a name, a position) and departments, joined by «يتبع لـ»
     kind: "orgChart", label: "الهيكل التنظيمي", group: "تحليل النظم",
-    hint: "من يتبع لمن في الشركة: المدير في الأعلى ومن يتبعون له تحته. «أضف تابعًا» يرسم شخصًا تحت المختار، و«رتّب الشجرة» يرتّب الهيكل.",
+    hint: "من يتبع لمن في الشركة: المدير في الأعلى ومن يتبعون له تحته، ومساعده بجانبه. «أضف تابعًا» يرسم شخصًا تحت المختار، و«أضف مساعدًا» بجانبه، و«رتّب الشجرة» يرتّب الهيكل.",
     nodes: [
       { type: "person", label: "شخص", form: "icon", fields: [NAME, { key: "details", label: "المنصب", hint: "مثل: مدير المبيعات" }, { key: "icon", label: "الصورة", choose: "icon" }],
         defaults: { icon: "employee", name: "اسم الموظف" }, minW: 72, minH: 90 },
@@ -334,7 +334,10 @@ export const DIAGRAM_CATALOG: readonly KindSpec[] = Object.freeze([
       text
     ],
     edges: [
-      { type: "reports", label: "يتبع لـ", start: "none", end: "none", hint: "اسحب من المدير إلى من يتبع له مباشرة." }
+      { type: "reports", label: "يتبع لـ", start: "none", end: "none", hint: "اسحب من المدير إلى من يتبع له مباشرة." },
+      // DG12: the same line drawn dotted with an arrowhead; an assistant or adviser beside his manager
+      { type: "reportsDotted", label: "يتبع لـ (منقّط بسهم)", dash: "dotted", start: "none", end: "arrow", hint: "الخط نفسه منقّطًا برأس سهم. اختر خطوط الهيكل كلها ثم هذا النوع لتصير منقّطة." },
+      { type: "assists", label: "مساعد / مستشار", dash: "dotted", start: "none", end: "arrow", hint: "من المدير إلى مساعده أو مستشاره، يقف بجانبه لا تحته." }
     ]
   },
   {

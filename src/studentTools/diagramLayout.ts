@@ -301,7 +301,11 @@ export function edgePath(doc: DiagramDoc, edge: DEdge, boxes: ReadonlyMap<string
   // the offset is measured on one fixed side (from the lower id to the higher) so two opposite arrows separate
   const flip = edge.from < edge.to ? 1 : -1;
   const off = (i - (same.length - 1) / 2) * 16 * flip;
-  if (ortho && doc.kind === "orgChart") {
+  if (ortho && doc.kind === "orgChart" && edge.type === "assists") {
+    // DG12: an assistant beside his manager: one level line between their facing sides, at the assistant's middle height
+    const l = sideLine(a, b);
+    if (l) return polyline(l);
+  } else if (ortho && doc.kind === "orgChart") {
     // DG11: down from the manager's bottom, along a bar just over the one who reports to him, and down into his top: the team of one
     // manager, on one level, share that bar
     const t = treePath(a, b);
@@ -462,6 +466,18 @@ function crossings(pts: [number, number][], obs: readonly NodeBox[]): number {
 /** DG11 — an organisation chart's line from `a` (above) to `b` (below), or up the same way: out of the middle of the facing side, along
  *  a bar 30 px from the manager (the same bar for all his team, whatever their heights), into the middle of the other's facing side.
  *  Side by side (no gap between them up and down): null. */
+/** DG12 — a level line between two components side by side whose heights overlap (null when one is above the other, or they meet). */
+function sideLine(a: NodeBox, b: NodeBox): [number, number][] | null {
+  const lo = Math.max(a.y, b.y), hi = Math.min(a.y + a.h, b.y + b.h);
+  if (hi - lo < 8) return null;
+  // a person is his picture: the line runs between the two pictures, at the picture's middle height
+  const pic = (x: NodeBox) => x.form === "icon";
+  const y = pic(a) && pic(b) ? Math.round(b.y + ICON_TOP + ICON_SIZE / 2) : Math.min(hi - 4, Math.max(lo + 4, b.y + b.h / 2));
+  const left = (x: NodeBox) => (pic(x) ? x.x + x.w / 2 - ICON_SIZE / 2 - 6 : x.x), right = (x: NodeBox) => (pic(x) ? x.x + x.w / 2 + ICON_SIZE / 2 + 6 : x.x + x.w);
+  if (b.x >= a.x + a.w) return [[right(a), y], [left(b), y]];
+  if (a.x >= b.x + b.w) return [[left(a), y], [right(b), y]];
+  return null;
+}
 function treePath(a: NodeBox, b: NodeBox): [number, number][] | null {
   const down = b.y >= a.y + a.h, up = a.y >= b.y + b.h;
   if (!down && !up) return null;

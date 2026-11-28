@@ -260,7 +260,8 @@ function state(c: Ctx) {
 function orgChart(c: Ctx) {
   const { doc } = c;
   const member = (id: string) => c.is(id, "person") || c.is(id, "unit");
-  const lines = doc.edges.filter(e => e.type === "reports" && e.from !== e.to && member(e.from) && member(e.to));
+  // DG12: the reporting line, solid or dotted
+  const lines = doc.edges.filter(e => (e.type === "reports" || e.type === "reportsDotted") && e.from !== e.to && member(e.from) && member(e.to));
   const bosses = (id: string) => lines.filter(e => e.to === id);
   for (const n of doc.nodes) {
     if (!member(n.id)) continue;
@@ -283,6 +284,13 @@ function orgChart(c: Ctx) {
   }
   const tops = doc.nodes.filter(n => member(n.id) && !bosses(n.id).length && lines.some(e => e.from === n.id));
   if (tops.length > 1) c.add("warning", "org.tops", "في الهيكل أكثر من رأس (" + tops.map(n => label(doc, n)).join("، ") + "): المعتاد رأس واحد يتبع له الجميع.", tops.map(n => n.id));
+  // DG12: an assistant stands beside his manager, and is not also one of his team
+  for (const e of doc.edges) {
+    if (e.type !== "assists" || e.from === e.to || !member(e.from) || !member(e.to)) continue;
+    const a = c.byId.get(e.from)!, b = c.byId.get(e.to)!;
+    if (lines.some(l => l.to === b.id)) c.add("warning", "org.assist", label(doc, b) + " مساعد لـ" + label(doc, a) + " ويتبع لمدير أيضًا: المساعد يقف بجانب مديره بخط «مساعد / مستشار» وحده.", [a.id, b.id], [e.id]);
+    else if (b.y >= a.y + a.h || b.y + b.h <= a.y) c.add("warning", "org.assistSide", label(doc, b) + " مساعد لـ" + label(doc, a) + " لكنه مرسوم فوقه أو تحته: ضعه بجانبه (أو اضغط «رتّب الشجرة»).", [a.id, b.id], [e.id]);
+  }
   for (const e of lines) {
     const a = c.byId.get(e.from)!, b = c.byId.get(e.to)!;
     if (a.y > b.y + b.h / 2) c.add("warning", "org.upside", "المدير " + label(doc, a) + " مرسوم تحت " + label(doc, b) + " الذي يتبع له: ضع المدير فوق (أو اضغط «رتّب الشجرة»).", [a.id, b.id], [e.id]);
