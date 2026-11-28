@@ -3,6 +3,8 @@
 
 import { edgeSpec, nodeSpec, type DiagramKind } from "./diagramCatalog";
 import { SEQ_FIRST, SEQ_STEP, SEQ_TOP, type DEdge, type DiagramDoc, type DNode } from "./diagramDoc";
+import { layoutNode } from "./diagramLayout";
+import { treeLayout } from "./orgChart";
 
 /** [type, x, y, text, w?, h?] */
 type N = [string, number, number, Record<string, string>?, number?, number?];
@@ -73,6 +75,21 @@ const EXAMPLES: Record<DiagramKind, () => DiagramDoc> = {
     ["table", 360, 300, { name: "Marks", fields: "PK MarkID : INT\nFK StudentID : INT\nFK CourseID : INT\nMark : DECIMAL(5,2)" }],
     ["table", 660, 300, { name: "Courses", fields: "PK CourseID : INT\nTitle : VARCHAR(60)" }]
   ], [[1, 2, "oneMany"], [2, 3, "oneMany"], [4, 3, "oneMany"]]),
+  // DG11 — a small company: the general manager, two managers, and their teams; arranged by «رتّب الشجرة», drawn with right angles
+  orgChart: () => {
+    const d = build("orgChart", [
+      ["person", 400, 40, { icon: "manager", name: "سامي خليل", details: "المدير العام" }],
+      // in Arabic order: the first of each team on the right
+      ["person", 600, 200, { icon: "manager", name: "أحمد ناصر", details: "مدير المبيعات" }],
+      ["person", 200, 200, { icon: "managerF", name: "ليلى حسن", details: "مديرة الموارد البشرية" }],
+      ["person", 700, 360, { icon: "sales", name: "يوسف علي", details: "مندوب مبيعات" }],
+      ["person", 500, 360, { icon: "employeeF", name: "منى سعيد", details: "مندوبة مبيعات" }],
+      ["person", 200, 360, { icon: "employee", name: "خالد عمر", details: "شؤون الموظفين" }],
+    ], [[1, 2, "reports"], [1, 3, "reports"], [2, 4, "reports"], [2, 5, "reports"], [3, 6, "reports"]]);
+    const ortho = { ...d, edges: d.edges.map(e => ({ ...e, route: "ortho" as const })) };
+    const sizes = new Map(ortho.nodes.map(n => { const b = layoutNode(ortho, n)!; return [n.id, { w: b.w, h: b.h }]; }));
+    return treeLayout(ortho, sizes).doc;
+  },
   dfd: () => build("dfd", [
     ["external", 40, 160, { name: "الطالب" }], ["process", 280, 130, { number: "1.0", name: "تسجيل طالب" }], ["store", 520, 60, { number: "D1", name: "ملف الطلاب" }],
     ["process", 520, 220, { number: "2.0", name: "إصدار كشف العلامات" }], ["external", 780, 250, { name: "المعلّم" }]

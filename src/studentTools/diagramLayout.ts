@@ -288,6 +288,12 @@ export function edgePath(doc: DiagramDoc, edge: DEdge, boxes: ReadonlyMap<string
   // the offset is measured on one fixed side (from the lower id to the higher) so two opposite arrows separate
   const flip = edge.from < edge.to ? 1 : -1;
   const off = (i - (same.length - 1) / 2) * 16 * flip;
+  if (ortho && doc.kind === "orgChart") {
+    // DG11: down from the manager's bottom, along a bar just over the one who reports to him, and down into his top: the team of one
+    // manager, on one level, share that bar
+    const t = treePath(a, b);
+    if (t) return polyline(t);
+  }
   if (ortho) {
     // DG9: a flowchart's loop back goes round the left of the steps it returns over
     const back = loopBack(doc, boxes, edge, a, b);
@@ -440,6 +446,17 @@ function crossings(pts: [number, number][], obs: readonly NodeBox[]): number {
   return n;
 }
 
+/** DG11 — an organisation chart's line from `a` (above) to `b` (below), or up the same way: out of the middle of the facing side, along
+ *  a bar 30 px from the manager (the same bar for all his team, whatever their heights), into the middle of the other's facing side.
+ *  Side by side (no gap between them up and down): null. */
+function treePath(a: NodeBox, b: NodeBox): [number, number][] | null {
+  const down = b.y >= a.y + a.h, up = a.y >= b.y + b.h;
+  if (!down && !up) return null;
+  const s = { x: a.x + a.w / 2, y: down ? a.y + a.h : a.y }, t = { x: b.x + b.w / 2, y: down ? b.y : b.y + b.h };
+  const gap = Math.abs(t.y - s.y), bar = down ? s.y + Math.min(30, gap / 2) : s.y - Math.min(30, gap / 2);
+  // within a pixel of each other: one upright line (never a slant)
+  return Math.abs(s.x - t.x) < 1 ? [[s.x, s.y], [s.x, t.y]] : [[s.x, s.y], [s.x, bar], [t.x, bar], [t.x, t.y]];
+}
 /** DG9 — is `b` wholly above `a` (an arrow between them goes back up)? */
 const above = (a: NodeBox, b: NodeBox) => b.y + b.h <= a.y;
 /** A vertical lane at `x` moved outward (to the left or the right) past every component it would run through between `y0` and `y1`. */

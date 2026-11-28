@@ -46,7 +46,8 @@ function context(doc: DiagramDoc): Ctx {
 }
 
 /** A note — and DG10 an icon or a free text: not one of the diagram's own symbols, so its rules leave it be (an icon beside a class, a step…). */
-const isNote = (doc: DiagramDoc, n: DNode) => { const f = nodeSpec(doc.kind, n.type)?.form; return f === "note" || f === "icon" || f === "text"; };
+// (by type: DG11's «شخص» is drawn as an icon but is the organisation chart's own symbol)
+const isNote = (doc: DiagramDoc, n: DNode) => nodeSpec(doc.kind, n.type)?.form === "note" || n.type === "icon" || n.type === "text";
 const isContainer = (doc: DiagramDoc, n: DNode) => !!nodeSpec(doc.kind, n.type)?.resizable;
 /** The component's centre lies inside the container. */
 const inside = (n: DNode, c: DNode) => {
@@ -61,7 +62,7 @@ const NAMED: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
   useCase: ["actor", "usecase", "system"], class: ["class", "abstract", "interface", "enum"], sequence: ["actorLifeline", "lifeline"],
   activity: ["action", "lane"], state: ["state", "composite"], object: ["object"], deployment: ["node", "component", "artifact", "database"],
   erd: ["entity", "weakEntity", "attribute", "keyAttribute", "multiAttribute", "derivedAttribute", "relationship", "identifyingRel"],
-  dsd: ["table"], dfd: ["process", "processGS", "external", "store"],
+  dsd: ["table"], dfd: ["process", "processGS", "external", "store"], orgChart: ["person", "unit"],
   topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
   flowchart: ["io", "process", "decision", "subroutine", "connector"],
 };
@@ -75,7 +76,7 @@ const UNIQUE: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
 const CONNECTED: Readonly<Partial<Record<DiagramKind, readonly string[]>>> = {
   useCase: ["actor", "usecase"], sequence: ["actorLifeline", "lifeline"], activity: ["action", "decision", "fork"],
   state: ["state", "choice"], erd: ["entity", "weakEntity", "attribute", "keyAttribute", "multiAttribute", "derivedAttribute", "relationship", "identifyingRel"],
-  dfd: ["process", "processGS", "external", "store"], topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
+  dfd: ["process", "processGS", "external", "store"], orgChart: ["person", "unit"], topology: ["router", "switch", "hub", "pc", "laptop", "server", "ap", "printer", "phone", "firewall", "cloud"],
   flowchart: ["io", "process", "decision", "subroutine", "connector"],
 };
 
@@ -252,6 +253,39 @@ function state(c: Ctx) {
       if (outs.length >= 2 && bare.length) c.add("warning", "st.event", "يخرج من " + label(doc, n) + " أكثر من انتقال: اكتب على كل انتقال الحدث الذي يسبّبه.", [n.id], bare.map(e => e.id));
     }
     if (n.type === "choice" && c.outOf(n.id).length < 2) c.add("warning", "st.choice", "الاختيار يخرج منه انتقالان على الأقل، بشرط على كل منهما.", [n.id]);
+  }
+}
+
+// ── DG11: organisation chart ────────────────────────────────────────────────────────────────────────────────────────────────────
+function orgChart(c: Ctx) {
+  const { doc } = c;
+  const member = (id: string) => c.is(id, "person") || c.is(id, "unit");
+  const lines = doc.edges.filter(e => e.type === "reports" && e.from !== e.to && member(e.from) && member(e.to));
+  const bosses = (id: string) => lines.filter(e => e.to === id);
+  for (const n of doc.nodes) {
+    if (!member(n.id)) continue;
+    const b = bosses(n.id);
+    if (b.length > 1) c.add("warning", "org.bosses", label(doc, n) + " يتبع لأكثر من مدير: في الهيكل التنظيمي لكل شخص مدير مباشر واحد.", [n.id], b.map(e => e.id));
+  }
+  // a loop: following the managers up comes back
+  const up = new Map(lines.map(e => [e.to, e.from]));
+  const looped = new Set<string>();
+  for (const start of up.keys()) {
+    const path: string[] = [];
+    for (let at: string | undefined = start; at && !path.includes(at); at = up.get(at)) path.push(at);
+    const last = up.get(path[path.length - 1]);
+    if (last && path.includes(last) && !path.slice(path.indexOf(last)).some(id => looped.has(id))) {
+      const ring = path.slice(path.indexOf(last));
+      ring.forEach(id => looped.add(id));
+      c.add("error", "org.cycle", "في الهيكل حلقة: " + ring.map(id => label(doc, c.byId.get(id)!)).join(" ← ") + " يعود إلى نفسه. لكل شخص مدير فوقه، ولا يتبع المدير لمن تحته.", ring,
+        lines.filter(e => ring.includes(e.from) && ring.includes(e.to)).map(e => e.id));
+    }
+  }
+  const tops = doc.nodes.filter(n => member(n.id) && !bosses(n.id).length && lines.some(e => e.from === n.id));
+  if (tops.length > 1) c.add("warning", "org.tops", "في الهيكل أكثر من رأس (" + tops.map(n => label(doc, n)).join("، ") + "): المعتاد رأس واحد يتبع له الجميع.", tops.map(n => n.id));
+  for (const e of lines) {
+    const a = c.byId.get(e.from)!, b = c.byId.get(e.to)!;
+    if (a.y > b.y + b.h / 2) c.add("warning", "org.upside", "المدير " + label(doc, a) + " مرسوم تحت " + label(doc, b) + " الذي يتبع له: ضع المدير فوق (أو اضغط «رتّب الشجرة»).", [a.id, b.id], [e.id]);
   }
 }
 
@@ -472,7 +506,7 @@ function topology(c: Ctx) {
 }
 
 const BY_KIND: Readonly<Record<DiagramKind, (c: Ctx) => void>> = {
-  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, topology, flowchart,
+  useCase, class: classes, sequence, activity, state, object: objects, deployment, erd, dsd, dfd, orgChart, topology, flowchart,
 };
 
 /** Every finding of the diagram: errors first, then warnings, each in the diagram's order. */
