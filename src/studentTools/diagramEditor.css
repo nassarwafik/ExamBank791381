@@ -65,6 +65,15 @@ textarea.dgm-input { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13
   .dgm-inspector { grid-column: 1 / -1; }
   .dgm-pal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* a computer only (a mouse; owner request 2026-11-28): from 900px (a student's project page) the properties stay beside the sheet, so
+   editing a component never needs a scroll down under the drawing; a phone or a tablet keeps the layout below */
+@media (hover: hover) and (pointer: fine) {
+  @container (min-width: 900px) {
+    .dgm-main { grid-template-columns: 172px minmax(0, 1fr) 224px; }
+    .dgm-inspector { grid-column: auto; }
+    .dgm-canvas { max-height: none; height: min(72vh, 900px); }
+  }
+}
 @container (min-width: 1080px) {
   .dgm-main { grid-template-columns: 200px minmax(0, 1fr) 250px; }
   .dgm-inspector { grid-column: auto; }
