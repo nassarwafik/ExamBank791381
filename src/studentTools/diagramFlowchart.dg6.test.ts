@@ -30,8 +30,8 @@ describe("the catalog", () => {
     const k = kindSpec("flowchart");
     expect(k.group).toBe("البرمجة");
     expect(k.nodes.map(n => n.type + ":" + n.form)).toEqual(["start:terminal", "io:parallelogram", "process:rect", "decision:diamond", "subroutine:subroutine",
-      "connector:ellipse", "end:terminal", "note:note"]);
-    expect(k.nodes.map(n => n.defaults.name)).toEqual(["ابدأ", "أدخل a, b", "avg = (a + b) / 2", "avg >= 50 ؟", "Sort(list)", "A", "انتهِ", "ملاحظة"]);
+      "connector:ellipse", "end:terminal", "note:note", "icon:icon", "text:text"]);   // DG10: an icon and a free text, in every kind
+    expect(k.nodes.map(n => n.defaults.name)).toEqual(["ابدأ", "أدخل a, b", "avg = (a + b) / 2", "avg >= 50 ؟", "Sort(list)", "A", "انتهِ", "ملاحظة", "موظف", "عنوان المخطط"]);
     expect(k.edges.map(e => e.type + ":" + e.end)).toEqual(["flow:arrow"]);
     expect(DIAGRAM_CATALOG.at(-1)!.kind).toBe("flowchart");
   });

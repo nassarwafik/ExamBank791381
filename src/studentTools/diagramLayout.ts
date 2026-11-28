@@ -1,7 +1,7 @@
 // «محرّر المخططات» — how big each component is drawn (it grows with its text), where an arrow meets its border, and the arrows' paths.
 // Pure but for `measureText`, which uses a canvas when the page has one (the app's own font) and a fair estimate otherwise.
 
-import { edgeSpec, nodeSpec, type NodeSpec, type ShapeForm } from "./diagramCatalog";
+import { edgeSpec, isTextSize, nodeSpec, TEXT_SIZES, type NodeSpec, type ShapeForm } from "./diagramCatalog";
 import { routeApplies, routeOf, SEQ_STEP, type DEdge, type DiagramDoc, type DNode } from "./diagramDoc";
 
 /** The text's own direction: Arabic first → right to left; anything else → left to right. */
@@ -110,6 +110,21 @@ export function layoutNode(doc: DiagramDoc, node: DNode): NodeBox | null {
       h = Math.max(h, title.length * LINE + 22 + bodyH + (form === "cylinder" ? 22 : 0));
       break;
     }
+    case "text": {   // DG10: a free text, each of its lines in its size
+      const z = textStyle(t.size);
+      title = (t.name ?? "").split("\n").flatMap(l => wrapText(l, 640, z.px, z.bold));
+      while (title.length > 1 && !title[title.length - 1]) title.pop();
+      w = Math.max(w, widest(title, z.px, z.bold) + 12);
+      h = Math.max(h, title.length * Math.round(z.px * 1.4) + 8);
+      break;
+    }
+    case "icon": {   // DG10: the picture, its name under it, then its short description
+      if (!(t.name ?? "").trim()) title = [];
+      sections = [wrapText(t.details ?? "", WRAP_AT, SMALL)].map(s => s.filter(Boolean)).filter(s => s.length);
+      w = Math.max(w, ICON_SIZE + 12, widest(title, FONT_SIZE, true) + 14, ...sections.map(s => widest(s, SMALL) + 14));
+      h = Math.max(h, ICON_TOP + ICON_SIZE + 6 + title.length * LINE + (sections[0]?.length ?? 0) * SMALL_LINE + 6);
+      break;
+    }
     case "ellipse": case "doubleEllipse": case "dashedEllipse": {
       w = Math.max(w, widest(title, FONT_SIZE, true) * 1.3 + 30);
       h = Math.max(h, title.length * LINE + 24);
@@ -174,6 +189,10 @@ export function layoutNode(doc: DiagramDoc, node: DNode): NodeBox | null {
 }
 
 export const centerOf = (b: { x: number; y: number; w: number; h: number }) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+/** DG10 — a free text's size in px, and whether it is bold (a size the file does not name: «عادي»). */
+export const textStyle = (size: string | undefined) => TEXT_SIZES[isTextSize(size) ? size : "m"];
+/** DG10 — an icon component: the picture's size, and how far under the component's top it starts. */
+export const ICON_SIZE = 56, ICON_TOP = 4;
 /** DG6 — how far a flowchart's input / output parallelogram leans: its top edge starts this far in from the left. */
 export const SLANT = 16;
 

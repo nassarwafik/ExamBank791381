@@ -45,7 +45,8 @@ function context(doc: DiagramDoc): Ctx {
   };
 }
 
-const isNote = (doc: DiagramDoc, n: DNode) => nodeSpec(doc.kind, n.type)?.form === "note";
+/** A note — and DG10 an icon or a free text: not one of the diagram's own symbols, so its rules leave it be (an icon beside a class, a step…). */
+const isNote = (doc: DiagramDoc, n: DNode) => { const f = nodeSpec(doc.kind, n.type)?.form; return f === "note" || f === "icon" || f === "text"; };
 const isContainer = (doc: DiagramDoc, n: DNode) => !!nodeSpec(doc.kind, n.type)?.resizable;
 /** The component's centre lies inside the container. */
 const inside = (n: DNode, c: DNode) => {
@@ -194,17 +195,20 @@ function sequence(c: Ctx) {
 function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string; end: string; startHow?: string; endHow?: string },
   jumps: readonly { from: string; to: string }[] = []) {
   const { doc } = c;
-  // DG9: a jump (a flowchart's connector to its twin) carries the flow on as an arrow would
-  const ways = [...doc.edges, ...jumps];
+  // DG10: an arrow to or from a note, an icon or a text is not a step of the flow; DG9: a jump (a flowchart's connector to its twin)
+  // carries the flow on as an arrow would
+  const aside = (e: DEdge) => isNote(doc, c.byId.get(e.from)!) || isNote(doc, c.byId.get(e.to)!);
+  const ins = (id: string) => c.inOf(id).filter(e => !aside(e)), outs = (id: string) => c.outOf(id).filter(e => !aside(e));
+  const ways = [...doc.edges.filter(e => !aside(e)), ...jumps];
   const starts = doc.nodes.filter(n => n.type === start), ends = doc.nodes.filter(n => n.type === end);
   const working = doc.nodes.filter(n => !isNote(doc, n) && !isContainer(doc, n));
   if (!working.length) return;
   if (!starts.length) c.add("error", "flow.noStart", "لا " + kindWord.start + ": " + (kindWord.startHow ?? "يبدأ المخطط بدائرة ممتلئة."));
   if (starts.length > 1) c.add("warning", "flow.manyStarts", "في المخطط " + starts.length + " " + kindWord.start + ": المعتاد واحدة.", starts.map(n => n.id));
   if (!ends.length) c.add("error", "flow.noEnd", "لا " + kindWord.end + ": " + (kindWord.endHow ?? "ينتهي المخطط بالدائرة المزدوجة."));
-  for (const s of starts) if (c.inOf(s.id).length) c.add("error", "flow.intoStart", "لا يدخل سهم إلى " + kindWord.start + ".", [s.id], c.inOf(s.id).map(e => e.id));
-  for (const s of starts) if (c.outOf(s.id).length > 1) c.add("warning", "flow.startMany", "يخرج من " + kindWord.start + " سهم واحد.", [s.id], c.outOf(s.id).map(e => e.id));
-  for (const s of ends) if (c.outOf(s.id).length) c.add("error", "flow.fromEnd", "لا يخرج سهم من " + kindWord.end + ".", [s.id], c.outOf(s.id).map(e => e.id));
+  for (const s of starts) if (ins(s.id).length) c.add("error", "flow.intoStart", "لا يدخل سهم إلى " + kindWord.start + ".", [s.id], ins(s.id).map(e => e.id));
+  for (const s of starts) if (outs(s.id).length > 1) c.add("warning", "flow.startMany", "يخرج من " + kindWord.start + " سهم واحد.", [s.id], outs(s.id).map(e => e.id));
+  for (const s of ends) if (outs(s.id).length) c.add("error", "flow.fromEnd", "لا يخرج سهم من " + kindWord.end + ".", [s.id], outs(s.id).map(e => e.id));
   // reachable from a start
   const reached = new Set(starts.map(s => s.id));
   for (let grew = true; grew;) {
@@ -212,11 +216,11 @@ function flowGraph(c: Ctx, start: string, end: string, kindWord: { start: string
     for (const e of ways) if (reached.has(e.from) && !reached.has(e.to)) { reached.add(e.to); grew = true; }
   }
   if (starts.length) for (const n of working) {
-    if (n.type !== start && !reached.has(n.id) && c.edgesOf(n.id).length) c.add("warning", "flow.unreached", "لا يُوصَل إلى " + label(doc, n) + " من " + kindWord.start + ".", [n.id]);
+    if (n.type !== start && !reached.has(n.id) && (ins(n.id).length || outs(n.id).length)) c.add("warning", "flow.unreached", "لا يُوصَل إلى " + label(doc, n) + " من " + kindWord.start + ".", [n.id]);
   }
   for (const n of working) {
     if (n.type === end || n.type === start || isContainer(doc, n)) continue;
-    if (c.inOf(n.id).length && !c.outOf(n.id).length && !jumps.some(j => j.from === n.id)) c.add("warning", "flow.deadEnd", "لا يخرج أي سهم من " + label(doc, n) + ": إلى أين يذهب بعده؟", [n.id]);
+    if (ins(n.id).length && !outs(n.id).length && !jumps.some(j => j.from === n.id)) c.add("warning", "flow.deadEnd", "لا يخرج أي سهم من " + label(doc, n) + ": إلى أين يذهب بعده؟", [n.id]);
   }
 }
 

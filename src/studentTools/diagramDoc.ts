@@ -4,7 +4,8 @@
 // A diagram is a kind, a list of components (nodes) and a list of arrows (edges). Every operation returns a NEW document (or the reason
 // it cannot be done), so the history is a plain list of documents and nothing is ever mutated in place.
 
-import { DIAGRAM_COLOR_IDS, edgeSpec, isDiagramKind, kindSpec, nodeSpec, type DiagramColor, type DiagramKind } from "./diagramCatalog";
+import { isIconId } from "./diagramIconSet";
+import { DIAGRAM_COLOR_IDS, edgeSpec, isDiagramKind, isTextSize, kindSpec, nodeSpec, type DiagramColor, type DiagramKind } from "./diagramCatalog";
 
 export type DNode = { id: string; type: string; x: number; y: number; w: number; h: number; text: Record<string, string>; color: DiagramColor };
 /** `y`: a sequence diagram's message height on the page (its order, top to bottom); 0 in every other kind.
@@ -363,6 +364,8 @@ export function readDiagramBody(kind: DiagramKind, nodesRaw: unknown, edgesRaw: 
     for (const [key, value] of Object.entries(raw.text)) {
       const f = spec.fields.find(x => x.key === key);
       if (!f || !cleanString(value, f.lines ? DIAGRAM_LIMITS.lines : DIAGRAM_LIMITS.text, !!f.lines)) return { ok: false, error: BAD_FILE };
+      // DG10: an icon is one of the library's (a file cannot name another)
+      if ((f.choose === "icon" && !isIconId(value)) || (f.choose === "size" && !isTextSize(value))) return { ok: false, error: BAD_FILE };
       text[key] = value;
     }
     ids.add(raw.id);

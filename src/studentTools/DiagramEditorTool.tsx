@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
-import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, type DiagramKind, type EdgeSpec, type NodeSpec } from "./diagramCatalog";
+import { DIAGRAM_CATALOG, DIAGRAM_COLORS, DIAGRAM_COLOR_IDS, edgeSpec, kindSpec, nodeSpec, TEXT_INK, TEXT_SIZES, type DiagramKind, type EdgeSpec, type NodeSpec, type TextSize } from "./diagramCatalog";
 import {
   DIAGRAM_LIMITS, addNode, alignNodes, commit, connect, diagramFileName, duplicateMany, duplicateNode, emptyDoc, moveMessage, moveNodesBy, parseDiagram,
   parseDraft, preview, redo, removeEdge, removeMany, removeNode, reverseEdge, routeApplies, routeOf, serializeDiagram, serializeDraft, setColor, setEdge,
@@ -14,9 +14,11 @@ import { checkDiagram, type Finding, type FindingLevel } from "./diagramChecks";
 import { readSqlTables, sqlToDsd, SQL_LIMITS } from "./sqlToDsd";
 import { readCSharpTypes, csharpToClass, CS_LIMITS } from "./csharpToClass";
 import { codeToFlowchart, FLOW_LIMITS } from "./codeToFlowchart";
-import { isScriptKind, keepPositions, readDiagramScript, SCRIPT_MAX_CHARS, type ScriptKind, type ScriptProblem, type ScriptResult } from "./diagramScript";
+import { isScriptKind, keepIcons, keepPositions, readDiagramScript, SCRIPT_MAX_CHARS, type ScriptKind, type ScriptProblem, type ScriptResult } from "./diagramScript";
 import { diagramToScript } from "./diagramToScript";
 import type { NetLab } from "./networkLab";
+import { findIcons, iconOf, ICON_GROUPS } from "./diagramIconSet";
+import { IconGlyph } from "./diagramIcons";
 import "./diagramEditor.css";
 
 // «محرّر المخططات» (docs/enterprise-diagram-editor-design.md) — the learner draws a diagram for the project book by choosing components,
@@ -52,7 +54,14 @@ function readStore(draftKey?: string): Store {
 
 /** A component's drawing in a small box (the palette's buttons). */
 function PaletteIcon({ kind, spec }: { kind: DiagramKind; spec: NodeSpec }) {
-  const node = { id: "p", type: spec.type, x: 2, y: 2, w: spec.minW, h: spec.form === "lifeline" ? 34 : spec.minH, text: {}, color: "none" as const };
+  // DG10: the free text's button shows a letter; the icon's, its default picture
+  if (spec.form === "text") return (
+    <svg className="dgm-pal-icon eb-light-island" viewBox="0 0 44 34" aria-hidden="true" focusable="false">
+      <text x={22} y={18} textAnchor="middle" dominantBaseline="central" fontSize={26} fontWeight={700} fill="#1f2937">أ</text>
+    </svg>
+  );
+  const text: Record<string, string> = spec.form === "icon" ? { icon: spec.defaults.icon } : {};
+  const node = { id: "p", type: spec.type, x: 2, y: 2, w: spec.minW, h: spec.form === "lifeline" ? 34 : spec.minH, text, color: "none" as const };
   const b = layoutNode({ kind, nodes: [node], edges: [] }, node);
   if (!b) return null;
   const tall = spec.form === "lifeline" ? 70 : b.h;
@@ -69,6 +78,35 @@ function ArrowIcon({ spec, prefix }: { spec: EdgeSpec; prefix: string }) {
     <svg className="dgm-arrow-icon eb-light-island" viewBox="0 0 60 20" aria-hidden="true" focusable="false">
       <EdgeShape edge={{ id: "p", type: spec.type, from: "", to: "", label: "", fromLabel: "", toLabel: "", y: 0 }} path={path} spec={spec} prefix={prefix} />
     </svg>
+  );
+}
+
+/** DG10 — the icon library: a search (Arabic or English, «مدير», «فاتورة», «truck») and the icons by group; the chosen one is pressed. */
+function IconPicker({ value, onPick }: { value: string; onPick: (id: string) => void }) {
+  const [query, setQuery] = useState("");
+  const found = useMemo(() => findIcons(query), [query]);
+  return (
+    <div className="dgm-icons" data-testid="diagram-icon-picker">
+      <input type="search" className="dgm-input" value={query} onChange={e => setQuery(e.target.value)} placeholder="ابحث: مدير، عميل، فاتورة…"
+        aria-label="ابحث عن أيقونة" data-testid="diagram-icon-search" />
+      {ICON_GROUPS.map(g => {
+        const list = found.filter(i => i.group === g);
+        return list.length ? (
+          <div key={g} role="group" aria-label={g}>
+            <p className="dgm-icons-group">{g}</p>
+            <div className="dgm-icons-grid">
+              {list.map(i => (
+                <button key={i.id} type="button" className={"dgm-icon-btn" + (i.id === value ? " is-on" : "")} aria-pressed={i.id === value} aria-label={i.label}
+                  title={i.label} onClick={() => onPick(i.id)} data-testid={"diagram-icon-" + i.id}>
+                  <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><IconGlyph id={i.id} x={0} y={0} size={64} /></svg>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })}
+      {!found.length && <p className="stt-hint" role="status">لا أيقونة بهذا الاسم. جرّب كلمة أخرى، مثل: موظف، منتج، حاسوب.</p>}
+    </div>
   );
 }
 
@@ -317,7 +355,7 @@ function ScriptPanel({ kind, doc, onApply, onClose }: { kind: ScriptKind; doc: D
           )}
         </div>
       )}
-      <p className="stt-hint">يُرسم المخطط وأنت تكتب. ما حرّكته بيدك يبقى في مكانه. الأمثلة: «class A»، «A --&gt; B : نص»، «A &lt;|-- B»، «actor X»، «(حالة)»، «[*] --&gt; S»، «:نشاط;».</p>
+      <p className="stt-hint">يُرسم المخطط وأنت تكتب. ما حرّكته بيدك يبقى في مكانه، والأيقونات لا تُكتب في النص وتبقى على الورقة كما هي. الأمثلة: «class A»، «A --&gt; B : نص»، «A &lt;|-- B»، «actor X»، «(حالة)»، «[*] --&gt; S»، «:نشاط;».</p>
     </section>
   );
 }
@@ -507,7 +545,8 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
     const same = editKey.current === key;
     if (!same) scriptBase.current = store.hist[r.kind]?.present;
     editKey.current = key;
-    const next = keepPositions(r.doc, scriptBase.current);
+    // DG10: the icons are not in the text: they stay on the sheet as they were
+    const next = keepIcons(keepPositions(r.doc, scriptBase.current), scriptBase.current);
     setStore(s => {
       const h = s.hist[r.kind] ?? startHistory(emptyDoc(r.kind));
       return { kind: r.kind, hist: { ...s.hist, [r.kind]: same ? preview(h, next) : commit(h, next) } };
@@ -765,6 +804,34 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
                 const id = prefix + "f-" + f.key;
                 const value = selNode.text[f.key] ?? "";
                 const onChange = (v: string) => change(setText(doc, selNode.id, f.key, v), "text:" + selNode.id + ":" + f.key);
+                // DG10: an icon is chosen from the library; a name still the old icon's own (or empty) follows the new one
+                if (f.choose === "icon") return (
+                  <div key={f.key} className="dgm-field">
+                    <span>{f.label}: {iconOf(value)?.label ?? "—"}</span>
+                    <IconPicker key={selNode.id} value={value} onPick={pick => {
+                      const name = (selNode.text.name ?? "").trim();
+                      let next = setText(doc, selNode.id, f.key, pick);
+                      if (!name || name === iconOf(value)?.label) next = setText(next, selNode.id, "name", iconOf(pick)!.label);
+                      editKey.current = "";
+                      change(next);
+                    }} />
+                  </div>
+                );
+                // DG10: a free text's size, chosen from four
+                if (f.choose === "size") return (
+                  <div key={f.key} className="dgm-field">
+                    <span>{f.label}</span>
+                    <div className="dgm-sizes" role="radiogroup" aria-label={f.label} data-testid="diagram-text-size">
+                      {(Object.keys(TEXT_SIZES) as TextSize[]).map(z => (
+                        <button key={z} type="button" role="radio" aria-checked={(value || "m") === z} className={"dgm-arrow-btn" + ((value || "m") === z ? " is-on" : "")}
+                          onClick={() => { editKey.current = ""; change(setText(doc, selNode.id, f.key, z)); }} data-testid={"diagram-text-size-" + z}>
+                          <span style={{ fontSize: Math.min(22, TEXT_SIZES[z].px) + "px", fontWeight: TEXT_SIZES[z].bold ? 700 : 400 }}>أ</span>
+                          <span>{TEXT_SIZES[z].label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
                 return (
                   <label key={f.key} className="dgm-field" htmlFor={id}>
                     <span>{f.label}</span>
@@ -778,10 +845,11 @@ export default function DiagramEditorTool({ draftKey, labDraftKey, incomingLab, 
               })}
               {selSpec.form !== "start" && selSpec.form !== "end" && selSpec.form !== "bar" && selSpec.form !== "frame" && (
                 <fieldset className="dgm-colors">
-                  <legend>اللون</legend>
+                  <legend>{selSpec.form === "text" ? "لون النص" : "اللون"}</legend>
                   {DIAGRAM_COLOR_IDS.map(c => (
-                    <button key={c} type="button" className={"dgm-swatch" + (selNode.color === c ? " is-on" : "")} style={{ background: DIAGRAM_COLORS[c].fill }}
-                      aria-label={DIAGRAM_COLORS[c].label} aria-pressed={selNode.color === c} onClick={() => change(setColor(doc, selNode.id, c))} />
+                    <button key={c} type="button" className={"dgm-swatch" + (selNode.color === c ? " is-on" : "")}
+                      style={{ background: selSpec.form === "text" ? TEXT_INK[c] : DIAGRAM_COLORS[c].fill }}
+                      aria-label={selSpec.form === "text" && c === "none" ? "أسود" : DIAGRAM_COLORS[c].label} aria-pressed={selNode.color === c} onClick={() => change(setColor(doc, selNode.id, c))} />
                   ))}
                 </fieldset>
               )}

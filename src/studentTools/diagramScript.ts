@@ -710,3 +710,26 @@ export function keepPositions(next: DiagramDoc, old: DiagramDoc | undefined): Di
     return { ...n, x: Math.min(o.x, DIAGRAM_LIMITS.canvasW - n.w), y: next.kind === "sequence" ? n.y : Math.min(o.y, DIAGRAM_LIMITS.canvasH - n.h) };
   }), edges: !ortho.size ? next.edges : next.edges.map(e => (e.route !== "ortho" && ortho.has(ekey(next, e)) ? { ...e, route: "ortho" as const } : e)) };
 }
+
+/** DG10 — the icons and the free texts are not written in the script: when a script is drawn, the old diagram's icons and texts stay on
+ *  the sheet as they were, with their arrows to one another and to the components of the same names the new diagram still has. */
+export function keepIcons(next: DiagramDoc, old: DiagramDoc | undefined): DiagramDoc {
+  const icons = old && old.kind === next.kind ? old.nodes.filter(n => { const f = nodeSpec(old.kind, n.type)?.form; return f === "icon" || f === "text"; }) : [];
+  if (!icons.length) return next;
+  const num = (id: string) => Number(id.slice(1)) || 0;
+  let nid = Math.max(0, ...next.nodes.map(n => num(n.id))), eid = Math.max(0, ...next.edges.map(e => num(e.id)));
+  const room = Math.max(0, DIAGRAM_LIMITS.nodes - next.nodes.length);
+  const moved = new Map<string, string>();
+  const kept = icons.slice(0, room).map(n => { const id = "n" + ++nid; moved.set(n.id, id); return { ...n, id, text: { ...n.text } }; });
+  const key = (n: DNode) => n.type + "|" + (n.text.name ?? "").trim().toLowerCase();
+  const named = new Map<string, string>();
+  for (const n of next.nodes) if ((n.text.name ?? "").trim() && !named.has(key(n))) named.set(key(n), n.id);
+  const now = (id: string) => moved.get(id) ?? (() => { const o = old!.nodes.find(n => n.id === id); return o ? named.get(key(o)) : undefined; })();
+  const edges: DEdge[] = [];
+  for (const e of old!.edges) {
+    if (!moved.has(e.from) && !moved.has(e.to)) continue;
+    const from = now(e.from), to = now(e.to);
+    if (from && to && next.edges.length + edges.length < DIAGRAM_LIMITS.edges) edges.push({ ...e, id: "e" + ++eid, from, to });
+  }
+  return { ...next, nodes: [...next.nodes, ...kept], edges: [...next.edges, ...edges] };
+}
