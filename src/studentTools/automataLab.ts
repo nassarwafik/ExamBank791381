@@ -59,6 +59,9 @@ export type LabDraft = {
   leftEnd: boolean;
   /** AUTO-A6b — where the learner placed states by mouse: grid cells [column, row] (the others are placed automatically). */
   layout?: Record<string, [number, number]>;
+  /** AUTO-A16c — arrows bent by hand on the drawing (arrow key «from to» → the bend; a loop's angle). The drawing's only: never part of
+   *  the machine, never sent with an exam answer. */
+  bends?: Record<string, number>;
 };
 
 export const cellKey = (state: string, symbol: string): string => state + "|" + symbol;
@@ -95,8 +98,9 @@ export function removeState(d: LabDraft, q: string): LabDraft {
   delete labels[q];
   const layout = d.layout ? { ...d.layout } : undefined;
   if (layout) delete layout[q];
+  const bends = d.bends ? Object.fromEntries(Object.entries(d.bends).filter(([k]) => !k.split(" ").includes(q))) : undefined;
   return {
-    ...d, states, start: d.start === q ? states[0] : d.start, accept: d.accept.filter(s => s !== q), labels, cells, ...(layout ? { layout } : {}),
+    ...d, states, start: d.start === q ? states[0] : d.start, accept: d.accept.filter(s => s !== q), labels, cells, ...(layout ? { layout } : {}), ...(bends ? { bends } : {}),
     pda: d.pda.filter(r => r.from !== q && r.to !== q), tm: d.tm.filter(r => r.from !== q && r.to !== q),
   };
 }
@@ -552,9 +556,10 @@ export function toggleArrowSymbol(d: LabDraft, from: string, to: string, symbol:
 
 /** The whole arrow from → to removed: every symbol of it (finite automata), every row of it (push-down automaton, Turing machine). */
 export function removeArrow(d: LabDraft, from: string, to: string): LabDraft {
-  if (d.kind === "PDA") return d.pda.some(r => r.from === from && r.to === to) ? { ...d, pda: d.pda.filter(r => !(r.from === from && r.to === to)) } : d;
-  if (d.kind === "TM") return d.tm.some(r => r.from === from && r.to === to) ? { ...d, tm: d.tm.filter(r => !(r.from === from && r.to === to)) } : d;
-  return arrowSymbols(d, from, to).reduce((x, s) => toggleArrowSymbol(x, from, to, s), d);
+  const gone = d.kind === "PDA" ? (d.pda.some(r => r.from === from && r.to === to) ? { ...d, pda: d.pda.filter(r => !(r.from === from && r.to === to)) } : d)
+    : d.kind === "TM" ? (d.tm.some(r => r.from === from && r.to === to) ? { ...d, tm: d.tm.filter(r => !(r.from === from && r.to === to)) } : d)
+    : arrowSymbols(d, from, to).reduce((x, s) => toggleArrowSymbol(x, from, to, s), d);
+  return gone === d ? d : setBend(gone, from, to, undefined);          // A16c: its hand-made bend goes with it
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -604,4 +609,63 @@ export function swapStates(d: LabDraft, layoutNow: Record<string, Cell>, a: stri
   const pa = layoutNow[a], pb = layoutNow[b];
   if (!pa || !pb || a === b) return d;
   return { ...d, layout: { ...layoutNow, [a]: [pb[0], pb[1]], [b]: [pa[0], pa[1]] } };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUTO-A16c — an arrow bent by hand, and «تراجع» / «إعادة» (pure)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** The widest bend, one step of the non-dragging buttons, how near the straight line a dragged arrow snaps straight, a loop's step. */
+export const BEND_MAX = 240;
+export const BEND_STEP = 20;
+export const BEND_SNAP = 8;
+export const LOOP_STEP = Math.PI / 4;
+const bendKey = (from: string, to: string) => from + " " + to;        // the drawing's arrow key (automaton.ts edgeKey)
+const turn = (a: number) => Math.round(Math.atan2(Math.sin(a), Math.cos(a)) * 100) / 100;   // an angle in (−π, π], two decimals
+
+/**
+ * The bend a pointer asks for. An arrow between two states: how far the point is from the middle of the straight line, along the
+ * line's left-hand normal (whole units, at most BEND_MAX either way; close to the line: 0, a straight arrow). A loop: the angle of the
+ * point around its state.
+ */
+export function bendAt(point: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }): number {
+  const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+  if (!len) return turn(Math.atan2(point.y - a.y, point.x - a.x));
+  const v = ((point.x - (a.x + b.x) / 2) * -dy + (point.y - (a.y + b.y) / 2) * dx) / len;
+  return Math.abs(v) < BEND_SNAP ? 0 : Math.round(Math.max(-BEND_MAX, Math.min(BEND_MAX, v)));
+}
+
+/** One step of the non-dragging buttons from a bend (`dir` 1 or −1): an arrow by BEND_STEP within the bounds, a loop by an eighth of a turn. */
+export function bendStep(now: number, loop: boolean, dir: 1 | -1): number {
+  return loop ? turn(now + dir * LOOP_STEP) : Math.round(Math.max(-BEND_MAX, Math.min(BEND_MAX, now + dir * BEND_STEP)));
+}
+
+/** An arrow's hand-made bend set, or (undefined) given back to the automatic drawing. */
+export function setBend(d: LabDraft, from: string, to: string, bend: number | undefined): LabDraft {
+  const k = bendKey(from, to), had = d.bends?.[k];
+  if (bend === undefined ? had === undefined : had === bend || !Number.isFinite(bend)) return d;
+  const bends = { ...d.bends };
+  if (bend === undefined) delete bends[k]; else bends[k] = bend;
+  const { bends: _old, ...rest } = d;
+  return Object.keys(bends).length ? { ...rest, bends } : rest;
+}
+
+/** «تراجع» / «إعادة»: the drafts before this one and the ones undone, the draft last seen, and what the next change is —
+ *  a jump the learner asked for, or (held: one drag) more of the same step. */
+export type LabHistory = { past: LabDraft[]; future: LabDraft[]; last: LabDraft; jump: "undo" | "redo" | null; held: boolean };
+export const HISTORY_MAX = 100;
+export const startHistory = (d: LabDraft): LabHistory => ({ past: [], future: [], last: d, jump: null, held: false });
+
+/**
+ * The history after the draft changed to `now` (wherever the change was made: the drawing, the table, the states list):
+ *   • a jump asked for — «تراجع» drops the newest past draft and keeps the one left for «إعادة»; «إعادة» the reverse;
+ *   • `hold` (a drag in progress) after the drag's first change: the same step, nothing added;
+ *   • anything else is a new step: the draft before it is kept (the oldest dropped past HISTORY_MAX) and «إعادة» is emptied.
+ */
+export function stepHistory(h: LabHistory, now: LabDraft, hold: boolean): LabHistory {
+  if (now === h.last) return h;
+  if (h.jump === "undo") return { past: h.past.slice(0, -1), future: [...h.future, h.last], last: now, jump: null, held: false };
+  if (h.jump === "redo") return { past: [...h.past, h.last], future: h.future.slice(0, -1), last: now, jump: null, held: false };
+  if (hold && h.held) return { ...h, last: now };
+  return { past: [...h.past, h.last].slice(-HISTORY_MAX), future: [], last: now, jump: null, held: hold };
 }

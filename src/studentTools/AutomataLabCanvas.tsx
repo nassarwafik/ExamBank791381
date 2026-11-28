@@ -3,7 +3,7 @@ import { edgeKey, type Machine, type PdaOp, type TmMove } from "../learning/acti
 import { Diagram } from "../learning/activities/automatonDiagram";
 import type { Scene } from "../learning/activities/automatonScene";
 import {
-  addArrow, addStateAt, arrowSymbols, checkDraft, EPS, FINE_STEP, GRID_MAX, handlesOf, MAX_STATES, onHandle, placeAt, placeState, removeArrow, removeState,
+  addArrow, addStateAt, arrowSymbols, bendAt, bendStep, checkDraft, setBend, startHistory, stepHistory, EPS, FINE_STEP, GRID_MAX, handlesOf, MAX_STATES, onHandle, placeAt, placeState, removeArrow, removeState,
   snapPlace, stateAt, stateNear, swapStates, MOVE_TEXT, OP_TEXT, toggleArrowSymbol, type LabDraft, type PdaRow, type TmRow,
 } from "./automataLab";
 import "./automataLabCanvas.css";
@@ -20,6 +20,10 @@ import "./automataLabCanvas.css";
  *     state's arrow for the symbol; a new arrow's first symbol closes the window); a push-down automaton's or a Turing machine's transitions are written there, and a transition the
  *     machine cannot take is refused in the window (the drawing never disappears under the learner);
  *   • click an arrow: the same window — its symbols or transitions, and «حذف السهم» (the Delete key too);
+ *   • AUTO-A16c (§26): DRAG an arrow to bend it (close to the straight line it snaps straight; a loop turns around its state). The
+ *     bend is the drawing's only (`draft.bends`): never part of the machine, never sent with an exam answer. The window has the
+ *     non-dragging way («اثنِ», «انحناء تلقائي»). «تراجع» / «إعادة» (Ctrl+Z, Ctrl+Y) step through every change of the machine,
+ *     wherever it was made (the drawing, the table, the states list); one drag is one step;
  *   • double-click an empty spot: a new state there; double-click a state: accepting or not;
  *   • the non-dragging way to do everything a drag does (WCAG 2.5.7): the state list with «بداية», «قبول», «حذف», «سهم إلى» (the arrow's
  *     window with no drag), and the arrow buttons (or the keyboard's arrows) that move the chosen state one cell — onto another state,
@@ -38,7 +42,9 @@ type Box = Scene["box"];
  *  was (`from`: a press that does not travel is a click, not a move) and the drawing's frame (`box`), held still until the drop — the
  *  frame follows the states, so letting it move under the pointer would move the state again. An arrow's end is a point of the drawing. */
 type Drag = { kind: "move"; state: string; pointer: number; startDraft: LabDraft; startLayout: Record<string, Cell>; grab: Pt; from: Pt; moved: boolean; box: Box }
-  | { kind: "arrow"; from: string; pointer: number; end: Pt };
+  | { kind: "arrow"; from: string; pointer: number; end: Pt }
+  /** An arrow pressed: released where it was pressed, its window opens; dragged, it bends (the frame held still, as for a move). */
+  | { kind: "bend"; arrow: [string, string]; pointer: number; from: Pt; moved: boolean; box: Box };
 /** How far (screen pixels) a press must travel to be a move. */
 const TRAVEL = 4;
 /** The arrow whose window is open, and where on the editor (its own pixels) the window sits. */
@@ -108,6 +114,10 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
   const [drag, setDrag] = useState<Drag | null>(null);
   const [open, setOpen] = useState<Open | null>(null);
   const [said, setSaid] = useState("");
+  // AUTO-A16c — «تراجع» / «إعادة»: every change of the draft is a step, wherever it was made (React's "adjusting state on a prop change")
+  const [hist, setHist] = useState(() => startHistory(draft));
+  const holding = (drag?.kind === "move" || drag?.kind === "bend") && drag.moved;
+  if (hist.last !== draft) setHist(stepHistory(hist, draft, holding));
   const sel = draft.states.includes(selected) ? selected : draft.start;
   const fa = draft.kind === "DFA" || draft.kind === "NFA";
   // the window of an arrow whose state was removed meanwhile is closed
@@ -172,6 +182,20 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     setSaid("حُذف السهم من " + from + " إلى " + to + ".");
     box.current?.focus();
   };
+  const jump = (way: "undo" | "redo") => {
+    const to = way === "undo" ? hist.past[hist.past.length - 1] : hist.future[hist.future.length - 1];
+    if (!to || hist.jump) return;
+    setHist({ ...hist, jump: way });
+    setOpen(null);
+    edit(to);
+    setSaid(way === "undo" ? "تراجعت خطوة." : "أُعيدت الخطوة.");
+  };
+  const bendBy = (from: string, to: string, dir: 1 | -1) => {
+    const now = scene.edges.find(x => x.e.key === edgeKey(from, to))?.bend;
+    if (now === undefined) return;
+    edit(setBend(draft, from, to, bendStep(now, from === to, dir)));
+    setSaid(from === to ? "أُديرت الحلقة." : "ثُني السهم من " + from + " إلى " + to + ".");
+  };
   const toggleAccept = (q: string) => edit({ ...draft, accept: draft.accept.includes(q) ? draft.accept.filter(s => s !== q) : [...draft.accept, q] });
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
@@ -197,14 +221,27 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     }
     const key = (e.target as Element).closest?.("[data-edge]")?.getAttribute("data-edge");
     const [from, to] = key ? key.split(" ") : [];
-    if (from && to && draft.states.includes(from) && draft.states.includes(to)) { openArrow(from, to); e.preventDefault(); }
-    else setOpen(null);
+    setOpen(null);
+    if (from && to && draft.states.includes(from) && draft.states.includes(to)) {
+      capture();
+      setDrag({ kind: "bend", arrow: [from, to], pointer: e.pointerId, from: { x: e.clientX, y: e.clientY }, moved: false, box: roomy.box });
+      e.preventDefault();
+    }
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag || drag.pointer !== e.pointerId) return;
     const p = toDrawing(e.clientX, e.clientY);
     if (!p) return;
     if (drag.kind === "arrow") { setDrag({ ...drag, end: p }); return; }
+    if (drag.kind === "bend") {
+      if (!drag.moved) {
+        if (Math.hypot(e.clientX - drag.from.x, e.clientY - drag.from.y) < TRAVEL) return;
+        setDrag({ ...drag, moved: true });
+      }
+      const [from, to] = drag.arrow;
+      edit(setBend(draft, from, to, bendAt(p, scene.pos[from], scene.pos[to])));
+      return;
+    }
     if (!drag.moved) {
       if (Math.hypot(e.clientX - drag.from.x, e.clientY - drag.from.y) < TRAVEL) return;
       setDrag({ ...drag, moved: true });
@@ -220,6 +257,12 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     if (!drag || drag.pointer !== e.pointerId) return;
     const p = toDrawing(e.clientX, e.clientY);
     setDrag(null);
+    setHist(h => (h.held ? { ...h, held: false } : h));                // the drag's step is closed
+    if (drag.kind === "bend") {
+      if (!drag.moved) openArrow(drag.arrow[0], drag.arrow[1]);        // a press that did not travel: the arrow's window
+      else setSaid(drag.arrow[0] === drag.arrow[1] ? "أُديرت الحلقة." : "ثُني السهم من " + drag.arrow[0] + " إلى " + drag.arrow[1] + ".");
+      return;
+    }
     if (!p) return;
     if (drag.kind === "move") {
       if (!drag.moved) return;
@@ -254,6 +297,10 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     const step: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     if (step[e.key]) { e.preventDefault(); nudge(...step[e.key], e.shiftKey); }
     else if (e.key === "Escape") { setOpen(null); setDrag(null); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z" || e.key === "y" || e.key === "Y")) {
+      e.preventDefault();
+      jump(e.key === "y" || e.key === "Y" || e.shiftKey ? "redo" : "undo");
+    }
     else if ((e.key === "Delete" || e.key === "Backspace") && arrow) { e.preventDefault(); dropArrow(arrow.from, arrow.to); }
   };
 
@@ -262,6 +309,8 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
   const has = !!arrow && (fa ? on.length > 0 : (draft.kind === "PDA" ? draft.pda : draft.tm).some(r => r.from === arrow.from && r.to === arrow.to));
   const center = scene.pos[sel];
   const over = drag?.kind === "arrow" ? stateAt(drag.end, scene.pos, scene.r) : null;
+  const bent = !!arrow && draft.bends?.[arrowId] !== undefined;
+  const loop = !!arrow && arrow.from === arrow.to;
   const closePop = () => { setOpen(null); box.current?.focus(); };
   return (
     <div className="alab-canvas">
@@ -274,6 +323,8 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
         <button type="button" className="learning-autodesign-btn is-quiet" aria-pressed={draft.accept.includes(sel)} onClick={() => toggleAccept(sel)}>قبول</button>
         <button type="button" className="learning-autodesign-btn is-quiet" disabled={draft.states.length <= 1}
           onClick={() => { edit(removeState(draft, sel)); setSaid("حُذفت الحالة " + sel + " وأسهمها."); }}>حذف</button>
+        <button type="button" className="learning-autodesign-btn is-quiet" disabled={!hist.past.length} onClick={() => jump("undo")}>تراجع</button>
+        <button type="button" className="learning-autodesign-btn is-quiet" disabled={!hist.future.length} onClick={() => jump("redo")}>إعادة</button>
         <label className="stt-label" htmlFor={ids + "-to"}>سهم إلى</label>
         <select id={ids + "-to"} className="learning-autodesign-select" dir="ltr" value="" onChange={e => { if (e.target.value) openArrow(sel, e.target.value); }}>
           <option value="">—</option>
@@ -286,13 +337,13 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
           <button type="button" className="learning-autodesign-btn is-quiet" aria-label="يمينًا" onClick={() => nudge(1, 0)}>→</button>
         </span>
       </div>
-      <p className="stt-hint">اسحب حالة لتنقلها بحرّية (تصطفّ مع ما يجاورها؛ مع Alt بلا اصطفاف). اسحب إحدى النقاط الأربع حول الحالة المختارة إلى حالة أخرى (أو إليها نفسها) لترسم سهمًا. انقر سهمًا لتعدّله أو تحذفه. انقر نقرتين على مكان فارغ لإضافة حالة، وعلى حالة لجعلها حالة قبول.</p>
+      <p className="stt-hint">اسحب حالة لتنقلها بحرّية (تصطفّ مع ما يجاورها؛ مع Alt بلا اصطفاف). اسحب إحدى النقاط الأربع حول الحالة المختارة إلى حالة أخرى (أو إليها نفسها) لترسم سهمًا. انقر سهمًا لتعدّله أو تحذفه، واسحبه لتثنيه. انقر نقرتين على مكان فارغ لإضافة حالة، وعلى حالة لجعلها حالة قبول.</p>
       <div className="alab-canvas-stage">
         <div ref={box} className={"alab-canvas-box" + (drag ? " is-dragging" : "")} tabIndex={0}
           aria-label="محرّر الرسم: الأسهم تنقل الحالة المختارة خانة، ومع Shift خطوة صغيرة" onKeyDown={onKeyDown}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => setDrag(null)} onDoubleClick={onDoubleClick}
           data-testid="alab-canvas">
-          <Diagram machine={machine} scene={drag?.kind === "move" ? { ...scene, box: drag.box } : roomy} step={{ active: [sel], used: arrow ? [arrowId] : [] }} ids={ids + "-draw"} live={false} hit>
+          <Diagram machine={machine} scene={drag?.kind === "move" || drag?.kind === "bend" ? { ...scene, box: drag.box } : roomy} step={{ active: [sel], used: arrow ? [arrowId] : [] }} ids={ids + "-draw"} live={false} hit>
             <g aria-hidden="true">
               {over && <circle className="alab-canvas-target" cx={scene.pos[over].x} cy={scene.pos[over].y} r={scene.r + 6} />}
               {drag?.kind === "arrow" && <line className="alab-canvas-line" x1={scene.pos[drag.from].x} y1={scene.pos[drag.from].y} x2={drag.end.x} y2={drag.end.y} />}
@@ -309,6 +360,11 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
               ? <div className="alab-pop-symbols">{symbols.map(s => <button key={s} type="button" dir="ltr" aria-pressed={on.includes(s)}
                   className={"learning-autodesign-target" + (on.includes(s) ? " is-on" : "")} onClick={() => toggleSymbol(arrow.from, arrow.to, s)}>{s}</button>)}</div>
               : <RowsOfArrow key={arrowId} draft={draft} from={arrow.from} to={arrow.to} edit={edit} say={setSaid} />}
+            {has && <div className="alab-pop-bend" role="group" aria-label={loop ? "مكان الحلقة" : "انحناء السهم"}>
+              <button type="button" className="learning-autodesign-btn is-quiet" aria-label={loop ? "أدِر الحلقة عكس عقارب الساعة" : "اثنِ السهم إلى جهة"} onClick={() => bendBy(arrow.from, arrow.to, -1)}>↶ {loop ? "أدِر" : "اثنِ"}</button>
+              <button type="button" className="learning-autodesign-btn is-quiet" aria-label={loop ? "أدِر الحلقة مع عقارب الساعة" : "اثنِ السهم إلى الجهة الأخرى"} onClick={() => bendBy(arrow.from, arrow.to, 1)}>{loop ? "أدِر" : "اثنِ"} ↷</button>
+              <button type="button" className="learning-autodesign-btn is-quiet" disabled={!bent} onClick={() => { edit(setBend(draft, arrow.from, arrow.to, undefined)); setSaid("عاد السهم إلى انحنائه التلقائي."); }}>تلقائي</button>
+            </div>}
             <div className="alab-pop-actions">
               <button type="button" className="learning-autodesign-btn is-quiet" disabled={!has} onClick={() => dropArrow(arrow.from, arrow.to)}>حذف السهم</button>
               <button type="button" className="learning-autodesign-btn" onClick={closePop}>تم</button>

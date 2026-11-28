@@ -69,13 +69,14 @@ export default function AutomataLabTool({ config, incoming }: { config: Automata
   const stamp = useMemo(() => (machine ? JSON.stringify(machine) : ""), [machine]);
   // AUTO-A6b — the layout: the course's automatic one, with the cells the learner chose by mouse; the editor and the player share it
   const layout = useMemo(() => (machine ? labLayout(machine, draft.layout) : null), [machine, draft.layout]);
-  const scene = useMemo(() => (machine && layout ? buildScene(machine, layout) : null), [machine, layout]);
+  const scene = useMemo(() => (machine && layout ? buildScene(machine, layout, draft.bends) : null), [machine, layout, draft.bends]);
   const fine = useMemo(finePointer, []);
   const batchNow = batch && batch.stamp === stamp ? batch.value : null;
   const listingNow = listing && listing.stamp === stamp ? listing.value : null;
   const isFa = draft.kind === "DFA" || draft.kind === "NFA";
 
-  const edit = (next: LabDraft) => setDraft(next);
+  // (A16c: «تراجع» on the drawing may bring back another alphabet — its text field follows)
+  const edit = (next: LabDraft) => { setDraft(next); if (next.alphabet.join() !== draft.alphabet.join()) setAlphabetText(next.alphabet.join(", ")); };
   const chooseKind = (kind: AutomatonKind) => edit({ ...draft, kind });
   const applyAlphabet = () => {
     const r = parseAlphabet(alphabetText);

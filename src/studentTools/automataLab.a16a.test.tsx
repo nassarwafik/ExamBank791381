@@ -77,7 +77,8 @@ describe("A16a — the editor", () => {
   it("a pressed arrow opens its window; «حذف السهم» removes every symbol of it; the Delete key does the same", () => {
     const canvas = open();
     const edge = (k: string) => canvas.querySelector("g[data-edge='" + k + "']") as Element;
-    const press = (k: string) => fireEvent.pointerDown(edge(k), { button: 0, clientX: -900, clientY: -900 });   // the arrow itself, no state under the pointer
+    // the arrow itself, no state under the pointer. AUTO-A16c — a press released where it was made (a drag bends the arrow instead)
+    const press = (k: string) => { fireEvent.pointerDown(edge(k), { button: 0, clientX: -900, clientY: -900 }); fireEvent.pointerUp(edge(k), { button: 0, clientX: -900, clientY: -900 }); };
     press("q1 q0");
     const win = screen.getByRole("group", { name: "رمز السهم من q1 إلى q0" });
     expect(edge("q1 q0").getAttribute("class")).toMatch(/is-used/);                  // the chosen arrow is lit

@@ -17,6 +17,8 @@
   border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface); box-shadow: var(--eb-sh-md); }
 .alab-pop-title { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
 .alab-pop-symbols { display: flex; flex-wrap: wrap; gap: var(--eb-space-1); }
+.alab-pop-bend { display: flex; flex-wrap: wrap; gap: var(--eb-space-1); }
+.alab-pop-bend .learning-autodesign-btn.is-quiet { margin-inline-start: 0; }
 .alab-pop-actions { display: flex; justify-content: space-between; gap: var(--eb-space-2); }
 .alab-pop-actions .learning-autodesign-btn.is-quiet { margin-inline-start: 0; }
 .alab-pop-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
