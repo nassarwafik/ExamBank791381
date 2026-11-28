@@ -210,6 +210,25 @@ describe("A8 — the student's renderer", () => {
     expect(circleY()).toBe(y);                                                    // restored where it was left
     fireEvent.change(cell(screen.getByTestId("automaton-design-response"), "q0", "1"), { target: { value: "q1" } });
   });
+  it("AUTO-A16b — a state moved between the cells: the answer saves the same machine with a fractional place, and comes back there", () => {
+    vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === "(pointer: fine)", media: q, addEventListener() {}, removeEventListener() {} })));
+    const sent: Answer[] = [];
+    render(<Student q={studentQ()} spy={a => sent.push(a)} />);
+    const r = screen.getByTestId("automaton-design-response");
+    fireEvent.click(within(r).getByRole("button", { name: /إضافة حالة/ }));
+    const before = sent[0] as Extract<Answer, { kind: "automatonDesign" }>;
+    fireEvent.change(within(r).getByLabelText("الحالة"), { target: { value: "q1" } });
+    for (let k = 0; k < 3; k++) fireEvent.keyDown(screen.getByTestId("alab-canvas"), { key: "ArrowDown", shiftKey: true });   // three fine steps
+    const moved = sent.at(-1) as Extract<Answer, { kind: "automatonDesign" }>;
+    expect(moved.machine).toEqual(before.machine);                              // the same machine: the same grade
+    const [col, row] = moved.layout!.q1;
+    expect([Number.isInteger(col), Math.round((row % 1) * 100) / 100]).toEqual([true, 0.3]);   // its column kept, 0.3 of a cell lower
+    const circleY = () => Number([...screen.getByTestId("alab-canvas").querySelectorAll("g.learning-automaton-state")].find(g => g.querySelector("text")?.textContent === "q1")!.querySelector("circle")!.getAttribute("cy"));
+    const y = circleY();
+    cleanup();
+    render(<Student q={studentQ()} initial={moved} />);
+    expect(circleY()).toBe(y);                                                    // restored between the cells
+  });
   it("a config that does not read shows a note (never a broken builder)", () => {
     render(<AutomatonDesignResponse q={{ text: "س", marks: 1, automatonDesign: { v: 1, machine: "TM" } } as never} id="a1" labelPrefix="" answer={undefined} onAnswer={() => {}} />);
     expect(screen.getByTestId("automaton-design-unavailable")).toBeTruthy();

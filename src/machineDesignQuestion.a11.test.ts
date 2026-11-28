@@ -79,7 +79,8 @@ describe("A11a — the private reference", () => {
   it("AUTO-A12 — the reference's layout: one that reads is a valid part of the key; one that does not is the teacher's to fix", () => {
     expect(validateMachineDesignQuestion({ ...q(TM_CFG, PLUS2), answer: { reference: PLUS2, layout: { q0: [0, 0], q5: [4, 2] } } })).toEqual([]);
     expect(machineDesignAuthority(TM_CFG, { reference: PLUS2, layout: { q0: [0, 0], q5: [4, 2] } })?.key.layout).toEqual({ q0: [0, 0], q5: [4, 2] });
-    for (const layout of [{ q0: [0, 21] }, { nowhere: [1, 1] }, { q0: [1.5, 0] }, "x"]) {
+    expect(machineDesignAuthority(TM_CFG, { reference: PLUS2, layout: { q0: [0.5, 0], q5: [4.25, 2] } })?.key.layout).toEqual({ q0: [0.5, 0], q5: [4.25, 2] });   // A16b: between the cells
+    for (const layout of [{ q0: [0, 21] }, { nowhere: [1, 1] }, { q0: [20.5, 0] }, { q0: [NaN, 0] }, "x"]) {
       expect(codes(validateMachineDesignQuestion({ ...q(TM_CFG, PLUS2), answer: { reference: PLUS2, layout } })), JSON.stringify(layout)).toEqual(["MACHINE_KEY_LAYOUT"]);
     }
   });

@@ -92,8 +92,15 @@ describe("AUTO-A9 — the drawing's layout (presentation only)", () => {
     expect(readAutomatonLayout({ q0: [20, 20] }, ["q0"])).toEqual({ q0: [20, 20] });
     expect(AUTOMATON_LAYOUT_GRID_MAX).toBe(GRID_MAX);                              // parity with the drawing editor's grid
   });
+  // AUTO-A16b — the drawing editor moves a state freely: a place between the grid's cells reads (it did not in A9, where [1.5, 0] was dropped)
+  it("A16b — a place between the cells reads, kept to two decimals; whole cells read exactly as before; the bounds are the same", () => {
+    expect(normalizeAutomatonDesignAnswer(A(REF, { q0: [1.5, 0], q1: [3.25, 2.75] }))).toEqual({ ok: true, answer: A(REF, { q0: [1.5, 0], q1: [3.25, 2.75] }) });
+    expect(readAutomatonLayout({ q0: [0.123456, 19.999] }, ["q0"])).toEqual({ q0: [0.12, 20] });
+    expect(readAutomatonLayout({ q0: [0, 20] }, ["q0"])).toEqual({ q0: [0, 20] });
+    expect([readAutomatonLayout({ q0: [20.004, 0] }, ["q0"]), readAutomatonLayout({ q0: [-0.004, 0] }, ["q0"])]).toEqual([null, null]);   // out of the grid, however little
+  });
   it("a layout that does not read is dropped — the machine (the answer) is kept", () => {
-    for (const bad of [{ q9: [0, 0] }, { q0: [21, 0] }, { q0: [-1, 0] }, { q0: [1.5, 0] }, { q0: [0] }, { q0: "0,0" }, [[0, 0]], { q0: [0, 0], q1: [1, 1], q2: [2, 2] }, { __proto__: [0, 0] }])
+    for (const bad of [{ q9: [0, 0] }, { q0: [21, 0] }, { q0: [-1, 0] }, { q0: [20.01, 0] }, { q0: [-0.01, 0] }, { q0: [NaN, 0] }, { q0: [Infinity, 0] }, { q0: ["1", 0] }, { q0: [null, 0] }, { q0: [0, 0, 0] }, { q0: [0] }, { q0: "0,0" }, [[0, 0]], { q0: [0, 0], q1: [1, 1], q2: [2, 2] }, { __proto__: [0, 0] }])
       expect(normalizeAutomatonDesignAnswer(A(REF, bad)), JSON.stringify(bad)).toEqual({ ok: true, answer: A(REF) });
     expect(normalizeAutomatonDesignAnswer(A(REF, {}))).toEqual({ ok: true, answer: A(REF) });
     expect(normalizeAutomatonDesignAnswer({ ...A(REF, { q0: [0, 0] }), score: 5 })).toEqual({ ok: false, code: "AUTOMATON_ANSWER_INVALID" });   // other fields still refused

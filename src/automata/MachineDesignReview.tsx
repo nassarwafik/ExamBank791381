@@ -37,7 +37,7 @@ function drawable(cfg: MachineDesignConfigV1, raw: unknown): Machine | null {
 const layoutOf = (raw: unknown): Record<string, [number, number]> | undefined => {
   if (!isObj(raw)) return undefined;
   const out: Record<string, [number, number]> = {};
-  for (const [q, c] of Object.entries(raw)) if (Array.isArray(c) && c.length === 2 && c.every(v => Number.isInteger(v) && v >= 0 && v <= 20)) out[q] = [c[0], c[1]];
+  for (const [q, c] of Object.entries(raw)) if (Array.isArray(c) && c.length === 2 && c.every(v => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 20)) out[q] = [c[0], c[1]];
   return out;
 };
 function Drawing({ title, machine, layout, ids, testId }: { title: string; machine: Machine | null; layout?: Record<string, [number, number]>; ids: string; testId: string }) {

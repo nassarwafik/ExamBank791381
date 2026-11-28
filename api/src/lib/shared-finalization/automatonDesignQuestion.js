@@ -34,9 +34,9 @@ function readAutomatonLayout(raw, states) {
         const c = raw[q];
         if (FORBIDDEN.has(q) || !states.includes(q) || !Array.isArray(c) || c.length !== 2)
             return null;
-        if (!c.every(v => Number.isInteger(v) && v >= 0 && v <= exports.AUTOMATON_LAYOUT_GRID_MAX))
+        if (!c.every(v => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= exports.AUTOMATON_LAYOUT_GRID_MAX))
             return null;
-        out[q] = [c[0], c[1]];
+        out[q] = [Math.round(c[0] * 100) / 100, Math.round(c[1] * 100) / 100];
     }
     return out;
 }
