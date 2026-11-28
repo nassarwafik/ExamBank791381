@@ -3,8 +3,8 @@ import { edgeKey, type Machine, type PdaOp, type TmMove } from "../learning/acti
 import { Diagram } from "../learning/activities/automatonDiagram";
 import type { Scene } from "../learning/activities/automatonScene";
 import {
-  addArrow, addStateAt, arrowSymbols, cellAt, checkDraft, EPS, GRID_MAX, handlesOf, MAX_STATES, moveStateTo, onHandle, removeArrow, removeState, stateAt,
-  MOVE_TEXT, OP_TEXT, toggleArrowSymbol, type LabDraft, type PdaRow, type TmRow,
+  addArrow, addStateAt, arrowSymbols, checkDraft, EPS, FINE_STEP, GRID_MAX, handlesOf, MAX_STATES, onHandle, placeAt, placeState, removeArrow, removeState,
+  snapPlace, stateAt, stateNear, swapStates, MOVE_TEXT, OP_TEXT, toggleArrowSymbol, type LabDraft, type PdaRow, type TmRow,
 } from "./automataLab";
 import "./automataLabCanvas.css";
 
@@ -12,7 +12,9 @@ import "./automataLabCanvas.css";
  * AUTO-A6b (docs/enterprise-automata-lab-a4.md §9) — «ارسم بالفأرة»: the machine drawn as the book draws it, and edited on the drawing,
  * on a desktop (a fine pointer; the transition table stays, and is the phone's way).
  * AUTO-A16a (§24) — the drawing works as the diagram editor's sheet does, with no mode to switch:
- *   • drag a state to move it — it snaps to the drawing's grid; dropped on another state, the two swap places;
+ *   • drag a state to move it — AUTO-A16b (§25): FREELY, to any place between the grid's cells (kept to two decimals in `layout`). It
+ *     lines up with a nearby state's column or row, or a whole cell's (Alt: no snapping); it never lands on another state (a place that
+ *     would crowd one is not taken); dropped INSIDE another state, the two swap places. The drawing's frame is held still during a drag;
  *   • the chosen state shows four link handles: drag one (or Shift + drag the state) to another state, or back onto itself — an arrow.
  *     Its window opens on the drawing: a finite automaton's symbols are put on and taken off there (a deterministic one replaces that
  *     state's arrow for the symbol; a new arrow's first symbol closes the window); a push-down automaton's or a Turing machine's transitions are written there, and a transition the
@@ -20,7 +22,8 @@ import "./automataLabCanvas.css";
  *   • click an arrow: the same window — its symbols or transitions, and «حذف السهم» (the Delete key too);
  *   • double-click an empty spot: a new state there; double-click a state: accepting or not;
  *   • the non-dragging way to do everything a drag does (WCAG 2.5.7): the state list with «بداية», «قبول», «حذف», «سهم إلى» (the arrow's
- *     window with no drag), and the arrow buttons (or the keyboard's arrows) that move the chosen state one cell.
+ *     window with no drag), and the arrow buttons (or the keyboard's arrows) that move the chosen state one cell — onto another state,
+ *     the two swap; Shift + an arrow key is a fine step.
  * Every edit goes through the same pure functions as the table (automataLab.ts); the layout is kept in the draft, so the step-by-step
  * player below draws the machine where the learner put it.
  * AUTO-A7 — the book's «صمّم الآلة» activity uses this editor too (with its exercise's state limit, `maxStates`); its styles are its own
@@ -29,9 +32,15 @@ import "./automataLabCanvas.css";
 
 type Cell = [number, number];
 type Pt = { x: number; y: number };
+type Box = Scene["box"];
 /** A move keeps the draft and the layout as they were when it began: the drop (a swap above all) is computed from them, not from the
- *  free cells the state crossed on its way. An arrow's end is a point of the drawing. */
-type Drag = { kind: "move"; state: string; pointer: number; startDraft: LabDraft; startLayout: Record<string, Cell> } | { kind: "arrow"; from: string; pointer: number; end: Pt };
+ *  places the state crossed on its way. It also keeps where in the circle the state was grabbed (`grab`), where on the screen the press
+ *  was (`from`: a press that does not travel is a click, not a move) and the drawing's frame (`box`), held still until the drop — the
+ *  frame follows the states, so letting it move under the pointer would move the state again. An arrow's end is a point of the drawing. */
+type Drag = { kind: "move"; state: string; pointer: number; startDraft: LabDraft; startLayout: Record<string, Cell>; grab: Pt; from: Pt; moved: boolean; box: Box }
+  | { kind: "arrow"; from: string; pointer: number; end: Pt };
+/** How far (screen pixels) a press must travel to be a move. */
+const TRAVEL = 4;
 /** The arrow whose window is open, and where on the editor (its own pixels) the window sits. */
 type Open = { from: string; to: string; at: Pt; /** A finite automaton's arrow that had no symbol when its window opened: the first symbol put on it closes the window. */ fresh: boolean };
 
@@ -129,15 +138,16 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     const q = new DOMPoint(p.x, p.y).matrixTransform(m);
     return { x: q.x - r.left, y: q.y - r.top };
   };
-  const taken = (c: Cell, but?: string) => Object.entries(layout).find(([s, l]) => s !== but && l[0] === c[0] && l[1] === c[1])?.[0];
+  const near = (at: Cell, but?: string) => stateNear(layout, at, scene.cell, scene.r, but);
 
-  const move = (q: string, c: Cell) => { edit(moveStateTo(draft, layout, q, c)); };
-  const nudge = (dc: number, dr: number) => {
-    const [c, r] = layout[sel];
-    const to: Cell = [Math.max(0, Math.min(GRID_MAX, c + dc)), Math.max(0, Math.min(GRID_MAX, r + dr))];
+  /** One step of the chosen state: a whole cell (onto another state: they swap), or — `fine` — a small step that another state stops. */
+  const nudge = (dc: number, dr: number, fine = false) => {
+    const [c, r] = layout[sel], k = fine ? FINE_STEP : 1;
+    const to: Cell = [Math.max(0, Math.min(GRID_MAX, c + dc * k)), Math.max(0, Math.min(GRID_MAX, r + dr * k))];
     if (to[0] === c && to[1] === r) return;
-    const other = taken(to, sel);
-    move(sel, to);
+    const other = near(to, sel);
+    if (other && fine) { setSaid("لا مكان هناك: " + other + " قريبة."); return; }
+    edit(other ? swapStates(draft, layout, sel, other) : placeState(draft, layout, sel, to));
     setSaid(other ? "تبادلت " + sel + " و" + other + " مكانيهما." : "نُقلت " + sel + ".");
   };
   /** Opens the window of the arrow from → to: at the arrow's label when it is drawn, else between the two states (above a state, for a loop). */
@@ -179,7 +189,9 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     const s = p && stateAt(p, scene.pos, scene.r);
     if (p && s) {
       setSelected(s); setOpen(null); capture();
-      setDrag(e.shiftKey ? { kind: "arrow", from: s, pointer: e.pointerId, end: p } : { kind: "move", state: s, pointer: e.pointerId, startDraft: draft, startLayout: layout });
+      setDrag(e.shiftKey ? { kind: "arrow", from: s, pointer: e.pointerId, end: p }
+        : { kind: "move", state: s, pointer: e.pointerId, startDraft: draft, startLayout: layout, grab: { x: p.x - scene.pos[s].x, y: p.y - scene.pos[s].y },
+            from: { x: e.clientX, y: e.clientY }, moved: false, box: roomy.box });
       e.preventDefault();
       return;
     }
@@ -193,8 +205,16 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     const p = toDrawing(e.clientX, e.clientY);
     if (!p) return;
     if (drag.kind === "arrow") { setDrag({ ...drag, end: p }); return; }
-    const c = cellAt(p, scene.cell);
-    if (!taken(c, drag.state)) move(drag.state, c);                  // live, onto free cells; an occupied one swaps on the drop
+    if (!drag.moved) {
+      if (Math.hypot(e.clientX - drag.from.x, e.clientY - drag.from.y) < TRAVEL) return;
+      setDrag({ ...drag, moved: true });
+    }
+    // the state's centre follows the pointer from where it was grabbed, inside the frame held for this drag
+    const b = drag.box, R = scene.r;
+    const centre = { x: Math.max(b.x1 + R, Math.min(b.x2 - R, p.x - drag.grab.x)), y: Math.max(b.y1 + R, Math.min(b.y2 - R, p.y - drag.grab.y)) };
+    const free = placeAt(centre, scene.cell);
+    const at = e.altKey ? free : snapPlace(free, layout, scene.cell, drag.state);
+    if (!near(at, drag.state)) edit(placeState(draft, layout, drag.state, at));   // live, onto free places; inside another state: a swap on the drop
   };
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag || drag.pointer !== e.pointerId) return;
@@ -202,9 +222,10 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     setDrag(null);
     if (!p) return;
     if (drag.kind === "move") {
-      const c = cellAt(p, scene.cell);
-      const other = Object.keys(drag.startLayout).find(s => s !== drag.state && drag.startLayout[s][0] === c[0] && drag.startLayout[s][1] === c[1]);
-      if (other) { edit(moveStateTo(drag.startDraft, drag.startLayout, drag.state, c)); setSaid("تبادلت " + drag.state + " و" + other + " مكانيهما."); }
+      if (!drag.moved) return;
+      const other = Object.keys(scene.pos).find(s => s !== drag.state && Math.hypot(p.x - scene.pos[s].x, p.y - scene.pos[s].y) <= scene.r);
+      if (other && drag.startLayout[other]) { edit(swapStates(drag.startDraft, drag.startLayout, drag.state, other)); setSaid("تبادلت " + drag.state + " و" + other + " مكانيهما."); }
+      else setSaid("نُقلت " + drag.state + ".");
       return;
     }
     // a handle released where it was pressed is not an arrow; released inside its own state, it is a loop
@@ -220,8 +241,8 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
     if (s) { toggleAccept(s); setSaid(draft.accept.includes(s) ? s + " لم تعد حالة قبول." : s + " حالة قبول الآن."); return; }
     if (onHandle(p, scene.pos[sel], scene.r)) return;
     if (draft.states.length >= limit) { setSaid("بلغت الحد: " + limit + " حالة."); return; }
-    const c = cellAt(p, scene.cell);
-    if (taken(c)) return;
+    const c = snapPlace(placeAt(p, scene.cell), layout, scene.cell);
+    if (near(c)) { setSaid("لا مكان لحالة هنا: " + near(c) + " قريبة."); return; }
     const next = addStateAt(draft, layout, c);
     edit(next);
     const q = next.states[next.states.length - 1];
@@ -231,7 +252,7 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget && (e.target as Element).closest?.("select, input, button")) return;
     const step: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-    if (step[e.key]) { e.preventDefault(); nudge(...step[e.key]); }
+    if (step[e.key]) { e.preventDefault(); nudge(...step[e.key], e.shiftKey); }
     else if (e.key === "Escape") { setOpen(null); setDrag(null); }
     else if ((e.key === "Delete" || e.key === "Backspace") && arrow) { e.preventDefault(); dropArrow(arrow.from, arrow.to); }
   };
@@ -265,17 +286,17 @@ export default function AutomataLabCanvas({ ids, draft, machine, scene, layout, 
           <button type="button" className="learning-autodesign-btn is-quiet" aria-label="يمينًا" onClick={() => nudge(1, 0)}>→</button>
         </span>
       </div>
-      <p className="stt-hint">اسحب حالة لتنقلها. اسحب إحدى النقاط الأربع حول الحالة المختارة إلى حالة أخرى (أو إليها نفسها) لترسم سهمًا. انقر سهمًا لتعدّله أو تحذفه. انقر نقرتين على مكان فارغ لإضافة حالة، وعلى حالة لجعلها حالة قبول.</p>
+      <p className="stt-hint">اسحب حالة لتنقلها بحرّية (تصطفّ مع ما يجاورها؛ مع Alt بلا اصطفاف). اسحب إحدى النقاط الأربع حول الحالة المختارة إلى حالة أخرى (أو إليها نفسها) لترسم سهمًا. انقر سهمًا لتعدّله أو تحذفه. انقر نقرتين على مكان فارغ لإضافة حالة، وعلى حالة لجعلها حالة قبول.</p>
       <div className="alab-canvas-stage">
         <div ref={box} className={"alab-canvas-box" + (drag ? " is-dragging" : "")} tabIndex={0}
-          aria-label="محرّر الرسم: الأسهم تنقل الحالة المختارة" onKeyDown={onKeyDown}
+          aria-label="محرّر الرسم: الأسهم تنقل الحالة المختارة خانة، ومع Shift خطوة صغيرة" onKeyDown={onKeyDown}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => setDrag(null)} onDoubleClick={onDoubleClick}
           data-testid="alab-canvas">
-          <Diagram machine={machine} scene={roomy} step={{ active: [sel], used: arrow ? [arrowId] : [] }} ids={ids + "-draw"} live={false} hit>
+          <Diagram machine={machine} scene={drag?.kind === "move" ? { ...scene, box: drag.box } : roomy} step={{ active: [sel], used: arrow ? [arrowId] : [] }} ids={ids + "-draw"} live={false} hit>
             <g aria-hidden="true">
               {over && <circle className="alab-canvas-target" cx={scene.pos[over].x} cy={scene.pos[over].y} r={scene.r + 6} />}
               {drag?.kind === "arrow" && <line className="alab-canvas-line" x1={scene.pos[drag.from].x} y1={scene.pos[drag.from].y} x2={drag.end.x} y2={drag.end.y} />}
-              {drag?.kind !== "move" && handlesOf(center, scene.r).map((h, i) => <circle key={i} className="alab-canvas-handle" data-handle="link" cx={h.x} cy={h.y} r={5.5} />)}
+              {!(drag?.kind === "move" && drag.moved) && handlesOf(center, scene.r).map((h, i) => <circle key={i} className="alab-canvas-handle" data-handle="link" cx={h.x} cy={h.y} r={5.5} />)}
             </g>
           </Diagram>
         </div>

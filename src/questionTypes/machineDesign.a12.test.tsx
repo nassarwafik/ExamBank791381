@@ -53,6 +53,16 @@ describe("A12 — the student's answer keeps where the states were put", () => {
     render(<Student initial={sent.at(-1)} />);
     expect(ys(screen.getByTestId("alab-canvas")).q1).toBe(y);                        // restored where it was left
   });
+  it("AUTO-A16b — a saved place between the cells comes back there (half a cell is half the distance of a whole one)", () => {
+    vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === "(pointer: fine)", media: q, addEventListener() {}, removeEventListener() {} })));
+    const saved = (row: number) => ({ kind: "machineDesign", machine: { states: ["q0", "q1"], start: "q0", accept: [], transitions: [] }, layout: { q0: [0, 0], q1: [0, row] } }) as unknown as Answer;
+    render(<Student initial={saved(0.5)} />);
+    const half = ys(screen.getByTestId("alab-canvas"));
+    cleanup();
+    render(<Student initial={saved(1)} />);
+    const whole = ys(screen.getByTestId("alab-canvas"));
+    expect((half.q1 - half.q0) / (whole.q1 - whole.q0)).toBeCloseTo(0.5, 5);         // not a whole cell, and not dropped
+  });
   it("a phone has no drawing: no layout is invented, and a saved layout is kept untouched by an edit of the rows", () => {
     vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} })));
     const sent: Answer[] = [];
@@ -90,5 +100,17 @@ describe("A12 — the teacher's reference keeps its layout; the review draws bot
     const mine = ys(screen.getByTestId("machine-review-student")), ref = ys(screen.getByTestId("machine-review-reference"));
     expect(mine.p0).toBeGreaterThan(mine.p1);                                          // p0 put below p1
     expect(ref.q1).toBeGreaterThan(ref.q0);
+  });
+  it("AUTO-A16b — the review draws places between the cells (half a cell is half the distance of a whole one)", () => {
+    const gaps = (row: number) => {
+      cleanup();
+      const answer = { kind: "machineDesign", machine: { ...REF, states: ["p0", "p1"], start: "p0", accept: ["p1"], transitions: [tm("p0", "a", "a", "S", "p1")] }, layout: { p0: [0, 0], p1: [0, row] } };
+      render(<MachineDesignReview answer={answer} answerKey={{ reference: REF, layout: { q0: [0, 0], q1: [0, row] } }} config={CFG} />);
+      const mine = ys(screen.getByTestId("machine-review-student")), ref = ys(screen.getByTestId("machine-review-reference"));
+      return [mine.p1 - mine.p0, ref.q1 - ref.q0];
+    };
+    const half = gaps(0.5), whole = gaps(1);
+    expect(half[0] / whole[0]).toBeCloseTo(0.5, 5);
+    expect(half[1] / whole[1]).toBeCloseTo(0.5, 5);
   });
 });

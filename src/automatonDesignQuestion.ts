@@ -23,7 +23,7 @@ export const AUTOMATON_DESIGN_LIMITS = Object.freeze({ states: 12, symbols: 6, t
 export type AutomatonDesignMachineType = "DFA" | "NFA";
 export type AutomatonDesignConfigV1 = { v: 1; machine: AutomatonDesignMachineType; alphabet: string[]; maxStates: number; complete?: true; examples?: { accept: string[]; reject: string[] } };
 export type AutomatonMachine = { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] };
-/** AUTO-A9 — the drawing's grid cells of a machine's states ([column, row], 0…GRID_MAX), presentation only. */
+/** AUTO-A9 — where a machine's states sit on the drawing's grid ([column, row], 0…GRID_MAX; A16b: fractions too), presentation only. */
 export type AutomatonLayout = Record<string, [number, number]>;
 export type AutomatonDesignAnswerKeyV1 = { reference: AutomatonMachine; layout?: AutomatonLayout };
 export type AutomatonDesignAnswer = { kind: "automatonDesign"; machine: AutomatonMachine; layout?: AutomatonLayout };
@@ -41,7 +41,9 @@ const EPSILON = "ε";
 /** The drawing editor's grid bound (studentTools/automataLab.ts GRID_MAX — parity-tested). */
 export const AUTOMATON_LAYOUT_GRID_MAX = 20;
 
-/** AUTO-A9 — a layout for these states, or null when it does not read: a plain object, keys among the states, values two integers 0…20. */
+/** AUTO-A9 — a layout for these states, or null when it does not read: a plain object, keys among the states, values two numbers 0…20.
+ *  AUTO-A16b — a state may sit BETWEEN the grid's cells (the drawing editor moves it freely): the two numbers are finite, 0…20, and kept
+ *  to two decimals. Whole cells read exactly as before; presentation only, as before. */
 export function readAutomatonLayout(raw: unknown, states: readonly string[]): AutomatonLayout | null {
   if (!isPlain(raw)) return null;
   const keys = Object.keys(raw);
@@ -50,8 +52,8 @@ export function readAutomatonLayout(raw: unknown, states: readonly string[]): Au
   for (const q of keys) {
     const c = raw[q];
     if (FORBIDDEN.has(q) || !states.includes(q) || !Array.isArray(c) || c.length !== 2) return null;
-    if (!c.every(v => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= AUTOMATON_LAYOUT_GRID_MAX)) return null;
-    out[q] = [c[0] as number, c[1] as number];
+    if (!c.every(v => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= AUTOMATON_LAYOUT_GRID_MAX)) return null;
+    out[q] = [Math.round((c[0] as number) * 100) / 100, Math.round((c[1] as number) * 100) / 100];
   }
   return out;
 }

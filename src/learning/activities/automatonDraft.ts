@@ -43,9 +43,10 @@ export function draftOfMachine(rules: Pick<FaRules, "machine" | "alphabet">, raw
     const k = cellKey(from, sym), now = cells[k] ?? [];
     if (rules.machine === "DFA" ? now.length === 0 : !now.includes(to)) cells[k] = [...now, to];
   }
-  // AUTO-A9 — where the states were put on the drawing (cells of these states only; the rest is the book's automatic layout)
+  // AUTO-A9 — where the states were put on the drawing (cells of these states only; the rest is the book's automatic layout).
+  // AUTO-A16b — a place may be between the cells (a fraction), as the answer's reader accepts it.
   const cellsOf: Record<string, [number, number]> = {};
-  if (isObj(layout)) for (const q of states) { const c = layout[q]; if (Array.isArray(c) && c.length === 2 && c.every(v => Number.isInteger(v) && v >= 0 && v <= 20)) cellsOf[q] = [c[0], c[1]]; }
+  if (isObj(layout)) for (const q of states) { const c = layout[q]; if (Array.isArray(c) && c.length === 2 && c.every(v => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 20)) cellsOf[q] = [c[0], c[1]]; }
   return { ...initialFaDraft(rules), states, start, accept, cells, ...(Object.keys(cellsOf).length ? { layout: cellsOf } : {}) };
 }
 

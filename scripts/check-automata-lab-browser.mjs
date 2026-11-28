@@ -85,18 +85,33 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     const cellX = q1.x - q0.x;                                                        // one grid column, on screen
     await dragFrom(q1, { x: q1.x, y: q1.y + cellX * 0.8 });                           // down about one row
     const q1b = await center("q1");
-    check(q1b.y > q1.y + 20 && Math.abs(q1b.x - q1.x) < 3, "drag: q1 moved down a grid row (snapped), its arrows redrawn");
+    check(q1b.y > q1.y + 20 && Math.abs(q1b.x - q1.x) < 3, "drag: q1 moved down (its column kept), its arrows redrawn");
+    // A16b: a FREE move — between the grid's cells, by what the mouse travelled; places are measured from q0, which does not move
+    const off = async () => { const a = await center("q0"), b = await center("q1"); return { x: b.x - a.x, y: b.y - a.y, r: b.r }; };
+    const o1 = await off(), g1 = await center("q1");
+    await dragFrom({ x: g1.x + 6, y: g1.y - 5 }, { x: g1.x + 6 + 41, y: g1.y - 5 + 27 });   // grabbed off-centre, moved (41, 27) px
+    const o2 = await off();
+    check(Math.abs(o2.x - o1.x - 41) <= 3 && Math.abs(o2.y - o1.y - 27) <= 3, "free move: q1 followed the mouse by (41, 27) px — between the cells, no jump to the pointer (" + JSON.stringify({ dx: Math.round(o2.x - o1.x), dy: Math.round(o2.y - o1.y) }) + ")");
+    const g2 = await center("q1"), z0 = await center("q0");
+    await dragFrom(g2, { x: z0.x + z0.r * 2 + 3, y: z0.y });                         // dropped beside q0, closer than two states may be
+    const o3 = await off();
+    check(Math.hypot(o3.x, o3.y) >= 2 * o3.r + 8 && await lab.getByText(/تبادلت/).count() === 0, "a state never lands on another: q1 stops clear of q0 (" + Math.round(Math.hypot(o3.x, o3.y)) + " px apart, radius " + Math.round(o3.r) + "), no swap");
+    const g3 = await center("q1");
+    await page.mouse.click(g3.x, g3.y);                                              // a press that does not travel is not a move
+    const o4 = await off();
+    check(Math.abs(o4.x - o3.x) < 1 && Math.abs(o4.y - o3.y) < 1, "a click on a state does not move it");
+    await dragFrom(await center("q1"), { x: q1.x, y: q1.y + cellX * 0.8 });          // back near where the first drag left it
     await page.mouse.dblclick(q1b.x + cellX, q0.y);                                  // an empty spot to the right
     await lab.getByText(/^أُضيفت الحالة q2\.$/).waitFor({ timeout: 5000 });
     check(true, "double-click on an empty spot: a new state q2 there");
     // A16a: no mode — the chosen state's link handle is dragged to another state, and the arrow's window opens on the drawing
     check(await lab.getByRole("radio", { name: "رسم الأسهم" }).count() === 0 && await canvas.locator("circle[data-handle=link]").count() === 4, "no drawing mode; the chosen state (q2) shows four link handles");
-    const handle = async i => { const b = await canvas.locator("circle[data-handle=link]").nth(i).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+    const handle = async i => { await canvas.scrollIntoViewIfNeeded(); const b = await canvas.locator("circle[data-handle=link]").nth(i).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
     const win = (from, to) => lab.getByRole("group", { name: "رمز السهم من " + from + " إلى " + to });
-    await dragFrom(await handle(3), await center("q0"));                             // q2's left handle → q0
+    { const to = await center("q0"); await dragFrom(await handle(3), to); }                             // q2's left handle → q0
     await win("q2", "q0").getByRole("button", { name: "a", exact: true }).click();
     check(await lab.getByLabel("من q2 بالرمز a إلى").inputValue() === "q0" && await win("q2", "q0").count() === 0, "a link handle dragged from q2 to q0, symbol a: the table's arrow (q2, a) → q0, and the window closes");
-    await dragFrom(await handle(0), await center("q2"));                             // a handle dropped on its own state: a loop
+    { const to = await center("q2"); await dragFrom(await handle(0), to); }                             // a handle dropped on its own state: a loop
     await win("q2", "q2").getByRole("button", { name: "b", exact: true }).click();
     check(await lab.getByLabel("من q2 بالرمز b إلى").inputValue() === "q2", "a handle dropped on its own state: the loop (q2, b) → q2");
     const label = await canvas.locator("g[data-edge='q2 q0'] text").boundingBox();

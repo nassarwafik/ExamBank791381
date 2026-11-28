@@ -459,10 +459,12 @@ export function labLayout(m: Machine, chosen?: Record<string, Cell>): Record<str
     const c = chosen?.[s];
     if (c && !used.some(u => sameCell(u, c))) { out[s] = [c[0], c[1]]; used.push(out[s]); }
   }
+  // A16b — a chosen place may be between the cells: an automatic cell is free only when no placed state is within half a cell of it
+  const crowded = (c: Cell) => used.some(u => Math.abs(u[0] - c[0]) < 0.5 && Math.abs(u[1] - c[1]) < 0.5);
   for (const s of m.states) {
     if (out[s]) continue;
     let [col, row] = auto[s];
-    while (used.some(u => sameCell(u, [col, row]))) { row++; if (row > GRID_MAX) { row = 0; col++; } }
+    while (crowded([col, row])) { row++; if (row > GRID_MAX) { row = 0; col++; } }
     out[s] = [col, row];
     used.push(out[s]);
   }
@@ -553,4 +555,53 @@ export function removeArrow(d: LabDraft, from: string, to: string): LabDraft {
   if (d.kind === "PDA") return d.pda.some(r => r.from === from && r.to === to) ? { ...d, pda: d.pda.filter(r => !(r.from === from && r.to === to)) } : d;
   if (d.kind === "TM") return d.tm.some(r => r.from === from && r.to === to) ? { ...d, tm: d.tm.filter(r => !(r.from === from && r.to === to)) } : d;
   return arrowSymbols(d, from, to).reduce((x, s) => toggleArrowSymbol(x, from, to, s), d);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUTO-A16b — a state moved freely: a place between the grid's cells (pure)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** The least clear space between two states' circles, and how close (drawing units) a moved state snaps to a line. */
+export const STATE_GAP = 16;
+export const SNAP = 9;
+/** A fine keyboard step (Shift + an arrow key), in cells. */
+export const FINE_STEP = 0.1;
+const inGrid = (v: number) => Math.round(Math.max(0, Math.min(GRID_MAX, v)) * 100) / 100;
+
+/** The place under a point of the drawing: a fraction of the grid's cells, kept inside the grid, to two decimals (what `layout` stores). */
+export function placeAt(point: { x: number; y: number }, cell: { w: number; h: number }): Cell {
+  return [inGrid(point.x / cell.w), inGrid(point.y / cell.h)];
+}
+
+/** The state (other than `but`) whose circle a state put at `at` would touch or crowd, or null. */
+export function stateNear(layoutNow: Record<string, Cell>, at: Cell, cell: { w: number; h: number }, r: number, but?: string): string | null {
+  for (const [s, c] of Object.entries(layoutNow)) {
+    if (s !== but && Math.hypot((c[0] - at[0]) * cell.w, (c[1] - at[1]) * cell.h) < 2 * r + STATE_GAP) return s;
+  }
+  return null;
+}
+
+/** A place pulled onto a nearby line: another state's column or row first (so states line up), else a whole cell's. Each axis on its own. */
+export function snapPlace(at: Cell, layoutNow: Record<string, Cell>, cell: { w: number; h: number }, but?: string): Cell {
+  const others = Object.entries(layoutNow).filter(([s]) => s !== but).map(([, c]) => c);
+  const axis = (v: number, i: 0 | 1, size: number) => {
+    const lines = [...others.map(c => c[i]), Math.round(v)];
+    const near = lines.find(l => Math.abs(l - v) * size <= SNAP);
+    return near === undefined ? v : inGrid(near);
+  };
+  return [axis(at[0], 0, cell.w), axis(at[1], 1, cell.h)];
+}
+
+/** A state put at a place (no swap: the caller has checked the place is free). The layout keeps every state's place. */
+export function placeState(d: LabDraft, layoutNow: Record<string, Cell>, q: string, to: Cell): LabDraft {
+  const from = layoutNow[q];
+  if (!from || sameCell(from, to)) return d;
+  return { ...d, layout: { ...layoutNow, [q]: [inGrid(to[0]), inGrid(to[1])] } };
+}
+
+/** Two states take each other's place. */
+export function swapStates(d: LabDraft, layoutNow: Record<string, Cell>, a: string, b: string): LabDraft {
+  const pa = layoutNow[a], pb = layoutNow[b];
+  if (!pa || !pb || a === b) return d;
+  return { ...d, layout: { ...layoutNow, [a]: [pb[0], pb[1]], [b]: [pa[0], pa[1]] } };
 }
