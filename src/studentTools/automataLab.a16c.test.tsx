@@ -69,6 +69,8 @@ describe("A16c — the scene draws the bend it is given", () => {
     expect([down["q0 q1"].d, down["q0 q1"].bend]).toEqual([expect.stringMatching(/ Q /), 40]);
     expect(down["q0 q1"].label.at.y).toBeGreaterThan(plain["q0 q1"].label.at.y);     // q0 → q1 runs to the right: +40 bulges down the screen
     expect(up["q0 q1"].label.at.y).toBeLessThan(plain["q0 q1"].label.at.y);
+    expect(up["q0 q1"].label.at.y).toBeCloseTo(-down["q0 q1"].label.at.y, 5);        // the label is OUTSIDE the curve on either side (the line is y = 0)
+    expect([up["q0 q1"].label.grow, down["q0 q1"].label.grow]).toEqual(["up", "down"]);
     expect(down["q1 q2"].d).toBe(plain["q1 q2"].d);
     const pair = { ...three, cells: { ...three.cells, "q1|b": ["q0"] } };           // q0 ⇄ q1: bent apart automatically (26)
     const auto = buildScene(machine(pair), l).edges.find(e => e.e.key === "q0 q1")!;
