@@ -1,14 +1,33 @@
-/* AUTO-A6b / A7 — the drawing editor (AutomataLabCanvas): the tool bar's lab and the book's «صمّم الآلة» activity. Its hints and
-   labels are styled here too, so it looks the same outside the tool bar (where studentTools.css is not loaded). */
+/* AUTO-A6b / A7 / A16a — the drawing editor (AutomataLabCanvas): the tool bar's lab, the book's «صمّم الآلة» activity and the exam's
+   design questions. Its hints, labels and the arrow's window are styled here too, so it looks the same outside the tool bar (where
+   studentTools.css is not loaded). */
 .alab-canvas { display: flex; flex-direction: column; gap: var(--eb-space-2); }
 .alab-canvas-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
-.alab-nudge { display: inline-flex; gap: var(--eb-space-1); }
-.alab-canvas-box { position: relative; cursor: grab; touch-action: none; user-select: none; border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r); }
-.alab-canvas-box.is-arrow { cursor: crosshair; }
-.alab-canvas-box.is-dragging { cursor: grabbing; }
+.alab-canvas-tools .learning-autodesign-btn.is-quiet { margin-inline-start: 0; }
+.alab-nudge { display: inline-flex; gap: var(--eb-space-1); margin-inline-start: auto; }
+.alab-canvas-stage { position: relative; }
+.alab-canvas-box { position: relative; min-block-size: 16rem; cursor: default; touch-action: none; user-select: none; border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r); }
+.alab-canvas-box .learning-automaton-state { cursor: grab; }
+.alab-canvas-box.is-dragging, .alab-canvas-box.is-dragging .learning-automaton-state { cursor: grabbing; }
 .alab-canvas-box:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
-.alab-canvas-line { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; overflow: visible; }
-.alab-canvas-line line { stroke: var(--eb-primary); stroke-width: 2; stroke-dasharray: 6 4; }
-.alab-pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); }
+.alab-canvas-line { stroke: var(--eb-primary); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.alab-canvas-target { fill: var(--eb-primary); fill-opacity: .1; stroke: var(--eb-primary); stroke-width: 2; pointer-events: none; }
+.alab-canvas-handle { fill: var(--eb-primary); stroke: var(--eb-surface); stroke-width: 2; cursor: crosshair; }
+.alab-pop { position: absolute; z-index: 2; inline-size: 264px; max-inline-size: calc(100% - 8px); display: flex; flex-direction: column; gap: var(--eb-space-2); padding: var(--eb-space-3);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface); box-shadow: 0 6px 24px rgb(0 0 0 / .16); }
+.alab-pop-title { margin: 0; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
+.alab-pop-symbols { display: flex; flex-wrap: wrap; gap: var(--eb-space-1); }
+.alab-pop-actions { display: flex; justify-content: space-between; gap: var(--eb-space-2); }
+.alab-pop-actions .learning-autodesign-btn.is-quiet { margin-inline-start: 0; }
+.alab-pop-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.alab-pop-rows li { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2); }
+.alab-pop-notation { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.alab-pop-x { min-inline-size: 44px; min-block-size: 44px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-pill); background: var(--eb-surface); color: var(--eb-text); font: inherit; cursor: pointer; }
+.alab-pop-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--eb-space-2); }
+.alab-pop-form label { display: flex; flex-direction: column; gap: 2px; font-size: var(--eb-fs-12); color: var(--eb-text-secondary); }
+.alab-pop-sym { inline-size: 3.2rem; min-block-size: 44px; text-align: center; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-bg); color: var(--eb-text); font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: var(--eb-fs-16); }
+.alab-pop-sym.is-wide { inline-size: 5.5rem; }
+.alab-pop-x:focus-visible, .alab-pop-sym:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
+.alab-pop-error { margin: 0; font-size: var(--eb-fs-12); color: var(--eb-danger, #b42318); }
 .alab-canvas .stt-hint { margin: var(--eb-space-1) 0; font-size: var(--eb-fs-12); color: var(--eb-muted); }
 .alab-canvas .stt-label { font-size: var(--eb-fs-13); color: var(--eb-text-secondary); }

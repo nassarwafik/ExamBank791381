@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Machine, RunStep } from "./automaton";
 import { firstBaseline, KIND_TEXT, LINE_H, MIN_SCALE, type Placed, type Scene } from "./automatonScene";
 
@@ -15,7 +16,11 @@ function Label({ pl, className, rtl }: { pl: Placed; className: string; rtl?: bo
   );
 }
 
-export function Diagram({ machine, scene, step, ids, live = true }: { machine: Machine; scene: Scene; step: Pick<RunStep, "active" | "used">; ids: string; live?: boolean }) {
+/** `hit` (an editor's drawing): every arrow carries its key (`data-edge`) and a wide invisible stroke, so it can be pressed with a mouse.
+ *  `children` are drawn last, in the drawing's own coordinates (an editor's handles and the arrow being drawn). */
+export function Diagram({ machine, scene, step, ids, live = true, hit = false, children }: {
+  machine: Machine; scene: Scene; step: Pick<RunStep, "active" | "used">; ids: string; live?: boolean; hit?: boolean; children?: ReactNode;
+}) {
   const { pos, box, r: R } = scene;
   const width = Math.ceil(box.x2 - box.x1), height = Math.ceil(box.y2 - box.y1);
   const summary = KIND_TEXT[machine.kind] + " حالاته " + machine.states.join("، ") + "؛ البداية " + machine.start
@@ -38,7 +43,8 @@ export function Diagram({ machine, scene, step, ids, live = true }: { machine: M
         {scene.edges.map(({ e, d, label }) => {
           const used = step.used.includes(e.key);
           return (
-            <g key={e.key} className={"learning-automaton-arrow" + (used ? " is-used" : "")}>
+            <g key={e.key} className={"learning-automaton-arrow" + (used ? " is-used" : "")} data-edge={hit ? e.key : undefined} style={hit ? { cursor: "pointer" } : undefined}>
+              {hit && <path d={d} fill="none" stroke="transparent" strokeWidth={16} pointerEvents="stroke" />}
               <path d={d} className={"learning-automaton-edge" + (used ? " is-used" : "")} markerEnd={`url(#${ids}-${used ? "u" : "a"})`} />
               <Label pl={label} className="learning-automaton-label" rtl={machine.kind === "PDA"} />
             </g>
@@ -57,6 +63,7 @@ export function Diagram({ machine, scene, step, ids, live = true }: { machine: M
             </g>
           );
         })}
+        {children}
       </svg>
     </div>
   );

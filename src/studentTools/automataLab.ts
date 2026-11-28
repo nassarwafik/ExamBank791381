@@ -38,6 +38,9 @@ export const KIND_LABEL: Record<AutomatonKind, string> = {
 
 export type PdaRow = { from: string; read: string; top: string; op: PdaOp; write: string; to: string };
 export type TmRow = { from: string; read: string; write: string; move: TmMove; to: string };
+/** The words of a row editor (the table's, and the arrow's window on the drawing). */
+export const MOVE_TEXT: Record<TmMove, string> = { R: "يمينًا R", L: "يسارًا L", S: "بلا حركة S" };
+export const OP_TEXT: Record<PdaOp, string> = { push: "ادفع", pop: "اسحب", none: "بلا تغيير" };
 
 /** The learner's work. Each kind keeps its own transitions, so switching the kind and back loses nothing. */
 export type LabDraft = {
@@ -509,4 +512,45 @@ export function addArrow(d: LabDraft, from: string, to: string, symbol?: string)
   }
   if (d.kind === "PDA") return { ...d, pda: [...d.pda, { from, read: d.alphabet[0] ?? "", top: BOTTOM, op: "none", write: "", to }] };
   return { ...d, tm: [...d.tm, { from, read: d.alphabet[0] ?? BLANK, write: d.alphabet[0] ?? BLANK, move: "R", to }] };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUTO-A16 — the arrows edited on the drawing itself (pure)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** How far outside a state's circle its four link handles sit, and how close a press must be to take one (drawing units). */
+export const HANDLE_GAP = 13;
+export const HANDLE_HIT = 10;
+
+/** The four link handles of a state (above, right, below, left), as in the diagram editor. */
+export function handlesOf(center: { x: number; y: number }, r: number): { x: number; y: number }[] {
+  const d = r + HANDLE_GAP;
+  return [{ x: center.x, y: center.y - d }, { x: center.x + d, y: center.y }, { x: center.x, y: center.y + d }, { x: center.x - d, y: center.y }];
+}
+
+/** Whether a point of the drawing presses one of a state's link handles. */
+export function onHandle(point: { x: number; y: number }, center: { x: number; y: number }, r: number): boolean {
+  return handlesOf(center, r).some(h => Math.hypot(point.x - h.x, point.y - h.y) <= HANDLE_HIT);
+}
+
+/** The symbols a finite automaton's arrow from → to carries (ε last, in a non-deterministic one). */
+export function arrowSymbols(d: LabDraft, from: string, to: string): string[] {
+  const all = d.kind === "NFA" ? [...d.alphabet, EPS] : d.kind === "DFA" ? d.alphabet : [];
+  return all.filter(s => (d.cells[cellKey(from, s)] ?? []).includes(to));
+}
+
+/** One symbol of a finite automaton's arrow, put on or taken off: putting goes through `addArrow` (a DFA replaces the state's arrow for it). */
+export function toggleArrowSymbol(d: LabDraft, from: string, to: string, symbol: string): LabDraft {
+  if (d.kind !== "DFA" && d.kind !== "NFA") return d;
+  if (!arrowSymbols(d, from, to).includes(symbol)) return addArrow(d, from, to, symbol);
+  const k = cellKey(from, symbol), cells = { ...d.cells }, left = (cells[k] ?? []).filter(t => t !== to);
+  if (left.length) cells[k] = left; else delete cells[k];
+  return { ...d, cells };
+}
+
+/** The whole arrow from → to removed: every symbol of it (finite automata), every row of it (push-down automaton, Turing machine). */
+export function removeArrow(d: LabDraft, from: string, to: string): LabDraft {
+  if (d.kind === "PDA") return d.pda.some(r => r.from === from && r.to === to) ? { ...d, pda: d.pda.filter(r => !(r.from === from && r.to === to)) } : d;
+  if (d.kind === "TM") return d.tm.some(r => r.from === from && r.to === to) ? { ...d, tm: d.tm.filter(r => !(r.from === from && r.to === to)) } : d;
+  return arrowSymbols(d, from, to).reduce((x, s) => toggleArrowSymbol(x, from, to, s), d);
 }
