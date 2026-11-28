@@ -19,6 +19,7 @@ import { postSelfReport } from "./studentSelfReport";
 import StudentExamFormCard from "./examForm/StudentExamFormCard";
 import StudentExamForm from "./examForm/StudentExamForm";
 import type { ExamFormSummary } from "./examForm/types";
+import DiagramAttachPanel from "./examForm/DiagramAttachPanel";
 import { lazyWithRetry } from "../lazyWithRetry";
 import ToolDockBoundary from "../studentTools/ToolDockBoundary";
 
@@ -106,7 +107,8 @@ function openingFilter(project: StudentProject, trackId: string): StageFilter {
 function OneProject({ project, contribution, onBack, token, onChanged, readOnly = false }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null; token: string; onChanged: () => void; readOnly?: boolean }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const [formOpen, setFormOpen] = useState(false);                               // Phase F2-UI: the exam form replaces the project view while open
-  const [diagramsOpen, setDiagramsOpen] = useState(false);                       // DG1: the diagram editor replaces the project view while open
+  const [diagramsOpen, setDiagramsOpen] = useState(false);
+  const [attach, setAttach] = useState<{ picture: Blob; title: string; seq: number } | null>(null);   // DG8: the picture on its way to the form                       // DG1: the diagram editor replaces the project view while open
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
   const perf = normalizeProjectPerformance(project.performance);
@@ -172,8 +174,11 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
     <div className="eb-sp-project eb-sp-diagrams" data-testid="project-diagrams">
       <button type="button" className="eb-button is-quiet is-small eb-sp-project-back" onClick={() => setDiagramsOpen(false)}><IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى المشروع</button>
       <h2 className="eb-sp-diagrams-title">مخططات المشروع</h2>
+      {attach && <DiagramAttachPanel key={attach.seq} token={token} projectCode={project.projectCode} picture={attach.picture} title={attach.title}
+        onClose={() => setAttach(null)} onAttached={onChanged} />}
       <ToolDockBoundary>
-        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={DIAGRAM_DRAFT_KEY} labDraftKey={NETWORK_LAB_DRAFT_KEY} /></Suspense>
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل محرّر المخططات…</p>}><DiagramEditorTool draftKey={DIAGRAM_DRAFT_KEY} labDraftKey={NETWORK_LAB_DRAFT_KEY}
+          onAttachPicture={project.examForm && !readOnly ? (picture, title) => setAttach(a => ({ picture, title, seq: (a?.seq ?? 0) + 1 })) : undefined} /></Suspense>
       </ToolDockBoundary>
     </div>
   );

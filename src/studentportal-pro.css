@@ -201,6 +201,18 @@
 /* DG1 — «مخططات المشروع»: the diagram editor's card on the project page, and its page */
 .eb-sp-diagrams-card{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border); border-radius:var(--eb-r); background:var(--eb-surface); }
 .eb-sp-diagrams-card p{ margin:0; }
+/* DG8 — «أرفق بالاستمارة»: the picture and the form's image questions, above the editor */
+.eb-sp-attach{ display:grid; gap:var(--eb-space-2); padding:var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); margin-block-end:var(--eb-space-3); }
+.eb-sp-attach-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
+.eb-sp-attach-title{ margin:0; font-size:var(--eb-fs-16); }
+.eb-sp-attach-body{ display:flex; flex-wrap:wrap; gap:var(--eb-space-3); align-items:flex-start; }
+.eb-sp-attach-preview{ flex:0 1 220px; max-width:100%; max-height:180px; object-fit:contain; border:1px solid var(--eb-border); border-radius:8px; background:var(--eb-surface); }
+.eb-sp-attach-main{ flex:1 1 280px; min-width:0; display:grid; gap:var(--eb-space-2); }
+.eb-sp-attach-main .platform-error, .eb-sp-attach-main .platform-notice, .eb-sp-attach-main .platform-warning{ width:auto; margin:0; }
+.eb-sp-attach-list{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-2); }
+.eb-sp-attach-list li{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2); border:1px solid var(--eb-border); border-radius:8px; }
+.eb-sp-attach-q{ display:grid; gap:2px; min-width:0; overflow-wrap:anywhere; }
+.eb-sp-attach-note{ margin:0; font-size:var(--eb-fs-13); }
 .eb-sp-diagrams-title{ margin:var(--eb-space-2) 0; font-size:var(--eb-fs-18, 1.15rem); }
 .eb-sp-stage-filters .eb-chip-button{ min-height:40px; }
 .eb-sp-stage-empty{ margin:0; }
