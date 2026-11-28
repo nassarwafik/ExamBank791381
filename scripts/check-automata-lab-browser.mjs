@@ -126,6 +126,20 @@ for (const [name, viewport, touch] of [["desktop", { width: 1280, height: 900 },
     await page.keyboard.down("Shift"); await dragFrom(await center("q1"), await center("q2"), { shift: true });
     await win("q1", "q2").getByRole("button", { name: "تم" }).click();
     check(await win("q1", "q2").count() === 0, "Shift + drag from a state draws an arrow too; «تم» closes its window with nothing added");
+    // A16c: an arrow DRAGGED bends (its window does not open); «تراجع» / «إعادة» take the whole drag as one step
+    const dOf = k => canvas.locator("g[data-edge='" + k + "'] path.learning-automaton-edge").getAttribute("d");
+    const flat = await dOf("q2 q0");
+    await canvas.scrollIntoViewIfNeeded();
+    const grip = await canvas.locator("g[data-edge='q2 q0'] text").boundingBox();
+    await dragFrom({ x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 }, { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 + 64 });
+    const bentD = await dOf("q2 q0");
+    check(bentD !== flat && / Q /.test(bentD) && await win("q2", "q0").count() === 0, "an arrow dragged bends (a curve now), and its window stays closed");
+    await lab.getByRole("group", { name: "أدوات الرسم" }).getByRole("button", { name: "تراجع" }).click();
+    check(await dOf("q2 q0") === flat, "«تراجع»: the whole drag is one step — the arrow as it was");
+    await lab.getByRole("group", { name: "أدوات الرسم" }).getByRole("button", { name: "إعادة" }).click();
+    check(await dOf("q2 q0") === bentD, "«إعادة»: the bend is back");
+    await canvas.focus(); await page.keyboard.press("Control+z");
+    check(await dOf("q2 q0") === flat && await lab.getByLabel("من q2 بالرمز a إلى").inputValue() === "q0", "Ctrl+Z on the drawing undoes the bend; the machine was never touched");
     await page.mouse.click((await center("q2")).x, (await center("q2")).y);
     // positions relative to q1, which does not move: the drawing's edge follows the start arrow, so the whole picture can shift on screen
     const before0 = await center("q0"), before2 = await center("q2"), before1 = await center("q1");

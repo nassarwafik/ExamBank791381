@@ -64,7 +64,9 @@ export type Scene = {
   r: number;
   font: number;
   pos: Record<string, Pt>;
-  edges: { e: DrawnEdge; d: string; label: Placed }[];
+  /** `bend` (AUTO-A16c): how the arrow is bent — the control point's offset from the straight line, along its left-hand normal (0: a
+   *  straight arrow); for a loop, its angle around the state. An editor starts a manual bend from it. */
+  edges: { e: DrawnEdge; d: string; label: Placed; bend: number }[];
   stateLabels: Record<string, Placed>;
   start: { d: string };
   box: Box;
@@ -72,8 +74,11 @@ export type Scene = {
   cell: { w: number; h: number };
 };
 
-/** Lays the whole drawing out once per machine: arrows, loops on the freest side, labels clear of the arrows, the bounds. */
-export function buildScene(machine: Machine, layout: Record<string, [number, number]>): Scene {
+/** Lays the whole drawing out once per machine: arrows, loops on the freest side, labels clear of the arrows, the bounds.
+ *  AUTO-A16c — `bends` (arrow key → a bend, or a loop's angle): an arrow the learner bent by hand keeps that bend instead of the
+ *  automatic one. Presentation only; a value that is not a finite number is ignored. */
+export function buildScene(machine: Machine, layout: Record<string, [number, number]>, bends?: Record<string, number>): Scene {
+  const manual = (key: string): number | undefined => { const v = bends?.[key]; return typeof v === "number" && Number.isFinite(v) ? v : undefined; };
   const { r: R, font } = stateSizing(machine.states);
   const cw = Math.max(CELL_W, 2 * R + 100), ch = Math.max(CELL_H, 2 * R + 72);
   const pos: Record<string, Pt> = {};
@@ -92,7 +97,8 @@ export function buildScene(machine: Machine, layout: Record<string, [number, num
     const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
     const nx = -dy / len, ny = dx / len;                                 // the left-hand normal of a→b
     const blocked = Object.entries(pos).some(([s, p]) => s !== e.from && s !== e.to && passesNear(a, b, p, R + 10));
-    const bend = pairs.has(edgeKey(e.to, e.from)) ? 26 : blocked ? 62 : 0;
+    const bend = manual(e.key) ?? (pairs.has(edgeKey(e.to, e.from)) ? 26 : blocked ? 62 : 0);
+    const out = bend < 0 ? -1 : 1;                                       // the side the arrow bulges to: its label goes there
     const c = { x: (a.x + b.x) / 2 + nx * bend * 2, y: (a.y + b.y) / 2 + ny * bend * 2 };
     const toward = (from: Pt, to: Pt, dist: number) => { const l = Math.hypot(to.x - from.x, to.y - from.y) || 1; return { x: from.x + (to.x - from.x) / l * dist, y: from.y + (to.y - from.y) / l * dist }; };
     const s = toward(a, bend ? c : b, R), t = toward(b, bend ? c : a, R + 2);
@@ -104,8 +110,8 @@ export function buildScene(machine: Machine, layout: Record<string, [number, num
       // a state this arrow bends around sees the arrow on that side (so its loop and label go elsewhere)
       for (const [st, p] of Object.entries(pos)) if (st !== e.from && st !== e.to && passesNear(a, b, p, R + 10)) touching[st].push(Math.atan2(mid.y - p.y, mid.x - p.x));
     }
-    const side = Math.atan2(ny, nx);
-    edges.push({ e, d: bend ? `M ${s.x} ${s.y} Q ${c.x} ${c.y} ${t.x} ${t.y}` : `M ${s.x} ${s.y} L ${t.x} ${t.y}`, label: placeAt(e.labels, { x: mid.x + nx * 10, y: mid.y + ny * 10 }, side) });
+    const side = Math.atan2(ny * out, nx * out);
+    edges.push({ e, bend, d: bend ? `M ${s.x} ${s.y} Q ${c.x} ${c.y} ${t.x} ${t.y}` : `M ${s.x} ${s.y} L ${t.x} ${t.y}`, label: placeAt(e.labels, { x: mid.x + nx * 10 * out, y: mid.y + ny * 10 * out }, side) });
   }
   const loopAt: Record<string, number> = {};
   for (const { e } of pending) {
@@ -113,7 +119,7 @@ export function buildScene(machine: Machine, layout: Record<string, [number, num
     // a loop goes straight up or down when either side is reasonably free (a sideways loop pushes its label past the edge)
     const upDown = freeSlot(touching[e.from], [], [SLOTS[0], SLOTS[1]]);
     const clear = touching[e.from].every(x => angleGap(x, upDown) >= Math.PI / 4);
-    const ang = clear ? upDown : freeSlot(touching[e.from]);
+    const ang = manual(e.key) ?? (clear ? upDown : freeSlot(touching[e.from]));
     loopAt[e.from] = ang;
     touching[e.from].push(ang);
     const p1 = { x: a.x + Math.cos(ang - 0.5) * R, y: a.y + Math.sin(ang - 0.5) * R };
@@ -121,7 +127,7 @@ export function buildScene(machine: Machine, layout: Record<string, [number, num
     const c1 = { x: a.x + Math.cos(ang - 0.62) * (R + 52), y: a.y + Math.sin(ang - 0.62) * (R + 52) };
     const c2 = { x: a.x + Math.cos(ang + 0.62) * (R + 52), y: a.y + Math.sin(ang + 0.62) * (R + 52) };
     const tip = { x: a.x + Math.cos(ang) * (R + 44), y: a.y + Math.sin(ang) * (R + 44) };
-    edges.push({ e, d: `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`, label: placeAt(e.labels, tip, ang) });
+    edges.push({ e, bend: ang, d: `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`, label: placeAt(e.labels, tip, ang) });
   }
   const stateLabels: Scene["stateLabels"] = {};
   for (const s of machine.states) {

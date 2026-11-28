@@ -37,6 +37,6 @@ export function copyDraft(d: LabDraft): LabDraft {
   const layout = d.layout ? Object.fromEntries(Object.entries(d.layout).map(([q, c]) => [q, [c[0], c[1]] as [number, number]])) : undefined;
   return {
     ...d, alphabet: [...d.alphabet], states: [...d.states], accept: [...d.accept], labels: { ...d.labels }, cells,
-    pda: d.pda.map(r => ({ ...r })), tm: d.tm.map(r => ({ ...r })), ...(layout ? { layout } : {}),
+    pda: d.pda.map(r => ({ ...r })), tm: d.tm.map(r => ({ ...r })), ...(layout ? { layout } : {}), ...(d.bends ? { bends: { ...d.bends } } : {}),
   };
 }

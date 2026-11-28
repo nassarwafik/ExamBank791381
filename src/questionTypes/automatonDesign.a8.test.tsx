@@ -229,6 +229,31 @@ describe("A8 — the student's renderer", () => {
     render(<Student q={studentQ()} initial={moved} />);
     expect(circleY()).toBe(y);                                                    // restored between the cells
   });
+  it("AUTO-A16c — a bent arrow is the drawing's only: nothing is saved for it; «تراجع» saves the machine it brings back", () => {
+    vi.stubGlobal("matchMedia", vi.fn((q: string) => ({ matches: q === "(pointer: fine)", media: q, addEventListener() {}, removeEventListener() {} })));
+    const sent: Answer[] = [];
+    render(<Student q={studentQ()} spy={a => sent.push(a)} />);
+    const r = screen.getByTestId("automaton-design-response");
+    const tools = within(r).getByRole("group", { name: "أدوات الرسم" });
+    fireEvent.click(within(r).getByRole("button", { name: /إضافة حالة/ }));
+    fireEvent.change(cell(r, "q0", "1"), { target: { value: "q1" } });
+    const drawn = sent.at(-1) as Extract<Answer, { kind: "automatonDesign" }>;
+    expect(drawn.machine.transitions).toEqual([["q0", "1", "q1"]]);
+    const saves = sent.length;
+    fireEvent.change(within(tools).getByLabelText("سهم إلى"), { target: { value: "q1" } });
+    const d = () => screen.getByTestId("alab-canvas").querySelector("g[data-edge='q0 q1'] path.learning-automaton-edge")!.getAttribute("d");
+    const straight = d();
+    fireEvent.click(within(r).getByRole("button", { name: "اثنِ السهم إلى الجهة الأخرى" }));
+    expect(d()).not.toBe(straight);                                                // bent on the drawing
+    expect(sent).toHaveLength(saves);                                              // and nothing saved for it
+    expect(sent.every(a => JSON.stringify(Object.keys(a).sort()) === '["kind","machine"]' || JSON.stringify(Object.keys(a).sort()) === '["kind","layout","machine"]')).toBe(true);
+    fireEvent.click(within(tools).getByRole("button", { name: "تراجع" }));           // the bend
+    expect([d(), sent.length]).toEqual([straight, saves]);
+    fireEvent.click(within(tools).getByRole("button", { name: "تراجع" }));           // the arrow: the answer is the machine without it
+    expect((sent.at(-1) as typeof drawn).machine.transitions).toEqual([]);
+    fireEvent.click(within(tools).getByRole("button", { name: "إعادة" }));
+    expect((sent.at(-1) as typeof drawn).machine).toEqual(drawn.machine);
+  });
   it("a config that does not read shows a note (never a broken builder)", () => {
     render(<AutomatonDesignResponse q={{ text: "س", marks: 1, automatonDesign: { v: 1, machine: "TM" } } as never} id="a1" labelPrefix="" answer={undefined} onAnswer={() => {}} />);
     expect(screen.getByTestId("automaton-design-unavailable")).toBeTruthy();

@@ -49,7 +49,7 @@ export default function AutomatonBuilder({ ids, rules, draft, onDraft, intro, ex
   }, [stamp, rules.machine]);   // eslint-disable-line react-hooks/exhaustive-deps
   // AUTO-A7 — the book's automatic layout, with the cells the learner chose by mouse (the drawing and the editor share it)
   const layout = useMemo(() => (drawn ? labLayout(drawn, draft.layout) : null), [drawn, draft.layout]);
-  const scene = useMemo(() => (drawn && layout ? buildScene(drawn, layout) : null), [drawn, layout]);
+  const scene = useMemo(() => (drawn && layout ? buildScene(drawn, layout, draft.bends) : null), [drawn, layout, draft.bends]);
   const fine = useMemo(() => finePointer(), []);
 
   const edit = (next: LabDraft) => { if (disabled) return; onDraft(next); setTried(null); };

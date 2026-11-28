@@ -33,7 +33,7 @@ export default function MachineBuilder({ ids, rules, draft, onDraft, examples: e
   const machine = checked.machine;
   const stamp = useMemo(() => JSON.stringify(checked.raw ?? null), [checked]);
   const layout = useMemo(() => (machine ? labLayout(machine, draft.layout) : null), [machine, draft.layout]);
-  const scene = useMemo(() => (machine && layout ? buildScene(machine, layout) : null), [machine, layout]);
+  const scene = useMemo(() => (machine && layout ? buildScene(machine, layout, draft.bends) : null), [machine, layout, draft.bends]);
   const fine = useMemo(() => finePointer(), []);
   const unreachable = machine ? unreachableStates(machine) : [];
 
