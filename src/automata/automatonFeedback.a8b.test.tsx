@@ -46,6 +46,12 @@ describe("AUTO-A9 — the review draws each machine where its author put it", ()
     expect(cy("automaton-review-student", "p1")).toBeGreaterThan(flat[0]);
     expect(cy("automaton-review-reference", "q2")).toBeGreaterThan(flat[1]);
   });
+  it("AUTO-A16b — a place between the cells is drawn there (half a cell is half the distance of a whole one)", () => {
+    const at = (layout: Record<string, [number, number]>) => { cleanup(); render(<AutomatonDesignReview answer={{ ...MINE, layout }} answerKey={{ reference: REF, layout: { q2: [2, layout.p1[1]] } }} config={CFG} />); return [cy("automaton-review-student", "p1"), cy("automaton-review-reference", "q2")]; };
+    const zero = at({ p1: [1, 0] }), half = at({ p1: [1, 1.5] }), whole = at({ p1: [1, 3] });
+    expect((half[0] - zero[0]) / (whole[0] - zero[0])).toBeCloseTo(0.5, 5);
+    expect((half[1] - zero[1]) / (whole[1] - zero[1])).toBeCloseTo(0.5, 5);
+  });
 });
 
 describe("A8b — the student's released breakdown", () => {

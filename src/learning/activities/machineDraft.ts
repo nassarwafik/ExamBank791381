@@ -31,7 +31,7 @@ export function draftOfMachineShape(r: MachineRules, raw: unknown, layout?: unkn
   }
   if (isObj(layout)) {
     const cells: Record<string, [number, number]> = {};
-    for (const q of d.states) { const c = layout[q]; if (Array.isArray(c) && c.length === 2 && c.every(n => Number.isInteger(n))) cells[q] = [c[0] as number, c[1] as number]; }
+    for (const q of d.states) { const c = layout[q]; if (Array.isArray(c) && c.length === 2 && c.every(n => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 20)) cells[q] = [c[0] as number, c[1] as number]; }
     if (Object.keys(cells).length) d.layout = cells;
   }
   return d;
